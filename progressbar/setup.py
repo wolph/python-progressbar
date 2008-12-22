@@ -15,7 +15,7 @@ setup(
     long_description = progressbar.__doc__,
     maintainer = progressbar.__author__,
     maintainer_email = progressbar.__author_email__,
-    url = 'http://qubit.ic.unicamp.br/~nilton',
+    url = 'http://code.google.com/p/python-progressbar',
     py_modules = ['progressbar'],
     classifiers = [
     'Development Status :: 5 - Production/Stable',
