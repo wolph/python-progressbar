@@ -1,0 +1,28 @@
+2008-12-22:
+  - Added SimpleProgress widget contributed by Sando Tosi
+    <matrixhasu at gmail.com>.
+
+2006-05-07:
+  - Fixed bug with terminal width in Windows.
+  - Released version 2.2.
+
+2005-12-04:
+  - Autodetection of terminal width.
+  - Added start method.
+  - Released version 2.1.
+
+2005-12-04:
+  - Everything is a widget now!
+  - Released version 2.0.
+
+2005-12-03:
+  - Rewrite using widgets.
+  - Released version 1.0.
+
+2005-06-02:
+  - Rewrite.
+  - Released version 0.5.
+
+2004-06-15:
+  - First version.
+  - Released version 0.1.
