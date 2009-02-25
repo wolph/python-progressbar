@@ -3,17 +3,17 @@
 #
 # progressbar  - Text progressbar library for python.
 # Copyright (c) 2005 Nilton Volpato
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -21,7 +21,7 @@
 
 """Text progressbar library for python.
 
-This library provides a text mode progressbar. This is tipically used
+This library provides a text mode progressbar. This is typically used
 to display the progress of a long running operation, providing a
 visual clue that processing is underway.
 
@@ -42,17 +42,7 @@ automatically supports features like auto-resizing when available.
 __author__ = "Nilton Volpato"
 __author_email__ = "first-name dot last-name @ gmail.com"
 __date__ = "2006-05-07"
-__version__ = "2.2"
-
-# Changelog
-#
-# 2006-05-07: v2.2 fixed bug in windows
-# 2005-12-04: v2.1 autodetect terminal width, added start method
-# 2005-12-04: v2.0 everything is now a widget (wow!)
-# 2005-12-03: v1.0 rewrite using widgets
-# 2005-06-02: v0.5 rewrite
-# 2004-??-??: v0.1 first version
-
+__version__ = "2.3-dev"
 
 import sys, time, os
 from array import array
@@ -148,8 +138,13 @@ class Percentage(ProgressBarWidget):
     def update(self, pbar):
         return '%3d%%' % pbar.percentage()
 
+class SimpleProgress(ProgressBarWidget):
+    "Returns what is already done and the total, e.g.: '5 of 47'"
+    def update(self, pbar):
+        return '%d of %d' % (pbar.currval, pbar.maxval)
+
 class Bar(ProgressBarWidgetHFill):
-    "The bar of progress. It will strech to fill the line."
+    "The bar of progress. It will stretch to fill the line."
     def __init__(self, marker='#', left='|', right='|'):
         self.marker = marker
         self.left = left
@@ -181,7 +176,7 @@ default_widgets = [Percentage(), ' ', Bar()]
 class ProgressBar(object):
     """This is the ProgressBar class, it updates and prints the bar.
 
-    The term_width parameter may be an integer. Or None, in which case
+    The term_width parameter must be an integer or None. In the latter case
     it will try to guess it, if it fails it will default to 80 columns.
 
     The simple use is like this:
@@ -203,11 +198,20 @@ class ProgressBar(object):
     like to access are:
     - currval: current value of the progress, 0 <= currval <= maxval
     - maxval: maximum (and final) value of the progress
-    - finished: True if the bar is have finished (reached 100%), False o/w
-    - start_time: first time update() method of ProgressBar was called
+    - finished: True if the bar has finished (reached 100%), False o/w
+    - start_time: the time when start() method of ProgressBar was called
     - seconds_elapsed: seconds elapsed since start_time
-    - percentage(): percentage of the progress (this is a method)
+    - percentage(): percentage of the progress [0..100]. This is a method.
+
+    The attributes above are unlikely to change between different versions,
+    the other ones may change or cease to exist without notice, so try to rely
+    only on the ones documented above if you are extending the progress bar.
     """
+
+    __slots__ = ('maxval', 'currval', 'term_width', 'start_time',
+                 'seconds_elapsed', 'finished', 'fd', 'signal_set', 'widgets',
+                 'update_interval', 'next_update', 'num_intervals')
+
     def __init__(self, maxval=100, widgets=default_widgets, term_width=None,
                  fd=sys.stderr):
         assert maxval > 0
@@ -215,21 +219,24 @@ class ProgressBar(object):
         self.widgets = widgets
         self.fd = fd
         self.signal_set = False
-        if term_width is None:
+        if term_width is not None:
+            self.term_width = term_width
+        else:
             try:
-                self.handle_resize(None,None)
+                self.handle_resize(None, None)
                 signal.signal(signal.SIGWINCH, self.handle_resize)
                 self.signal_set = True
             except (SystemExit, KeyboardInterrupt):
                 raise
             except:
                 self.term_width = int(os.environ.get('COLUMNS', 80)) - 1
-        else:
-            self.term_width = term_width
+
+        self.num_intervals = max(100, self.term_width)
+        self.update_interval = float(self.maxval) / self.num_intervals
+        self.next_update = 0
 
         self.currval = 0
         self.finished = False
-        self.prev_percentage = -1
         self.start_time = None
         self.seconds_elapsed = 0
 
@@ -265,24 +272,35 @@ class ProgressBar(object):
     def _format_line(self):
         return ''.join(self._format_widgets()).ljust(self.term_width)
 
+    def _next_update(self):
+        return int((int(self.num_intervals *
+                        (float(self.currval) / self.maxval)) + 1) *
+                   self.update_interval)
+
     def _need_update(self):
-        return int(self.percentage()) != int(self.prev_percentage)
+        """Returns true when the progressbar should print an updated line.
+
+        You can override this method if you want finer grained control over
+        updates.
+
+        The current implementation is optimized to be as fast as possible and
+        as economical as possible in the number of updates. However, depending
+        on your usage you may want to do more updates. Ideally you could call
+        self._format_line() and see if it's different from the previous
+        _format_line() call, but calling _format_line() takes around 20 times
+        more time than calling this implementation of _need_update().
+        """
+        return self.currval >= self.next_update
 
     def update(self, value):
         "Updates the progress bar to a new value."
         assert 0 <= value <= self.maxval
         self.currval = value
-        if not self._need_update() or self.finished:
+        if not self._need_update():
             return
-        if not self.start_time:
-            self.start_time = time.time()
         self.seconds_elapsed = time.time() - self.start_time
-        self.prev_percentage = self.percentage()
-        if value != self.maxval:
-            self.fd.write(self._format_line() + '\r')
-        else:
-            self.finished = True
-            self.fd.write(self._format_line() + '\n')
+        self.next_update = self._next_update()
+        self.fd.write(self._format_line() + '\r')
 
     def start(self):
         """Start measuring time, and prints the bar at 0%.
@@ -295,76 +313,14 @@ class ProgressBar(object):
         ...
         >>> pbar.finish()
         """
+        self.start_time = time.time()
         self.update(0)
         return self
 
     def finish(self):
         """Used to tell the progress is finished."""
+        self.finished = True
         self.update(self.maxval)
+        self.fd.write('\n')
         if self.signal_set:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
-        
-
-
-
-
-
-if __name__=='__main__':
-    import os
-
-    def example1():
-        widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
-                   ' ', ETA(), ' ', FileTransferSpeed()]
-        pbar = ProgressBar(widgets=widgets, maxval=10000000).start()
-        for i in range(1000000):
-            # do something
-            pbar.update(10*i+1)
-        pbar.finish()
-        print
-
-    def example2():
-        class CrazyFileTransferSpeed(FileTransferSpeed):
-            "It's bigger between 45 and 80 percent"
-            def update(self, pbar):
-                if 45 < pbar.percentage() < 80:
-                    return 'Bigger Now ' + FileTransferSpeed.update(self,pbar)
-                else:
-                    return FileTransferSpeed.update(self,pbar)
-
-        widgets = [CrazyFileTransferSpeed(),' <<<', Bar(), '>>> ', Percentage(),' ', ETA()]
-        pbar = ProgressBar(widgets=widgets, maxval=10000000)
-        # maybe do something
-        pbar.start()
-        for i in range(2000000):
-            # do something
-            pbar.update(5*i+1)
-        pbar.finish()
-        print
-
-    def example3():
-        widgets = [Bar('>'), ' ', ETA(), ' ', ReverseBar('<')]
-        pbar = ProgressBar(widgets=widgets, maxval=10000000).start()
-        for i in range(1000000):
-            # do something
-            pbar.update(10*i+1)
-        pbar.finish()
-        print
-
-    def example4():
-        widgets = ['Test: ', Percentage(), ' ',
-                   Bar(marker='0',left='[',right=']'),
-                   ' ', ETA(), ' ', FileTransferSpeed()]
-        pbar = ProgressBar(widgets=widgets, maxval=500)
-        pbar.start()
-        for i in range(100,500+1,50):
-            time.sleep(0.2)
-            pbar.update(i)
-        pbar.finish()
-        print
-
-
-    example1()
-    example2()
-    example3()
-    example4()
-
