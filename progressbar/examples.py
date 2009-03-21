@@ -64,8 +64,8 @@ def example4():
     print
 
 def example5():
-  pbar = ProgressBar(widgets=[SimpleProgress()], maxval=47).start()
-  for i in range(47):
+  pbar = ProgressBar(widgets=[SimpleProgress()], maxval=17).start()
+  for i in range(17):
     time.sleep(0.2)
     pbar.update(i + 1)
   pbar.finish()

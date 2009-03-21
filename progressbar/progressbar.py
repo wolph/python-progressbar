@@ -107,20 +107,21 @@ class ETA(ProgressBarWidget):
 
 class FileTransferSpeed(ProgressBarWidget):
     "Widget for showing the transfer speed (useful for file transfers)."
-    def __init__(self):
+    def __init__(self, unit='B'):
+        self.unit = unit
         self.fmt = '%6.2f %s'
-        self.units = ['B','K','M','G','T','P']
+        self.prefixes = ['', 'K', 'M', 'G', 'T', 'P']
     def update(self, pbar):
         if pbar.seconds_elapsed < 2e-6:#== 0:
             bps = 0.0
         else:
             bps = float(pbar.currval) / pbar.seconds_elapsed
         spd = bps
-        for u in self.units:
+        for u in self.prefixes:
             if spd < 1000:
                 break
             spd /= 1000
-        return self.fmt % (spd, u+'/s')
+        return self.fmt % (spd, u + self.unit + '/s')
 
 class RotatingMarker(ProgressBarWidget):
     "A rotating marker for filling the bar of progress."

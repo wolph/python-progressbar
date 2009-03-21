@@ -1,3 +1,8 @@
+2009-03-21:
+  - Improved FileTransferSpeed widget, which now supports an unit parameter,
+    defaulting to 'B' for bytes. It will also show B/s, MB/s, etc instead of
+    B/s, M/s, etc.
+
 2008-12-22:
   - Added SimpleProgress widget contributed by Sando Tosi
     <matrixhasu at gmail.com>.
