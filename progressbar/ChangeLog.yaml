@@ -3,6 +3,12 @@
     defaulting to 'B' for bytes. It will also show B/s, MB/s, etc instead of
     B/s, M/s, etc.
 
+2009-02-24:
+  - Updated licensing.
+  - Moved examples to separated file.
+  - Improved _need_update() method, which is now as fast as it can be. IOW,
+    no wasted cycles when an update is not needed.
+
 2008-12-22:
   - Added SimpleProgress widget contributed by Sando Tosi
     <matrixhasu at gmail.com>.
