@@ -210,8 +210,9 @@ class ProgressBar(object):
     """
 
     __slots__ = ('maxval', 'currval', 'term_width', 'start_time',
-                 'seconds_elapsed', 'finished', 'fd', 'signal_set', 'widgets',
-                 'update_interval', 'next_update', 'num_intervals')
+                 'last_update_time', 'seconds_elapsed', 'finished', 'fd',
+                 'signal_set', 'widgets', 'update_interval', 'next_update',
+                 'num_intervals')
 
     def __init__(self, maxval=100, widgets=default_widgets, term_width=None,
                  fd=sys.stderr):
@@ -239,6 +240,7 @@ class ProgressBar(object):
         self.currval = 0
         self.finished = False
         self.start_time = None
+        self.last_update_time = None
         self.seconds_elapsed = 0
 
     def handle_resize(self, signum, frame):
@@ -286,10 +288,15 @@ class ProgressBar(object):
 
         The current implementation is optimized to be as fast as possible and
         as economical as possible in the number of updates. However, depending
-        on your usage you may want to do more updates. Ideally you could call
-        self._format_line() and see if it's different from the previous
-        _format_line() call, but calling _format_line() takes around 20 times
-        more time than calling this implementation of _need_update().
+        on your usage you may want to do more updates. For instance, if your
+        progressbar stays in the same percentage for a long time, and you want
+        to update other widgets, like ETA, then you could return True after
+        some time has passed with no updates.
+
+        Ideally you could call self._format_line() and see if it's different
+        from the previous _format_line() call, but calling _format_line() takes
+        around 20 times more time than calling this implementation of
+        _need_update().
         """
         return self.currval >= self.next_update
 
@@ -299,9 +306,11 @@ class ProgressBar(object):
         self.currval = value
         if not self._need_update():
             return
-        self.seconds_elapsed = time.time() - self.start_time
+        now = time.time()
+        self.seconds_elapsed = now - self.start_time
         self.next_update = self._next_update()
         self.fd.write(self._format_line() + '\r')
+        self.last_update_time = now
 
     def start(self):
         """Start measuring time, and prints the bar at 0%.
@@ -314,7 +323,7 @@ class ProgressBar(object):
         ...
         >>> pbar.finish()
         """
-        self.start_time = time.time()
+        self.start_time = self.last_update_time = time.time()
         self.update(0)
         return self
 
