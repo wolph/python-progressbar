@@ -225,8 +225,8 @@ class ProgressBar(object):
             self.term_width = term_width
         else:
             try:
-                self.handle_resize(None, None)
-                signal.signal(signal.SIGWINCH, self.handle_resize)
+                self._handle_resize(None, None)
+                signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
             except (SystemExit, KeyboardInterrupt):
                 raise
@@ -243,13 +243,13 @@ class ProgressBar(object):
         self.last_update_time = None
         self.seconds_elapsed = 0
 
-    def handle_resize(self, signum, frame):
-        h,w=array('h', ioctl(self.fd, termios.TIOCGWINSZ, '\0'*8))[:2]
+    def _handle_resize(self, signum, frame):
+        h, w = array('h', ioctl(self.fd, termios.TIOCGWINSZ, '\0' * 8))[:2]
         self.term_width = w
 
     def percentage(self):
         "Returns the percentage of the progress."
-        return self.currval*100.0 / self.maxval
+        return self.currval * 100.0 / self.maxval
 
     def _format_widgets(self):
         r = []
@@ -269,7 +269,8 @@ class ProgressBar(object):
                 currwidth += len(weval)
                 r.append(weval)
         for iw in hfill_inds:
-            r[iw] = r[iw].update(self, (self.term_width-currwidth)/num_hfill)
+            r[iw] = r[iw].update(self,
+                                 (self.term_width - currwidth) / num_hfill)
         return r
 
     def _format_line(self):
