@@ -209,10 +209,10 @@ class ProgressBar(object):
     only on the ones documented above if you are extending the progress bar.
     """
 
-    __slots__ = ('maxval', 'currval', 'term_width', 'start_time',
-                 'last_update_time', 'seconds_elapsed', 'finished', 'fd',
-                 'signal_set', 'widgets', 'update_interval', 'next_update',
-                 'num_intervals')
+    __slots__ = ('currval', 'fd', 'finished', 'last_update_time', 'maxval',
+                 'next_update', 'num_intervals', 'seconds_elapsed',
+                 'signal_set', 'start_time', 'term_width', 'update_interval',
+                 'widgets')
 
     def __init__(self, maxval=100, widgets=default_widgets, term_width=None,
                  fd=sys.stderr):
@@ -307,6 +307,8 @@ class ProgressBar(object):
         self.currval = value
         if not self._need_update():
             return
+        if self.start_time is None:
+            raise RuntimeError('You must call start() before calling update()')
         now = time.time()
         self.seconds_elapsed = now - self.start_time
         self.next_update = self._next_update()
