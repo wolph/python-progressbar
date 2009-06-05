@@ -1,3 +1,6 @@
+2009-05-31:
+  - Included check for calling start before update.
+
 2009-03-21:
   - Improved FileTransferSpeed widget, which now supports an unit parameter,
     defaulting to 'B' for bytes. It will also show B/s, MB/s, etc instead of
