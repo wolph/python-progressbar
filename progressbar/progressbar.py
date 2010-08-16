@@ -39,6 +39,8 @@ The progressbar module is very easy to use, yet very powerful. And
 automatically supports features like auto-resizing when available.
 """
 
+from __future__ import division
+
 __author__ = "Nilton Volpato"
 __author_email__ = "first-name dot last-name @ gmail.com"
 __date__ = "2006-05-07"
@@ -52,6 +54,10 @@ try:
 except ImportError:
     pass
 import signal
+try:
+    basestring
+except NameError:
+    basestring = (str,)
 
 class ProgressBarWidget(object):
     """This is an element of ProgressBar formatting.
@@ -115,7 +121,7 @@ class FileTransferSpeed(ProgressBarWidget):
         if pbar.seconds_elapsed < 2e-6:#== 0:
             bps = 0.0
         else:
-            bps = float(pbar.currval) / pbar.seconds_elapsed
+            bps = pbar.currval / pbar.seconds_elapsed
         spd = bps
         for u in self.prefixes:
             if spd < 1000:
@@ -151,16 +157,16 @@ class Bar(ProgressBarWidgetHFill):
         self.left = left
         self.right = right
     def _format_marker(self, pbar):
-        if isinstance(self.marker, (str, unicode)):
+        if isinstance(self.marker, basestring):
             return self.marker
         else:
             return self.marker.update(pbar)
     def update(self, pbar, width):
         percent = pbar.percentage()
         cwidth = width - len(self.left) - len(self.right)
-        marked_width = int(percent * cwidth / 100)
+        marked_width = int(percent * cwidth // 100)
         m = self._format_marker(pbar)
-        bar = (self.left + (m*marked_width).ljust(cwidth) + self.right)
+        bar = (self.left + (m * marked_width).ljust(cwidth) + self.right)
         return bar
 
 class ReverseBar(Bar):
@@ -168,7 +174,7 @@ class ReverseBar(Bar):
     def update(self, pbar, width):
         percent = pbar.percentage()
         cwidth = width - len(self.left) - len(self.right)
-        marked_width = int(percent * cwidth / 100)
+        marked_width = int(percent * cwidth // 100)
         m = self._format_marker(pbar)
         bar = (self.left + (m*marked_width).rjust(cwidth) + self.right)
         return bar
@@ -234,7 +240,7 @@ class ProgressBar(object):
                 self.term_width = int(os.environ.get('COLUMNS', 80)) - 1
 
         self.num_intervals = max(100, self.term_width)
-        self.update_interval = float(self.maxval) / self.num_intervals
+        self.update_interval = self.maxval / self.num_intervals
         self.next_update = 0
 
         self.currval = 0
@@ -261,7 +267,7 @@ class ProgressBar(object):
                 r.append(w)
                 hfill_inds.append(i)
                 num_hfill += 1
-            elif isinstance(w, (str, unicode)):
+            elif isinstance(w, basestring):
                 r.append(w)
                 currwidth += len(w)
             else:
@@ -269,8 +275,8 @@ class ProgressBar(object):
                 currwidth += len(weval)
                 r.append(weval)
         for iw in hfill_inds:
-            r[iw] = r[iw].update(self,
-                                 (self.term_width - currwidth) / num_hfill)
+            widget_width = int((self.term_width - currwidth) // num_hfill)
+            r[iw] = r[iw].update(self, widget_width)
         return r
 
     def _format_line(self):
@@ -278,7 +284,7 @@ class ProgressBar(object):
 
     def _next_update(self):
         return int((int(self.num_intervals *
-                        (float(self.currval) / self.maxval)) + 1) *
+                        (self.currval / self.maxval)) + 1) *
                    self.update_interval)
 
     def _need_update(self):

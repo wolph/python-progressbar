@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import sys
 import time
 
 from progressbar import ProgressBar, Percentage, Bar, ETA, FileTransferSpeed, \
@@ -11,7 +12,7 @@ def example0():
         time.sleep(0.01)
         pbar.update(i+1)
     pbar.finish()
-    print
+    sys.stdout.write('\n')
 
 def example1():
     widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
@@ -21,7 +22,7 @@ def example1():
         # do something
         pbar.update(10*i+1)
     pbar.finish()
-    print
+    sys.stdout.write('\n')
 
 def example2():
     class CrazyFileTransferSpeed(FileTransferSpeed):
@@ -32,7 +33,8 @@ def example2():
             else:
                 return FileTransferSpeed.update(self,pbar)
 
-    widgets = [CrazyFileTransferSpeed(),' <<<', Bar(), '>>> ', Percentage(),' ', ETA()]
+    widgets = [CrazyFileTransferSpeed(),' <<<', Bar(), '>>> ',
+               Percentage(),' ', ETA()]
     pbar = ProgressBar(widgets=widgets, maxval=10000000)
     # maybe do something
     pbar.start()
@@ -40,7 +42,7 @@ def example2():
         # do something
         pbar.update(5*i+1)
     pbar.finish()
-    print
+    sys.stdout.write('\n')
 
 def example3():
     widgets = [Bar('>'), ' ', ETA(), ' ', ReverseBar('<')]
@@ -49,7 +51,7 @@ def example3():
         # do something
         pbar.update(10*i+1)
     pbar.finish()
-    print
+    sys.stdout.write('\n')
 
 def example4():
     widgets = ['Test: ', Percentage(), ' ',
@@ -61,15 +63,15 @@ def example4():
         time.sleep(0.2)
         pbar.update(i)
     pbar.finish()
-    print
+    sys.stdout.write('\n')
 
 def example5():
-  pbar = ProgressBar(widgets=[SimpleProgress()], maxval=17).start()
-  for i in range(17):
-    time.sleep(0.2)
-    pbar.update(i + 1)
-  pbar.finish()
-  print
+    pbar = ProgressBar(widgets=[SimpleProgress()], maxval=17).start()
+    for i in range(17):
+        time.sleep(0.2)
+        pbar.update(i + 1)
+    pbar.finish()
+    sys.stdout.write('\n')
 
 example0()
 example1()
