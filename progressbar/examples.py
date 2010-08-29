@@ -82,13 +82,13 @@ def example6():
     sys.stdout.write('\n')
 
 def example7():
-    pbar = ProgressBar()
+    pbar = ProgressBar()  # Progressbar can guess maxval automatically.
     for i in pbar(range(80)):
         time.sleep(0.01)
     sys.stdout.write('\n')
 
 def example8():
-    pbar = ProgressBar(maxval=80)
+    pbar = ProgressBar(maxval=80)  # Progressbar can't guess maxval.
     for i in pbar((i for i in range(80))):
         time.sleep(0.01)
     sys.stdout.write('\n')
