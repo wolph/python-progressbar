@@ -73,9 +73,32 @@ def example5():
     pbar.finish()
     sys.stdout.write('\n')
 
+def example6():
+    pbar = ProgressBar().start()
+    for i in range(100):
+        time.sleep(0.01)
+        pbar.update(i + 1)
+    pbar.finish()
+    sys.stdout.write('\n')
+
+def example7():
+    pbar = ProgressBar()
+    for i in pbar(range(80)):
+        time.sleep(0.01)
+    sys.stdout.write('\n')
+
+def example8():
+    pbar = ProgressBar(maxval=80)
+    for i in pbar((i for i in range(80))):
+        time.sleep(0.01)
+    sys.stdout.write('\n')
+
 example0()
 example1()
 example2()
 example3()
 example4()
 example5()
+example6()
+example7()
+example8()

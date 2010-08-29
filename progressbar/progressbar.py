@@ -137,7 +137,7 @@ class RotatingMarker(ProgressBarWidget):
     def update(self, pbar):
         if pbar.finished:
             return self.markers[0]
-        self.curmark = (self.curmark + 1)%len(self.markers)
+        self.curmark = (self.curmark + 1) % len(self.markers)
         return self.markers[self.curmark]
 
 class Percentage(ProgressBarWidget):
@@ -147,8 +147,10 @@ class Percentage(ProgressBarWidget):
 
 class SimpleProgress(ProgressBarWidget):
     "Returns what is already done and the total, e.g.: '5 of 47'"
+    def __init__(self, sep=' of '):
+        self.sep = sep
     def update(self, pbar):
-        return '%d of %d' % (pbar.currval, pbar.maxval)
+        return '%d%s%d' % (pbar.currval, self.sep, pbar.maxval)
 
 class Bar(ProgressBarWidgetHFill):
     "The bar of progress. It will stretch to fill the line."
@@ -183,10 +185,7 @@ default_widgets = [Percentage(), ' ', Bar()]
 class ProgressBar(object):
     """This is the ProgressBar class, it updates and prints the bar.
 
-    The term_width parameter must be an integer or None. In the latter case
-    it will try to guess it, if it fails it will default to 80 columns.
-
-    The simple use is like this:
+    A common way of using it is like:
     >>> pbar = ProgressBar().start()
     >>> for i in xrange(100):
     ...    # do something
@@ -194,10 +193,19 @@ class ProgressBar(object):
     ...
     >>> pbar.finish()
 
+    You can also use a progressbar as an iterator:
+    >>> progress = ProgressBar()
+    >>> for i in progress(some_iterable):
+    ...    # do something
+    ...
+
     But anything you want to do is possible (well, almost anything).
     You can supply different widgets of any type in any order. And you
     can even write your own widgets! There are many widgets already
     shipped and you should experiment with them.
+
+    The term_width parameter must be an integer or None. In the latter case
+    it will try to guess it, if it fails it will default to 80 columns.
 
     When implementing a widget update method you may access any
     attribute or function of the ProgressBar object calling the
@@ -218,11 +226,12 @@ class ProgressBar(object):
     __slots__ = ('currval', 'fd', 'finished', 'last_update_time', 'maxval',
                  'next_update', 'num_intervals', 'seconds_elapsed',
                  'signal_set', 'start_time', 'term_width', 'update_interval',
-                 'widgets')
+                 'widgets', '_iterable')
 
-    def __init__(self, maxval=100, widgets=default_widgets, term_width=None,
+    _DEFAULT_MAXVAL = 100
+
+    def __init__(self, maxval=None, widgets=default_widgets, term_width=None,
                  fd=sys.stderr):
-        assert maxval > 0
         self.maxval = maxval
         self.widgets = widgets
         self.fd = fd
@@ -239,15 +248,37 @@ class ProgressBar(object):
             except:
                 self.term_width = int(os.environ.get('COLUMNS', 80)) - 1
 
-        self.num_intervals = max(100, self.term_width)
-        self.update_interval = self.maxval / self.num_intervals
-        self.next_update = 0
-
         self.currval = 0
         self.finished = False
         self.start_time = None
         self.last_update_time = None
         self.seconds_elapsed = 0
+        self._iterable = None
+
+    def __call__(self, iterable):
+        try:
+            self.maxval = len(iterable)
+        except TypeError:
+            # If the iterable has no length, then rely on the value provided
+            # by the user, otherwise fail.
+            if not (isinstance(self.maxval, (int, long)) and self.maxval > 0):
+                raise RuntimeError('Could not determine maxval from iterable. '
+                                   'You must explicitly provide a maxval.')
+        self._iterable = iter(iterable)
+        self.start()
+        return self
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        try:
+            next = self._iterable.next()
+            self.update(self.currval + 1)
+            return next
+        except StopIteration:
+            self.finish()
+            raise
 
     def _handle_resize(self, signum, frame):
         h, w = array('h', ioctl(self.fd, termios.TIOCGWINSZ, '\0' * 8))[:2]
@@ -309,7 +340,7 @@ class ProgressBar(object):
 
     def update(self, value):
         "Updates the progress bar to a new value."
-        assert 0 <= value <= self.maxval
+        assert 0 <= value <= self.maxval, '0 <= %d <= %d' % (value, self.maxval)
         self.currval = value
         if not self._need_update():
             return
@@ -322,7 +353,7 @@ class ProgressBar(object):
         self.last_update_time = now
 
     def start(self):
-        """Start measuring time, and prints the bar at 0%.
+        """Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
         >>> pbar = ProgressBar().start()
@@ -332,6 +363,14 @@ class ProgressBar(object):
         ...
         >>> pbar.finish()
         """
+        if self.maxval is None:
+            self.maxval = self._DEFAULT_MAXVAL
+        assert self.maxval > 0
+
+        self.num_intervals = max(100, self.term_width)
+        self.update_interval = self.maxval / self.num_intervals
+        self.next_update = 0
+
         self.start_time = self.last_update_time = time.time()
         self.update(0)
         return self

@@ -1,3 +1,11 @@
+2010-08-29:
+  - Refactored some code and made it possible to use a ProgressBar as
+    an iterator (actually as an iterator that is a proxy to another iterator).
+    This simplifies showing a progress bar in a number of cases.
+
+2010-08-15:
+  - Did some minor changes to make it compatible with python 3.
+
 2009-05-31:
   - Included check for calling start before update.
 
