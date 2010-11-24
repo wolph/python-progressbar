@@ -265,7 +265,6 @@ class ProgressBar(object):
                 raise RuntimeError('Could not determine maxval from iterable. '
                                    'You must explicitly provide a maxval.')
         self._iterable = iter(iterable)
-        self.start()
         return self
 
     def __iter__(self):
@@ -274,7 +273,10 @@ class ProgressBar(object):
     def next(self):
         try:
             next = self._iterable.next()
-            self.update(self.currval + 1)
+            if self.start_time is None:
+                self.start()
+            else:
+                self.update(self.currval + 1)
             return next
         except StopIteration:
             self.finish()
