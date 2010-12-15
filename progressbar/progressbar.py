@@ -47,6 +47,7 @@ __date__ = "2006-05-07"
 __version__ = "2.3-dev"
 
 import sys, time, os
+import datetime
 from array import array
 try:
     from fcntl import ioctl
@@ -65,7 +66,11 @@ class ProgressBarWidget(object):
     The ProgressBar object will call it's update value when an update
     is needed. It's size may change between call, but the results will
     not be good if the size changes drastically and repeatedly.
+
+    If the class constant TIME_SENSITIVE is True, then the progressbar
+    will be updated at least once every second, provided update() is called.
     """
+    TIME_SENSITIVE = False
     def update(self, pbar):
         """Returns the string representing the widget.
 
@@ -76,7 +81,7 @@ class ProgressBarWidget(object):
         At least this function must be overriden."""
         pass
 
-class ProgressBarWidgetHFill(object):
+class ProgressBarWidgetHFill(ProgressBarWidget):
     """This is a variable width element of ProgressBar formatting.
 
     The ProgressBar object will call it's update value, informing the
@@ -99,8 +104,9 @@ class ProgressBarWidgetHFill(object):
 
 class ETA(ProgressBarWidget):
     "Widget for the Estimated Time of Arrival"
+    TIME_SENSITIVE = True
     def format_time(self, seconds):
-        return time.strftime('%H:%M:%S', time.gmtime(seconds))
+        return str(datetime.timedelta(seconds=int(seconds)))
     def update(self, pbar):
         if pbar.currval == 0:
             return 'ETA:  --:--:--'
@@ -154,10 +160,11 @@ class SimpleProgress(ProgressBarWidget):
 
 class Bar(ProgressBarWidgetHFill):
     "The bar of progress. It will stretch to fill the line."
-    def __init__(self, marker='#', left='|', right='|'):
+    def __init__(self, marker='#', left='|', right='|', fillchar=' '):
         self.marker = marker
         self.left = left
         self.right = right
+        self.fillchar = ' '
     def _format_marker(self, pbar):
         if isinstance(self.marker, basestring):
             return self.marker
@@ -168,7 +175,9 @@ class Bar(ProgressBarWidgetHFill):
         cwidth = width - len(self.left) - len(self.right)
         marked_width = int(percent * cwidth // 100)
         m = self._format_marker(pbar)
-        bar = (self.left + (m * marked_width).ljust(cwidth) + self.right)
+        bar = (self.left +
+               (m * marked_width).ljust(cwidth, self.fillchar) +
+               self.right)
         return bar
 
 class ReverseBar(Bar):
@@ -226,7 +235,7 @@ class ProgressBar(object):
     __slots__ = ('currval', 'fd', 'finished', 'last_update_time', 'maxval',
                  'next_update', 'num_intervals', 'seconds_elapsed',
                  'signal_set', 'start_time', 'term_width', 'update_interval',
-                 'widgets', '_iterable')
+                 'widgets', '_iterable', '_time_sensitive')
 
     _DEFAULT_MAXVAL = 100
 
@@ -247,6 +256,12 @@ class ProgressBar(object):
                 raise
             except:
                 self.term_width = int(os.environ.get('COLUMNS', 80)) - 1
+
+        self._time_sensitive = False
+        for w in widgets:
+          if getattr(w, 'TIME_SENSITIVE', False):
+            self._time_sensitive = True
+            break
 
         self.currval = 0
         self.finished = False
@@ -326,19 +341,14 @@ class ProgressBar(object):
         You can override this method if you want finer grained control over
         updates.
 
-        The current implementation is optimized to be as fast as possible and
-        as economical as possible in the number of updates. However, depending
-        on your usage you may want to do more updates. For instance, if your
-        progressbar stays in the same percentage for a long time, and you want
-        to update other widgets, like ETA, then you could return True after
-        some time has passed with no updates.
-
         Ideally you could call self._format_line() and see if it's different
         from the previous _format_line() call, but calling _format_line() takes
         around 20 times more time than calling this implementation of
         _need_update().
         """
-        return self.currval >= self.next_update
+        return (self.currval >= self.next_update or
+                (self._time_sensitive and
+                 int(time.time() - self.last_update_time) > 1))
 
     def update(self, value):
         "Updates the progress bar to a new value."
