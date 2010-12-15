@@ -164,7 +164,7 @@ class Bar(ProgressBarWidgetHFill):
         self.marker = marker
         self.left = left
         self.right = right
-        self.fillchar = ' '
+        self.fillchar = fillchar
     def _format_marker(self, pbar):
         if isinstance(self.marker, basestring):
             return self.marker
