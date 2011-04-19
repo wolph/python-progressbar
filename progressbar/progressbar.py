@@ -346,7 +346,7 @@ class ProgressBar(object):
         around 20 times more time than calling this implementation of
         _need_update().
         """
-        return (self.currval >= self.next_update or
+        return (self.currval >= self.next_update or self.finished or
                 (self._time_sensitive and
                  int(time.time() - self.last_update_time) > 1))
 
