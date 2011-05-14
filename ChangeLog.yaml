@@ -1,3 +1,7 @@
+2011-05-14:
+  - Changes to directory structure so pip can install from Google Code
+  - Python 3.x related fixes (all examples work on Python 3.1.3)
+
 2010-08-29:
   - Refactored some code and made it possible to use a ProgressBar as
     an iterator (actually as an iterator that is a proxy to another iterator).

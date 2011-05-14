@@ -6,7 +6,7 @@ import progressbar
 
 if (not os.path.exists('README') or
     os.stat('progressbar.py').st_mtime > os.stat('README').st_mtime):
-    file('README','w').write(progressbar.__doc__)
+    open('README','w').write(progressbar.__doc__)
 
 setup(
     name = 'progressbar',
