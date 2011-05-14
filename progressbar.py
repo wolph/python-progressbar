@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: iso-8859-1 -*-
 #
-# progressbar  - Text progressbar library for python.
+# progressbar  - Text progress bar library for python.
 # Copyright (c) 2005 Nilton Volpato
 #
 # This library is free software; you can redistribute it and/or
@@ -19,18 +19,18 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-"""Text progressbar library for python.
+"""Text progress bar library for python.
 
-This library provides a text mode progressbar. This is typically used
+This library provides a text mode progress bar. This is typically used
 to display the progress of a long running operation, providing a
 visual clue that processing is underway.
 
 The ProgressBar class manages the progress, and the format of the line
 is given by a number of widgets. A widget is an object that may
-display diferently depending on the state of the progress. There are
+display differently depending on the state of the progress. There are
 three types of widget:
 - a string, which always shows itself;
-- a ProgressBarWidget, which may return a diferent value every time
+- a ProgressBarWidget, which may return a different value every time
 it's update method is called; and
 - a ProgressBarWidgetHFill, which is like ProgressBarWidget, except it
 expands to fill the remaining width of the line.
@@ -49,16 +49,36 @@ __version__ = "2.3-dev"
 import sys, time, os
 import datetime
 from array import array
+
 try:
     from fcntl import ioctl
     import termios
 except ImportError:
     pass
+
 import signal
+
 try:
     basestring
 except NameError:
     basestring = (str,)
+
+
+# Python 3.x (and backports) use a modified iterator syntax
+# This will allow 2.x to behave with 3.x iterators
+if not hasattr(__builtins__, 'next'):
+    def next(iter):
+        try:
+            # Try new style iterators
+            return iter.__next__()
+        except AttributeError:
+            # Fallback in case of a "native" iterator
+            return iter.next()
+
+# Python 3.x int is practically synonymous for a long in 2.x so create an alias
+if not hasattr(__builtins__, 'long'):
+    long = int
+
 
 class ProgressBarWidget(object):
     """This is an element of ProgressBar formatting.
@@ -67,7 +87,7 @@ class ProgressBarWidget(object):
     is needed. It's size may change between call, but the results will
     not be good if the size changes drastically and repeatedly.
 
-    If the class constant TIME_SENSITIVE is True, then the progressbar
+    If the class constant TIME_SENSITIVE is True, then the ProgressBar
     will be updated at least once every second, provided update() is called.
     """
     TIME_SENSITIVE = False
@@ -78,7 +98,7 @@ class ProgressBarWidget(object):
         where one can access attributes of the class for knowing how
         the update must be made.
 
-        At least this function must be overriden."""
+        At least this function must be overridden."""
         pass
 
 class ProgressBarWidgetHFill(ProgressBarWidget):
@@ -98,7 +118,7 @@ class ProgressBarWidgetHFill(ProgressBarWidget):
         the update must be made. The parameter width is the total
         horizontal width the widget must have.
 
-        At least this function must be overriden."""
+        At least this function must be overridden."""
         pass
 
 
@@ -202,7 +222,7 @@ class ProgressBar(object):
     ...
     >>> pbar.finish()
 
-    You can also use a progressbar as an iterator:
+    You can also use a ProgressBar as an iterator:
     >>> progress = ProgressBar()
     >>> for i in progress(some_iterable):
     ...    # do something
@@ -229,7 +249,7 @@ class ProgressBar(object):
 
     The attributes above are unlikely to change between different versions,
     the other ones may change or cease to exist without notice, so try to rely
-    only on the ones documented above if you are extending the progress bar.
+    only on the ones documented above if you are extending ProgressBar.
     """
 
     __slots__ = ('currval', 'fd', 'finished', 'last_update_time', 'maxval',
@@ -285,17 +305,21 @@ class ProgressBar(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         try:
-            next = self._iterable.next()
+            value = next(self._iterable)
             if self.start_time is None:
                 self.start()
             else:
                 self.update(self.currval + 1)
-            return next
+            return value
         except StopIteration:
             self.finish()
             raise
+
+    # Create an alias so that Python 2.x won't complain about not being
+    # an iterator.
+    next = __next__
 
     def _handle_resize(self, signum, frame):
         h, w = array('h', ioctl(self.fd, termios.TIOCGWINSZ, '\0' * 8))[:2]
@@ -336,7 +360,7 @@ class ProgressBar(object):
                    self.update_interval)
 
     def _need_update(self):
-        """Returns true when the progressbar should print an updated line.
+        """Returns true when the ProgressBar should print an updated line.
 
         You can override this method if you want finer grained control over
         updates.
@@ -351,7 +375,7 @@ class ProgressBar(object):
                  int(time.time() - self.last_update_time) > 1))
 
     def update(self, value):
-        "Updates the progress bar to a new value."
+        "Updates the ProgressBar to a new value."
         assert 0 <= value <= self.maxval, '0 <= %d <= %d' % (value, self.maxval)
         self.currval = value
         if not self._need_update():
