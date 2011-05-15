@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 #
 # progressbar  - Text progress bar library for Python.
 # Copyright (c) 2005 Nilton Volpato
@@ -87,6 +87,8 @@ def format_updatable(updatable, pbar):
     if hasattr(updatable, 'update'): return updatable.update(pbar)
     else: return updatable
 
+class UnknownLength: pass
+
 
 class ProgressBarWidget(object):
     '''The base class for all widgets
@@ -128,15 +130,32 @@ class ProgressBarWidgetHFill(ProgressBarWidget):
         '''
 
 
-class ETA(ProgressBarWidget):
-    'Widget which attempts to estimate the time of arrival.'
+class Timer(ProgressBarWidget):
+    'Widget which displays the elapsed seconds.'
 
+    __slots__ = ('format',)
     TIME_SENSITIVE = True
 
-    def format_time(self, seconds):
+    def __init__(self, format='Elapsed Time: %s'):
+        self.format = format
+
+    @staticmethod
+    def format_time(seconds):
         'Formats time as the string "HH:MM:SS".'
 
         return str(datetime.timedelta(seconds=int(seconds)))
+
+
+    def update(self, pbar):
+        'Updates the widget to show the elapsed time.'
+
+        return self.format % self.format_time(pbar.seconds_elapsed)
+
+
+class ETA(Timer):
+    'Widget which attempts to estimate the time of arrival.'
+
+    TIME_SENSITIVE = True
 
     def update(self, pbar):
         'Updates the widget to show the ETA or total time when finished.'
@@ -198,11 +217,50 @@ class AnimatedMarker(ProgressBarWidget):
 RotatingMarker = AnimatedMarker
 
 
+class Counter(ProgressBarWidget):
+    'Displays the current count'
+
+    __slots__ = ('format',)
+
+    def __init__(self, format='%d'):
+        self.format = format
+
+    def update(self, pbar):
+        return self.format % pbar.currval
+
+
 class Percentage(ProgressBarWidget):
     'Displays the current percentage as a number with a percent sign.'
 
     def update(self, pbar):
         return '%3d%%' % pbar.percentage()
+
+
+class FormatLabel(Timer):
+    'Displays a formatted label'
+
+    mapping = {
+        'elapsed': ('seconds_elapsed', Timer.format_time),
+        'finished': ('finished', None),
+        'last_update': ('last_update_time', None),
+        'max': ('maxval', None),
+        'seconds': ('seconds_elapsed', None),
+        'start': ('start_time', None),
+        'value': ('currval', None)
+    }
+
+    __slots__ = ('format',)
+    def __init__(self, format): self.format = format
+
+    def update(self, pbar):
+        context = {}
+        for name, (key, transform) in self.mapping.items():
+            try:
+                value = getattr(pbar, key)
+                context[name] = value if transform is None else transform(value)
+            except: pass
+
+        return self.format % context
 
 
 class SimpleProgress(ProgressBarWidget):
@@ -270,6 +328,28 @@ class ReverseBar(Bar):
         self.right = right
         self.fill = fill
         self.fill_left = fill_left
+
+
+class BouncingBar(Bar):
+    def update(self, pbar, width):
+        'Updates the progress bar and its subcomponents'
+
+        left, marker, right = (format_updatable(i, pbar) for i in
+                               (self.left, self.marker, self.right))
+
+        width -= len(left) + len(right)
+
+        if pbar.finished: return '%s%s%s' % (left, width * marker, right)
+
+        position = int(pbar.currval % (width * 2 - 1))
+        if position > width: position = width * 2 - position
+        lpad = self.fill * (position - 1)
+        rpad = self.fill * (width - len(marker) - len(lpad))
+
+        # Swap if we want to bounce the other way
+        if not self.fill_left: rpad, lpad = lpad, rpad
+
+        return '%s%s%s%s%s' % (left, lpad, marker, rpad, right)
 
 
 class ProgressBar(object):
@@ -350,14 +430,15 @@ class ProgressBar(object):
             except:
                 self.term_width = self._env_size()
 
+        self.__iterable = None
         self._update_widgets()
         self.currval = 0
         self.finished = False
-        self.start_time = None
         self.last_update_time = None
-        self.seconds_elapsed = 0
         self.poll = poll
-        self.__iterable = None
+        self.seconds_elapsed = 0
+        self.start_time = None
+        self.update_interval = 1
 
 
     def __call__(self, iterable):
@@ -365,12 +446,10 @@ class ProgressBar(object):
 
         try:
             self.maxval = len(iterable)
-        except TypeError:
-            # If the iterable has no length, then rely on the value provided
-            # by the user, otherwise fail.
-            if not (isinstance(self.maxval, (int, long)) and self.maxval > 0):
-                raise RuntimeError('Could not determine maxval from iterable. '
-                                   'You must explicitly provide a maxval.')
+        except:
+            if self.maxval is None:
+                self.maxval = UnknownLength
+
         self.__iterable = iter(iterable)
         return self
 
@@ -469,9 +548,15 @@ class ProgressBar(object):
     def update(self, value):
         'Updates the ProgressBar to a new value.'
 
-        assert 0 <= value <= self.maxval, '0 <= %d <= %d' % (value, self.maxval)
+        if value is not None:
+            if (self.maxval is not UnknownLength
+                and not 0 <= value <= self.maxval):
 
-        self.currval = value
+                raise ValueError('Value out of range')
+
+            self.currval = value
+
+
         if not self._need_update(): return
         if self.start_time is None:
             raise RuntimeError('You must call "start" before calling "update"')
@@ -495,12 +580,16 @@ class ProgressBar(object):
         >>> pbar.finish()
         '''
 
-        if self.maxval is None: self.maxval = self._DEFAULT_MAXVAL
-        assert self.maxval > 0
+        if self.maxval is None:
+            self.maxval = self._DEFAULT_MAXVAL
 
         self.num_intervals = max(100, self.term_width)
-        self.update_interval = self.maxval / self.num_intervals
         self.next_update = 0
+
+        if self.maxval is not UnknownLength:
+            if self.maxval < 0: raise ValueError('Value out of range')
+            self.update_interval = self.maxval / self.num_intervals
+
 
         self.start_time = self.last_update_time = time.time()
         self.update(0)
@@ -512,7 +601,7 @@ class ProgressBar(object):
         'Puts the ProgressBar bar in the finished state.'
 
         self.finished = True
-        self.update(self.maxval)
+        self.update(self.maxval if self.maxval is not UnknownLength else None)
         self.fd.write('\n')
         if self.signal_set:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)

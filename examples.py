@@ -1,20 +1,28 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import sys
 import time
 
-from progressbar import ProgressBar, Percentage, Bar, ETA, FileTransferSpeed, \
-     RotatingMarker, ReverseBar, SimpleProgress
+from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
+                        FileTransferSpeed, FormatLabel, Percentage, \
+                        ProgressBar, ReverseBar, RotatingMarker, \
+                        SimpleProgress, Timer
 
+examples = []
 def example(fn):
     try: name = 'Example %d' % int(fn.__name__[7:])
     except: name = fn.__name__
 
     def wrapped():
-        sys.stdout.write('Running: %s\n' % name)
-        fn()
-        sys.stdout.write('Finished: %s\n\n' % name)
+        try:
+            sys.stdout.write('Running: %s\n' % name)
+            fn()
+            sys.stdout.write('\n')
+        except KeyboardInterrupt:
+            sys.stdout.write('\nSkipping example.\n\n')
 
+    examples.append(wrapped)
     return wrapped
 
 
@@ -105,13 +113,82 @@ def example8():
     for i in pbar((i for i in range(80))):
         time.sleep(0.01)
 
+@example
+def example9():
+    pbar = ProgressBar(widgets=['Working: ', AnimatedMarker()])
+    for i in pbar((i for i in range(50))):
+        time.sleep(.08)
+
+@example
+def example10():
+    widgets = ['Processed: ', Counter(), ' lines (', Timer(), ')']
+    pbar = ProgressBar(widgets=widgets)
+    for i in pbar((i for i in range(150))):
+        time.sleep(0.1)
+
+@example
+def example11():
+    widgets = [FormatLabel('Processed: %(value)d lines (in: %(elapsed)s)')]
+    pbar = ProgressBar(widgets=widgets)
+    for i in pbar((i for i in range(150))):
+        time.sleep(0.1)
+
+@example
+def example12():
+    widgets = ['Balloon: ', AnimatedMarker(markers='.oO@* ')]
+    pbar = ProgressBar(widgets=widgets)
+    for i in pbar((i for i in range(24))):
+        time.sleep(0.3)
+
+@example
+def example13():
+    # You may need python 3.x to see this correctly
+    try:
+        widgets = ['Arrows: ', AnimatedMarker(markers='←↖↑↗→↘↓↙')]
+        pbar = ProgressBar(widgets=widgets)
+        for i in pbar((i for i in range(24))):
+            time.sleep(0.3)
+    except UnicodeError: sys.stdout.write('Unicode error: skipping example')
+
+@example
+def example14():
+    # You may need python 3.x to see this correctly
+    try:
+        widgets = ['Arrows: ', AnimatedMarker(markers='◢◣◤◥')]
+        pbar = ProgressBar(widgets=widgets)
+        for i in pbar((i for i in range(24))):
+            time.sleep(0.3)
+    except UnicodeError: sys.stdout.write('Unicode error: skipping example')
+
+@example
+def example15():
+    # You may need python 3.x to see this correctly
+    try:
+        widgets = ['Wheels: ', AnimatedMarker(markers='◐◓◑◒')]
+        pbar = ProgressBar(widgets=widgets)
+        for i in pbar((i for i in range(24))):
+            time.sleep(0.3)
+    except UnicodeError: sys.stdout.write('Unicode error: skipping example')
+
+@example
+def example16():
+    widgets = [FormatLabel('Bouncer: value %(value)d - '), BouncingBar()]
+    pbar = ProgressBar(widgets=widgets)
+    for i in pbar((i for i in range(180))):
+        time.sleep(0.05)
+
+@example
+def example17():
+    widgets = [FormatLabel('Animated Bouncer: value %(value)d - '),
+               BouncingBar(marker=RotatingMarker())]
+
+    pbar = ProgressBar(widgets=widgets)
+    for i in pbar((i for i in range(180))):
+        time.sleep(0.05)
+
+
 if __name__ == '__main__':
-    example0()
-    example1()
-    example2()
-    example3()
-    example4()
-    example5()
-    example6()
-    example7()
-    example8()
+    try:
+        for example in examples: example()
+    except KeyboardInterrupt:
+        sys.stdout('\nQuitting examples.\n')
