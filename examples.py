@@ -6,14 +6,27 @@ import time
 from progressbar import ProgressBar, Percentage, Bar, ETA, FileTransferSpeed, \
      RotatingMarker, ReverseBar, SimpleProgress
 
+def example(fn):
+    try: name = 'Example %d' % int(fn.__name__[7:])
+    except: name = fn.__name__
+
+    def wrapped():
+        sys.stdout.write('Running: %s\n' % name)
+        fn()
+        sys.stdout.write('Finished: %s\n\n' % name)
+
+    return wrapped
+
+
+@example
 def example0():
     pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=300).start()
     for i in range(300):
         time.sleep(0.01)
         pbar.update(i+1)
     pbar.finish()
-    sys.stdout.write('\n')
 
+@example
 def example1():
     widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
                ' ', ETA(), ' ', FileTransferSpeed()]
@@ -22,8 +35,8 @@ def example1():
         # do something
         pbar.update(10*i+1)
     pbar.finish()
-    sys.stdout.write('\n')
 
+@example
 def example2():
     class CrazyFileTransferSpeed(FileTransferSpeed):
         "It's bigger between 45 and 80 percent"
@@ -42,8 +55,8 @@ def example2():
         # do something
         pbar.update(5*i+1)
     pbar.finish()
-    sys.stdout.write('\n')
 
+@example
 def example3():
     widgets = [Bar('>'), ' ', ETA(), ' ', ReverseBar('<')]
     pbar = ProgressBar(widgets=widgets, maxval=10000000).start()
@@ -51,8 +64,8 @@ def example3():
         # do something
         pbar.update(10*i+1)
     pbar.finish()
-    sys.stdout.write('\n')
 
+@example
 def example4():
     widgets = ['Test: ', Percentage(), ' ',
                Bar(marker='0',left='[',right=']'),
@@ -63,35 +76,34 @@ def example4():
         time.sleep(0.2)
         pbar.update(i)
     pbar.finish()
-    sys.stdout.write('\n')
 
+@example
 def example5():
     pbar = ProgressBar(widgets=[SimpleProgress()], maxval=17).start()
     for i in range(17):
         time.sleep(0.2)
         pbar.update(i + 1)
     pbar.finish()
-    sys.stdout.write('\n')
 
+@example
 def example6():
     pbar = ProgressBar().start()
     for i in range(100):
         time.sleep(0.01)
         pbar.update(i + 1)
     pbar.finish()
-    sys.stdout.write('\n')
 
+@example
 def example7():
     pbar = ProgressBar()  # Progressbar can guess maxval automatically.
     for i in pbar(range(80)):
         time.sleep(0.01)
-    sys.stdout.write('\n')
 
+@example
 def example8():
     pbar = ProgressBar(maxval=80)  # Progressbar can't guess maxval.
     for i in pbar((i for i in range(80))):
         time.sleep(0.01)
-    sys.stdout.write('\n')
 
 if __name__ == '__main__':
     example0()
