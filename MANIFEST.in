@@ -1,3 +1,0 @@
-include README MANIFEST MANIFEST.in LICENSE
-include setup.py
-include progressbar.py

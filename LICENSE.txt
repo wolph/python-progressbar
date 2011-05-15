@@ -3,7 +3,7 @@ GNU LGPL license or BSD license (or both).
 
 ---
 
-progressbar - Text progressbar library for python.
+progressbar - Text progress bar library for python.
 Copyright (C) 2005 Nilton Volpato
 
 This library is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 ---
 
-progressbar - Text progressbar library for python
+progressbar - Text progress bar library for python
 Copyright (c) 2008 Nilton Volpato
 
 All rights reserved.
