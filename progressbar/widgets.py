@@ -25,10 +25,13 @@ from __future__ import division
 import datetime
 import math
 
-try: from abc import ABCMeta, abstractmethod
+try:
+    from abc import ABCMeta, abstractmethod
 except ImportError:
-   ABCMeta = None
-   abstractmethod = lambda fn: fn
+    AbstractWidget = object
+    abstractmethod = lambda fn: fn
+else:
+    AbstractWidget = ABCMeta('AbstractWidget', (object,), {})
 
 
 def format_updatable(updatable, pbar):
@@ -36,7 +39,7 @@ def format_updatable(updatable, pbar):
     else: return updatable
 
 
-class Widget(object):
+class Widget(AbstractWidget):
     '''The base class for all widgets
 
     The ProgressBar will call the widget's update value when the widget should
@@ -46,7 +49,6 @@ class Widget(object):
     The boolean TIME_SENSITIVE informs the ProgressBar that it should be
     updated more often because it is time sensitive.
     '''
-    if ABCMeta is not None: __metaclass__ = ABCMeta
 
     TIME_SENSITIVE = False
     __slots__ = ()
