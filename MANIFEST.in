@@ -1,0 +1,2 @@
+include README.txt LICENSE.txt
+include examples.py
