@@ -253,17 +253,20 @@ class Bar(WidgetHFill):
     def update(self, pbar, width):
         'Updates the progress bar and its subcomponents'
 
-        left, marker, right = (format_updatable(i, pbar) for i in
+        left, marked, right = (format_updatable(i, pbar) for i in
                                (self.left, self.marker, self.right))
 
         width -= len(left) + len(right)
-        # Marker must *always* have length of 1
-        marker *= int(pbar.currval / pbar.maxval * width)
+        # Marked must *always* have length of 1
+        if pbar.maxval:
+          marked *= int(pbar.currval / pbar.maxval * width)
+        else:
+          marked = ''
 
         if self.fill_left:
-            return '%s%s%s' % (left, marker.ljust(width, self.fill), right)
+            return '%s%s%s' % (left, marked.ljust(width, self.fill), right)
         else:
-            return '%s%s%s' % (left, marker.rjust(width, self.fill), right)
+            return '%s%s%s' % (left, marked.rjust(width, self.fill), right)
 
 
 class ReverseBar(Bar):
