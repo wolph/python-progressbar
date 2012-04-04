@@ -165,6 +165,19 @@ class AnimatedMarker(Widget):
 RotatingMarker = AnimatedMarker
 
 
+class Count(Widget):
+    'Display the total and current count'
+
+    __slots__ = ('format',)
+
+    def __init__(self, format='% *d/%d'):
+        self.format = format
+
+    def update(self, pbar):
+        decimals = int(math.ceil(math.log10(pbar.maxval)))
+        return self.format % (decimals, pbar.currval, pbar.maxval)
+
+
 class Counter(Widget):
     'Displays the current count'
 
