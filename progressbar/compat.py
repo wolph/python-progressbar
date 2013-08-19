@@ -35,8 +35,9 @@ if not hasattr(__builtins__, 'next'):
 
 # Python < 2.5 does not have "any"
 if not hasattr(__builtins__, 'any'):
-   def any(iterator):
-      for item in iterator:
-         if item: return True
+    def any(iterator):
+        for item in iterator:
+            if item:
+                return True
 
-      return False
+        return False

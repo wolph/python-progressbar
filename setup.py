@@ -11,10 +11,11 @@ try:
     info = 'progressbar/__init__.py'
 
     if (not os.path.exists(readme) or
-        os.stat(info).st_mtime > os.stat(readme).st_mtime):
+            os.stat(info).st_mtime > os.stat(readme).st_mtime):
 
-        open(readme,'w').write(progressbar.__doc__)
-except: pass
+        open(readme, 'w').write(progressbar.__doc__)
+except:
+    pass
 
 setup(
     name='progressbar',
