@@ -56,6 +56,8 @@ try:
 except ImportError:
     pass
 
+from widgets import *
+
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
 __date__ = '2012-02-20'
@@ -182,6 +184,12 @@ class ProgressBar(object):
         except StopIteration:
             self.finish()
             raise
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.finish()
+
+    def __enter__(self):
+        return self.start()
 
     # Create an alias so that Python 2.x won't complain about not being
     # an iterator.

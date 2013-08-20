@@ -31,9 +31,16 @@ def example(fn):
 
 
 @example
+def with_example0():
+    with ProgressBar(maxval=100) as progress:
+        for i in range(100):
+            time.sleep(0.01)
+            progress.update(i)
+
+@example
 def example0():
-    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=300).start()
-    for i in range(300):
+    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=100).start()
+    for i in range(100):
         time.sleep(0.01)
         pbar.update(i + 1)
     pbar.finish()
