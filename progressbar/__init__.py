@@ -29,6 +29,7 @@ The ProgressBar class manages the current progress, and the format of the line
 is given by a number of widgets. A widget is an object that may display
 differently depending on the state of the progress bar. There are three types
 of widgets:
+
  - a string, which always shows itself
 
  - a ProgressBarWidget, which may return a different value every time its
@@ -61,7 +62,7 @@ from widgets import *
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
 __date__ = '2012-02-20'
-__version__ = '2.3.1'
+__version__ = '2.4.0'
 
 
 class UnknownLength:
