@@ -67,7 +67,7 @@ from widgets import *
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
 __date__ = '2012-02-20'
-__version__ = '2.4.0'
+__version__ = '2.4.1'
 
 
 class UnknownLength:
