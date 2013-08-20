@@ -17,3 +17,6 @@ of widgets:
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
+
+To install just use `pip install progressbar2`
+
