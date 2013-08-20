@@ -39,6 +39,15 @@ def with_example0():
 
 
 @example
+def with_example1():
+    with ProgressBar(maxval=10, redirect_stdout=True) as p:
+        for i in range(10):
+            p.update(i)
+            print 'Something %02d.' % i
+            time.sleep(0.1)
+
+
+@example
 def example0():
     pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=100).start()
     for i in range(100):

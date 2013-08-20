@@ -57,6 +57,11 @@ try:
 except ImportError:
     pass
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 from widgets import *
 
 __author__ = 'Rick van Hattem'
@@ -119,14 +124,16 @@ class ProgressBar(object):
                  'left_justify', 'maxval', 'next_update', 'num_intervals',
                  'poll', 'seconds_elapsed', 'signal_set', 'start_time',
                  'term_width', 'update_interval', 'widgets',
-                 '_time_sensitive', '__iterable')
+                 '_time_sensitive', '__iterable', 'redirect_stderr',
+                 'redirect_stdout', '_stderr', '_stdout')
 
     _DEFAULT_MAXVAL = 100
     _DEFAULT_TERMSIZE = 80
     _DEFAULT_WIDGETS = [Percentage(), ' ', Bar()]
 
     def __init__(self, maxval=None, widgets=None, term_width=None, poll=0.1,
-                 left_justify=True, fd=sys.stderr):
+                 left_justify=True, fd=sys.stderr, redirect_stderr=False,
+                 redirect_stdout=False):
         '''Initializes a progress bar with sane defaults'''
 
         # Don't share a reference with any other progress bars
@@ -137,6 +144,8 @@ class ProgressBar(object):
         self.widgets = widgets
         self.fd = fd
         self.left_justify = left_justify
+        self.redirect_stderr = redirect_stderr
+        self.redirect_stdout = redirect_stdout
 
         self.signal_set = False
         if term_width is not None:
@@ -281,10 +290,22 @@ class ProgressBar(object):
         if self.start_time is None:
             raise RuntimeError('You must call "start" before calling "update"')
 
+        if self.redirect_stderr and sys.stderr.tell():
+            self.fd.write('\r' + ' ' * self.term_width + '\r')
+            self._stderr.write(sys.stderr.getvalue())
+            self._stderr.flush()
+            sys.stderr = StringIO()
+
+        if self.redirect_stdout and sys.stdout.tell():
+            self.fd.write('\r' + ' ' * self.term_width + '\r')
+            self._stdout.write(sys.stdout.getvalue())
+            self._stdout.flush()
+            sys.stdout = StringIO()
+
         now = time.time()
         self.seconds_elapsed = now - self.start_time
         self.next_update = self.currval + self.update_interval
-        self.fd.write(self._format_line() + '\r')
+        self.fd.write('\r' + self._format_line())
         self.last_update_time = now
 
     def start(self):
@@ -298,6 +319,14 @@ class ProgressBar(object):
         ...
         >>> pbar.finish()
         '''
+
+        if self.redirect_stderr:
+            self._stderr = sys.stderr
+            sys.stderr = StringIO()
+
+        if self.redirect_stdout:
+            self._stdout = sys.stdout
+            sys.stdout = StringIO()
 
         if self.maxval is None:
             self.maxval = self._DEFAULT_MAXVAL
@@ -323,6 +352,15 @@ class ProgressBar(object):
         self.fd.write('\n')
         if self.signal_set:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+
+        if self.redirect_stderr:
+            self._stderr.write(sys.stderr.getvalue())
+            sys.stderr = self._stderr
+
+        if self.redirect_stdout:
+            self._stdout.write(sys.stdout.getvalue())
+            sys.stdout = self._stdout
+
 
 if __name__ == '__main__':
     import doctest
