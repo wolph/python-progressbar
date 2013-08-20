@@ -37,6 +37,7 @@ def with_example0():
             time.sleep(0.01)
             progress.update(i)
 
+
 @example
 def example0():
     pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=100).start()

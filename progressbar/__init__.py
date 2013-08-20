@@ -76,15 +76,17 @@ class ProgressBar(object):
     A common way of using it is like:
     >>> pbar = ProgressBar().start()
     >>> for i in range(100):
-    ...    # do something
-    ...    pbar.update(i+1)
+    ...     pbar.update(i+1)
+    ...     # do something
     ...
     >>> pbar.finish()
 
     You can also use a ProgressBar as an iterator:
     >>> progress = ProgressBar()
+    >>> some_iterable = range(100)
     >>> for i in progress(some_iterable):
-    ...    # do something
+    ...     # do something
+    ...     pass
     ...
 
     Since the progress bar is incredibly customizable you can specify
@@ -321,3 +323,7 @@ class ProgressBar(object):
         self.fd.write('\n')
         if self.signal_set:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
