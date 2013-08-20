@@ -1,4 +1,5 @@
 Text progress bar library for Python.
+------------------------------------------------------------------------------
 
 A text progress bar is typically used to display the progress of a long
 running operation, providing a visual cue that processing is underway.
@@ -7,6 +8,7 @@ The ProgressBar class manages the current progress, and the format of the line
 is given by a number of widgets. A widget is an object that may display
 differently depending on the state of the progress bar. There are three types
 of widgets:
+
  - a string, which always shows itself
 
  - a ProgressBarWidget, which may return a different value every time its
@@ -18,5 +20,8 @@ of widgets:
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
 
-To install just use `pip install progressbar2`
+To install:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    pip install progressbar2
 
