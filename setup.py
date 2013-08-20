@@ -18,7 +18,7 @@ except:
     pass
 
 setup(
-    name='progressbar',
+    name='progressbar2',
     version=progressbar.__version__,
     packages=find_packages(),
 
