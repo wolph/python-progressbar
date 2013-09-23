@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 import sys
 import time
 
@@ -34,6 +36,7 @@ def example(fn):
 def with_example0():
     with ProgressBar(maxval=10) as progress:
         for i in range(10):
+            # do something
             time.sleep(0.001)
             progress.update(i)
 
@@ -42,8 +45,8 @@ def with_example0():
 def with_example1():
     with ProgressBar(maxval=10, redirect_stdout=True) as p:
         for i in range(10):
+            # do something
             p.update(i)
-            print 'Something %02d.' % i
             time.sleep(0.001)
 
 
@@ -51,6 +54,7 @@ def with_example1():
 def example0():
     pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=10).start()
     for i in range(10):
+        # do something
         time.sleep(0.001)
         pbar.update(i + 1)
     pbar.finish()
@@ -241,41 +245,35 @@ def with_example18():
 @example
 def with_example19():
     with ProgressBar(maxval=1) as progress:
-        e = None
         try:
             progress.update(2)
-        except ValueError, e:
+        except ValueError:
             pass
-        assert e
 
 
 @example
 def with_example20():
     progress = ProgressBar(maxval=1)
-    e = None
     try:
         progress.update(1)
-    except RuntimeError, e:
+    except RuntimeError:
         pass
-    assert e
 
 
 @example
 def with_example21():
     with ProgressBar(maxval=1, redirect_stderr=True) as progress:
-        print >>sys.stderr, ''
+        print('', file=sys.stderr)
         progress.update(0)
 
 
 @example
 def with_example22():
-    e = None
     try:
         with ProgressBar(maxval=-1) as progress:
             progress.start()
-    except ValueError, e:
+    except ValueError:
         pass
-    assert e
 
 
 @example

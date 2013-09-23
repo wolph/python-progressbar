@@ -42,7 +42,7 @@ The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
 '''
 
-from __future__ import division
+from __future__ import division, absolute_import, with_statement
 
 import math
 import os
@@ -61,9 +61,12 @@ except ImportError:  # pragma: no cover
 try:
     from cStringIO import StringIO
 except ImportError:  # pragma: no cover
-    from StringIO import StringIO
+    try:
+        from StringIO import StringIO
+    except ImportError:
+        from io import StringIO
 
-from widgets import *
+from progressbar.widgets import *
 
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
@@ -122,13 +125,6 @@ class ProgressBar(object):
                         update
      - percentage(): progress in percent [0..100]
     '''
-
-    __slots__ = ('currval', 'fd', 'finished', 'last_update_time',
-                 'left_justify', 'maxval', 'next_update', 'num_intervals',
-                 'poll', 'seconds_elapsed', 'signal_set', 'start_time',
-                 'term_width', 'update_interval', 'widgets',
-                 '_time_sensitive', '__iterable', 'redirect_stderr',
-                 'redirect_stdout', '_stderr', '_stdout')
 
     _DEFAULT_MAXVAL = 100
     _DEFAULT_TERMSIZE = 80

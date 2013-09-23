@@ -20,7 +20,7 @@
 
 '''Default ProgressBar widgets'''
 
-from __future__ import division
+from __future__ import division, absolute_import, with_statement
 
 import datetime
 import math
@@ -51,7 +51,6 @@ class Widget(AbstractWidget):
     '''
 
     TIME_SENSITIVE = False
-    __slots__ = ()
 
     @abc.abstractmethod
     def update(self, pbar):
@@ -83,7 +82,6 @@ class Timer(Widget):
 
     'Widget which displays the elapsed seconds.'
 
-    __slots__ = ('format',)
     TIME_SENSITIVE = True
 
     def __init__(self, format='Elapsed Time: %s'):
@@ -126,7 +124,6 @@ class FileTransferSpeed(Widget):
 
     format = '%6.2f %s%s/s'
     prefixes = ' kMGTPEZY'
-    __slots__ = ('unit', 'format')
 
     def __init__(self, unit='B'):
         self.unit = unit
@@ -150,7 +147,6 @@ class AnimatedMarker(Widget):
     it were rotating.
     '''
 
-    __slots__ = ('markers', 'curmark')
 
     def __init__(self, markers='|/-\\'):
         self.markers = markers
@@ -174,7 +170,6 @@ class Counter(Widget):
 
     'Displays the current count'
 
-    __slots__ = ('format',)
 
     def __init__(self, format='%d'):
         self.format = format
@@ -205,7 +200,6 @@ class FormatLabel(Timer):
         'value': ('currval', None)
     }
 
-    __slots__ = ('format',)
 
     def __init__(self, format):
         self.format = format
@@ -230,7 +224,6 @@ class SimpleProgress(Widget):
 
     'Returns progress as a count of the total (e.g.: "5 of 47")'
 
-    __slots__ = ('sep',)
 
     def __init__(self, sep=' of '):
         self.sep = sep
@@ -243,7 +236,6 @@ class Bar(WidgetHFill):
 
     'A progress bar which stretches to fill the line.'
 
-    __slots__ = ('marker', 'left', 'right', 'fill', 'fill_left')
 
     def __init__(self, marker='#', left='|', right='|', fill=' ',
                  fill_left=True):
