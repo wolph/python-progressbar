@@ -4,7 +4,7 @@ progressbar Package
 :mod:`progressbar` Package
 --------------------------
 
-.. automodule:: progressbar.__init__
+.. automodule:: progressbar
     :members:
     :undoc-members:
     :show-inheritance:

@@ -79,6 +79,7 @@ class ProgressBar(object):
     '''The ProgressBar class which updates and prints the bar.
 
     A common way of using it is like:
+
     >>> pbar = ProgressBar().start()
     >>> for i in range(100):
     ...     pbar.update(i+1)
@@ -87,6 +88,7 @@ class ProgressBar(object):
     >>> pbar.finish()
 
     You can also use a ProgressBar as an iterator:
+
     >>> progress = ProgressBar()
     >>> some_iterable = range(100)
     >>> for i in progress(some_iterable):
@@ -312,6 +314,7 @@ class ProgressBar(object):
         '''Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
+
         >>> pbar = ProgressBar().start()
         >>> for i in range(100):
         ...    # do something
