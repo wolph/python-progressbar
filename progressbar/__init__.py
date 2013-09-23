@@ -54,12 +54,12 @@ try:
     from fcntl import ioctl
     from array import array
     import termios
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 try:
     from cStringIO import StringIO
-except ImportError:
+except ImportError:  # pragma: no cover
     from StringIO import StringIO
 
 from widgets import *
@@ -157,9 +157,9 @@ class ProgressBar(object):
                 self._handle_resize()
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
-            except (SystemExit, KeyboardInterrupt):
+            except (SystemExit, KeyboardInterrupt):  # pragma: no cover
                 raise
-            except:
+            except:  # pragma: no cover
                 self.term_width = self._env_size()
 
         self.__iterable = None
@@ -287,10 +287,10 @@ class ProgressBar(object):
 
             self.currval = value
 
-        if not self._need_update():
-            return
         if self.start_time is None:
             raise RuntimeError('You must call "start" before calling "update"')
+        if not self._need_update():
+            return
 
         if self.redirect_stderr and sys.stderr.tell():
             self.fd.write('\r' + ' ' * self.term_width + '\r')
@@ -364,7 +364,3 @@ class ProgressBar(object):
             self._stdout.write(sys.stdout.getvalue())
             sys.stdout = self._stdout
 
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

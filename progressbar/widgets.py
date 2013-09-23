@@ -24,14 +24,11 @@ from __future__ import division
 
 import datetime
 import math
+import abc
 
-try:
-    from abc import ABCMeta, abstractmethod
-except ImportError:
-    AbstractWidget = object
-    abstractmethod = lambda fn: fn
-else:
-    AbstractWidget = ABCMeta('AbstractWidget', (object,), {})
+
+class AbstractWidget(object):
+    __metaclass__ = abc.ABCMeta
 
 
 def format_updatable(updatable, pbar):
@@ -56,7 +53,7 @@ class Widget(AbstractWidget):
     TIME_SENSITIVE = False
     __slots__ = ()
 
-    @abstractmethod
+    @abc.abstractmethod
     def update(self, pbar):
         '''Updates the widget.
 
@@ -73,7 +70,7 @@ class WidgetHFill(Widget):
     all have the same width, and together will fill the line.
     '''
 
-    @abstractmethod
+    @abc.abstractmethod
     def update(self, pbar, width):
         '''Updates the widget providing the total width the widget must fill.
 
@@ -223,7 +220,7 @@ class FormatLabel(Timer):
                     context[name] = value
                 else:
                     context[name] = transform(value)
-            except:
+            except:  # pragma: no cover
                 pass
 
         return self.format % context
@@ -274,7 +271,7 @@ class Bar(WidgetHFill):
         # Marked must *always* have length of 1
         if pbar.maxval:
             marked *= int(pbar.currval / pbar.maxval * width)
-        else:
+        else:  # pragma: no cover
             marked = ''
 
         if self.fill_left:
