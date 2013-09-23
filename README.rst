@@ -25,3 +25,7 @@ To install:
 
     pip install progressbar2
 
+Documentation:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+http://progressbar-2.readthedocs.org/en/latest/
