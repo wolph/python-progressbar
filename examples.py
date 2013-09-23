@@ -262,6 +262,13 @@ def with_example20():
 
 @example
 def with_example21():
+    with ProgressBar(maxval=1, redirect_stdout=True) as progress:
+        print('', file=sys.stdout)
+        progress.update(0)
+
+
+@example
+def with_example21():
     with ProgressBar(maxval=1, redirect_stderr=True) as progress:
         print('', file=sys.stderr)
         progress.update(0)
