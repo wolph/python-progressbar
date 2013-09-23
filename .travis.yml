@@ -1,0 +1,14 @@
+language: python
+python:
+  - "2.7"
+# command to install dependencies
+install:
+  - pip install . --use-mirrors
+  - pip install coveralls --use-mirrors
+# command to run tests
+script:
+    - nosetests --with-coverage
+
+after_success:
+    - coveralls
+
