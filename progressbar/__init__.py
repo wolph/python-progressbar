@@ -49,6 +49,7 @@ import os
 import signal
 import sys
 import time
+from datetime import date
 
 try:
     from fcntl import ioctl
@@ -66,8 +67,8 @@ from widgets import *
 
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
-__date__ = '2012-02-20'
-__version__ = '2.4.1'
+__date__ = str(date.today())
+__version__ = '2.5.0'
 
 
 class UnknownLength:
