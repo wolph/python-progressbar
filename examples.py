@@ -278,6 +278,19 @@ def with_example22():
     assert e
 
 
+@example
+def example23():
+    widgets = [BouncingBar(marker=RotatingMarker())]
+    with ProgressBar(widgets=widgets, maxval=20, term_width=10) as progress:
+        for i in range(20):
+            progress.update(i)
+
+    widgets = [BouncingBar(marker=RotatingMarker(), fill_left=False)]
+    with ProgressBar(widgets=widgets, maxval=20, term_width=10) as progress:
+        for i in range(20):
+            progress.update(i)
+
+
 if __name__ == '__main__':
     try:
         for example in examples:

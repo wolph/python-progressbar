@@ -1,0 +1,15 @@
+[run]
+branch = True
+source =
+    progressbar
+    tests
+omit =
+    */mock/*
+    */nose/*
+[paths]
+source =
+    progressbar
+[report]
+exclude_lines =
+    pragma: no cover
+    @abc.abstractmethod
