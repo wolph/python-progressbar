@@ -360,4 +360,3 @@ class ProgressBar(object):
         if self.redirect_stdout:
             self._stdout.write(sys.stdout.getvalue())
             sys.stdout = self._stdout
-

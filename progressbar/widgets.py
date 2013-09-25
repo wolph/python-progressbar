@@ -147,7 +147,6 @@ class AnimatedMarker(Widget):
     it were rotating.
     '''
 
-
     def __init__(self, markers='|/-\\'):
         self.markers = markers
         self.curmark = -1
@@ -169,7 +168,6 @@ RotatingMarker = AnimatedMarker
 class Counter(Widget):
 
     'Displays the current count'
-
 
     def __init__(self, format='%d'):
         self.format = format
@@ -200,7 +198,6 @@ class FormatLabel(Timer):
         'value': ('currval', None)
     }
 
-
     def __init__(self, format):
         self.format = format
 
@@ -224,7 +221,6 @@ class SimpleProgress(Widget):
 
     'Returns progress as a count of the total (e.g.: "5 of 47")'
 
-
     def __init__(self, sep=' of '):
         self.sep = sep
 
@@ -235,7 +231,6 @@ class SimpleProgress(Widget):
 class Bar(WidgetHFill):
 
     'A progress bar which stretches to fill the line.'
-
 
     def __init__(self, marker='#', left='|', right='|', fill=' ',
                  fill_left=True):
