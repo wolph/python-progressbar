@@ -30,7 +30,7 @@ setup(
     author_email=progressbar.__author_email__,
     maintainer_email=progressbar.__author_email__,
 
-    url='http://code.google.com/p/python-progressbar',
+    url='https://github.com/WoLpH/python-progressbar',
     license='LICENSE.txt',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
