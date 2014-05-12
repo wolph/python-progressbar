@@ -206,6 +206,11 @@ class ProgressBar(object):
     # an iterator.
     next = __next__
 
+    def __iadd__(self, value):
+        'Updates the ProgressBar by adding a new value.'
+        self.update(self.currval + value)
+        return self
+
     def _env_size(self):
         'Tries to find the term_width from the environment.'
 
