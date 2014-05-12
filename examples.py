@@ -262,13 +262,6 @@ def with_example20():
 
 @example
 def with_example21():
-    with ProgressBar(maxval=1, redirect_stdout=True) as progress:
-        print('', file=sys.stdout)
-        progress.update(0)
-
-
-@example
-def with_example21():
     with ProgressBar(maxval=1, redirect_stderr=True) as progress:
         print('', file=sys.stderr)
         progress.update(0)
@@ -294,6 +287,27 @@ def example23():
     with ProgressBar(widgets=widgets, maxval=20, term_width=10) as progress:
         for i in range(20):
             progress.update(i)
+
+
+@example
+def example24():
+    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=10).start()
+    for i in range(10):
+        # do something
+        time.sleep(0.001)
+        pbar += 1
+    pbar.finish()
+
+
+@example
+def example25():
+    widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
+               ' ', ETA(), ' ', FileTransferSpeed()]
+    pbar = ProgressBar(widgets=widgets, maxval=1000).start()
+    for i in range(100):
+        # do something
+        pbar += 10
+    pbar.finish()
 
 
 if __name__ == '__main__':
