@@ -15,14 +15,9 @@ examples = []
 
 
 def example(fn):
-    try:
-        name = 'Example %d' % int(fn.__name__[7:])
-    except:
-        name = fn.__name__
-
     def wrapped():
         try:
-            sys.stdout.write('Running: %s\n' % name)
+            sys.stdout.write('Running: %s\n' % fn.__name__)
             fn()
             sys.stdout.write('\n')
         except KeyboardInterrupt:
