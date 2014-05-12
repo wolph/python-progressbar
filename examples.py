@@ -261,7 +261,14 @@ def with_example20():
 
 
 @example
-def with_example21():
+def with_example21a():
+    with ProgressBar(maxval=1, redirect_stdout=True) as progress:
+        print('', file=sys.stdout)
+        progress.update(0)
+
+
+@example
+def with_example21b():
     with ProgressBar(maxval=1, redirect_stderr=True) as progress:
         print('', file=sys.stderr)
         progress.update(0)
@@ -303,7 +310,7 @@ def example24():
 def example25():
     widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
                ' ', ETA(), ' ', FileTransferSpeed()]
-    pbar = ProgressBar(widgets=widgets, maxval=1000).start()
+    pbar = ProgressBar(widgets=widgets, maxval=1000, redirect_stdout=True).start()
     for i in range(100):
         # do something
         pbar += 10
