@@ -9,7 +9,7 @@ import time
 from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
     FileTransferSpeed, FormatLabel, Percentage, \
     ProgressBar, ReverseBar, RotatingMarker, \
-    SimpleProgress, Timer
+    SimpleProgress, Timer, AdaptiveETA
 
 examples = []
 
@@ -311,6 +311,18 @@ def example25():
         pbar += 10
     pbar.finish()
 
+@example
+def example26():
+    widgets = [Percentage(),
+               ' ', Bar(),
+               ' ', ETA(),
+               ' ', AdaptiveETA()]
+    pbar = ProgressBar(widgets=widgets, maxval=500)
+    pbar.start()
+    for i in range(500):
+        time.sleep(0.01 + (i < 100) * 0.01 + (i > 400) * 0.9)
+        pbar.update(i + 1)
+    pbar.finish()
 
 if __name__ == '__main__':
     try:
