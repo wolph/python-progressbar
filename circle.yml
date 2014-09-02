@@ -4,13 +4,15 @@ dependencies:
     - .pyenv
 
   pre:
-    - pyenv shell 2.6.8; pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv shell 2.7; pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv shell 3.1.5; pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv shell 3.2; pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv shell 3.3.3; pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv shell 3.4.1; pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv shell pypy-2.2.1; pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv shell 3.2 && which pip
+    - pyenv shell 3.2 && which python
+#   - pyenv shell 2.6.8; pip install --download-cache .pip-cache nose coverage tissue
+#   - pyenv shell 2.7; pip install --download-cache .pip-cache nose coverage tissue
+#   - pyenv shell 3.1.5; pip install --download-cache .pip-cache nose coverage tissue
+#   - pyenv shell 3.2; pip install --download-cache .pip-cache nose coverage tissue
+#   - pyenv shell 3.3.3; pip install --download-cache .pip-cache nose coverage tissue
+#   - pyenv shell 3.4.1; pip install --download-cache .pip-cache nose coverage tissue
+#   - pyenv shell pypy-2.2.1; pip install --download-cache .pip-cache nose coverage tissue
 
 test:
   override:
