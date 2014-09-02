@@ -6,27 +6,42 @@ dependencies:
   pre:
     - mkdir -p .pip-cache
     - pyenv install -ks 2.6.8
-    - pyenv shell 2.6.8 && pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv install -ks 2.7
-    - pyenv shell 2.7 && pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv install -ks 3.1.5
-    - pyenv shell 3.1.5 && pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv install -ks 3.2
-    - pyenv shell 3.2 && pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv install -ks 3.3.3
-    - pyenv shell 3.3.3 && pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv install -ks 3.4.1
-    - pyenv shell 3.4.1 && pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv install -ks pypy-2.2.1
-    - pyenv shell pypy-2.2.1 && pip install --download-cache .pip-cache nose coverage tissue
     - pyenv rehash
+    - pyenv shell 2.6.8
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -ks 2.7
+    - pyenv shell 2.7
+    - pyenv rehash
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -ks 3.1.5
+    - pyenv shell 3.1.5
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -ks 3.2
+    - pyenv shell 3.2
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -ks 3.3.3
+    - pyenv shell 3.3.3
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -ks 3.4.1
+    - pyenv shell 3.4.1
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -ks pypy-2.2.1
+    - pyenv shell pypy-2.2.1
+    - pip install --download-cache .pip-cache nose coverage tissue
 
 test:
   override:
-    - pyenv shell 2.6.8 && nosetests
-    - pyenv shell 2.7 && nosetests
-    - pyenv shell 3.1.5 && nosetests
-    - pyenv shell 3.2 && nosetests
-    - pyenv shell 3.3.3 && nosetests
-    - pyenv shell 3.4.1 && nosetests
-    - pyenv shell pypy-2.2.1 && nosetests
+    - pyenv shell 2.6.8
+    - nosetests
+    - pyenv shell 2.7
+    - nosetests
+    - pyenv shell 3.1.5
+    - nosetests
+    - pyenv shell 3.2
+    - nosetests
+    - pyenv shell 3.3.3
+    - nosetests
+    - pyenv shell 3.4.1
+    - nosetests
+    - pyenv shell pypy-2.2.1
+    - nosetests
