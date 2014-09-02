@@ -5,15 +5,12 @@ dependencies:
 
   pre:
     - mkdir -p .pip-cache
-    - pyenv install -ks 2.6.8
-    - pyenv rehash
-    - pyenv shell 2.6.8
-    - pyenv rehash
-    - pip install --download-cache .pip-cache nose coverage tissue
-    - pyenv rehash
-    - pyenv local 2.6.8
-    - pyenv rehash
-    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -ks 2.6.8; python -v
+    - pyenv rehash; python -v
+    - pyenv shell 2.6.8; pyenv rehash; python -v
+    - pyenv local 2.6.8; pyenv rehash; python -v
+      #- pip install --download-cache .pip-cache nose coverage tissue
+      #- pip install --download-cache .pip-cache nose coverage tissue
 #   - pip install --download-cache .pip-cache nose coverage tissue
 #   - pyenv install -ks 2.7
 #   - pyenv shell 2.7
