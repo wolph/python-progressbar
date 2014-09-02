@@ -105,6 +105,10 @@ class ETA(Timer):
 
     TIME_SENSITIVE = True
 
+    def _eta(self, pbar):
+        elapsed = pbar.seconds_elapsed
+        return elapsed * pbar.maxval / pbar.currval - elapsed
+
     def update(self, pbar):
         'Updates the widget to show the ETA or total time when finished.'
 
@@ -113,11 +117,9 @@ class ETA(Timer):
         elif pbar.finished:
             return 'Time: %s' % self.format_time(pbar.seconds_elapsed)
         else:
-            elapsed = pbar.seconds_elapsed
-            eta = elapsed * pbar.maxval / pbar.currval - elapsed
-            return 'ETA:  %s' % self.format_time(eta)
+            return 'ETA:  %s' % self.format_time(self._eta(pbar))
 
-class AdaptiveETA(Timer):
+class AdaptiveETA(ETA):
     """Widget which attempts to estimate the time of arrival.
 
     Uses a weighted average of two estimates:
@@ -130,36 +132,35 @@ class AdaptiveETA(Timer):
     """
 
     TIME_SENSITIVE = True
-    NUM_SAMPLES = 10
 
-    def _update_samples(self, currval, elapsed):
-        sample = (currval, elapsed)
-        if not hasattr(self, 'samples'):
-            self.samples = [sample] * (self.NUM_SAMPLES + 1)
-        else:
-            self.samples.append(sample)
-        return self.samples.pop(0)
+    def __init__(self, num_samples=10):
+        ETA.__init__(self)
+        self.num_samples = num_samples
+        self.samples = []
+        self.last_sample_val = None
 
-    def _eta(self, maxval, currval, elapsed):
-        return elapsed * maxval / float(currval) - elapsed
+    def _eta(self, pbar):
+        samples = self.samples
+        import sys
+        print >>sys.stderr, 'curr, last = %s, %s' % (pbar.currval, self.last_sample_val)
+        if pbar.currval != self.last_sample_val:
+            # Update the last sample counter, we only update if currval has
+            # changed
+            self.last_sample_val = pbar.currval
 
-    def update(self, pbar):
-        """Updates the widget to show the ETA or total time when finished."""
-        if pbar.currval == 0:
-            return 'ETA:  --:--:--'
-        elif pbar.finished:
-            return 'Time: %s' % self.format_time(pbar.seconds_elapsed)
-        else:
-            elapsed = pbar.seconds_elapsed
-            currval1, elapsed1 = self._update_samples(pbar.currval, elapsed)
-            eta = self._eta(pbar.maxval, pbar.currval, elapsed)
-            if pbar.currval > currval1:
-                etasamp = self._eta(pbar.maxval - currval1,
-                                    pbar.currval - currval1,
-                                    elapsed - elapsed1)
-                weight = (pbar.currval / float(pbar.maxval)) ** 0.5
-                eta = (1 - weight) * eta + weight * etasamp
-            return 'ETA:  %s' % self.format_time(eta)
+            # Add a sample but limit the size to `num_samples`
+            samples.append(pbar.seconds_elapsed)
+            if len(samples) > self.num_samples:
+                samples.pop(0)
+
+        if len(samples) <= 1:
+            # No samples so just return the normal ETA calculation
+            return ETA._eta(self, pbar)
+
+        todo = pbar.maxval - pbar.currval
+        per_item = float(samples[-1] - samples[0]) / len(samples)
+        return todo * per_item
+
 
 class FileTransferSpeed(Widget):
 

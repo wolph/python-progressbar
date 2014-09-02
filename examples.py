@@ -320,8 +320,18 @@ def example26():
     pbar = ProgressBar(widgets=widgets, maxval=500)
     pbar.start()
     for i in range(500):
-        time.sleep(0.01 + (i < 100) * 0.01 + (i > 400) * 0.9)
+        time.sleep(0.001 + (i < 100) * 0.0001 + (i > 400) * 0.009)
         pbar.update(i + 1)
+    pbar.finish()
+
+@example
+def example27():
+    # Testing AdaptiveETA when the value doesn't actually change
+    pbar = ProgressBar(widgets=[AdaptiveETA()], maxval=2, poll=0.0001)
+    pbar.start()
+    pbar.update(1)
+    time.sleep(0.001)
+    pbar.update(1)
     pbar.finish()
 
 if __name__ == '__main__':
