@@ -8,6 +8,7 @@ dependencies:
     - pyenv install -ks 2.6.8; python -c 'print __import__("sys").version'
     - pyenv rehash; python -c 'print __import__("sys").version'
     - pyenv shell 2.6.8; pyenv rehash; python -c 'print __import__("sys").version'
+    - pyenv global 2.6.8; pyenv rehash; python -c 'print __import__("sys").version'
     - pyenv local 2.6.8; pyenv rehash; python -c 'print __import__("sys").version'
       #- pip install --download-cache .pip-cache nose coverage tissue
       #- pip install --download-cache .pip-cache nose coverage tissue
