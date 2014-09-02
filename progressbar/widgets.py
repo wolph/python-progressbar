@@ -141,8 +141,6 @@ class AdaptiveETA(ETA):
 
     def _eta(self, pbar):
         samples = self.samples
-        import sys
-        print >>sys.stderr, 'curr, last = %s, %s' % (pbar.currval, self.last_sample_val)
         if pbar.currval != self.last_sample_val:
             # Update the last sample counter, we only update if currval has
             # changed
