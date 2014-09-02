@@ -1,7 +1,43 @@
 dependencies:
+  cache_directories:
+    - .pip-cache
   pre:
-    - pip install nose coverage tissue
+    - mkdir -p .pip-cache
+    - pyenv install -f 2.6.8
+    - pyenv local 2.6.8
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -f 2.7
+    - pyenv local 2.7
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -f 3.1.5
+    - pyenv local 3.1.5
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -f 3.2
+    - pyenv local 3.2
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -f 3.3.3
+    - pyenv local 3.3.3
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -f 3.4.1
+    - pyenv local 3.4.1
+    - pip install --download-cache .pip-cache nose coverage tissue
+    - pyenv install -f pypy-2.2.1
+    - pyenv local pypy-2.2.1
+    - pip install --download-cache .pip-cache nose coverage tissue
 
 test:
   override:
+    - pyenv local 2.6.8
+    - nosetests
+    - pyenv local 2.7
+    - nosetests
+    - pyenv local 3.1.5
+    - nosetests
+    - pyenv local 3.2
+    - nosetests
+    - pyenv local 3.3.3
+    - nosetests
+    - pyenv local 3.4.1
+    - nosetests
+    - pyenv local pypy-2.2.1
     - nosetests
