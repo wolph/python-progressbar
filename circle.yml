@@ -2,11 +2,29 @@
 machine:
   python:
     version: 2.6.8
+
+machine:
+  python:
     version: 2.7
+
+machine:
+  python:
     version: 3.1.5
+
+machine:
+  python:
     version: 3.2
+
+machine:
+  python:
     version: 3.3.3
+
+machine:
+  python:
     version: 3.4.1
+
+machine:
+  python:
     version: pypy-2.2.1
 
 dependencies:
