@@ -137,10 +137,12 @@ class AdaptiveETA(ETA):
         ETA.__init__(self)
         self.num_samples = num_samples
         self.samples = []
+        self.sample_vals = []
         self.last_sample_val = None
 
     def _eta(self, pbar):
         samples = self.samples
+        sample_vals = self.sample_vals
         if pbar.currval != self.last_sample_val:
             # Update the last sample counter, we only update if currval has
             # changed
@@ -148,15 +150,18 @@ class AdaptiveETA(ETA):
 
             # Add a sample but limit the size to `num_samples`
             samples.append(pbar.seconds_elapsed)
+            sample_vals.append(pbar.currval)
             if len(samples) > self.num_samples:
                 samples.pop(0)
+                sample_vals.pop(0)
 
         if len(samples) <= 1:
             # No samples so just return the normal ETA calculation
             return ETA._eta(self, pbar)
 
         todo = pbar.maxval - pbar.currval
-        per_item = float(samples[-1] - samples[0]) / len(samples)
+        items = samples[-1] - samples[0]
+        per_item = float(samples[-1] - samples[0]) / items
         return todo * per_item
 
 
