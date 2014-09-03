@@ -120,16 +120,11 @@ class ETA(Timer):
             return 'ETA:  %s' % self.format_time(self._eta(pbar))
 
 class AdaptiveETA(ETA):
-    """Widget which attempts to estimate the time of arrival.
+    '''Widget which attempts to estimate the time of arrival.
 
-    Uses a weighted average of two estimates:
-      1) ETA based on the total progress and time elapsed so far
-      2) ETA based on the progress as per tha last 10 update reports
-
-    The weight depends on the current progress so that to begin with the
-    total progress is used and at the end only the most recent progress is
-    used.
-    """
+    Uses a sampled average of the speed based on the 10 last updates.
+    Very convenient for resuming the progress halfway.
+    '''
 
     TIME_SENSITIVE = True
 
