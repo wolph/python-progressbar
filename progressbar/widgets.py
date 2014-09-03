@@ -171,17 +171,59 @@ class FileTransferSpeed(Widget):
     def __init__(self, unit='B'):
         self.unit = unit
 
+    def _speed(self, pbar):
+        speed = pbar.currval / pbar.seconds_elapsed
+        power = int(math.log(speed, 1000))
+        scaled = speed / 1000. ** power
+        return scaled, power
+
     def update(self, pbar):
         'Updates the widget with the current SI prefixed speed.'
 
         if pbar.seconds_elapsed < 2e-6 or pbar.currval < 2e-6:  # =~ 0
             scaled = power = 0
         else:
-            speed = pbar.currval / pbar.seconds_elapsed
-            power = int(math.log(speed, 1000))
-            scaled = speed / 1000. ** power
+            scaled, power = self._speed(pbar)
 
         return self.format % (scaled, self.prefixes[power], self.unit)
+
+
+class AdaptiveTransferSpeed(FileTransferSpeed):
+
+    'Widget for showing the transfer speed, based on the last X samples'
+
+    def __init__(self, num_samples=10):
+        ETA.__init__(self)
+        self.num_samples = num_samples
+        self.samples = []
+        self.sample_vals = []
+        self.last_sample_val = None
+
+    def _speed(self, pbar):
+        samples = self.samples
+        sample_vals = self.sample_vals
+        if pbar.currval != self.last_sample_val:
+            # Update the last sample counter, we only update if currval has
+            # changed
+            self.last_sample_val = pbar.currval
+
+            # Add a sample but limit the size to `num_samples`
+            samples.append(pbar.seconds_elapsed)
+            sample_vals.append(pbar.currval)
+            if len(samples) > self.num_samples:
+                samples.pop(0)
+                sample_vals.pop(0)
+
+        if len(samples) <= 1:
+            # No samples so just return the parent's calculation
+            return FileTransferSpeed._speed(self, pbar)
+
+        items = sample_vals[-1] - sample_vals[0]
+        duration = float(samples[-1] - samples[0])
+        speed = items / duration
+        power = int(math.log(speed, 1000))
+        scaled = speed / 1000. ** power
+        return scaled, power
 
 
 class AnimatedMarker(Widget):
