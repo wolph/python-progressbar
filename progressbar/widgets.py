@@ -193,7 +193,7 @@ class AdaptiveTransferSpeed(FileTransferSpeed):
     'Widget for showing the transfer speed, based on the last X samples'
 
     def __init__(self, num_samples=10):
-        ETA.__init__(self)
+        FileTransferSpeed.__init__(self)
         self.num_samples = num_samples
         self.samples = []
         self.sample_vals = []

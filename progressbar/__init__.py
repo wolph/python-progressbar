@@ -71,7 +71,7 @@ from progressbar.widgets import *
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
 __date__ = str(date.today())
-__version__ = '2.6.6'
+__version__ = '2.6.7'
 
 
 class UnknownLength:
