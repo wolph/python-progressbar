@@ -160,8 +160,9 @@ class AdaptiveETA(ETA):
             return ETA._eta(self, pbar)
 
         todo = pbar.maxval - pbar.currval
-        items = samples[-1] - samples[0]
-        per_item = float(samples[-1] - samples[0]) / items
+        items = sample_vals[-1] - sample_vals[0]
+        duration = float(samples[-1] - samples[0])
+        per_item = duration / items
         return todo * per_item
 
 
