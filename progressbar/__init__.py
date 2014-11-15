@@ -128,16 +128,15 @@ class ProgressBar(object):
 
     _DEFAULT_MAXVAL = 100
     _DEFAULT_TERMSIZE = 80
-    _DEFAULT_WIDGETS = [Percentage(), ' ', Bar()]
 
     def __init__(self, maxval=None, widgets=None, term_width=None, poll=0.1,
                  left_justify=True, fd=sys.stderr, redirect_stderr=False,
                  redirect_stdout=False):
         '''Initializes a progress bar with sane defaults'''
 
-        # Don't share a reference with any other progress bars
         if widgets is None:
-            widgets = list(self._DEFAULT_WIDGETS)
+            # Don't share widgets with any other progress bars
+            widgets = self.default_widgets()
 
         self.maxval = maxval
         self.widgets = widgets
@@ -168,6 +167,12 @@ class ProgressBar(object):
         self.seconds_elapsed = 0
         self.start_time = None
         self.update_interval = 1
+
+    def default_widgets(self):
+        return [
+            Percentage(), ' (', SimpleProgress(), ')', ' ', Bar(), ' ',
+            Timer(), ' ', AdaptiveETA(), 
+        ]
 
     def __call__(self, iterable, maxval=None):
         'Use a ProgressBar to iterate through an iterable'
