@@ -169,14 +169,16 @@ class ProgressBar(object):
         self.start_time = None
         self.update_interval = 1
 
-    def __call__(self, iterable):
+    def __call__(self, iterable, maxval=None):
         'Use a ProgressBar to iterate through an iterable'
-
-        try:
-            self.maxval = len(iterable)
-        except:
-            if self.maxval is None:
-                self.maxval = UnknownLength
+        if maxval is None:
+            try:
+                self.maxval = len(iterable)
+            except:
+                if self.maxval is None:
+                    self.maxval = UnknownLength
+        else:
+            self.maxval = maxval
 
         self.__iterable = iter(iterable)
         return self

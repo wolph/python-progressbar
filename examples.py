@@ -338,6 +338,15 @@ def example27():
     pbar.update(1)
     pbar.finish()
 
+@example
+def example28():
+    # Testing using progressbar as an iterator with a max value
+    pbar = ProgressBar()
+
+    for n in pbar(iter(range(100)), 100):
+        # iter range is a way to get an iterator in both python 2 and 3
+        pass
+
 if __name__ == '__main__':
     try:
         for example in examples:
