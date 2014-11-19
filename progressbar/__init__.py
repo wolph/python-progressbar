@@ -71,7 +71,7 @@ from progressbar.widgets import *
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
 __date__ = str(date.today())
-__version__ = '2.6.8'
+__version__ = '2.6.9'
 
 
 class UnknownLength:
@@ -171,7 +171,7 @@ class ProgressBar(object):
     def default_widgets(self):
         return [
             Percentage(), ' (', SimpleProgress(), ')', ' ', Bar(), ' ',
-            Timer(), ' ', AdaptiveETA(), 
+            Timer(), ' ', AdaptiveETA(),
         ]
 
     def __call__(self, iterable, maxval=None):

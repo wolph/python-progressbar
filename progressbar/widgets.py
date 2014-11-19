@@ -119,6 +119,7 @@ class ETA(Timer):
         else:
             return 'ETA:  %s' % self.format_time(self._eta(pbar))
 
+
 class AdaptiveETA(ETA):
     '''Widget which attempts to estimate the time of arrival.
 
