@@ -7,7 +7,7 @@ import progressbar
 # TODO: I don't believe this should be in here. This should be done on package
 #       creation only
 try:
-    readme = 'README.txt'
+    readme = 'README.rst'
     info = 'progressbar/__init__.py'
 
     if (not os.path.exists(readme) or
