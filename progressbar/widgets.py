@@ -129,8 +129,8 @@ class AdaptiveETA(ETA):
 
     TIME_SENSITIVE = True
 
-    def __init__(self, num_samples=10):
-        ETA.__init__(self)
+    def __init__(self, num_samples=10, **kwargs):
+        ETA.__init__(self, **kwargs)
         self.num_samples = num_samples
         self.samples = []
         self.sample_vals = []
