@@ -1,4 +1,8 @@
 Text progress bar library for Python.
+=====================================
+
+Introduction
+------------
 
 A text progress bar is typically used to display the progress of a long
 running operation, providing a visual cue that processing is underway.
@@ -18,3 +22,16 @@ of widgets:
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
+
+Links
+-----
+
+* Documentation
+    - http://progressbar-2.readthedocs.org/en/latest/
+* Source
+    - https://github.com/WoLpH/python-progressbar
+* Bug reports 
+    - https://github.com/WoLpH/python-progressbar/issues
+* Package homepage
+    - https://pypi.python.org/pypi/progressbar2
+
