@@ -71,7 +71,7 @@ from progressbar.widgets import *
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
 __date__ = str(date.today())
-__version__ = '2.7.0'
+__version__ = '2.7.3'
 
 
 class UnknownLength:
@@ -231,7 +231,7 @@ class ProgressBar(object):
 
     def percentage(self):
         'Returns the progress as a percentage.'
-        return self.currval * 100.0 / self.maxval
+        return self.currval * 100.0 / (self.maxval or 1)
 
     percent = property(percentage)
 
@@ -298,7 +298,8 @@ class ProgressBar(object):
             self.currval = value
 
         if self.start_time is None:
-            raise RuntimeError('You must call "start" before calling "update"')
+            self.start()
+            self.update(value)
         if not self._need_update():
             return
 
