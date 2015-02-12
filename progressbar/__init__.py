@@ -52,7 +52,7 @@ import time
 from datetime import date
 
 try:
-    from fcntl import ioctl
+    import fcntl
     from array import array
     import termios
 except ImportError:  # pragma: no cover
@@ -66,7 +66,7 @@ except ImportError:  # pragma: no cover
     except ImportError:
         from io import StringIO
 
-from progressbar.widgets import *
+from progressbar.widgets import *  # NOQA
 
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
@@ -74,7 +74,7 @@ __date__ = str(date.today())
 __version__ = '2.7.3'
 
 
-class UnknownLength:
+class UnknownLength(object):
     pass
 
 
@@ -226,11 +226,15 @@ class ProgressBar(object):
     def _handle_resize(self, signum=None, frame=None):
         'Tries to catch resize signals sent from the terminal.'
 
-        h, w = array('h', ioctl(self.fd, termios.TIOCGWINSZ, '\0' * 8))[:2]
+        size = fcntl.ioctl(self.fd, termios.TIOCGWINSZ, '\0' * 8)
+        h, w = array('h', size)[:2]
         self.term_width = w
 
     def percentage(self):
         'Returns the progress as a percentage.'
+        assert self.maxval is not UnknownLength, \
+            'Need a maxval for a percentage'
+
         return self.currval * 100.0 / (self.maxval or 1)
 
     percent = property(percentage)
