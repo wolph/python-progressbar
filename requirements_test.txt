@@ -2,3 +2,5 @@ flake8
 pytest
 pytest-cov
 pytest-cache
+pytest-pep8
+pytest-flakes

@@ -66,12 +66,54 @@ except ImportError:  # pragma: no cover
     except ImportError:
         from io import StringIO
 
-from progressbar.widgets import *  # NOQA
+from progressbar.widgets import (
+    AbstractWidget,
+    Widget,
+    WidgetHFill,
+    Timer,
+    ETA,
+    AdaptiveETA,
+    FileTransferSpeed,
+    AdaptiveTransferSpeed,
+    AnimatedMarker,
+    Counter,
+    Percentage,
+    FormatLabel,
+    SimpleProgress,
+    Bar,
+    ReverseBar,
+    BouncingBar,
+    format_updatable,
+    RotatingMarker,
+)
+
 
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
 __date__ = str(date.today())
 __version__ = '2.7.3'
+__all__ = [
+    'AbstractWidget',
+    'Widget',
+    'WidgetHFill',
+    'Timer',
+    'ETA',
+    'AdaptiveETA',
+    'FileTransferSpeed',
+    'AdaptiveTransferSpeed',
+    'AnimatedMarker',
+    'Counter',
+    'Percentage',
+    'FormatLabel',
+    'SimpleProgress',
+    'Bar',
+    'ReverseBar',
+    'BouncingBar',
+    'UnknownLength',
+    'ProgressBar',
+    'format_updatable',
+    'RotatingMarker',
+]
 
 
 class UnknownLength(object):
