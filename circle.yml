@@ -1,8 +1,4 @@
 dependencies:
-  cache_directories:
-    - .pip-cache
-    - .pyenv
-
   pre:
     - pip install -r requirements_test.txt
 
