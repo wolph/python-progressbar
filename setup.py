@@ -23,7 +23,6 @@ if __name__ == '__main__':
         name=metadata.__package_name__,
         version=metadata.__version__,
         packages=find_packages(),
-
         description=metadata.__doc__.split('\n')[0],
         long_description=metadata.__doc__,
         author=metadata.__author__,
