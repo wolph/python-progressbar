@@ -87,6 +87,8 @@ from progressbar.widgets import (
     RotatingMarker,
 )
 
+from .bar import ProgressBar, UnknownLength
+
 
 __author__ = 'Rick van Hattem'
 __author_email__ = 'Rick.van.Hattem@Fawo.nl'
@@ -114,7 +116,4 @@ __all__ = [
     'format_updatable',
     'RotatingMarker',
 ]
-
-
-from .bar import ProgressBar, UnknownLength
 
