@@ -19,8 +19,23 @@ class ProgressBarBase(collections.Iterable):
     pass
 
 
-class ResizableMixin(object):
+class ProgressBarMixinBase(object):
+    def __init__(self, redirect_stderr=False, redirect_stdout=False, **kwargs):
+        super(ProgressBarMixinBase, self).__init__(**kwargs)
+
+    def start(self):
+        pass
+
+    def update(self, value=None):
+        pass
+
+    def finish(self):
+        pass
+
+
+class ResizableMixin(ProgressBarMixinBase):
     _DEFAULT_TERMSIZE = 80
+
     def __init__(self, term_width=_DEFAULT_TERMSIZE, **kwargs):
         self.signal_set = False
         if term_width is not None:
@@ -54,24 +69,55 @@ class ResizableMixin(object):
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
 
 
-class StdRedirectMixin(object):
+class StdRedirectMixin(ProgressBarMixinBase):
     def __init__(self, redirect_stderr=False, redirect_stdout=False, **kwargs):
-        # super(StdRedirectMixin, self).__init__()
-        pass
+        super(StdRedirectMixin, self).__init__(**kwargs)
+        self.redirect_stderr = redirect_stderr
+        self.redirect_stdout = redirect_stdout
+
+        if self.redirect_stderr:
+            self._stderr = sys.stderr
+            sys.stderr = six.StringIO()
+
+        if self.redirect_stdout:
+            self._stdout = sys.stdout
+            sys.stdout = six.StringIO()
+
+    def update(self, value=None):
+        if self.redirect_stderr and sys.stderr.tell():
+            self.fd.write('\r' + ' ' * self.term_width + '\r')
+            self._stderr.write(sys.stderr.getvalue())
+            self._stderr.flush()
+            sys.stderr = six.StringIO()
+
+        if self.redirect_stdout and sys.stdout.tell():
+            self.fd.write('\r' + ' ' * self.term_width + '\r')
+            self._stdout.write(sys.stdout.getvalue())
+            self._stdout.flush()
+            sys.stdout = six.StringIO()
+
+    def finish(self):
+        if self.redirect_stderr:
+            self._stderr.write(sys.stderr.getvalue())
+            sys.stderr = self._stderr
+
+        if self.redirect_stdout:
+            self._stdout.write(sys.stdout.getvalue())
+            sys.stdout = self._stdout
 
 
-class ProgressBar(ResizableMixin, ProgressBarBase):
+class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     '''The ProgressBar class which updates and prints the bar.
 
     A common way of using it is like:
 
-    >>> pbar = ProgressBar().start()
+    >>> progress = ProgressBar().start()
     >>> for i in range(100):
-    ...     pbar.update(i+1)
+    ...     progress.update(i+1)
     ...     # do something
     ...
-    >>> pbar.finish()
+    >>> progress.finish()
 
     You can also use a ProgressBar as an iterator:
 
@@ -123,8 +169,6 @@ class ProgressBar(ResizableMixin, ProgressBarBase):
         self.widgets = widgets
         self.fd = fd
         self.left_justify = left_justify
-        self.redirect_stderr = redirect_stderr
-        self.redirect_stdout = redirect_stdout
 
         self.__iterable = None
         self._update_widgets()
@@ -250,6 +294,7 @@ class ProgressBar(ResizableMixin, ProgressBarBase):
 
     def update(self, value=None):
         'Updates the ProgressBar to a new value.'
+        super(ProgressBar, self).update(value=value)
 
         if value is not None and value is not UnknownLength:
             if (self.maxval is not UnknownLength
@@ -265,18 +310,6 @@ class ProgressBar(ResizableMixin, ProgressBarBase):
             self.update(value)
         if not self._need_update():
             return
-
-        if self.redirect_stderr and sys.stderr.tell():
-            self.fd.write('\r' + ' ' * self.term_width + '\r')
-            self._stderr.write(sys.stderr.getvalue())
-            self._stderr.flush()
-            sys.stderr = six.StringIO()
-
-        if self.redirect_stdout and sys.stdout.tell():
-            self.fd.write('\r' + ' ' * self.term_width + '\r')
-            self._stdout.write(sys.stdout.getvalue())
-            self._stdout.flush()
-            sys.stdout = six.StringIO()
 
         now = time.time()
         self.seconds_elapsed = now - self.start_time
@@ -296,14 +329,7 @@ class ProgressBar(ResizableMixin, ProgressBarBase):
         ...
         >>> pbar.finish()
         '''
-
-        if self.redirect_stderr:
-            self._stderr = sys.stderr
-            sys.stderr = six.StringIO()
-
-        if self.redirect_stdout:
-            self._stdout = sys.stdout
-            sys.stdout = six.StringIO()
+        super(ProgressBar, self).start()
 
         if self.maxval is None:
             self.maxval = self._DEFAULT_MAXVAL
@@ -329,11 +355,3 @@ class ProgressBar(ResizableMixin, ProgressBarBase):
         self.fd.write('\n')
 
         super(ProgressBar, self).finish()
-
-        if self.redirect_stderr:
-            self._stderr.write(sys.stderr.getvalue())
-            sys.stderr = self._stderr
-
-        if self.redirect_stdout:
-            self._stdout.write(sys.stdout.getvalue())
-            sys.stdout = self._stdout
