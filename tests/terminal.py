@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import sys
 import fcntl
+import signal
 import progressbar
 
 
@@ -27,8 +28,17 @@ def test_right_justify():
         p.update(i)
 
 
-def test_auto_width():
+def test_auto_width(monkeypatch):
     '''Right justify using the terminal width'''
+
+    def ioctl(*args):
+        return '\xbf\x00\xeb\x00\x00\x00\x00\x00'
+
+    def fake_signal(signal, func):
+        pass
+
+    monkeypatch.setattr(fcntl, 'ioctl', ioctl)
+    monkeypatch.setattr(signal, 'signal', fake_signal)
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
         maxval=100, left_justify=True, term_width=None)
@@ -93,7 +103,11 @@ def test_resize(monkeypatch):
     def ioctl(*args):
         return '\xbf\x00\xeb\x00\x00\x00\x00\x00'
 
+    def fake_signal(signal, func):
+        pass
+
     monkeypatch.setattr(fcntl, 'ioctl', ioctl)
+    monkeypatch.setattr(signal, 'signal', fake_signal)
 
     p = progressbar.ProgressBar(maxval=10)
     p.start()

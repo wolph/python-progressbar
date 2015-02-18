@@ -15,12 +15,8 @@ class UnknownLength(object):
     pass
 
 
-class ProgressBarBase(collections.Iterable):
-    pass
-
-
 class ProgressBarMixinBase(object):
-    def __init__(self, redirect_stderr=False, redirect_stdout=False, **kwargs):
+    def __init__(self, **kwargs):
         super(ProgressBarMixinBase, self).__init__(**kwargs)
 
     def start(self):
@@ -33,10 +29,30 @@ class ProgressBarMixinBase(object):
         pass
 
 
-class ResizableMixin(ProgressBarMixinBase):
+class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
+    pass
+
+
+class DefaultFdMixin(ProgressBarMixinBase):
+    def __init__(self, fd=sys.stderr, **kwargs):
+        self.fd = fd
+        super(DefaultFdMixin, self).__init__(**kwargs)
+
+    def update(self, *args, **kwargs):
+        super(DefaultFdMixin, self).update(*args, **kwargs)
+        self.fd.write('\r' + self._format_line())
+
+    def finish(self, *args, **kwargs):
+        super(DefaultFdMixin, self).finish(*args, **kwargs)
+        self.fd.write('\n')
+
+
+class ResizableMixin(DefaultFdMixin):
     _DEFAULT_TERMSIZE = 80
 
     def __init__(self, term_width=_DEFAULT_TERMSIZE, **kwargs):
+        super(ResizableMixin, self).__init__(**kwargs)
+
         self.signal_set = False
         if term_width is not None:
             self.term_width = term_width
@@ -48,9 +64,9 @@ class ResizableMixin(ProgressBarMixinBase):
             except (SystemExit, KeyboardInterrupt):  # pragma: no cover
                 raise
             except:  # pragma: no cover
+                raise
                 self.term_width = self._env_size()
 
-        super(ResizableMixin, self).__init__(**kwargs)
 
     def _env_size(self):
         'Tries to find the term_width from the environment.'
@@ -69,7 +85,7 @@ class ResizableMixin(ProgressBarMixinBase):
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
 
 
-class StdRedirectMixin(ProgressBarMixinBase):
+class StdRedirectMixin(DefaultFdMixin):
     def __init__(self, redirect_stderr=False, redirect_stdout=False, **kwargs):
         super(StdRedirectMixin, self).__init__(**kwargs)
         self.redirect_stderr = redirect_stderr
@@ -84,6 +100,8 @@ class StdRedirectMixin(ProgressBarMixinBase):
             sys.stdout = six.StringIO()
 
     def update(self, value=None):
+        super(StdRedirectMixin, self).update(value=value)
+
         if self.redirect_stderr and sys.stderr.tell():
             self.fd.write('\r' + ' ' * self.term_width + '\r')
             self._stderr.write(sys.stderr.getvalue())
@@ -97,6 +115,8 @@ class StdRedirectMixin(ProgressBarMixinBase):
             sys.stdout = six.StringIO()
 
     def finish(self):
+        super(StdRedirectMixin, self).finish()
+
         if self.redirect_stderr:
             self._stderr.write(sys.stderr.getvalue())
             sys.stderr = self._stderr
@@ -157,7 +177,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     _DEFAULT_MAXVAL = 100
 
     def __init__(self, maxval=None, widgets=None, poll=0.1,
-                 left_justify=True, fd=sys.stderr, **kwargs):
+                 left_justify=True, **kwargs):
         '''Initializes a progress bar with sane defaults'''
         super(ProgressBar, self).__init__(**kwargs)
 
@@ -167,7 +187,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         self.maxval = maxval
         self.widgets = widgets
-        self.fd = fd
         self.left_justify = left_justify
 
         self.__iterable = None
@@ -294,7 +313,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def update(self, value=None):
         'Updates the ProgressBar to a new value.'
-        super(ProgressBar, self).update(value=value)
 
         if value is not None and value is not UnknownLength:
             if (self.maxval is not UnknownLength
@@ -314,8 +332,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         now = time.time()
         self.seconds_elapsed = now - self.start_time
         self.next_update = self.currval + self.update_interval
-        self.fd.write('\r' + self._format_line())
         self.last_update_time = now
+        super(ProgressBar, self).update(value=value)
 
     def start(self):
         '''Starts measuring time, and prints the bar at 0%.
@@ -352,6 +370,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         self.finished = True
         self.update(self.maxval)
-        self.fd.write('\n')
 
         super(ProgressBar, self).finish()
+
