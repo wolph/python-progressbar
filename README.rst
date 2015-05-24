@@ -34,4 +34,6 @@ Links
     - https://github.com/WoLpH/python-progressbar/issues
 * Package homepage
     - https://pypi.python.org/pypi/progressbar2
+* My blog
+    - http://w.wol.ph/
 
