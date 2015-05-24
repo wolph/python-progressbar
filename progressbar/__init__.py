@@ -67,9 +67,9 @@ except ImportError:  # pragma: no cover
         from io import StringIO
 
 from progressbar.widgets import (
-    AbstractWidget,
-    Widget,
-    WidgetHFill,
+    WidgetBase,
+    AutoWidthWidgetBase,
+    TimeSensitiveWidgetBase,
     Timer,
     ETA,
     AdaptiveETA,

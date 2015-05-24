@@ -1,3 +1,4 @@
+from __future__ import division, absolute_import, with_statement
 import os
 import sys
 import math
@@ -6,6 +7,7 @@ import fcntl
 import termios
 import array
 import signal
+from datetime import datetime
 import collections
 from . import widgets
 from . import six
@@ -165,8 +167,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     you from changing the ProgressBar you should treat it as read only.
 
     Useful methods and attributes include (Public API):
-     - currval: current progress (0 <= currval <= maxval)
-     - maxval: maximum (and final) value
+     - value: current progress (0 <= value <= max_value)
+     - max_value: maximum (and final) value
      - finished: True if the bar has finished (reached 100%)
      - start_time: the time when start() method of ProgressBar was called
      - seconds_elapsed: seconds elapsed since start_time and last call to
@@ -176,7 +178,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     _DEFAULT_MAXVAL = 100
 
-    def __init__(self, maxval=None, widgets=None, poll=0.1,
+    def __init__(self, max_value=None, widgets=None, poll=0.1,
                  left_justify=True, **kwargs):
         '''Initializes a progress bar with sane defaults'''
         super(ProgressBar, self).__init__(**kwargs)
@@ -185,19 +187,69 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             # Don't share widgets with any other progress bars
             widgets = self.default_widgets()
 
-        self.maxval = maxval
+        self.max_value = max_value
         self.widgets = widgets
         self.left_justify = left_justify
 
         self.__iterable = None
         self._update_widgets()
-        self.currval = 0
+        self.value = 0
         self.finished = False
         self.last_update_time = None
         self.poll = poll
         self.seconds_elapsed = 0
         self.start_time = None
         self.update_interval = 1
+
+    def data(self):
+        '''
+        Variables available:
+        - max_value: The maximum value (can be None with iterators)
+        - value: The current value
+        - total_seconds_elapsed: The seconds since the bar started
+        - seconds_elapsed: The seconds since the bar started modulo 60
+        - minutes_elapsed: The minutes since the bar started modulo 60
+        - hours_elapsed: The hours since the bar started modulo 24
+        - days_elapsed: The hours since the bar started
+        - time_elapsed: Shortcut for HH:MM:SS time since the bar started
+        including days
+        - percentage: Percentage as a float
+        '''
+        elapsed = datetime.now() - self.start_time
+        # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
+        # want to support older versions as well
+        total_seconds_elapsed = (elapsed.microseconds
+                                 + (elapsed.seconds + elapsed.days * 24 * 3600)
+                                 * 10**6
+                                 / 10**6)
+
+        if self.max_value is None:
+            percentage = None
+        elif self.max_value:
+            percentage = self.value / self.max_value
+        else:
+            percentage = 1
+
+        return dict(
+            # The maximum value (can be None with iterators)
+            max_value = self.max_value,
+            # The current value
+            value = self.value,
+            # The seconds since the bar started
+            total_seconds_elapsed = total_seconds_elapsed,
+            # The seconds since the bar started modulo 60
+            seconds_elapsed = (elapsed.seconds % 60) + elapsed.microseconds,
+            # The minutes since the bar started modulo 60
+            minutes_elapsed = (elapsed.seconds / 60) % 60,
+            # The hours since the bar started modulo 24
+            hours_elapsed = (elapsed.seconds / (60 * 60)) % 24,
+            # The hours since the bar started
+            days_elapsed = (elapsed.seconds / (60 * 60 * 24)),
+            # The raw elapsed `datetime.timedelta` object
+            time_elapsed = elapsed,
+            # Percentage as a float or `None` if no max_value is available
+            percentage = percentage,
+        )
 
     def default_widgets(self):
         return [
@@ -208,16 +260,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             ' ', widgets.AdaptiveETA(),
         ]
 
-    def __call__(self, iterable, maxval=None):
+    def __call__(self, iterable, max_value=None):
         'Use a ProgressBar to iterate through an iterable'
-        if maxval is None:
+        if max_value is None:
             try:
-                self.maxval = len(iterable)
+                self.max_value = len(iterable)
             except:
-                if self.maxval is None:
-                    self.maxval = UnknownLength
+                if self.max_value is None:
+                    self.max_value = UnknownLength
         else:
-            self.maxval = maxval
+            self.max_value = max_value
 
         self.__iterable = iter(iterable)
         return self
@@ -231,7 +283,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             if self.start_time is None:
                 self.start()
             else:
-                self.update(self.currval + 1)
+                self.update(self.value + 1)
             return value
         except StopIteration:
             self.finish()
@@ -249,15 +301,15 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __iadd__(self, value):
         'Updates the ProgressBar by adding a new value.'
-        self.update(self.currval + value)
+        self.update(self.value + value)
         return self
 
     def percentage(self):
         'Returns the progress as a percentage.'
-        assert self.maxval is not UnknownLength, \
-            'Need a maxval for a percentage'
+        assert self.max_value is not UnknownLength, \
+            'Need a max_value for a percentage'
 
-        return self.currval * 100.0 / (self.maxval or 1)
+        return self.value * 100.0 / (self.max_value or 1)
 
     percent = property(percentage)
 
@@ -265,25 +317,30 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         result = []
         expanding = []
         width = self.term_width
+        data = self.data()
 
         for index, widget in enumerate(self.widgets):
-            if isinstance(widget, widgets.WidgetHFill):
+            if isinstance(widget, widgets.AutoWidthWidgetBase):
                 result.append(widget)
                 expanding.insert(0, index)
-            else:
-                widget = widgets.format_updatable(widget, self)
+            elif isinstance(widget, basestring):
                 result.append(widget)
                 width -= len(widget)
+            else:
+                widget_output = widget(self, data)
+                result.append(widget_output)
+                width -= len(widget_output)
 
         count = len(expanding)
-        while count:
+        while expanding:
             portion = max(int(math.ceil(width * 1. / count)), 0)
             index = expanding.pop()
+            widget = result[index]
             count -= 1
 
-            widget = result[index].update(self, portion)
-            width -= len(widget)
-            result[index] = widget
+            widget_output = widget(self, data, portion)
+            width -= len(widget_output)
+            result[index] = widget_output
 
         return result
 
@@ -299,7 +356,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def _need_update(self):
         'Returns whether the ProgressBar should redraw the line.'
-        if self.currval >= self.next_update or self.finished:
+        if self.value >= self.next_update or self.finished:
             return True
 
         delta = time.time() - self.last_update_time
@@ -315,13 +372,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Updates the ProgressBar to a new value.'
 
         if value is not None and value is not UnknownLength:
-            if (self.maxval is not UnknownLength
-                    and not 0 <= value <= self.maxval
-                    and not value < self.currval):
+            if (self.max_value is not UnknownLength
+                    and not 0 <= value <= self.max_value
+                    and not value < self.value):
 
                 raise ValueError('Value out of range')
 
-            self.currval = value
+            self.value = value
 
         if self.start_time is None:
             self.start()
@@ -329,9 +386,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if not self._need_update():
             return
 
-        now = time.time()
+        now = datetime.now()
         self.seconds_elapsed = now - self.start_time
-        self.next_update = self.currval + self.update_interval
+        self.next_update = self.value + self.update_interval
         self.last_update_time = now
         super(ProgressBar, self).update(value=value)
 
@@ -349,18 +406,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         '''
         super(ProgressBar, self).start()
 
-        if self.maxval is None:
-            self.maxval = self._DEFAULT_MAXVAL
+        if self.max_value is None:
+            self.max_value = self._DEFAULT_MAXVAL
 
         self.num_intervals = max(100, self.term_width)
         self.next_update = 0
 
-        if self.maxval is not UnknownLength:
-            if self.maxval < 0:
+        if self.max_value is not UnknownLength:
+            if self.max_value < 0:
                 raise ValueError('Value out of range')
-            self.update_interval = self.maxval / self.num_intervals
+            self.update_interval = self.max_value / self.num_intervals
 
-        self.start_time = self.last_update_time = time.time()
+        self.start_time = self.last_update_time = datetime.now()
         self.update(0)
 
         return self
@@ -369,7 +426,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Puts the ProgressBar bar in the finished state.'
 
         self.finished = True
-        self.update(self.maxval)
+        self.update(self.max_value)
 
         super(ProgressBar, self).finish()
 
