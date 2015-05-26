@@ -14,7 +14,7 @@ class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
 
 def test_crazy_file_transfer_speed_widget():
     widgets = [
-        CrazyFileTransferSpeed(),
+        # CrazyFileTransferSpeed(),
         ' <<<',
         progressbar.Bar(),
         '>>> ',

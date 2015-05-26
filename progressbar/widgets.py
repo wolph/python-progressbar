@@ -49,6 +49,8 @@ class FormatWidgetMixin(object):
        days
      - percentage: Percentage as a float
     '''
+    required_values = []
+
     def __init__(self, format):
         self.format = format
         super(FormatWidgetMixin, self).__init__()
@@ -125,12 +127,14 @@ class ETA(Timer):
 
     def _eta(self, progress):
         elapsed = progress.seconds_elapsed
+        todo = progress.max_value - progress.value
+
         return elapsed * progress.maxval / progress.currval - elapsed
 
-    def update(self, progress):
+    def __call__(self, progress, data):
         '''Updates the widget to show the ETA or total time when finished.'''
 
-        if progress.currval == 0:
+        if progress.value == progress.min_value:
             return 'ETA:  --:--:--'
         elif progress.finished:
             return 'Time: %s' % self.format_time(progress.seconds_elapsed)
@@ -150,32 +154,28 @@ class AdaptiveETA(ETA):
     def __init__(self, num_samples=10, **kwargs):
         ETA.__init__(self, **kwargs)
         self.num_samples = num_samples
-        self.samples = []
-        self.sample_vals = []
-        self.last_sample_val = None
 
-    def _eta(self, progress):
-        samples = self.samples
-        sample_vals = self.sample_vals
-        if progress.currval != self.last_sample_val:
-            # Update the last sample counter, we only update if currval has
-            # changed
-            self.last_sample_val = progress.currval
+    def __call__(self, progress, data):
+        sample_times = progress.extra.setdefault('sample_times', [])
+        sample_values = progress.extra.setdefault('sample_values', [])
 
+        if progress.value != progress.previous_value:
             # Add a sample but limit the size to `num_samples`
-            samples.append(progress.seconds_elapsed)
-            sample_vals.append(progress.currval)
-            if len(samples) > self.num_samples:
-                samples.pop(0)
-                sample_vals.pop(0)
+            sample_times.append(progress.last_update_time)
+            sample_values.append(progress.value)
 
-        if len(samples) <= 1:
+            if len(sample_times) > self.num_samples:
+                sample_times.pop(0)
+                sample_values.pop(0)
+
+        if len(sample_times) <= 1:
             # No samples so just return the normal ETA calculation
             return ETA._eta(self, progress)
 
-        todo = progress.maxval - progress.currval
-        items = sample_vals[-1] - sample_vals[0]
-        duration = float(samples[-1] - samples[0])
+        todo = progress.max_value - progress.value
+
+        items = sample_values[-1] - sample_values[0]
+        duration = float(sample_times[-1] - sample_times[0])
         per_item = duration / items
         return todo * per_item
 
@@ -251,19 +251,18 @@ class AnimatedMarker(WidgetBase):
     it were rotating.
     '''
 
-    def __init__(self, markers='|/-\\'):
+    def __init__(self, markers='|/-\\', default=None):
         self.markers = markers
-        self.curmark = -1
+        self.default = default or markers[0]
 
-    def update(self, progress):
+    def __call__(self, progress, data, width=None):
         '''Updates the widget to show the next marker or the first marker when
         finished'''
 
-        if progress.finished:
-            return self.markers[0]
+        if progress.end_time:
+            return self.default
 
-        self.curmark = (self.curmark + 1) % len(self.markers)
-        return self.markers[self.curmark]
+        return self.markers[data['updates'] % len(self.markers)]
 
 # Alias for backwards compatibility
 RotatingMarker = AnimatedMarker
@@ -331,7 +330,6 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
 class Bar(AutoWidthWidgetBase):
 
     '''A progress bar which stretches to fill the line.'''
-
     def __init__(self, marker='#', left='|', right='|', fill=' ',
                  fill_left=True):
         '''Creates a customizable progress bar.
