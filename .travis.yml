@@ -2,16 +2,21 @@ language: python
 python:
   - "2.6"
   - "2.7"
-  - "3.2"
   - "3.3"
+  - "3.4"
   - "pypy"
+  - "pypy3"
+
 # command to install dependencies
 install:
-  - pip install . --use-mirrors
-  - pip install nose coverage tissue coveralls --use-mirrors
+  - pip install .
+  - pip install -r requirements_test.txt
+
+before_script: flake8 --ignore=W391 progressbar tests
+
 # command to run tests
 script:
-    - nosetests --with-coverage
+    - python setup.py test
 
 after_success:
     - coveralls

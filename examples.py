@@ -29,7 +29,7 @@ def example(fn):
 
 @example
 def with_example0():
-    with ProgressBar(maxval=10) as progress:
+    with ProgressBar(max_value=10) as progress:
         for i in range(10):
             # do something
             time.sleep(0.001)
@@ -38,7 +38,7 @@ def with_example0():
 
 @example
 def with_example1():
-    with ProgressBar(maxval=10, redirect_stdout=True) as p:
+    with ProgressBar(max_value=10, redirect_stdout=True) as p:
         for i in range(10):
             # do something
             p.update(i)
@@ -47,7 +47,7 @@ def with_example1():
 
 @example
 def example0():
-    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=10).start()
+    pbar = ProgressBar(widgets=[Percentage(), Bar()], max_value=10).start()
     for i in range(10):
         # do something
         time.sleep(0.001)
@@ -59,7 +59,7 @@ def example0():
 def example1():
     widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
                ' ', ETA(), ' ', FileTransferSpeed()]
-    pbar = ProgressBar(widgets=widgets, maxval=1000).start()
+    pbar = ProgressBar(widgets=widgets, max_value=1000).start()
     for i in range(100):
         # do something
         pbar.update(10 * i + 1)
@@ -80,7 +80,7 @@ def example2():
 
     widgets = [CrazyFileTransferSpeed(), ' <<<', Bar(), '>>> ',
                Percentage(), ' ', ETA()]
-    pbar = ProgressBar(widgets=widgets, maxval=1000)
+    pbar = ProgressBar(widgets=widgets, max_value=1000)
     # maybe do something
     pbar.start()
     for i in range(200):
@@ -92,7 +92,7 @@ def example2():
 @example
 def example3():
     widgets = [Bar('>'), ' ', ETA(), ' ', ReverseBar('<')]
-    pbar = ProgressBar(widgets=widgets, maxval=1000).start()
+    pbar = ProgressBar(widgets=widgets, max_value=1000).start()
     for i in range(100):
         # do something
         pbar.update(10 * i + 1)
@@ -104,7 +104,7 @@ def example4():
     widgets = ['Test: ', Percentage(), ' ',
                Bar(marker='0', left='[', right=']'),
                ' ', ETA(), ' ', FileTransferSpeed()]
-    pbar = ProgressBar(widgets=widgets, maxval=500)
+    pbar = ProgressBar(widgets=widgets, max_value=500)
     pbar.start()
     for i in range(100, 500 + 1, 50):
         time.sleep(0.001)
@@ -114,7 +114,7 @@ def example4():
 
 @example
 def example5():
-    pbar = ProgressBar(widgets=[SimpleProgress()], maxval=17).start()
+    pbar = ProgressBar(widgets=[SimpleProgress()], max_value=17).start()
     for i in range(17):
         time.sleep(0.001)
         pbar.update(i + 1)
@@ -132,14 +132,14 @@ def example6():
 
 @example
 def example7():
-    pbar = ProgressBar()  # Progressbar can guess maxval automatically.
+    pbar = ProgressBar()  # Progressbar can guess max_value automatically.
     for i in pbar(range(8)):
         time.sleep(0.001)
 
 
 @example
 def example8():
-    pbar = ProgressBar(maxval=8)  # Progressbar can't guess maxval.
+    pbar = ProgressBar(max_value=8)  # Progressbar can't guess max_value.
     for i in pbar((i for i in range(8))):
         time.sleep(0.001)
 
@@ -215,7 +215,7 @@ def example15():
 def example16():
     widgets = [FormatLabel('Bouncer: value %(value)d - '), BouncingBar()]
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(18))):
+    for i in pbar((i for i in range(100))):
         time.sleep(0.001)
 
 
@@ -231,7 +231,8 @@ def example17():
 
 @example
 def with_example18():
-    with ProgressBar(maxval=10, term_width=20, left_justify=False) as progress:
+    with ProgressBar(max_value=10, term_width=20, left_justify=False) as \
+            progress:
         assert progress._env_size() is not None
         for i in range(10):
             progress.update(i)
@@ -239,7 +240,7 @@ def with_example18():
 
 @example
 def with_example19():
-    with ProgressBar(maxval=1) as progress:
+    with ProgressBar(max_value=1) as progress:
         try:
             progress.update(2)
         except ValueError:
@@ -248,7 +249,7 @@ def with_example19():
 
 @example
 def with_example20():
-    progress = ProgressBar(maxval=1)
+    progress = ProgressBar(max_value=1)
     try:
         progress.update(1)
     except RuntimeError:
@@ -257,14 +258,14 @@ def with_example20():
 
 @example
 def with_example21a():
-    with ProgressBar(maxval=1, redirect_stdout=True) as progress:
+    with ProgressBar(max_value=1, redirect_stdout=True) as progress:
         print('', file=sys.stdout)
         progress.update(0)
 
 
 @example
 def with_example21b():
-    with ProgressBar(maxval=1, redirect_stderr=True) as progress:
+    with ProgressBar(max_value=1, redirect_stderr=True) as progress:
         print('', file=sys.stderr)
         progress.update(0)
 
@@ -272,7 +273,7 @@ def with_example21b():
 @example
 def with_example22():
     try:
-        with ProgressBar(maxval=-1) as progress:
+        with ProgressBar(max_value=-1) as progress:
             progress.start()
     except ValueError:
         pass
@@ -281,19 +282,19 @@ def with_example22():
 @example
 def example23():
     widgets = [BouncingBar(marker=RotatingMarker())]
-    with ProgressBar(widgets=widgets, maxval=20, term_width=10) as progress:
+    with ProgressBar(widgets=widgets, max_value=20, term_width=10) as progress:
         for i in range(20):
             progress.update(i)
 
     widgets = [BouncingBar(marker=RotatingMarker(), fill_left=False)]
-    with ProgressBar(widgets=widgets, maxval=20, term_width=10) as progress:
+    with ProgressBar(widgets=widgets, max_value=20, term_width=10) as progress:
         for i in range(20):
             progress.update(i)
 
 
 @example
 def example24():
-    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=10).start()
+    pbar = ProgressBar(widgets=[Percentage(), Bar()], max_value=10).start()
     for i in range(10):
         # do something
         time.sleep(0.001)
@@ -305,11 +306,13 @@ def example24():
 def example25():
     widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
                ' ', ETA(), ' ', FileTransferSpeed()]
-    pbar = ProgressBar(widgets=widgets, maxval=1000, redirect_stdout=True).start()
+    pbar = ProgressBar(widgets=widgets, max_value=1000,
+                       redirect_stdout=True).start()
     for i in range(100):
         # do something
         pbar += 10
     pbar.finish()
+
 
 @example
 def example26():
@@ -320,23 +323,25 @@ def example26():
         ' ', AdaptiveETA(),
         ' ', AdaptiveTransferSpeed(),
     ]
-    pbar = ProgressBar(widgets=widgets, maxval=500)
+    pbar = ProgressBar(widgets=widgets, max_value=500)
     pbar.start()
     for i in range(500):
         time.sleep(0.001 + (i < 100) * 0.0001 + (i > 400) * 0.009)
         pbar.update(i + 1)
     pbar.finish()
 
+
 @example
 def example27():
     # Testing AdaptiveETA when the value doesn't actually change
     pbar = ProgressBar(widgets=[AdaptiveETA(), AdaptiveTransferSpeed()],
-                       maxval=2, poll=0.0001)
+                       max_value=2, poll=0.0001)
     pbar.start()
     pbar.update(1)
     time.sleep(0.001)
     pbar.update(1)
     pbar.finish()
+
 
 @example
 def example28():
