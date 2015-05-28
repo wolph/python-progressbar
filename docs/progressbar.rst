@@ -1,19 +1,20 @@
-progressbar Package
+progressbar package
 ===================
 
-:mod:`progressbar` Package
---------------------------
+Submodules
+----------
+
+.. toctree::
+
+   progressbar.bar
+   progressbar.widgets
+   progressbar.utils
+   progressbar.six
+
+Module contents
+---------------
 
 .. automodule:: progressbar
     :members:
     :undoc-members:
     :show-inheritance:
-
-:mod:`widgets` Module
----------------------
-
-.. automodule:: progressbar.widgets
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
