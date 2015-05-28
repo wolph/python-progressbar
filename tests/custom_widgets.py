@@ -23,7 +23,7 @@ def test_crazy_file_transfer_speed_widget():
         progressbar.ETA(),
     ]
 
-    p = progressbar.ProgressBar(widgets=widgets, maxval=1000)
+    p = progressbar.ProgressBar(widgets=widgets, max_value=1000)
     # maybe do something
     p.start()
     for i in range(0, 200, 5):

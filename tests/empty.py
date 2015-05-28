@@ -7,6 +7,6 @@ def test_empty_list():
 
 
 def test_empty_iterator():
-    for x in progressbar.ProgressBar(maxval=0)(iter([])):
+    for x in progressbar.ProgressBar(max_value=0)(iter([])):
         print(x)
 

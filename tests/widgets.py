@@ -13,7 +13,7 @@ def test_widgets_small_values():
         ' ',
         progressbar.FileTransferSpeed(),
     ]
-    p = progressbar.ProgressBar(widgets=widgets, maxval=10).start()
+    p = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
     for i in range(10):
         time.sleep(0.001)
         p.update(i + 1)
@@ -31,7 +31,7 @@ def test_widgets_large_values():
         ' ',
         progressbar.FileTransferSpeed(),
     ]
-    p = progressbar.ProgressBar(widgets=widgets, maxval=10 ** 6).start()
+    p = progressbar.ProgressBar(widgets=widgets, max_value=10 ** 6).start()
     for i in range(0, 10 ** 6, 10 ** 4):
         time.sleep(0.001)
         p.update(i + 1)
@@ -58,13 +58,13 @@ def test_all_widgets_small_values():
         progressbar.AnimatedMarker(),
         progressbar.Counter(),
         progressbar.Percentage(),
-        progressbar.FormatLabel('%(value)d/%(max)d'),
+        progressbar.FormatLabel('%(value)d/%(max_value)d'),
         progressbar.SimpleProgress(),
         progressbar.Bar(),
         progressbar.ReverseBar(),
         progressbar.BouncingBar(),
     ]
-    p = progressbar.ProgressBar(widgets=widgets, maxval=10)
+    p = progressbar.ProgressBar(widgets=widgets, max_value=10)
     for i in range(10):
         time.sleep(0.001)
         p.update(i + 1)
@@ -81,13 +81,13 @@ def test_all_widgets_large_values():
         progressbar.AnimatedMarker(),
         progressbar.Counter(),
         progressbar.Percentage(),
-        progressbar.FormatLabel('%(value)d/%(max)d'),
+        progressbar.FormatLabel('%(value)d/%(max_value)d'),
         progressbar.SimpleProgress(),
         progressbar.Bar(),
         progressbar.ReverseBar(),
         progressbar.BouncingBar(),
     ]
-    p = progressbar.ProgressBar(widgets=widgets, maxval=10 ** 6)
+    p = progressbar.ProgressBar(widgets=widgets, max_value=10 ** 6)
     for i in range(0, 10 ** 6, 10 ** 4):
         time.sleep(0.001)
         p.update(i + 1)

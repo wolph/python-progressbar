@@ -41,35 +41,9 @@ of widgets:
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
 '''
-
-from __future__ import division, absolute_import, with_statement
-
-import math
-import os
-import signal
-import sys
-import time
 from datetime import date
 
-try:
-    import fcntl
-    from array import array
-    import termios
-except ImportError:  # pragma: no cover
-    pass
-
-try:
-    from cStringIO import StringIO
-except ImportError:  # pragma: no cover
-    try:
-        from StringIO import StringIO
-    except ImportError:
-        from io import StringIO
-
 from progressbar.widgets import (
-    WidgetBase,
-    AutoWidthWidgetBase,
-    TimeSensitiveWidgetBase,
     Timer,
     ETA,
     AdaptiveETA,
@@ -83,7 +57,6 @@ from progressbar.widgets import (
     Bar,
     ReverseBar,
     BouncingBar,
-    format_updatable,
     RotatingMarker,
 )
 

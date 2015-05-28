@@ -2,6 +2,19 @@ import pytest
 import progressbar
 
 
+def test_missing_format_values():
+    with pytest.raises(KeyError):
+        p = progressbar.ProgressBar(
+            widgets=[progressbar.widgets.FormatLabel('%(x)s')],
+        )
+        p.update(5)
+
+
+def test_max_smaller_than_min():
+    with pytest.raises(ValueError):
+        progressbar.ProgressBar(min_value=10, max_value=5)
+
+
 def test_no_max_value():
     '''Looping up to 5 without max_value? No problem'''
     p = progressbar.ProgressBar()
@@ -38,6 +51,7 @@ def test_one_max_value():
     '''max_value of one, another corner case'''
     p = progressbar.ProgressBar(max_value=1)
 
+    p.update(0)
     p.update(0)
     p.update(1)
     with pytest.raises(ValueError):
