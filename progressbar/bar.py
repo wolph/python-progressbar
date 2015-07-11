@@ -396,7 +396,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             if isinstance(widget, widgets.AutoWidthWidgetBase):
                 result.append(widget)
                 expanding.insert(0, index)
-            elif isinstance(widget, basestring):
+            elif isinstance(widget, six.basestring):
                 result.append(widget)
                 width -= len(widget)
             else:

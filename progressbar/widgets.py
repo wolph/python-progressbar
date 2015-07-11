@@ -29,6 +29,7 @@ import sys
 import pprint
 
 from . import utils
+from . import six
 
 
 class FormatWidgetMixin(object):
@@ -332,7 +333,7 @@ class Bar(AutoWidthWidgetBase):
         fill_left - whether to fill from the left or the right
         '''
         def string_or_lambda(input_):
-            if isinstance(input_, basestring):
+            if isinstance(input_, six.basestring):
                 return lambda progress, data, width: input_ % data
             else:
                 return input_
@@ -345,7 +346,7 @@ class Bar(AutoWidthWidgetBase):
                 else:
                     return ''
 
-            if isinstance(marker, basestring):
+            if isinstance(marker, six.basestring):
                 assert len(marker) == 1, 'Markers are required to be 1 char'
                 return __marker
             else:
