@@ -1,0 +1,6 @@
+-r ../requirements.txt
+pytest
+pytest-cache
+pytest-cover
+pytest-flakes
+pytest-pep8
