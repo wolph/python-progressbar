@@ -347,7 +347,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if max_value is None:
             try:
                 self.max_value = len(iterable)
-            except:
+            except TypeError:
                 if self.max_value is None:
                     self.max_value = UnknownLength
         else:
