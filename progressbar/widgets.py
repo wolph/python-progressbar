@@ -52,10 +52,10 @@ class FormatWidgetMixin(object):
         self.format = format
         super(FormatWidgetMixin, self).__init__()
 
-    def __call__(self, progress, data):
+    def __call__(self, progress, data, format=None):
         '''Formats the widget into a string'''
         try:
-            return self.format % data
+            return (format or self.format) % data
         except (TypeError, KeyError):
             print >> sys.stderr, 'Error while formatting %r' % self.format
             pprint.pprint(data, stream=sys.stderr)
@@ -194,10 +194,12 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
     '''
 
     def __init__(
-            self, format='%(scaled)5.1f %(prefix)s%(unit)-s', unit='B',
+            self, format='%(scaled)5.1f %(prefix)s%(unit)-s/s',
+            inverse_format='%(scaled)5.1f s/%(prefix)s%(unit)-s', unit='B',
             prefixes=('', 'ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
         self.unit = unit
         self.prefixes = prefixes
+        self.inverse_format = inverse_format
         super(FileTransferSpeed, self).__init__(format=format)
 
     def _speed(self, value, elapsed):
@@ -216,10 +218,16 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
         else:
             scaled = power = 0
 
-        data['scaled'] = scaled
-        data['prefix'] = self.prefixes[power]
         data['unit'] = self.unit
-        return FormatWidgetMixin.__call__(self, progress, data)
+        if power == 0 and scaled < 0.1:
+            data['scaled'] = 1./scaled
+            data['prefix'] = self.prefixes[0]
+            return FormatWidgetMixin.__call__(self, progress, data,
+                                              self.inverse_format)
+        else:
+            data['scaled'] = scaled
+            data['prefix'] = self.prefixes[power]
+            return FormatWidgetMixin.__call__(self, progress, data)
 
 
 class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
