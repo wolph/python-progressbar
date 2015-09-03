@@ -192,10 +192,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                  **kwargs):
         '''Initializes a progress bar with sane defaults'''
         super(ProgressBar, self).__init__(**kwargs)
-        if not max_value and kwargs.get('max_value'):
-            warnings.warn('The usage of `max_value` is deprecated, please use '
+        if not max_value and kwargs.get('maxval'):
+            warnings.warn('The usage of `maxval` is deprecated, please use '
                           '`max_value` instead', DeprecationWarning)
-            max_value = kwargs.get('max_value')
+            max_value = kwargs.get('maxval')
 
         if not poll_interval and kwargs.get('poll'):
             warnings.warn('The usage of `poll` is deprecated, please use '

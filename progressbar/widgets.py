@@ -220,7 +220,9 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
 
         data['unit'] = self.unit
         if power == 0 and scaled < 0.1:
-            data['scaled'] = 1./scaled
+            if scaled > 0:
+                scaled = 1 / scaled
+            data['scaled'] = scaled
             data['prefix'] = self.prefixes[0]
             return FormatWidgetMixin.__call__(self, progress, data,
                                               self.inverse_format)

@@ -84,3 +84,11 @@ def test_incorrect_max_value():
             p.update(i)
 
 
+def test_deprecated_maxval():
+    progressbar.ProgressBar(maxval=5)
+
+
+def test_deprecated_poll():
+    progressbar.ProgressBar(poll=5)
+
+

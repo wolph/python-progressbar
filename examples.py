@@ -352,9 +352,13 @@ def example28():
         # iter range is a way to get an iterator in both python 2 and 3
         pass
 
+
+def test():
+    for example in examples:
+        example()
+
 if __name__ == '__main__':
     try:
-        for example in examples:
-            example()
+        test()
     except KeyboardInterrupt:
         sys.stdout('\nQuitting examples.\n')
