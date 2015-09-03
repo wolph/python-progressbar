@@ -463,7 +463,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.updates += 1
         super(ProgressBar, self).update(value=value)
 
-    def start(self):
+    def start(self, max_value=None):
         '''Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
@@ -477,6 +477,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         '''
         super(ProgressBar, self).start()
 
+        self.max_value = max_value or self.max_value
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
