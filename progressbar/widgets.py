@@ -175,13 +175,13 @@ class AbsoluteETA(Timer):
 
     def _eta(self, progress, data, value, elapsed):
         """Update the widget to show the ETA or total time when finished."""
-        now = datetime.datetime.now()
         if value == progress.min_value:
             return 'Estimated finish time: ----/--/-- --:--:--'
         elif progress.end_time:
-            return 'Finished at: %s' % self._format(datetime.datetime.now())
+            return 'Finished at: %s' % self._format(progress.end_time)
         else:
             eta = elapsed * progress.max_value / value - elapsed
+            now = datetime.datetime.now()
             eta_abs = now + datetime.timedelta(seconds=eta)
             return 'Estimated finish time: %s' % self._format(eta_abs)
 
