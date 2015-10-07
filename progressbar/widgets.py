@@ -193,6 +193,7 @@ class AbsoluteETA(Timer):
         return self._eta(progress, data, data['value'],
                          data['total_seconds_elapsed'])
 
+
 class AdaptiveETA(ETA, SamplesMixin):
     '''WidgetBase which attempts to estimate the time of arrival.
 
