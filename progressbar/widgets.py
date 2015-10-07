@@ -406,7 +406,7 @@ class ReverseBar(Bar):
 
 class BouncingBar(Bar):
 
-    def update(self, progress, width):
+    def update(self, progress, width):  # pragma: no cover
         '''Updates the progress bar and its subcomponents'''
 
         left, marker, right = (i for i in (self.left, self.marker, self.right))

@@ -83,7 +83,7 @@ def test_all_widgets_large_values():
         progressbar.Percentage(),
         progressbar.FormatLabel('%(value)d/%(max_value)d'),
         progressbar.SimpleProgress(),
-        progressbar.Bar(),
+        progressbar.Bar(fill=lambda progress, data, width: '#'),
         progressbar.ReverseBar(),
         progressbar.BouncingBar(),
     ]
