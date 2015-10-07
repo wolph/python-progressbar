@@ -170,6 +170,30 @@ class ETA(Timer):
                          data['total_seconds_elapsed'])
 
 
+class AbsoluteETA(Timer):
+    '''Widget which attempts to estimate the absolute time of arrival.'''
+
+    def _eta(self, progress, data, value, elapsed):
+        """Update the widget to show the ETA or total time when finished."""
+        if value == progress.min_value:
+            return 'Estimated finish time: ----/--/-- --:--:--'
+        elif progress.end_time:
+            return 'Finished at: %s' % self._format(progress.end_time)
+        else:
+            eta = elapsed * progress.max_value / value - elapsed
+            now = datetime.datetime.now()
+            eta_abs = now + datetime.timedelta(seconds=eta)
+            return 'Estimated finish time: %s' % self._format(eta_abs)
+
+    def _format(self, t):
+        return t.strftime("%Y/%m/%d %H:%M:%S")
+
+    def __call__(self, progress, data):
+        '''Updates the widget to show the ETA or total time when finished.'''
+        return self._eta(progress, data, data['value'],
+                         data['total_seconds_elapsed'])
+
+
 class AdaptiveETA(ETA, SamplesMixin):
     '''WidgetBase which attempts to estimate the time of arrival.
 
@@ -427,4 +451,3 @@ class BouncingBar(Bar):
             rpad, lpad = lpad, rpad
 
         return '%s%s%s%s%s' % (left, lpad, marker, rpad, right)
-

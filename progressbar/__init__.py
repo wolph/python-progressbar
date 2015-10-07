@@ -47,6 +47,7 @@ from progressbar.widgets import (
     Timer,
     ETA,
     AdaptiveETA,
+    AbsoluteETA,
     FileTransferSpeed,
     AdaptiveTransferSpeed,
     AnimatedMarker,
@@ -74,6 +75,7 @@ __all__ = [
     'Timer',
     'ETA',
     'AdaptiveETA',
+    'AbsoluteETA',
     'FileTransferSpeed',
     'AdaptiveTransferSpeed',
     'AnimatedMarker',
@@ -89,4 +91,3 @@ __all__ = [
     'format_updatable',
     'RotatingMarker',
 ]
-
