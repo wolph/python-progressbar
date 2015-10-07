@@ -61,7 +61,8 @@ from progressbar.widgets import (
     RotatingMarker,
 )
 
-from .bar import ProgressBar, UnknownLength
+from .bar import ProgressBar
+from .base import UnknownLength
 
 
 __author__ = 'Rick van Hattem'

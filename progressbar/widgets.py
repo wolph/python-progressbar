@@ -21,6 +21,7 @@
 '''Default ProgressBar widgets'''
 
 from __future__ import division, absolute_import, with_statement
+from __future__ import print_function
 
 import datetime
 import math
@@ -29,6 +30,8 @@ import sys
 import pprint
 
 from . import utils
+from . import six
+from . import base
 
 
 class FormatWidgetMixin(object):
@@ -57,7 +60,7 @@ class FormatWidgetMixin(object):
         try:
             return (format or self.format) % data
         except (TypeError, KeyError):
-            print >> sys.stderr, 'Error while formatting %r' % self.format
+            print('Error while formatting %r' % self.format, file=sys.stderr)
             pprint.pprint(data, stream=sys.stderr)
             raise
 
@@ -237,7 +240,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
         value = data['value'] or value
         elapsed = data['total_seconds_elapsed'] or total_seconds_elapsed
 
-        if elapsed > 2e-6 and value > 2e-6:  # =~ 0
+        if value is not None and elapsed > 2e-6 and value > 2e-6:  # =~ 0
             scaled, power = self._speed(value, elapsed)
         else:
             scaled = power = 0
@@ -366,20 +369,24 @@ class Bar(AutoWidthWidgetBase):
         fill_left - whether to fill from the left or the right
         '''
         def string_or_lambda(input_):
-            if isinstance(input_, basestring):
-                return lambda progress, data, width: input_ % data
+            if isinstance(input_, six.basestring):
+                def render_input(progress, data, width):
+                    return input_ % data
+
+                return render_input
             else:
                 return input_
 
         def _marker(marker):
             def __marker(progress, data, width):
-                if progress.max_value > 0:
+                if progress.max_value is not base.UnknownLength \
+                        and progress.max_value > 0:
                     length = int(progress.value / progress.max_value * width)
                     return (marker * length)
                 else:
                     return ''
 
-            if isinstance(marker, basestring):
+            if isinstance(marker, six.basestring):
                 assert len(marker) == 1, 'Markers are required to be 1 char'
                 return __marker
             else:
