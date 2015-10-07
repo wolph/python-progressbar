@@ -3,29 +3,18 @@ import os
 import sys
 import math
 import fcntl
+import shutil
 import termios
 import array
 import signal
 import warnings
 from datetime import datetime, timedelta
 import collections
+
 from . import widgets
 from . import six
 from . import utils
-
-
-class FalseMeta(type):
-    def __bool__(self):
-        return False
-
-    def __cmp__(self, other):
-        return -1
-
-    __nonzero__ = __bool__
-
-
-class UnknownLength(object):
-    __metaclass__ = FalseMeta
+from . import base
 
 
 class ProgressBarMixinBase(object):
@@ -61,9 +50,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
 
 class ResizableMixin(DefaultFdMixin):
-    _DEFAULT_TERMSIZE = 80
+    _DEFAULT_TERMWIDTH = 80
+    _DEFAULT_TERMHEIGHT = 25
 
-    def __init__(self, term_width=_DEFAULT_TERMSIZE, **kwargs):
+    def __init__(self, term_width=_DEFAULT_TERMWIDTH, **kwargs):
         super(ResizableMixin, self).__init__(**kwargs)
 
         self.signal_set = False
@@ -83,13 +73,17 @@ class ResizableMixin(DefaultFdMixin):
     def _env_size(self):
         'Tries to find the term_width from the environment.'
 
-        return int(os.environ.get('COLUMNS', self._DEFAULT_TERMSIZE)) - 1
+        return int(os.environ.get('COLUMNS', self._DEFAULT_TERMWIDTH)) - 1
 
     def _handle_resize(self, signum=None, frame=None):
         'Tries to catch resize signals sent from the terminal.'
 
-        size = fcntl.ioctl(self.fd, termios.TIOCGWINSZ, '\0' * 8)
-        h, w = array.array('h', size)[:2]
+        if six.PY3:  # pragma: no cover
+            h, w = shutil.get_terminal_size(
+                (self._DEFAULT_TERMWIDTH, self._DEFAULT_TERMHEIGHT))
+        else:  # pragma: no cover
+            size = fcntl.ioctl(self.fd, termios.TIOCGWINSZ, '\0' * 8)
+            h, w = array.array('h', size)[:2]
         self.term_width = w
 
     def finish(self):  # pragma: no cover
@@ -192,10 +186,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                  **kwargs):
         '''Initializes a progress bar with sane defaults'''
         super(ProgressBar, self).__init__(**kwargs)
-        if not max_value and kwargs.get('max_value'):
-            warnings.warn('The usage of `max_value` is deprecated, please use '
+        if not max_value and kwargs.get('maxval'):
+            warnings.warn('The usage of `maxval` is deprecated, please use '
                           '`max_value` instead', DeprecationWarning)
-            max_value = kwargs.get('max_value')
+            max_value = kwargs.get('maxval')
 
         if not poll_interval and kwargs.get('poll'):
             warnings.warn('The usage of `poll` is deprecated, please use '
@@ -264,7 +258,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         >>> progress.max_value = None
         >>> progress.percentage
         '''
-        if self.max_value is None:
+        if self.max_value is None or self.max_value is base.UnknownLength:
             return None
         elif self.max_value:
             todo = self.value - self.min_value
@@ -349,7 +343,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 self.max_value = len(iterable)
             except TypeError:
                 if self.max_value is None:
-                    self.max_value = UnknownLength
+                    self.max_value = base.UnknownLength
         else:
             self.max_value = max_value
 
@@ -396,7 +390,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             if isinstance(widget, widgets.AutoWidthWidgetBase):
                 result.append(widget)
                 expanding.insert(0, index)
-            elif isinstance(widget, basestring):
+            elif isinstance(widget, six.basestring):
                 result.append(widget)
                 width -= len(widget)
             else:
@@ -442,8 +436,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.start()
             return self.update(value)
 
-        if value is not None and value is not UnknownLength:
-            if self.max_value is UnknownLength:
+        if value is not None and value is not base.UnknownLength:
+            if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
                 pass
             elif self.min_value <= value <= self.max_value:
@@ -484,7 +478,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.num_intervals = max(100, self.term_width)
         self.next_update = 0
 
-        if self.max_value is not UnknownLength:
+        if self.max_value is not base.UnknownLength:
             if self.max_value < 0:
                 raise ValueError('Value out of range')
             self.update_interval = self.max_value / self.num_intervals

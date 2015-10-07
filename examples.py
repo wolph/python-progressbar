@@ -9,7 +9,7 @@ import time
 from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
     FileTransferSpeed, FormatLabel, Percentage, \
     ProgressBar, ReverseBar, RotatingMarker, \
-    SimpleProgress, Timer, AdaptiveETA, AdaptiveTransferSpeed
+    SimpleProgress, Timer, AdaptiveETA, AbsoluteETA, AdaptiveTransferSpeed
 
 examples = []
 
@@ -352,9 +352,23 @@ def example28():
         # iter range is a way to get an iterator in both python 2 and 3
         pass
 
+
+@example
+def example29():
+    widgets = ['Test: ', Percentage(), ' | ', ETA(), ' | ', AbsoluteETA()]
+    pbar = ProgressBar(widgets=widgets, maxval=500).start()
+    for i in range(500):
+        time.sleep(0.01)
+        pbar.update(i+1)
+    pbar.finish()
+
+
+def test():
+    for example in examples:
+        example()
+
 if __name__ == '__main__':
     try:
-        for example in examples:
-            example()
+        test()
     except KeyboardInterrupt:
         sys.stdout('\nQuitting examples.\n')

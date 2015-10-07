@@ -21,6 +21,7 @@
 '''Default ProgressBar widgets'''
 
 from __future__ import division, absolute_import, with_statement
+from __future__ import print_function
 
 import datetime
 import math
@@ -29,6 +30,8 @@ import sys
 import pprint
 
 from . import utils
+from . import six
+from . import base
 
 
 class FormatWidgetMixin(object):
@@ -57,7 +60,7 @@ class FormatWidgetMixin(object):
         try:
             return (format or self.format) % data
         except (TypeError, KeyError):
-            print >> sys.stderr, 'Error while formatting %r' % self.format
+            print('Error while formatting %r' % self.format, file=sys.stderr)
             pprint.pprint(data, stream=sys.stderr)
             raise
 
@@ -170,6 +173,30 @@ class ETA(Timer):
                          data['total_seconds_elapsed'])
 
 
+class AbsoluteETA(Timer):
+    '''Widget which attempts to estimate the absolute time of arrival.'''
+
+    def _eta(self, progress, data, value, elapsed):
+        """Update the widget to show the ETA or total time when finished."""
+        if value == progress.min_value:  # pragma: no cover
+            return 'Estimated finish time: ----/--/-- --:--:--'
+        elif progress.end_time:
+            return 'Finished at: %s' % self._format(progress.end_time)
+        else:
+            eta = elapsed * progress.max_value / value - elapsed
+            now = datetime.datetime.now()
+            eta_abs = now + datetime.timedelta(seconds=eta)
+            return 'Estimated finish time: %s' % self._format(eta_abs)
+
+    def _format(self, t):
+        return t.strftime("%Y/%m/%d %H:%M:%S")
+
+    def __call__(self, progress, data):
+        '''Updates the widget to show the ETA or total time when finished.'''
+        return self._eta(progress, data, data['value'],
+                         data['total_seconds_elapsed'])
+
+
 class AdaptiveETA(ETA, SamplesMixin):
     '''WidgetBase which attempts to estimate the time of arrival.
 
@@ -213,14 +240,16 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
         value = data['value'] or value
         elapsed = data['total_seconds_elapsed'] or total_seconds_elapsed
 
-        if elapsed > 2e-6 and value > 2e-6:  # =~ 0
+        if value is not None and elapsed > 2e-6 and value > 2e-6:  # =~ 0
             scaled, power = self._speed(value, elapsed)
         else:
             scaled = power = 0
 
         data['unit'] = self.unit
         if power == 0 and scaled < 0.1:
-            data['scaled'] = 1./scaled
+            if scaled > 0:
+                scaled = 1 / scaled
+            data['scaled'] = scaled
             data['prefix'] = self.prefixes[0]
             return FormatWidgetMixin.__call__(self, progress, data,
                                               self.inverse_format)
@@ -340,20 +369,24 @@ class Bar(AutoWidthWidgetBase):
         fill_left - whether to fill from the left or the right
         '''
         def string_or_lambda(input_):
-            if isinstance(input_, basestring):
-                return lambda progress, data, width: input_ % data
+            if isinstance(input_, six.basestring):
+                def render_input(progress, data, width):
+                    return input_ % data
+
+                return render_input
             else:
                 return input_
 
         def _marker(marker):
             def __marker(progress, data, width):
-                if progress.max_value > 0:
+                if progress.max_value is not base.UnknownLength \
+                        and progress.max_value > 0:
                     length = int(progress.value / progress.max_value * width)
                     return (marker * length)
                 else:
                     return ''
 
-            if isinstance(marker, basestring):
+            if isinstance(marker, six.basestring):
                 assert len(marker) == 1, 'Markers are required to be 1 char'
                 return __marker
             else:
@@ -404,7 +437,7 @@ class ReverseBar(Bar):
 
 class BouncingBar(Bar):
 
-    def update(self, progress, width):
+    def update(self, progress, width):  # pragma: no cover
         '''Updates the progress bar and its subcomponents'''
 
         left, marker, right = (i for i in (self.left, self.marker, self.right))
@@ -425,4 +458,3 @@ class BouncingBar(Bar):
             rpad, lpad = lpad, rpad
 
         return '%s%s%s%s%s' % (left, lpad, marker, rpad, right)
-
