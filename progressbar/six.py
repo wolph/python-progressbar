@@ -14,7 +14,7 @@ except ImportError:  # pragma: no cover
     except ImportError:
         from io import StringIO
 
-PY3 = sys.version_info.major == 3
+PY3 = sys.version_info[0] == 3
 
 if PY3:  # pragma: no cover
     basestring = str
