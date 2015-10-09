@@ -223,7 +223,7 @@ class DataSize(FormatWidgetMixin):
     '''
     def __init__(
             self, format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
-            prefixes=('', 'ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
         self.unit = unit
         self.prefixes = prefixes
         super(DataSize, self).__init__(format=format)
@@ -250,7 +250,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
     def __init__(
             self, format='%(scaled)5.1f %(prefix)s%(unit)-s/s',
             inverse_format='%(scaled)5.1f s/%(prefix)s%(unit)-s', unit='B',
-            prefixes=('', 'ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
         self.unit = unit
         self.prefixes = prefixes
         self.inverse_format = inverse_format
