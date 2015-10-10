@@ -27,4 +27,4 @@ __author__ = 'Rick van Hattem'
 __author_email__ = 'Wolph@Wol.ph'
 __url__ = 'https://github.com/WoLpH/python-progressbar'
 __date__ = str(datetime.date.today())
-__version__ = '3.0.1'
+__version__ = '3.1.0'
