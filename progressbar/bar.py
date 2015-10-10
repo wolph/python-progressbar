@@ -306,7 +306,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             # The seconds since the bar started
             total_seconds_elapsed=total_seconds_elapsed,
             # The seconds since the bar started modulo 60
-            seconds_elapsed=(elapsed.seconds % 60) + elapsed.microseconds,
+            seconds_elapsed=(elapsed.seconds % 60) +
+            (elapsed.microseconds / 1000000.),
             # The minutes since the bar started modulo 60
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24

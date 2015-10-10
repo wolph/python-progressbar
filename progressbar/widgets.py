@@ -115,16 +115,45 @@ class TimeSensitiveWidgetBase(WidgetBase):
     INTERVAL = datetime.timedelta(seconds=1)
 
 
-class Timer(FormatWidgetMixin, TimeSensitiveWidgetBase):
+def _format_time(seconds):
+    '''Formats time as the string "HH:MM:SS".'''
+    return str(datetime.timedelta(seconds=int(seconds)))
+
+
+class FormatLabel(FormatWidgetMixin):
+    '''Displays a formatted label'''
+
+    mapping = {
+        'finished': ('end_time', None),
+        'last_update': ('last_update_time', None),
+        'max': ('max_value', None),
+        'seconds': ('seconds_elapsed', None),
+        'start': ('start_time', None),
+        'elapsed': ('total_seconds_elapsed', _format_time),
+        'value': ('value', None),
+    }
+
+    def __call__(self, progress, data):
+        for name, (key, transform) in self.mapping.items():
+            try:
+                if transform is None:
+                    data[name] = data[key]
+                else:
+                    data[name] = transform(data[key])
+            except:  # pragma: no cover
+                pass
+
+        return FormatWidgetMixin.__call__(self, progress, data)
+
+
+class Timer(FormatLabel, TimeSensitiveWidgetBase):
     '''WidgetBase which displays the elapsed seconds.'''
 
-    def __init__(self, format='Elapsed Time: %(time_elapsed)s'):
+    def __init__(self, format='Elapsed Time: %(elapsed)s'):
         super(Timer, self).__init__(format=format)
 
-    @staticmethod
-    def format_time(seconds):
-        '''Formats time as the string "HH:MM:SS".'''
-        return str(datetime.timedelta(seconds=int(seconds)))
+    # This is exposed as a static method for backwards compatibility
+    format_time = staticmethod(_format_time)
 
 
 class SamplesMixin(object):
@@ -161,7 +190,7 @@ class ETA(Timer):
         if value == progress.min_value:
             return 'ETA:  --:--:--'
         elif progress.end_time:
-            return 'Time: %s' % elapsed
+            return 'Time: %.2f' % data['total_seconds_elapsed']
         else:
             eta = elapsed * progress.max_value / value - elapsed
             return 'ETA: %s' % self.format_time(eta)
@@ -337,37 +366,6 @@ class Percentage(FormatWidgetMixin, WidgetBase):
 
     def __init__(self, format='%(percentage)3d%%'):
         super(Percentage, self).__init__(format=format)
-
-
-class FormatLabel(Timer):
-
-    '''Displays a formatted label'''
-
-    mapping = {
-        'elapsed': ('seconds_elapsed', Timer.format_time),
-        'finished': ('end_time', None),
-        'last_update': ('last_update_time', None),
-        'max': ('max_value', None),
-        'seconds': ('seconds_elapsed', None),
-        'start': ('start_time', None),
-        'elapsed': ('total_seconds_elapsed', Timer.format_time),
-        'value': ('value', None),
-    }
-
-    def __init__(self, format):
-        self.format = format
-
-    def __call__(self, progress, data):
-        for name, (key, transform) in self.mapping.items():
-            try:
-                if transform is None:
-                    data[name] = data[key]
-                else:
-                    data[name] = transform(data[key])
-            except:  # pragma: no cover
-                pass
-
-        return FormatWidgetMixin.__call__(self, progress, data)
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
