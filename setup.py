@@ -50,7 +50,6 @@ if __name__ == '__main__':
             'Programming Language :: Python :: 3',
             'Programming Language :: Python :: 3.3',
             'Programming Language :: Python :: 3.4',
-            'Programming Language :: Python :: Pypy',
             'Topic :: Software Development :: Libraries',
             'Topic :: Software Development :: User Interfaces',
             'Topic :: Terminals'

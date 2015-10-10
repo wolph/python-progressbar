@@ -11,9 +11,12 @@ def test_widgets_small_values():
         ' ',
         progressbar.ETA(),
         ' ',
+        progressbar.AbsoluteETA(),
+        ' ',
         progressbar.FileTransferSpeed(),
     ]
     p = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
+    p.update(0)
     for i in range(10):
         time.sleep(0.001)
         p.update(i + 1)
@@ -28,6 +31,8 @@ def test_widgets_large_values():
         progressbar.Bar(marker=progressbar.RotatingMarker()),
         ' ',
         progressbar.ETA(),
+        ' ',
+        progressbar.AbsoluteETA(),
         ' ',
         progressbar.FileTransferSpeed(),
     ]
@@ -53,6 +58,8 @@ def test_all_widgets_small_values():
         progressbar.Timer(),
         progressbar.ETA(),
         progressbar.AdaptiveETA(),
+        progressbar.AbsoluteETA(),
+        progressbar.DataSize(),
         progressbar.FileTransferSpeed(),
         progressbar.AdaptiveTransferSpeed(),
         progressbar.AnimatedMarker(),
@@ -76,6 +83,8 @@ def test_all_widgets_large_values():
         progressbar.Timer(),
         progressbar.ETA(),
         progressbar.AdaptiveETA(),
+        progressbar.AbsoluteETA(),
+        progressbar.DataSize(),
         progressbar.FileTransferSpeed(),
         progressbar.AdaptiveTransferSpeed(),
         progressbar.AnimatedMarker(),
@@ -83,7 +92,7 @@ def test_all_widgets_large_values():
         progressbar.Percentage(),
         progressbar.FormatLabel('%(value)d/%(max_value)d'),
         progressbar.SimpleProgress(),
-        progressbar.Bar(),
+        progressbar.Bar(fill=lambda progress, data, width: '#'),
         progressbar.ReverseBar(),
         progressbar.BouncingBar(),
     ]

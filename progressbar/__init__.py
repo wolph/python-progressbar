@@ -47,6 +47,8 @@ from progressbar.widgets import (
     Timer,
     ETA,
     AdaptiveETA,
+    AbsoluteETA,
+    DataSize,
     FileTransferSpeed,
     AdaptiveTransferSpeed,
     AnimatedMarker,
@@ -60,7 +62,8 @@ from progressbar.widgets import (
     RotatingMarker,
 )
 
-from .bar import ProgressBar, UnknownLength
+from .bar import ProgressBar
+from .base import UnknownLength
 
 
 __author__ = 'Rick van Hattem'
@@ -74,6 +77,8 @@ __all__ = [
     'Timer',
     'ETA',
     'AdaptiveETA',
+    'AbsoluteETA',
+    'DataSize',
     'FileTransferSpeed',
     'AdaptiveTransferSpeed',
     'AnimatedMarker',
@@ -89,4 +94,3 @@ __all__ = [
     'format_updatable',
     'RotatingMarker',
 ]
-
