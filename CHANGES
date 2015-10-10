@@ -1,0 +1,25 @@
+=========
+Changelog
+=========
+
+Here you can find the recent changes to Python Progressbar..
+
+.. changelog::
+    :version: dev
+    :released: Ongoing
+
+    .. change::
+        :tags:  docs
+
+        Updated CHANGES.
+
+.. changelog::
+    :version: 3.1
+    :released: 2015-07-11
+
+    .. change::
+        :tags: project
+
+        First release on PyPi.
+
+.. todo:: vim: set filetype=rst:
