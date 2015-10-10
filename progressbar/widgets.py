@@ -24,7 +24,6 @@ from __future__ import division, absolute_import, with_statement
 from __future__ import print_function
 
 import datetime
-import math
 import abc
 import sys
 import pprint
@@ -116,16 +115,45 @@ class TimeSensitiveWidgetBase(WidgetBase):
     INTERVAL = datetime.timedelta(seconds=1)
 
 
-class Timer(FormatWidgetMixin, TimeSensitiveWidgetBase):
+def _format_time(seconds):
+    '''Formats time as the string "HH:MM:SS".'''
+    return str(datetime.timedelta(seconds=int(seconds)))
+
+
+class FormatLabel(FormatWidgetMixin):
+    '''Displays a formatted label'''
+
+    mapping = {
+        'finished': ('end_time', None),
+        'last_update': ('last_update_time', None),
+        'max': ('max_value', None),
+        'seconds': ('seconds_elapsed', None),
+        'start': ('start_time', None),
+        'elapsed': ('total_seconds_elapsed', _format_time),
+        'value': ('value', None),
+    }
+
+    def __call__(self, progress, data):
+        for name, (key, transform) in self.mapping.items():
+            try:
+                if transform is None:
+                    data[name] = data[key]
+                else:
+                    data[name] = transform(data[key])
+            except:  # pragma: no cover
+                pass
+
+        return FormatWidgetMixin.__call__(self, progress, data)
+
+
+class Timer(FormatLabel, TimeSensitiveWidgetBase):
     '''WidgetBase which displays the elapsed seconds.'''
 
-    def __init__(self, format='Elapsed Time: %(time_elapsed)s'):
+    def __init__(self, format='Elapsed Time: %(elapsed)s'):
         super(Timer, self).__init__(format=format)
 
-    @staticmethod
-    def format_time(seconds):
-        '''Formats time as the string "HH:MM:SS".'''
-        return str(datetime.timedelta(seconds=int(seconds)))
+    # This is exposed as a static method for backwards compatibility
+    format_time = staticmethod(_format_time)
 
 
 class SamplesMixin(object):
@@ -162,7 +190,7 @@ class ETA(Timer):
         if value == progress.min_value:
             return 'ETA:  --:--:--'
         elif progress.end_time:
-            return 'Time: %s' % elapsed
+            return 'Time: %.2f' % data['total_seconds_elapsed']
         else:
             eta = elapsed * progress.max_value / value - elapsed
             return 'ETA: %s' % self.format_time(eta)
@@ -215,6 +243,34 @@ class AdaptiveETA(ETA, SamplesMixin):
                              utils.timedelta_to_seconds(times[-1] - times[0]))
 
 
+class DataSize(FormatWidgetMixin):
+    '''
+    Widget for showing an amount of data transferred/processed.
+
+    Automatically formats the value (assumed to be a count of bytes) with an
+    appropriate sized unit, based on the IEC binary prefixes (powers of 1024).
+    '''
+    def __init__(
+            self, format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+        self.unit = unit
+        self.prefixes = prefixes
+        super(DataSize, self).__init__(format=format)
+
+    def __call__(self, progress, data):
+        value = data['value']
+        if value is not None:
+            scaled, power = utils.scale_1024(value, len(self.prefixes))
+        else:
+            scaled = power = 0
+
+        data['scaled'] = scaled
+        data['prefix'] = self.prefixes[power]
+        data['unit'] = self.unit
+
+        return FormatWidgetMixin.__call__(self, progress, data)
+
+
 class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
     '''
     WidgetBase for showing the transfer speed (useful for file transfers).
@@ -223,7 +279,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
     def __init__(
             self, format='%(scaled)5.1f %(prefix)s%(unit)-s/s',
             inverse_format='%(scaled)5.1f s/%(prefix)s%(unit)-s', unit='B',
-            prefixes=('', 'ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
         self.unit = unit
         self.prefixes = prefixes
         self.inverse_format = inverse_format
@@ -231,9 +287,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
 
     def _speed(self, value, elapsed):
         speed = float(value) / elapsed
-        power = min(int(math.log(speed, 2) / 10), len(self.prefixes) - 1)
-        scaled = speed / (2 ** (10 * power))
-        return scaled, power
+        return utils.scale_1024(speed, len(self.prefixes))
 
     def __call__(self, progress, data, value=None, total_seconds_elapsed=None):
         '''Updates the widget with the current SI prefixed speed.'''
@@ -312,37 +366,6 @@ class Percentage(FormatWidgetMixin, WidgetBase):
 
     def __init__(self, format='%(percentage)3d%%'):
         super(Percentage, self).__init__(format=format)
-
-
-class FormatLabel(Timer):
-
-    '''Displays a formatted label'''
-
-    mapping = {
-        'elapsed': ('seconds_elapsed', Timer.format_time),
-        'finished': ('end_time', None),
-        'last_update': ('last_update_time', None),
-        'max': ('max_value', None),
-        'seconds': ('seconds_elapsed', None),
-        'start': ('start_time', None),
-        'elapsed': ('total_seconds_elapsed', Timer.format_time),
-        'value': ('value', None),
-    }
-
-    def __init__(self, format):
-        self.format = format
-
-    def __call__(self, progress, data):
-        for name, (key, transform) in self.mapping.items():
-            try:
-                if transform is None:
-                    data[name] = data[key]
-                else:
-                    data[name] = transform(data[key])
-            except:  # pragma: no cover
-                pass
-
-        return FormatWidgetMixin.__call__(self, progress, data)
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
