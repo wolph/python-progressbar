@@ -2,10 +2,6 @@ from __future__ import division, absolute_import, with_statement
 import os
 import sys
 import math
-import fcntl
-import shutil
-import termios
-import array
 import signal
 import warnings
 from datetime import datetime, timedelta
@@ -78,12 +74,7 @@ class ResizableMixin(DefaultFdMixin):
     def _handle_resize(self, signum=None, frame=None):
         'Tries to catch resize signals sent from the terminal.'
 
-        if six.PY3:  # pragma: no cover
-            h, w = shutil.get_terminal_size(
-                (self._DEFAULT_TERMWIDTH, self._DEFAULT_TERMHEIGHT))
-        else:  # pragma: no cover
-            size = fcntl.ioctl(self.fd, termios.TIOCGWINSZ, '\0' * 8)
-            h, w = array.array('h', size)[:2]
+        w, h = utils.get_terminal_size()
         self.term_width = w
 
     def finish(self):  # pragma: no cover
