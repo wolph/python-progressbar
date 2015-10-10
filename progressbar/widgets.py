@@ -24,7 +24,6 @@ from __future__ import division, absolute_import, with_statement
 from __future__ import print_function
 
 import datetime
-import math
 import abc
 import sys
 import pprint
@@ -215,6 +214,34 @@ class AdaptiveETA(ETA, SamplesMixin):
                              utils.timedelta_to_seconds(times[-1] - times[0]))
 
 
+class DataSize(FormatWidgetMixin):
+    '''
+    Widget for showing an amount of data transferred/processed.
+
+    Automatically formats the value (assumed to be a count of bytes) with an
+    appropriate sized unit, based on the IEC binary prefixes (powers of 1024).
+    '''
+    def __init__(
+            self, format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+        self.unit = unit
+        self.prefixes = prefixes
+        super(DataSize, self).__init__(format=format)
+
+    def __call__(self, progress, data):
+        value = data['value']
+        if value is not None:
+            scaled, power = utils.scale_1024(value, len(self.prefixes))
+        else:
+            scaled = power = 0
+
+        data['scaled'] = scaled
+        data['prefix'] = self.prefixes[power]
+        data['unit'] = self.unit
+
+        return FormatWidgetMixin.__call__(self, progress, data)
+
+
 class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
     '''
     WidgetBase for showing the transfer speed (useful for file transfers).
@@ -223,7 +250,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
     def __init__(
             self, format='%(scaled)5.1f %(prefix)s%(unit)-s/s',
             inverse_format='%(scaled)5.1f s/%(prefix)s%(unit)-s', unit='B',
-            prefixes=('', 'ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
         self.unit = unit
         self.prefixes = prefixes
         self.inverse_format = inverse_format
@@ -231,9 +258,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
 
     def _speed(self, value, elapsed):
         speed = float(value) / elapsed
-        power = min(int(math.log(speed, 2) / 10), len(self.prefixes) - 1)
-        scaled = speed / (2 ** (10 * power))
-        return scaled, power
+        return utils.scale_1024(speed, len(self.prefixes))
 
     def __call__(self, progress, data, value=None, total_seconds_elapsed=None):
         '''Updates the widget with the current SI prefixed speed.'''
