@@ -1,11 +1,10 @@
 '''Library to make differences between Python 2 and 3 transparent'''
+import sys
 
 __all__ = [
     'StringIO',
     'basestring',
 ]
-
-import sys
 
 try:
     from cStringIO import StringIO
@@ -15,10 +14,10 @@ except ImportError:  # pragma: no cover
     except ImportError:
         from io import StringIO
 
-PY2 = sys.version[0] == 2
+PY3 = sys.version_info[0] == 3
 
-if PY2:
-    basestring = basestring
-else:
+if PY3:  # pragma: no cover
     basestring = str
-
+else:  # pragma: no cover
+    import __builtin__
+    basestring = __builtin__.basestring
