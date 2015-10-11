@@ -1,6 +1,6 @@
 flake8
 pytest
-pytest-cov
+pytest-cover
 pytest-cache
 pytest-pep8
 pytest-flakes
