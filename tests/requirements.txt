@@ -1,7 +1,8 @@
+-r ../requirements.txt
 flake8
 pytest
-pytest-cov
 pytest-cache
-pytest-pep8
+pytest-cov
 pytest-flakes
+pytest-pep8
 sphinx
