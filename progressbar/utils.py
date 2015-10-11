@@ -1,8 +1,6 @@
 import os
 import math
 
-from progressbar import six
-
 
 def timedelta_to_seconds(delta):
     '''Convert a timedelta to seconds with the microseconds as fraction
@@ -52,11 +50,15 @@ def get_terminal_size():  # pragma: no cover
     system = platform.system().lower()
     size = None
 
-    if six.PY3:
+    try:
+        # This works for Python 3, but not Pypy3. Probably the best method if
+        # it's supported so let's always try
         import shutil
         h, w = shutil.get_terminal_size((0, 0))
         if h and w:
             size = w, h
+    except:
+        pass
 
     if not size:
         if system == 'windows':

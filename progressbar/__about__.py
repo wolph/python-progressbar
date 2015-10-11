@@ -20,11 +20,15 @@ The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
 '''
 
-import datetime
-
+__title__ = 'Python Progressbar'
 __package_name__ = 'progressbar2'
-__author__ = 'Rick van Hattem'
-__author_email__ = 'Wolph@Wol.ph'
+__author__ = 'Rick van Hattem (Wolph)'
+__description__ = '''
+A Python Progressbar library to provide visual (yet text based) progress to
+long running operations.
+'''.strip()
+__email__ = 'wolph@wol.ph'
+__version__ = '3.2.0'
+__license__ = 'BSD'
+__copyright__ = 'Copyright 2015 Rick van Hattem (Wolph)'
 __url__ = 'https://github.com/WoLpH/python-progressbar'
-__date__ = str(datetime.date.today())
-__version__ = '3.1.0'

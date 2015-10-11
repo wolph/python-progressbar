@@ -1,3 +1,36 @@
+=========
+Changelog
+=========
+
+Here you can find the recent changes to Python Progressbar..
+
+.. changelog::
+    :version: dev
+    :released: Ongoing
+
+    .. change::
+        :tags:  docs
+
+        Updated CHANGES.
+
+.. changelog::
+    :version: 3.2
+    :released: 2015-10-11
+
+    .. change::
+        :tags: packaging
+
+        Cookiecutter package
+
+.. changelog::
+    :version: 3.1
+    :released: 2015-07-11
+
+    .. change::
+        :tags: python 3
+
+        Python 3 support
+
 2011-05-15:
   - Removed parse errors for Python2.4 (no, people *should not* be using it
     but it is only 3 years old and it does not have that many differences)
@@ -64,3 +97,5 @@
 2004-06-15:
   - First version.
   - Released version 0.1.
+
+.. todo:: vim: set filetype=rst:

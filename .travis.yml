@@ -12,7 +12,7 @@ python:
 # command to install dependencies
 install:
   - pip install .
-  - pip install -r requirements_test.txt
+  - pip install -r tests/requirements.txt
 
 before_script: flake8 --ignore=W391 progressbar tests
 
