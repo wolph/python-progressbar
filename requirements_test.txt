@@ -1,7 +1,0 @@
-flake8
-pytest
-pytest-cover
-pytest-cache
-pytest-pep8
-pytest-flakes
-sphinx
