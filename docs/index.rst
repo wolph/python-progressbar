@@ -9,8 +9,16 @@ Contents
 .. toctree::
    :maxdepth: 2
 
+   usage
    examples
-   progressbar
+   contributing
+   history
+   installation
+   progressbar.bar
+   progressbar.metadata
+   progressbar.six
+   progressbar.utils
+   progressbar.widgets
 
 Indices and tables
 ==================

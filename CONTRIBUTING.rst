@@ -64,8 +64,8 @@ Ready to contribute? Here's how to set up `python-progressbar` for local develop
 
 3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
 
-    $ mkvirtualenv python-progressbar
-    $ cd python-progressbar/
+    $ mkvirtualenv progressbar
+    $ cd progressbar/
     $ pip install -e .
 
 4. Create a branch for local development with `git-flow-avh`_::
@@ -80,7 +80,7 @@ Ready to contribute? Here's how to set up `python-progressbar` for local develop
 
 5. When you're done making changes, check that your changes pass flake8 and the tests, including testing other Python versions with tox::
 
-    $ flake8 python-progressbar tests
+    $ flake8 progressbar tests
     $ py.test
     $ tox
 

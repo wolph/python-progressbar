@@ -1,2 +1,8 @@
-include README.txt LICENSE.txt
+include AUTHORS.rst
+include CHANGES
+include CONTRIBUTING.rst
+include LICENSE
+include README.rst
+include README.txt
 include examples.py
+include requirements.txt

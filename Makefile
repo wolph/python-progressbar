@@ -24,7 +24,7 @@ clean-pyc:
 	find . -name '*~' -exec rm -f {} +
 
 lint:
-	flake8 python-progressbar tests
+	flake8 progressbar tests
 
 test:
 	py.test
@@ -33,15 +33,15 @@ test-all:
 	tox
 
 coverage:
-	coverage run --source python-progressbar setup.py test
+	coverage run --source progressbar setup.py test
 	coverage report -m
 	coverage html
 	open htmlcov/index.html
 
 docs:
-	rm -f docs/python-progressbar.rst
+	rm -f docs/progressbar.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ python-progressbar
+	sphinx-apidoc -o docs/ progressbar
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	open docs/_build/html/index.html

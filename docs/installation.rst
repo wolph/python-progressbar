@@ -4,9 +4,13 @@ Installation
 
 At the command line::
 
-    $ easy_install python-progressbar
+    $ pip install progressbar2
+
+Or if you don't have pip::
+
+    $ easy_install progressbar2
 
 Or, if you have virtualenvwrapper installed::
 
-    $ mkvirtualenv python-progressbar
-    $ pip install python-progressbar
+    $ mkvirtualenv progressbar2
+    $ pip install progressbar2
