@@ -52,7 +52,7 @@ if sys.argv[-1] == 'info':
 with open('README.rst') as fh:
     readme = fh.read()
 
-with open('CHANGES') as fh:
+with open('CHANGES.rst') as fh:
     history = fh.read().replace('.. :changelog:', '')
 
 
