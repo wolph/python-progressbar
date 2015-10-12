@@ -14,3 +14,14 @@ def test_unknown_length_default_widgets():
     for i in range(60):
         pb.update(i)
     pb.finish()
+
+
+def test_unknown_length_at_start():
+    # The default widgets should be picked after we call .start()
+    pb = ProgressBar().start(max_value=UnknownLength)
+    for i in range(60):
+        pb.update(i)
+    pb.finish()
+
+    pb2 = ProgressBar().start(max_value=UnknownLength)
+    assert any([isinstance(w, progressbar.Bar) for w in pb2.widgets])

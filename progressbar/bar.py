@@ -193,7 +193,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                                  'value')
         self.min_value = min_value
         self.max_value = max_value
-        self.widgets = widgets or self.default_widgets()
+        self.widgets = widgets
         self.left_justify = left_justify
 
         self._iterable = None
@@ -209,13 +209,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             poll_interval = timedelta(seconds=poll_interval)
 
         self.poll_interval = poll_interval
-        for widget in self.widgets:
-            interval = getattr(widget, 'INTERVAL', None)
-            if interval is not None:
-                self.poll_interval = min(
-                    self.poll_interval or interval,
-                    interval,
-                )
 
     @property
     def percentage(self):
@@ -465,6 +458,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.max_value = max_value or self.max_value
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
+
+        # Constructing the default widgets is only done when we know max_value
+        if self.widgets is None:
+            self.widgets = self.default_widgets()
+
+        for widget in self.widgets:
+            interval = getattr(widget, 'INTERVAL', None)
+            if interval is not None:
+                self.poll_interval = min(
+                    self.poll_interval or interval,
+                    interval,
+                )
 
         self.num_intervals = max(100, self.term_width)
         self.next_update = 0
