@@ -192,7 +192,8 @@ class ETA(Timer):
         elif progress.end_time:
             return 'Time: %.2f' % data['total_seconds_elapsed']
         else:
-            eta = elapsed * progress.max_value / value - data['total_seconds_elapsed']
+            eta = elapsed * progress.max_value / value \
+                - data['total_seconds_elapsed']
             return 'ETA: %s' % self.format_time(eta)
 
     def __call__(self, progress, data):
