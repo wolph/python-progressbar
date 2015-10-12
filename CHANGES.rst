@@ -14,6 +14,15 @@ Here you can find the recent changes to Python Progressbar..
         Updated CHANGES.
 
 .. changelog::
+    :version: 3.3
+    :released: 2015-10-12
+
+    .. change::
+        :tags: unknown-length
+
+        Fixed `UnknownLength` handling. Thanks to @takluyver
+
+.. changelog::
     :version: 3.2
     :released: 2015-10-11
 

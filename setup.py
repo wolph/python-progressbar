@@ -52,9 +52,6 @@ if sys.argv[-1] == 'info':
 with open('README.rst') as fh:
     readme = fh.read()
 
-with open('CHANGES.rst') as fh:
-    history = fh.read().replace('.. :changelog:', '')
-
 
 class PyTest(TestCommand):
     def finalize_options(self):
@@ -78,7 +75,7 @@ setup(
     license=about['__license__'],
     keywords=about['__title__'],
     packages=find_packages(exclude=['docs']),
-    long_description=readme + '\n\n' + history,
+    long_description=readme,
     include_package_data=True,
     install_requires=install_reqs,
     tests_require=tests_reqs,
