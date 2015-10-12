@@ -1,3 +1,6 @@
+from .six import with_metaclass
+
+
 class FalseMeta(type):
     def __bool__(self):  # pragma: no cover
         return False
@@ -8,5 +11,5 @@ class FalseMeta(type):
     __nonzero__ = __bool__
 
 
-class UnknownLength(object):
-    __metaclass__ = FalseMeta
+class UnknownLength(with_metaclass(FalseMeta, object)):
+    pass
