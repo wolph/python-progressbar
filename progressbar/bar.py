@@ -322,9 +322,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             ]
         else:
             return [
-                widgets.Percentage(),
-                ' (', widgets.SimpleProgress(), ')',
-                ' ', widgets.Bar(),
+                widgets.AnimatedMarker(),
+                ' ', widgets.Counter(),
                 ' ', widgets.Timer(),
             ]
 
