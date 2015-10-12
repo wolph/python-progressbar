@@ -193,7 +193,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                                  'value')
         self.min_value = min_value
         self.max_value = max_value
-        self.widgets = widgets or self.default_widgets()
+        self.widgets = widgets
         self.left_justify = left_justify
 
         self._iterable = None
@@ -209,13 +209,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             poll_interval = timedelta(seconds=poll_interval)
 
         self.poll_interval = poll_interval
-        for widget in self.widgets:
-            interval = getattr(widget, 'INTERVAL', None)
-            if interval is not None:
-                self.poll_interval = min(
-                    self.poll_interval or interval,
-                    interval,
-                )
 
     @property
     def percentage(self):
@@ -322,9 +315,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             ]
         else:
             return [
-                widgets.Percentage(),
-                ' (', widgets.SimpleProgress(), ')',
-                ' ', widgets.Bar(),
+                widgets.AnimatedMarker(),
+                ' ', widgets.Counter(),
                 ' ', widgets.Timer(),
             ]
 
@@ -467,6 +459,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
+        # Constructing the default widgets is only done when we know max_value
+        if self.widgets is None:
+            self.widgets = self.default_widgets()
+
+        for widget in self.widgets:
+            interval = getattr(widget, 'INTERVAL', None)
+            if interval is not None:
+                self.poll_interval = min(
+                    self.poll_interval or interval,
+                    interval,
+                )
+
         self.num_intervals = max(100, self.term_width)
         self.next_update = 0
 
@@ -488,3 +492,27 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         super(ProgressBar, self).finish()
 
+
+class DataTransferBar(ProgressBar):
+    '''A progress bar with sensible defaults for downloads etc.
+
+    This assumes that the values its given are numbers of bytes.
+    '''
+    # Base class defaults to 100, but that makes no sense here
+    _DEFAULT_MAXVAL = base.UnknownLength
+
+    def default_widgets(self):
+        if self.max_value:
+            return [
+                widgets.Percentage(),
+                ' of ', widgets.DataSize('max_value'),
+                ' ', widgets.Bar(),
+                ' ', widgets.Timer(),
+                ' ', widgets.AdaptiveETA(),
+            ]
+        else:
+            return [
+                widgets.AnimatedMarker(),
+                ' ', widgets.DataSize(),
+                ' ', widgets.Timer(),
+            ]

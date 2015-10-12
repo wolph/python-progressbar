@@ -192,7 +192,8 @@ class ETA(Timer):
         elif progress.end_time:
             return 'Time: %.2f' % data['total_seconds_elapsed']
         else:
-            eta = elapsed * progress.max_value / value - elapsed
+            eta = elapsed * progress.max_value / value \
+                - data['total_seconds_elapsed']
             return 'ETA: %s' % self.format_time(eta)
 
     def __call__(self, progress, data):
@@ -251,14 +252,16 @@ class DataSize(FormatWidgetMixin):
     appropriate sized unit, based on the IEC binary prefixes (powers of 1024).
     '''
     def __init__(
-            self, format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
+            self, variable='value',
+            format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
             prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+        self.variable = variable
         self.unit = unit
         self.prefixes = prefixes
         super(DataSize, self).__init__(format=format)
 
     def __call__(self, progress, data):
-        value = data['value']
+        value = data[self.variable]
         if value is not None:
             scaled, power = utils.scale_1024(value, len(self.prefixes))
         else:

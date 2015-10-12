@@ -62,7 +62,7 @@ from progressbar.widgets import (
     RotatingMarker,
 )
 
-from .bar import ProgressBar
+from .bar import ProgressBar, DataTransferBar
 from .base import UnknownLength
 
 
@@ -91,6 +91,7 @@ __all__ = [
     'BouncingBar',
     'UnknownLength',
     'ProgressBar',
+    'DataTransferBar',
     'format_updatable',
     'RotatingMarker',
 ]
