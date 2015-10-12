@@ -251,14 +251,16 @@ class DataSize(FormatWidgetMixin):
     appropriate sized unit, based on the IEC binary prefixes (powers of 1024).
     '''
     def __init__(
-            self, format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
+            self, variable='value',
+            format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
             prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+        self.variable = variable
         self.unit = unit
         self.prefixes = prefixes
         super(DataSize, self).__init__(format=format)
 
     def __call__(self, progress, data):
-        value = data['value']
+        value = data[self.variable]
         if value is not None:
             scaled, power = utils.scale_1024(value, len(self.prefixes))
         else:

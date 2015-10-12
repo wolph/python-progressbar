@@ -492,3 +492,27 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         super(ProgressBar, self).finish()
 
+
+class DataTransferBar(ProgressBar):
+    '''A progress bar with sensible defaults for downloads etc.
+
+    This assumes that the values its given are numbers of bytes.
+    '''
+    # Base class defaults to 100, but that makes no sense here
+    _DEFAULT_MAXVAL = base.UnknownLength
+
+    def default_widgets(self):
+        if self.max_value:
+            return [
+                widgets.Percentage(),
+                ' of ', widgets.DataSize('max_value'),
+                ' ', widgets.Bar(),
+                ' ', widgets.Timer(),
+                ' ', widgets.AdaptiveETA(),
+            ]
+        else:
+            return [
+                widgets.AnimatedMarker(),
+                ' ', widgets.DataSize(),
+                ' ', widgets.Timer(),
+            ]
