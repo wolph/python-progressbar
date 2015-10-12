@@ -20,9 +20,11 @@ def test_iterator_with_max_value():
 def test_iterator_without_max_value_error():
     '''Progressbar can't guess max_value.'''
     p = progressbar.ProgressBar()
-    with pytest.raises(TypeError):
-        for i in p((i for i in range(10))):
-            time.sleep(0.001)
+
+    for i in p((i for i in range(10))):
+        time.sleep(0.001)
+
+    assert p.max_value is progressbar.UnknownLength
 
 
 def test_iterator_without_max_value():
