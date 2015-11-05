@@ -41,7 +41,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.fd.write('\r' + self._format_line())
 
     def finish(self, *args, **kwargs):  # pragma: no cover
-        super(DefaultFdMixin, self).finish(*args, **kwargs)
+        ProgressBarMixinBase.finish(self, *args, **kwargs)
         self.fd.write('\n')
 
 
@@ -112,7 +112,7 @@ class StdRedirectMixin(DefaultFdMixin):
             sys.stdout = six.StringIO()
 
     def finish(self):
-        super(StdRedirectMixin, self).finish()
+        DefaultFdMixin.finish(self)
 
         if self.redirect_stderr:
             self._stderr.write(sys.stderr.getvalue())
@@ -490,7 +490,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.end_time = datetime.now()
         self.update(self.max_value)
 
-        super(ProgressBar, self).finish()
+        StdRedirectMixin.finish(self)
+        ResizableMixin.finish(self)
+        ProgressBarBase.finish(self)
 
 
 class DataTransferBar(ProgressBar):
