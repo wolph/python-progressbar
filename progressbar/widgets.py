@@ -297,7 +297,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
         value = data['value'] or value
         elapsed = data['total_seconds_elapsed'] or total_seconds_elapsed
 
-        if value is not None and elapsed > 2e-6 and value > 2e-6:  # =~ 0
+        if value is not None and elapsed is not None and elapsed > 2e-6 and value > 2e-6:  # =~ 0
             scaled, power = self._speed(value, elapsed)
         else:
             scaled = power = 0
