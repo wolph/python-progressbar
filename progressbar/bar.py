@@ -480,7 +480,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.update_interval = self.max_value / self.num_intervals
 
         self.start_time = self.last_update_time = datetime.now()
-        self.update(0)
+        self.update(self.min_value)
 
         return self
 
