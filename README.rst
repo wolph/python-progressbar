@@ -1,6 +1,16 @@
 Text progress bar library for Python.
 =====================================
 
+Travis status:
+
+.. image:: https://travis-ci.org/WoLpH/python-progressbar.png?branch=master
+  :target: https://travis-ci.org/WoLpH/python-progressbar
+
+Coverage:
+
+.. image:: https://coveralls.io/repos/WoLpH/python-progressbar/badge.png?branch=master
+  :target: https://coveralls.io/r/WoLpH/python-progressbar?branch=master
+
 Introduction
 ------------
 
