@@ -396,7 +396,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
                 temporary_data['value'] = value
                 width = len(FormatWidgetMixin.__call__(
                     self, progress, temporary_data, format=format))
-                if width:
+                if width:  # pragma: no branch
                     max_width = max(max_width or 0, width)
 
             self.max_width[key] = max_width

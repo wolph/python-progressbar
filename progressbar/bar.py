@@ -1,5 +1,4 @@
 from __future__ import division, absolute_import, with_statement
-import os
 import sys
 import math
 import signal
@@ -59,14 +58,6 @@ class ResizableMixin(DefaultFdMixin):
                 self.signal_set = True
             except (SystemExit, KeyboardInterrupt):  # pragma: no cover
                 raise
-            except:  # pragma: no cover
-                raise
-                self.term_width = self._env_size()
-
-    def _env_size(self):
-        'Tries to find the term_width from the environment.'
-
-        return int(os.environ.get('COLUMNS', self._DEFAULT_TERMWIDTH)) - 1
 
     def _handle_resize(self, signum=None, frame=None):
         'Tries to catch resize signals sent from the terminal.'
