@@ -190,11 +190,12 @@ class ETA(Timer):
         if value == progress.min_value:
             return 'ETA:  --:--:--'
         elif progress.end_time:
-            return 'Time: %.2f' % data['total_seconds_elapsed']
+            return 'Time: %s' % self.format_time(
+                data['total_seconds_elapsed'])
         else:
             eta = elapsed * progress.max_value / value \
                 - data['total_seconds_elapsed']
-            return 'ETA: %s' % self.format_time(eta)
+            return 'ETA:  %s' % self.format_time(eta)
 
     def __call__(self, progress, data):
         '''Updates the widget to show the ETA or total time when finished.'''
@@ -297,7 +298,8 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
         value = data['value'] or value
         elapsed = data['total_seconds_elapsed'] or total_seconds_elapsed
 
-        if value is not None and elapsed > 2e-6 and value > 2e-6:  # =~ 0
+        if value is not None and elapsed is not None \
+                and elapsed > 2e-6 and value > 2e-6:  # =~ 0
             scaled, power = self._speed(value, elapsed)
         else:
             scaled = power = 0
@@ -372,11 +374,35 @@ class Percentage(FormatWidgetMixin, WidgetBase):
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
-
     '''Returns progress as a count of the total (e.g.: "5 of 47")'''
 
-    def __init__(self, format='%(value)d of %(max_value)d'):
+    def __init__(self, format='%(value)d of %(max_value)d', max_width=None):
+        self.max_width = dict(default=max_width)
         super(SimpleProgress, self).__init__(format=format)
+
+    def __call__(self, progress, data, format=None):
+        formatted = FormatWidgetMixin.__call__(self, progress, data,
+                                               format=format)
+
+        # Guess the maximum width from the min and max value
+        key = progress.min_value, progress.max_value
+        max_width = self.max_width.get(key, self.max_width['default'])
+        if not max_width:
+            temporary_data = data.copy()
+            for value in key:
+                if value is None:
+                    continue
+
+                temporary_data['value'] = value
+                max_width = max(max_width, len(FormatWidgetMixin.__call__(
+                    self, progress, temporary_data, format=format)))
+
+            self.max_width[key] = max_width
+
+        # Adjust the output to have a consistent size in all cases
+        if max_width:
+            formatted = formatted.rjust(max_width)
+        return formatted
 
 
 class Bar(AutoWidthWidgetBase):
