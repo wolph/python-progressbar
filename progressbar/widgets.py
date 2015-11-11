@@ -390,7 +390,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
         if not max_width:
             temporary_data = data.copy()
             for value in key:
-                if value is None:
+                if value is None:  # pragma: no cover
                     continue
 
                 temporary_data['value'] = value
@@ -400,7 +400,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
             self.max_width[key] = max_width
 
         # Adjust the output to have a consistent size in all cases
-        if max_width:
+        if max_width:  # pragma: no branch
             formatted = formatted.rjust(max_width)
         return formatted
 
