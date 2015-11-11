@@ -46,11 +46,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
 
 class ResizableMixin(DefaultFdMixin):
-    _DEFAULT_TERMWIDTH = 80
-    _DEFAULT_TERMHEIGHT = 25
-
-    def __init__(self, term_width=_DEFAULT_TERMWIDTH, **kwargs):
-        super(ResizableMixin, self).__init__(**kwargs)
+    def __init__(self, term_width=None, **kwargs):
+        DefaultFdMixin.__init__(self, **kwargs)
 
         self.signal_set = False
         if term_width is not None:
@@ -176,7 +173,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                  left_justify=True, initial_value=0, poll_interval=None,
                  **kwargs):
         '''Initializes a progress bar with sane defaults'''
-        super(ProgressBar, self).__init__(**kwargs)
+        StdRedirectMixin.__init__(self, **kwargs)
+        ResizableMixin.__init__(self, **kwargs)
+        ProgressBarBase.__init__(self, **kwargs)
         if not max_value and kwargs.get('maxval'):
             warnings.warn('The usage of `maxval` is deprecated, please use '
                           '`max_value` instead', DeprecationWarning)
