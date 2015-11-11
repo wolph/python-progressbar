@@ -12,7 +12,7 @@ def test_left_justify():
         widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
         max_value=100, term_width=20, left_justify=True)
 
-    assert p._env_size() is not None
+    assert p.term_width is not None
     for i in range(100):
         p.update(i)
 
@@ -23,7 +23,7 @@ def test_right_justify():
         widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
         max_value=100, term_width=20, left_justify=False)
 
-    assert p._env_size() is not None
+    assert p.term_width is not None
     for i in range(100):
         p.update(i)
 
@@ -43,7 +43,7 @@ def test_auto_width(monkeypatch):
         widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
         max_value=100, left_justify=True, term_width=None)
 
-    assert p._env_size() is not None
+    assert p.term_width is not None
     for i in range(100):
         p.update(i)
 
@@ -54,7 +54,7 @@ def test_fill_right():
         widgets=[progressbar.BouncingBar(fill_left=False)],
         max_value=100, term_width=20)
 
-    assert p._env_size() is not None
+    assert p.term_width is not None
     for i in range(100):
         p.update(i)
 
@@ -65,7 +65,7 @@ def test_fill_left():
         widgets=[progressbar.BouncingBar(fill_left=True)],
         max_value=100, term_width=20)
 
-    assert p._env_size() is not None
+    assert p.term_width is not None
     for i in range(100):
         p.update(i)
 
