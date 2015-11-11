@@ -390,17 +390,19 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
         if not max_width:
             temporary_data = data.copy()
             for value in key:
-                if value is None:
+                if value is None:  # pragma: no cover
                     continue
 
                 temporary_data['value'] = value
-                max_width = max(max_width, len(FormatWidgetMixin.__call__(
-                    self, progress, temporary_data, format=format)))
+                width = len(FormatWidgetMixin.__call__(
+                    self, progress, temporary_data, format=format))
+                if width:
+                    max_width = max(max_width or 0, width)
 
             self.max_width[key] = max_width
 
         # Adjust the output to have a consistent size in all cases
-        if max_width:
+        if max_width:  # pragma: no branch
             formatted = formatted.rjust(max_width)
         return formatted
 

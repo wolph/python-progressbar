@@ -97,8 +97,6 @@ class StdRedirectMixin(DefaultFdMixin):
             sys.stdout = six.StringIO()
 
     def update(self, value=None):
-        super(StdRedirectMixin, self).update(value=value)
-
         if self.redirect_stderr and sys.stderr.tell():
             self.fd.write('\r' + ' ' * self.term_width + '\r')
             self._stderr.write(sys.stderr.getvalue())
@@ -110,6 +108,8 @@ class StdRedirectMixin(DefaultFdMixin):
             self._stdout.write(sys.stdout.getvalue())
             self._stdout.flush()
             sys.stdout = six.StringIO()
+
+        DefaultFdMixin.update(self, value=value)
 
     def finish(self):
         DefaultFdMixin.finish(self)
@@ -439,7 +439,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             return
 
         self.updates += 1
-        super(ProgressBar, self).update(value=value)
+        ResizableMixin.update(self, value=value)
+        ProgressBarBase.update(self, value=value)
+        StdRedirectMixin.update(self, value=value)
 
     def start(self, max_value=None):
         '''Starts measuring time, and prints the bar at 0%.

@@ -15,7 +15,6 @@ Contents
    history
    installation
    progressbar.bar
-   progressbar.metadata
    progressbar.six
    progressbar.utils
    progressbar.widgets

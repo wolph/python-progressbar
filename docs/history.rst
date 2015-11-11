@@ -4,5 +4,5 @@
 History
 =======
 
-.. include:: ../CHANGES
+.. include:: ../CHANGES.rst
     :start-line: 5

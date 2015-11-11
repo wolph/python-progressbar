@@ -14,6 +14,15 @@ Here you can find the recent changes to Python Progressbar..
         Updated CHANGES.
 
 .. changelog::
+    :version: 3.4
+    :released: 2015-11-11
+
+    .. change::
+        Added usage documentation
+
+    .. change::
+        Fixed several bugs including default widths and output redirection
+
     :version: 3.3
     :released: 2015-10-12
 
