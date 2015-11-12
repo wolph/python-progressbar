@@ -66,7 +66,7 @@ from .bar import ProgressBar, DataTransferBar
 from .base import UnknownLength
 
 
-from __about__ import (
+from .__about__ import (
     __author__,
     __version__,
 )

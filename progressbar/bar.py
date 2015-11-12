@@ -33,10 +33,10 @@ class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
 class DefaultFdMixin(ProgressBarMixinBase):
     def __init__(self, fd=sys.stderr, **kwargs):
         self.fd = fd
-        super(DefaultFdMixin, self).__init__(**kwargs)
+        ProgressBarMixinBase.__init__(self, **kwargs)
 
     def update(self, *args, **kwargs):
-        super(DefaultFdMixin, self).update(*args, **kwargs)
+        ProgressBarMixinBase.update(self, *args, **kwargs)
         self.fd.write('\r' + self._format_line())
 
     def finish(self, *args, **kwargs):  # pragma: no cover
@@ -49,9 +49,8 @@ class ResizableMixin(DefaultFdMixin):
         DefaultFdMixin.__init__(self, **kwargs)
 
         self.signal_set = False
-        if term_width is not None:
-            self.term_width = term_width
-        else:
+        self.term_width = term_width
+        if term_width is None:
             try:
                 self._handle_resize()
                 signal.signal(signal.SIGWINCH, self._handle_resize)
@@ -66,13 +65,14 @@ class ResizableMixin(DefaultFdMixin):
         self.term_width = w
 
     def finish(self):  # pragma: no cover
+        DefaultFdMixin.finish(self)
         if self.signal_set:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
 
 
 class StdRedirectMixin(DefaultFdMixin):
     def __init__(self, redirect_stderr=False, redirect_stdout=False, **kwargs):
-        super(StdRedirectMixin, self).__init__(**kwargs)
+        DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
 
