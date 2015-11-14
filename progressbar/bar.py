@@ -55,7 +55,8 @@ class ResizableMixin(DefaultFdMixin):
                 self._handle_resize()
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
-            except (SystemExit, KeyboardInterrupt):  # pragma: no cover
+            except:  # pragma: no cover
+                self.term_width = utils.get_terminal_size()
                 raise
 
     def _handle_resize(self, signum=None, frame=None):

@@ -57,7 +57,7 @@ def get_terminal_size():  # pragma: no cover
         h, w = shutil.get_terminal_size((0, 0))
         if h and w:
             size = w, h
-    except:
+    except:  # pragma: no cover
         pass
 
     if not size:
