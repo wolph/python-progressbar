@@ -57,12 +57,16 @@ def get_terminal_size():  # pragma: no cover
         import shutil
         h, w = shutil.get_terminal_size((0, 0))
         if w and h:
-            return w, h
+            print('shutil', w, h)
+            return h, w
     except:  # pragma: no cover
         pass
 
     try:
-        return int(os.environ.get('LINES')), int(os.environ.get('COLUMNS'))
+        w = int(os.environ.get('COLUMNS'))
+        h = int(os.environ.get('LINES'))
+        if w and h:
+            return h, w
     except:  # pragma: no cover
         pass
 
@@ -71,14 +75,14 @@ def get_terminal_size():  # pragma: no cover
         terminal = blessings.Terminal()
         h, w = terminal._height_and_width
         if w and h:
-            return w, h
+            return h, w
     except:  # pragma: no cover
         pass
 
     try:
         h, w = _get_terminal_size_linux()
         if w and h:
-            return w, h
+            return h, w
     except:  # pragma: no cover
         pass
 
@@ -86,7 +90,7 @@ def get_terminal_size():  # pragma: no cover
         # Windows detection doesn't always work, let's try anyhow
         h, w = _get_terminal_size_windows()
         if w and h:
-            return w, h
+            return h, w
     except:  # pragma: no cover
         pass
 
@@ -94,7 +98,7 @@ def get_terminal_size():  # pragma: no cover
         # needed for window's python in cygwin's xterm!
         h, w = _get_terminal_size_tput()
         if w and h:
-            return w, h
+            return h, w
     except:  # pragma: no cover
         pass
 
