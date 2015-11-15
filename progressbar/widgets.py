@@ -1,25 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-#
-# progressbar  - Text progress bar library for Python.
-# Copyright (c) 2005 Nilton Volpato
-#
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of the GNU Lesser General Public
-# License as published by the Free Software Foundation; either
-# version 2.1 of the License, or (at your option) any later version.
-#
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-'''Default ProgressBar widgets'''
-
 from __future__ import division, absolute_import, with_statement
 from __future__ import print_function
 
@@ -50,9 +28,8 @@ class FormatWidgetMixin(object):
     '''
     required_values = []
 
-    def __init__(self, format):
+    def __init__(self, format, **kwargs):
         self.format = format
-        super(FormatWidgetMixin, self).__init__()
 
     def __call__(self, progress, data, format=None):
         '''Formats the widget into a string'''
@@ -62,6 +39,24 @@ class FormatWidgetMixin(object):
             print('Error while formatting %r' % self.format, file=sys.stderr)
             pprint.pprint(data, stream=sys.stderr)
             raise
+
+
+class WidthWidgetMixin(object):
+    '''Mixing to make sure widgets are only visible if the screen is within a
+    specified size range so the progressbar fits on both large and small
+    screens..
+    '''
+    def __init__(self, min_width=None, max_width=None, **kwargs):
+        self.min_width = min_width
+        self.max_width = max_width
+
+    def check_size(self, progress):
+        if self.min_width and self.min_width > progress.term_width:
+            return False
+        elif self.max_width and self.max_width < progress.term_width:
+            return False
+        else:
+            return True
 
 
 class WidgetBase(object):
@@ -80,6 +75,9 @@ class WidgetBase(object):
     progressbar instead of the widget.
     '''
     INTERVAL = None
+
+    def __init__(self, **kwargs):
+        pass
 
     @abc.abstractmethod
     def __call__(self, progress, data):
@@ -120,8 +118,29 @@ def _format_time(seconds):
     return str(datetime.timedelta(seconds=int(seconds)))
 
 
-class FormatLabel(FormatWidgetMixin):
-    '''Displays a formatted label'''
+class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
+    '''Displays a formatted label
+
+    >>> label = FormatLabel('%(value)s', min_width=5, max_width=10)
+    >>> class Progress(object):
+    ...     pass
+
+    >>> Progress.term_width = 0
+    >>> label(Progress, dict(value='test'))
+    ''
+
+    >>> Progress.term_width = 5
+    >>> label(Progress, dict(value='test'))
+    'test'
+
+    >>> Progress.term_width = 10
+    >>> label(Progress, dict(value='test'))
+    'test'
+
+    >>> Progress.term_width = 11
+    >>> label(Progress, dict(value='test'))
+    ''
+    '''
 
     mapping = {
         'finished': ('end_time', None),
@@ -133,7 +152,14 @@ class FormatLabel(FormatWidgetMixin):
         'value': ('value', None),
     }
 
+    def __init__(self, format, **kwargs):
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
+
     def __call__(self, progress, data):
+        if not self.check_size(progress):
+            return ''
+
         for name, (key, transform) in self.mapping.items():
             try:
                 if transform is None:
@@ -149,15 +175,16 @@ class FormatLabel(FormatWidgetMixin):
 class Timer(FormatLabel, TimeSensitiveWidgetBase):
     '''WidgetBase which displays the elapsed seconds.'''
 
-    def __init__(self, format='Elapsed Time: %(elapsed)s'):
-        super(Timer, self).__init__(format=format)
+    def __init__(self, format='Elapsed Time: %(elapsed)s', **kwargs):
+        FormatLabel.__init__(self, format=format, **kwargs)
+        TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     # This is exposed as a static method for backwards compatibility
     format_time = staticmethod(_format_time)
 
 
 class SamplesMixin(object):
-    def __init__(self, samples=10, key_prefix=None):
+    def __init__(self, samples=10, key_prefix=None, **kwargs):
         self.samples = samples
         self.key_prefix = (self.__class__.__name__ or key_prefix) + '_'
 
@@ -234,6 +261,10 @@ class AdaptiveETA(ETA, SamplesMixin):
     Very convenient for resuming the progress halfway.
     '''
 
+    def __init__(self, **kwargs):
+        ETA.__init__(self, **kwargs)
+        SamplesMixin.__init__(self, **kwargs)
+
     def __call__(self, progress, data):
         times, values = SamplesMixin.__call__(self, progress, data)
 
@@ -255,11 +286,12 @@ class DataSize(FormatWidgetMixin):
     def __init__(
             self, variable='value',
             format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
-            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+            **kwargs):
         self.variable = variable
         self.unit = unit
         self.prefixes = prefixes
-        super(DataSize, self).__init__(format=format)
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
 
     def __call__(self, progress, data):
         value = data[self.variable]
@@ -283,11 +315,13 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
     def __init__(
             self, format='%(scaled)5.1f %(prefix)s%(unit)-s/s',
             inverse_format='%(scaled)5.1f s/%(prefix)s%(unit)-s', unit='B',
-            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi')):
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+            **kwargs):
         self.unit = unit
         self.prefixes = prefixes
         self.inverse_format = inverse_format
-        super(FileTransferSpeed, self).__init__(format=format)
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     def _speed(self, value, elapsed):
         speed = float(value) / elapsed
@@ -322,6 +356,10 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
     '''WidgetBase for showing the transfer speed, based on the last X samples
     '''
 
+    def __init__(self, **kwargs):
+        FileTransferSpeed.__init__(self, **kwargs)
+        SamplesMixin.__init__(self, **kwargs)
+
     def __call__(self, progress, data):
         times, values = SamplesMixin.__call__(self, progress, data)
         if len(times) <= 1:
@@ -336,14 +374,14 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
 
 
 class AnimatedMarker(WidgetBase):
-
     '''An animated marker for the progress bar which defaults to appear as if
     it were rotating.
     '''
 
-    def __init__(self, markers='|/-\\', default=None):
+    def __init__(self, markers='|/-\\', default=None, **kwargs):
         self.markers = markers
         self.default = default or markers[0]
+        WidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data, width=None):
         '''Updates the widget to show the next marker or the first marker when
@@ -359,26 +397,29 @@ RotatingMarker = AnimatedMarker
 
 
 class Counter(FormatWidgetMixin, WidgetBase):
-
     '''Displays the current count'''
 
-    def __init__(self, format='%(value)d'):
-        super(Counter, self).__init__(format=format)
+    def __init__(self, format='%(value)d', **kwargs):
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidgetBase.__init__(self, format=format, **kwargs)
 
 
 class Percentage(FormatWidgetMixin, WidgetBase):
     '''Displays the current percentage as a number with a percent sign.'''
 
-    def __init__(self, format='%(percentage)3d%%'):
-        super(Percentage, self).__init__(format=format)
+    def __init__(self, format='%(percentage)3d%%', **kwargs):
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidgetBase.__init__(self, format=format, **kwargs)
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
     '''Returns progress as a count of the total (e.g.: "5 of 47")'''
 
-    def __init__(self, format='%(value)d of %(max_value)d', max_width=None):
+    def __init__(self, format='%(value)d of %(max_value)d', max_width=None,
+                 **kwargs):
         self.max_width = dict(default=max_width)
-        super(SimpleProgress, self).__init__(format=format)
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidgetBase.__init__(self, format=format, **kwargs)
 
     def __call__(self, progress, data, format=None):
         formatted = FormatWidgetMixin.__call__(self, progress, data,
@@ -411,7 +452,7 @@ class Bar(AutoWidthWidgetBase):
 
     '''A progress bar which stretches to fill the line.'''
     def __init__(self, marker='#', left='|', right='|', fill=' ',
-                 fill_left=True):
+                 fill_left=True, **kwargs):
         '''Creates a customizable progress bar.
 
         The callable takes the same parameters as the `__call__` method
@@ -452,7 +493,7 @@ class Bar(AutoWidthWidgetBase):
         self.fill = string_or_lambda(fill)
         self.fill_left = fill_left
 
-        super(Bar, self).__init__()
+        AutoWidthWidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
@@ -476,7 +517,7 @@ class ReverseBar(Bar):
     '''A bar which has a marker which bounces from side to side.'''
 
     def __init__(self, marker='#', left='|', right='|', fill=' ',
-                 fill_left=False):
+                 fill_left=False, **kwargs):
         '''Creates a customizable progress bar.
 
         marker - string or updatable object to use as a marker
@@ -486,7 +527,7 @@ class ReverseBar(Bar):
         fill_left - whether to fill from the left or the right
         '''
         Bar.__init__(self, marker=marker, left=left, right=right, fill=fill,
-                     fill_left=fill_left)
+                     fill_left=fill_left, **kwargs)
 
 
 class BouncingBar(Bar):
