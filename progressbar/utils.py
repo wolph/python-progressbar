@@ -44,33 +44,65 @@ def scale_1024(x, n_prefixes):
 def get_terminal_size():  # pragma: no cover
     '''Get the current size of your terminal
 
-    Based on an activestate recipe: http://code.activestate.com/recipes/440694/
-    '''
-    import platform
-    system = platform.system().lower()
-    size = None
+    Multiple returns are not always a good idea, but in this case it greatly
+    simplifies the code so I believe it's justified. It's not the prettiest
+    function but that's never really possible with cross-platform code.
 
+    Returns:
+        height, width: Two integers containing height and width
+    '''
     try:
         # This works for Python 3, but not Pypy3. Probably the best method if
         # it's supported so let's always try
         import shutil
         h, w = shutil.get_terminal_size((0, 0))
-        if h and w:
-            size = w, h
-    except:
+        if w and h:
+            print('shutil', w, h)
+            return h, w
+    except:  # pragma: no cover
         pass
 
-    if not size:
-        if system == 'windows':
-            size = _get_terminal_size_windows()
-            if size is None:
-                # needed for window's python in cygwin's xterm!
-                size = _get_terminal_size_tput()
+    try:
+        w = int(os.environ.get('COLUMNS'))
+        h = int(os.environ.get('LINES'))
+        if w and h:
+            return h, w
+    except:  # pragma: no cover
+        pass
 
-        elif system in ('linux', 'darwin') or system.startswith('cygwin'):
-            size = _get_terminal_size_linux()
+    try:
+        import blessings
+        terminal = blessings.Terminal()
+        h, w = terminal._height_and_width
+        if w and h:
+            return h, w
+    except:  # pragma: no cover
+        pass
 
-    return size or (80, 25)
+    try:
+        h, w = _get_terminal_size_linux()
+        if w and h:
+            return h, w
+    except:  # pragma: no cover
+        pass
+
+    try:
+        # Windows detection doesn't always work, let's try anyhow
+        h, w = _get_terminal_size_windows()
+        if w and h:
+            return h, w
+    except:  # pragma: no cover
+        pass
+
+    try:
+        # needed for window's python in cygwin's xterm!
+        h, w = _get_terminal_size_tput()
+        if w and h:
+            return h, w
+    except:  # pragma: no cover
+        pass
+
+    return 80, 25
 
 
 def _get_terminal_size_windows():  # pragma: no cover

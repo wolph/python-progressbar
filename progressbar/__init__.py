@@ -66,10 +66,12 @@ from .bar import ProgressBar, DataTransferBar
 from .base import UnknownLength
 
 
-__author__ = 'Rick van Hattem'
-__author_email__ = 'Rick.van.Hattem@Fawo.nl'
+from .__about__ import (
+    __author__,
+    __version__,
+)
+
 __date__ = str(date.today())
-__version__ = '2.7.3'
 __all__ = [
     'AbstractWidget',
     'Widget',
@@ -94,4 +96,6 @@ __all__ = [
     'DataTransferBar',
     'format_updatable',
     'RotatingMarker',
+    '__author__',
+    '__version__',
 ]

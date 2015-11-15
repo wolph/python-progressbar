@@ -1,7 +1,6 @@
 from __future__ import division, absolute_import, with_statement
 import sys
 import math
-import signal
 import warnings
 from datetime import datetime, timedelta
 import collections
@@ -33,10 +32,10 @@ class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
 class DefaultFdMixin(ProgressBarMixinBase):
     def __init__(self, fd=sys.stderr, **kwargs):
         self.fd = fd
-        super(DefaultFdMixin, self).__init__(**kwargs)
+        ProgressBarMixinBase.__init__(self, **kwargs)
 
     def update(self, *args, **kwargs):
-        super(DefaultFdMixin, self).update(*args, **kwargs)
+        ProgressBarMixinBase.update(self, *args, **kwargs)
         self.fd.write('\r' + self._format_line())
 
     def finish(self, *args, **kwargs):  # pragma: no cover
@@ -49,14 +48,15 @@ class ResizableMixin(DefaultFdMixin):
         DefaultFdMixin.__init__(self, **kwargs)
 
         self.signal_set = False
-        if term_width is not None:
+        if term_width:
             self.term_width = term_width
         else:
             try:
                 self._handle_resize()
+                import signal
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
-            except (SystemExit, KeyboardInterrupt):  # pragma: no cover
+            except:  # pragma: no cover
                 raise
 
     def _handle_resize(self, signum=None, frame=None):
@@ -66,13 +66,18 @@ class ResizableMixin(DefaultFdMixin):
         self.term_width = w
 
     def finish(self):  # pragma: no cover
+        DefaultFdMixin.finish(self)
         if self.signal_set:
-            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            try:
+                import signal
+                signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            except:  # pragma no cover
+                pass
 
 
 class StdRedirectMixin(DefaultFdMixin):
     def __init__(self, redirect_stderr=False, redirect_stdout=False, **kwargs):
-        super(StdRedirectMixin, self).__init__(**kwargs)
+        DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
 
