@@ -14,6 +14,16 @@ Here you can find the recent changes to Python Progressbar..
         Updated CHANGES.
 
 .. changelog::
+    :version: 3.5
+    :released: 2015-11-15
+
+    .. change::
+        Added support for size-dependent widgets
+
+    .. change::
+        Fixed inheritance issues
+
+.. changelog::
     :version: 3.4
     :released: 2015-11-11
 
