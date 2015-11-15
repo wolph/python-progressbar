@@ -58,7 +58,6 @@ class ResizableMixin(DefaultFdMixin):
                 self.signal_set = True
             except:  # pragma: no cover
                 raise
-        print('term width', self.term_width)
 
     def _handle_resize(self, signum=None, frame=None):
         'Tries to catch resize signals sent from the terminal.'
