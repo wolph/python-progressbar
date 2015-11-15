@@ -1,7 +1,6 @@
 from __future__ import division, absolute_import, with_statement
 import sys
 import math
-import signal
 import warnings
 from datetime import datetime, timedelta
 import collections
@@ -53,10 +52,10 @@ class ResizableMixin(DefaultFdMixin):
         if term_width is None:
             try:
                 self._handle_resize()
+                import signal
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
             except:  # pragma: no cover
-                self.term_width = utils.get_terminal_size()
                 raise
 
     def _handle_resize(self, signum=None, frame=None):
@@ -68,7 +67,11 @@ class ResizableMixin(DefaultFdMixin):
     def finish(self):  # pragma: no cover
         DefaultFdMixin.finish(self)
         if self.signal_set:
-            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            try:
+                import signal
+                signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            except:  # pragma no cover
+                pass
 
 
 class StdRedirectMixin(DefaultFdMixin):
