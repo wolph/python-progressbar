@@ -5,6 +5,7 @@ import datetime
 import abc
 import sys
 import pprint
+from python_utils import converters
 
 from . import utils
 from . import six
@@ -498,11 +499,11 @@ class Bar(AutoWidthWidgetBase):
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
 
-        left = self.left(progress, data, width)
-        right = self.right(progress, data, width)
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
         width -= len(left) + len(right)
-        marker = self.marker(progress, data, width)
-        fill = self.fill(progress, data, width)
+        marker = converters.to_unicode(self.marker(progress, data, width))
+        fill = converters.to_unicode(self.fill(progress, data, width))
 
         if self.fill_left:
             marker = marker.ljust(width, fill)
