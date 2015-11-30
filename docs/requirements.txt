@@ -1,0 +1,3 @@
+-r ../requirements.txt
+changelog
+sphinx>=1.3
