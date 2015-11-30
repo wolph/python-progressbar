@@ -57,7 +57,7 @@ class ResizableMixin(DefaultFdMixin):
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
             except:  # pragma: no cover
-                raise
+                pass
 
     def _handle_resize(self, signum=None, frame=None):
         'Tries to catch resize signals sent from the terminal.'
