@@ -136,11 +136,13 @@ def _get_terminal_size_tput():  # pragma: no cover
     try:
         import subprocess
         proc = subprocess.Popen(
-            ['tput', 'cols'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            ['tput', 'cols'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
         output = proc.communicate(input=None)
         w = int(output[0])
         proc = subprocess.Popen(
-            ['tput', 'lines'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            ['tput', 'lines'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
         output = proc.communicate(input=None)
         h = int(output[0])
         return w, h
