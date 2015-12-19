@@ -402,12 +402,28 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def _needs_update(self):
         'Returns whether the ProgressBar should redraw the line.'
+
+        if self.poll_interval:
+            delta = datetime.now() - self.last_update_time
+            poll_status = delta > self.poll_interval
+
+        # Do not update if value increment is not large enough to
+        # add more bars to progressbar (according to current
+        # terminal width)
+        try:
+            divisor = self.max_value / self.term_width  # float division
+            if self.value // divisor == self.previous_value // divisor:
+                if self.poll_interval:
+                    return poll_status
+                return False
+        except:
+            # ignore any division errors
+            pass
+
         if self.value > self.next_update or self.end_time:
             return True
-
         elif self.poll_interval:
-            delta = datetime.now() - self.last_update_time
-            return delta > self.poll_interval
+            return poll_status
 
     def update(self, value=None):
         'Updates the ProgressBar to a new value.'
