@@ -29,23 +29,23 @@ class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
     pass
 
 
-class DefaultFdMixin(ProgressBarMixinBase):
+class DefaultFdMixin(object):
     def __init__(self, fd=sys.stderr, **kwargs):
         self.fd = fd
         ProgressBarMixinBase.__init__(self, **kwargs)
 
     def update(self, *args, **kwargs):
         ProgressBarMixinBase.update(self, *args, **kwargs)
-        self.fd.write('\r' + self._format_line())
+        self.fd.write(self._format_line() + '\r')
 
     def finish(self, *args, **kwargs):  # pragma: no cover
         ProgressBarMixinBase.finish(self, *args, **kwargs)
         self.fd.write('\n')
 
 
-class ResizableMixin(DefaultFdMixin):
+class ResizableMixin(ProgressBarMixinBase):
     def __init__(self, term_width=None, **kwargs):
-        DefaultFdMixin.__init__(self, **kwargs)
+        ProgressBarMixinBase.__init__(self, **kwargs)
 
         self.signal_set = False
         if term_width:
@@ -66,7 +66,7 @@ class ResizableMixin(DefaultFdMixin):
         self.term_width = w
 
     def finish(self):  # pragma: no cover
-        DefaultFdMixin.finish(self)
+        ProgressBarMixinBase.finish(self)
         if self.signal_set:
             try:
                 import signal
