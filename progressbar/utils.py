@@ -57,7 +57,9 @@ def get_terminal_size():  # pragma: no cover
         import shutil
         w, h = shutil.get_terminal_size()
         if w and h:
-            return w, h
+            # The off by one is needed due to progressbars in some cases, for
+            # safety we'll always substract it.
+            return w - 1, h
     except:  # pragma: no cover
         pass
 
@@ -102,7 +104,7 @@ def get_terminal_size():  # pragma: no cover
     except:  # pragma: no cover
         pass
 
-    return 80, 24
+    return 79, 24
 
 
 def _get_terminal_size_windows():  # pragma: no cover
@@ -124,8 +126,8 @@ def _get_terminal_size_windows():  # pragma: no cover
         import struct
         (_, _, _, _, _, left, top, right, bottom, _, _) = \
             struct.unpack("hhhhHhhhhhh", csbi.raw)
-        w = right - left + 1
-        h = bottom - top + 1
+        w = right - left
+        h = bottom - top
         return w, h
     else:
         return None
