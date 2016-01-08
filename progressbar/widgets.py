@@ -222,7 +222,10 @@ class ETA(Timer):
         else:
             eta = elapsed * progress.max_value / value \
                 - data['total_seconds_elapsed']
-            return 'ETA:  %s' % self.format_time(eta)
+            if eta > 0:
+                return 'ETA:  %s' % self.format_time(eta)
+            else:
+                return 'ETA:  0:00:00'
 
     def __call__(self, progress, data):
         '''Updates the widget to show the ETA or total time when finished.'''
