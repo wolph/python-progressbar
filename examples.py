@@ -233,7 +233,7 @@ def example17():
 def with_example18():
     with ProgressBar(max_value=10, term_width=20, left_justify=False) as \
             progress:
-        assert progress._env_size() is not None
+        assert progress.term_width is not None
         for i in range(10):
             progress.update(i)
 
@@ -359,7 +359,7 @@ def example29():
     pbar = ProgressBar(widgets=widgets, maxval=500).start()
     for i in range(500):
         time.sleep(0.01)
-        pbar.update(i+1)
+        pbar.update(i + 1)
     pbar.finish()
 
 
