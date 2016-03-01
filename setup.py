@@ -7,10 +7,11 @@ import sys
 
 try:
     from setuptools import setup, find_packages
-    from setuptools.command.test import test as TestCommand
 except ImportError:
-    from distutils.core import setup, find_packages, Command as TestCommand
+    from distutils.core import setup, find_packages
 
+# To prevent importing about and thereby breaking the coverage info we use this
+# exec hack
 about = {}
 with open("progressbar/__about__.py") as fp:
     exec(fp.read(), about)
@@ -19,7 +20,7 @@ with open("progressbar/__about__.py") as fp:
 install_reqs = []
 tests_reqs = []
 
-if sys.version_info < (2, 7):
+if sys.version_info < (3, 2):
     install_reqs += ['argparse']
     tests_reqs += ['unittest2']
 
@@ -53,18 +54,6 @@ with open('README.rst') as fh:
     readme = fh.read()
 
 
-class PyTest(TestCommand):
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-        errno = pytest.main(self.test_args)
-        sys.exit(errno)
-
 setup(
     name=about['__package_name__'],
     version=about['__version__'],
@@ -79,8 +68,8 @@ setup(
     include_package_data=True,
     install_requires=install_reqs,
     tests_require=tests_reqs,
+    setup_requires=['setuptools', 'pytest-runner'],
     zip_safe=False,
-    cmdclass={'test': PyTest},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
