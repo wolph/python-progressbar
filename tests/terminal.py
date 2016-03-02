@@ -109,15 +109,19 @@ def test_resize(monkeypatch):
     def fake_signal(signal, func):
         pass
 
-    monkeypatch.setattr(fcntl, 'ioctl', ioctl)
-    monkeypatch.setattr(signal, 'signal', fake_signal)
+    try:
+        import fcntl
+        monkeypatch.setattr(fcntl, 'ioctl', ioctl)
+        monkeypatch.setattr(signal, 'signal', fake_signal)
 
-    p = progressbar.ProgressBar(max_value=10)
-    p.start()
+        p = progressbar.ProgressBar(max_value=10)
+        p.start()
 
-    for i in range(10):
-        p.update(i)
-        p._handle_resize()
+        for i in range(10):
+            p.update(i)
+            p._handle_resize()
 
-    p.finish()
+        p.finish()
+    except ImportError:
+        pass  # Skip on Windows
 
