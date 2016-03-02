@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import sys
-import fcntl
 import signal
 import progressbar
 
@@ -37,15 +36,19 @@ def test_auto_width(monkeypatch):
     def fake_signal(signal, func):
         pass
 
-    monkeypatch.setattr(fcntl, 'ioctl', ioctl)
-    monkeypatch.setattr(signal, 'signal', fake_signal)
-    p = progressbar.ProgressBar(
-        widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
-        max_value=100, left_justify=True, term_width=None)
+    try:
+        import fcntl
+        monkeypatch.setattr(fcntl, 'ioctl', ioctl)
+        monkeypatch.setattr(signal, 'signal', fake_signal)
+        p = progressbar.ProgressBar(
+            widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
+            max_value=100, left_justify=True, term_width=None)
 
-    assert p.term_width is not None
-    for i in range(100):
-        p.update(i)
+        assert p.term_width is not None
+        for i in range(100):
+            p.update(i)
+    except ImportError:
+        pass  # Skip on Windows
 
 
 def test_fill_right():
