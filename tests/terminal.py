@@ -41,7 +41,8 @@ def test_auto_width(monkeypatch):
         monkeypatch.setattr(fcntl, 'ioctl', ioctl)
         monkeypatch.setattr(signal, 'signal', fake_signal)
         p = progressbar.ProgressBar(
-            widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
+            widgets=[
+                progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
             max_value=100, left_justify=True, term_width=None)
 
         assert p.term_width is not None
