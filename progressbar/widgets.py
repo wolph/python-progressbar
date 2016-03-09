@@ -556,3 +556,23 @@ class BouncingBar(Bar):
             rpad, lpad = lpad, rpad
 
         return '%s%s%s%s%s' % (left, lpad, marker, rpad, right)
+
+
+class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
+    mapping = {}
+
+    def __init__(self, format, mapping=mapping, **kwargs):
+        self.format = format
+        self.mapping = mapping
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
+
+    def update_str(self, new_format):
+        self.format = new_format
+
+    def update_mapping(self, new_mapping):
+        self.mapping.update(new_mapping)
+
+    def __call__(self, progress, data):
+        return FormatWidgetMixin.__call__(self, progress, self.mapping,
+                                          self.format)
