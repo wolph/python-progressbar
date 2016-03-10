@@ -1,5 +1,4 @@
 [run]
-fail_under = 100
 branch = True
 source =
     progressbar
@@ -11,6 +10,7 @@ omit =
 source =
     progressbar
 [report]
+fail_under = 100
 exclude_lines =
     pragma: no cover
     @abc.abstractmethod
