@@ -20,9 +20,6 @@ with open("progressbar/__about__.py") as fp:
 install_reqs = []
 tests_reqs = []
 
-if sys.version_info < (3, 2):
-    install_reqs += ['argparse']
-
 if sys.version_info < (2, 7):
     tests_reqs += ['unittest2']
 
