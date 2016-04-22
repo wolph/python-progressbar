@@ -426,7 +426,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         return self.value > self.next_update or poll_status or self.end_time
 
-    def update(self, value=None):
+    def update(self, value=None, force=False):
         'Updates the ProgressBar to a new value.'
         if self.start_time is None:
             self.start()
@@ -447,13 +447,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.previous_value = self.value
             self.value = value
 
-        if not self._needs_update():
-            return
-
-        self.updates += 1
-        ResizableMixin.update(self, value=value)
-        ProgressBarBase.update(self, value=value)
-        StdRedirectMixin.update(self, value=value)
+        if self._needs_update() or force:
+            self.updates += 1
+            ResizableMixin.update(self, value=value)
+            ProgressBarBase.update(self, value=value)
+            StdRedirectMixin.update(self, value=value)
 
     def start(self, max_value=None):
         '''Starts measuring time, and prints the bar at 0%.
@@ -496,7 +494,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.update_interval = self.max_value / self.num_intervals
 
         self.start_time = self.last_update_time = datetime.now()
-        self.update(self.min_value)
+        self.update(self.min_value, force=True)
 
         return self
 
