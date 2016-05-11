@@ -366,16 +366,16 @@ def example29():
 
 @example
 def example30():
-    # Use DynamicMessage to keep track of some parameter(s) during your 
+    # Use DynamicMessage to keep track of some parameter(s) during your
     # calculations
     widgets = [Percentage(), Bar(), DynamicMessage('loss')]
     with ProgressBar(max_value=100, widgets=widgets) as pbar:
-      min_so_far = 1
-      for i in range(100):
-        val = random.random()
-        if val < min_so_far:
-          min_so_far = val
-        pbar.update(i, loss=min_so_far)
+        min_so_far = 1
+        for i in range(100):
+            val = random.random()
+            if val < min_so_far:
+                min_so_far = val
+            pbar.update(i, loss=min_so_far)
 
 def test():
     for example in examples:
