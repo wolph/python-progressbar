@@ -377,6 +377,7 @@ def example30():
                 min_so_far = val
             pbar.update(i, loss=min_so_far)
 
+
 def test():
     for example in examples:
         example()
