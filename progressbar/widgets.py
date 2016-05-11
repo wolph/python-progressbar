@@ -556,3 +556,24 @@ class BouncingBar(Bar):
             rpad, lpad = lpad, rpad
 
         return '%s%s%s%s%s' % (left, lpad, marker, rpad, right)
+
+
+class DynamicMessage(FormatWidgetMixin, WidgetBase):
+    '''Displays a custom variable.'''
+
+    def __init__(self, name):
+        '''Creates a DynamicMessage associated with the given name.'''
+        if not isinstance(name, str):
+            raise TypeError('DynamicMessage(): argument must be a string')
+        if len(name.split()) > 1:
+            raise ValueError(
+                'DynamicMessage(): argument must be single word')
+
+        self.name = name
+
+    def __call__(self, progress, data):
+        val = data['dynamic_messages'][self.name]
+        if val:
+            return self.name + ': ' + '{:6.3g}'.format(val)
+        else:
+            return self.name + ': ' + 6 * '-'

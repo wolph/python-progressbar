@@ -30,3 +30,14 @@ def test_crazy_file_transfer_speed_widget():
         # do something
         p.update(i + 1)
     p.finish()
+
+
+def test_dynamic_message_widget():
+    widgets = [' [', progressbar.Timer(), '] ', progressbar.Bar(), ' (',
+               progressbar.ETA(), ') ', progressbar.DynamicMessage('loss')]
+
+    p = progressbar.ProgressBar(widgets=widgets, max_value=1000)
+    p.start()
+    for i in range(0, 200, 5):
+        p.update(i + 1, loss=.5)
+    p.finish()
