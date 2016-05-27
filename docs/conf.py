@@ -42,6 +42,16 @@ extensions = [
     'changelog'
 ]
 
+
+# For testing purposes, ignore non-local image reference warnings
+import sphinx.environment
+from docutils.utils import get_source_line
+
+def _warn_node(self, msg, node):
+    if not msg.startswith('nonlocal image URI found:'):
+        self._warnfunc(msg, '%s:%s' % get_source_line(node))
+
+sphinx.environment.BuildEnvironment.warn_node = _warn_node
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

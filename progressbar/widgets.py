@@ -223,7 +223,10 @@ class ETA(Timer):
         else:
             eta = elapsed * progress.max_value / value \
                 - data['total_seconds_elapsed']
-            return 'ETA:  %s' % self.format_time(eta)
+            if eta > 0:
+                return 'ETA:  %s' % self.format_time(eta)
+            else:
+                return 'ETA:  0:00:00'
 
     def __call__(self, progress, data):
         '''Updates the widget to show the ETA or total time when finished.'''
@@ -554,3 +557,24 @@ class BouncingBar(Bar):
             rpad, lpad = lpad, rpad
 
         return '%s%s%s%s%s' % (left, lpad, marker, rpad, right)
+
+
+class DynamicMessage(FormatWidgetMixin, WidgetBase):
+    '''Displays a custom variable.'''
+
+    def __init__(self, name):
+        '''Creates a DynamicMessage associated with the given name.'''
+        if not isinstance(name, str):
+            raise TypeError('DynamicMessage(): argument must be a string')
+        if len(name.split()) > 1:
+            raise ValueError(
+                'DynamicMessage(): argument must be single word')
+
+        self.name = name
+
+    def __call__(self, progress, data):
+        val = data['dynamic_messages'][self.name]
+        if val:
+            return self.name + ': ' + '{:6.3g}'.format(val)
+        else:
+            return self.name + ': ' + 6 * '-'

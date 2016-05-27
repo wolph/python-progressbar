@@ -6,16 +6,18 @@ from datetime import datetime, timedelta
 import collections
 
 from . import widgets
+from . import widgets as widgets_module  # Avoid name collision
 from . import six
 from . import utils
 from . import base
 
 
 class ProgressBarMixinBase(object):
+
     def __init__(self, **kwargs):
         pass
 
-    def start(self):
+    def start(self, **kwargs):
         pass
 
     def update(self, value=None):
@@ -30,6 +32,7 @@ class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
 
 
 class DefaultFdMixin(ProgressBarMixinBase):
+
     def __init__(self, fd=sys.stderr, **kwargs):
         self.fd = fd
         ProgressBarMixinBase.__init__(self, **kwargs)
@@ -43,9 +46,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.fd.write('\n')
 
 
-class ResizableMixin(DefaultFdMixin):
+class ResizableMixin(ProgressBarMixinBase):
+
     def __init__(self, term_width=None, **kwargs):
-        DefaultFdMixin.__init__(self, **kwargs)
+        ProgressBarMixinBase.__init__(self, **kwargs)
 
         self.signal_set = False
         if term_width:
@@ -56,8 +60,8 @@ class ResizableMixin(DefaultFdMixin):
                 import signal
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
-            except:  # pragma: no cover
-                raise
+            except Exception:  # pragma: no cover
+                pass
 
     def _handle_resize(self, signum=None, frame=None):
         'Tries to catch resize signals sent from the terminal.'
@@ -66,16 +70,17 @@ class ResizableMixin(DefaultFdMixin):
         self.term_width = w
 
     def finish(self):  # pragma: no cover
-        DefaultFdMixin.finish(self)
+        ProgressBarMixinBase.finish(self)
         if self.signal_set:
             try:
                 import signal
                 signal.signal(signal.SIGWINCH, signal.SIG_DFL)
-            except:  # pragma no cover
+            except Exception:  # pragma no cover
                 pass
 
 
 class StdRedirectMixin(DefaultFdMixin):
+
     def __init__(self, redirect_stderr=False, redirect_stdout=False, **kwargs):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
@@ -207,6 +212,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         self.poll_interval = poll_interval
 
+        # A dictionary of names of DynamicMessage's and their values.
+        if self.widgets:
+            dyn_msg_widgets = [widget for widget in self.widgets if
+                               isinstance(widget,
+                                          widgets_module.DynamicMessage)]
+        else:
+            dyn_msg_widgets = []
+        self.dynamic_messages = {dynamic_message.name: None for
+                                 dynamic_message in dyn_msg_widgets}
+
     @property
     def percentage(self):
         '''Return current percentage, returns None if no max_value is given
@@ -263,6 +278,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         - time_elapsed: Shortcut for HH:MM:SS time since the bar started
         including days
         - percentage: Percentage as a float
+        - dynamic_messages: A dictionary of user-defined DynamicMessage's
         '''
         self.last_update_time = datetime.now()
         elapsed = self.last_update_time - self.start_time
@@ -299,6 +315,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             time_elapsed=elapsed,
             # Percentage as a float or `None` if no max_value is available
             percentage=self.percentage,
+            # Dictionary of DynamicMessage's
+            dynamic_messages=self.dynamic_messages
         )
 
     def default_widgets(self):
@@ -404,18 +422,40 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def _needs_update(self):
         'Returns whether the ProgressBar should redraw the line.'
-        if self.value > self.next_update or self.end_time:
-            return True
 
-        elif self.poll_interval:
+        if self.poll_interval:
             delta = datetime.now() - self.last_update_time
-            return delta > self.poll_interval
+            poll_status = delta > self.poll_interval
+        else:
+            poll_status = False
 
-    def update(self, value=None):
+        # Do not update if value increment is not large enough to
+        # add more bars to progressbar (according to current
+        # terminal width)
+        try:
+            divisor = self.max_value / self.term_width  # float division
+            if self.value // divisor == self.previous_value // divisor:
+                return poll_status or self.end_time
+        except Exception:
+            # ignore any division errors
+            pass
+
+        return self.value > self.next_update or poll_status or self.end_time
+
+    def update(self, value=None, force=False, **kwargs):
         'Updates the ProgressBar to a new value.'
         if self.start_time is None:
             self.start()
             return self.update(value)
+
+        # Save the updated values for dynamic messages
+        for key in kwargs:
+            if key in self.dynamic_messages:
+                self.dynamic_messages[key] = kwargs[key]
+            else:
+                raise TypeError(
+                    'update() got an unexpected keyword ' +
+                    'argument \'{}\''.format(key))
 
         if value is not None and value is not base.UnknownLength:
             if self.max_value is base.UnknownLength:
@@ -432,13 +472,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.previous_value = self.value
             self.value = value
 
-        if not self._needs_update():
-            return
-
-        self.updates += 1
-        ResizableMixin.update(self, value=value)
-        ProgressBarBase.update(self, value=value)
-        StdRedirectMixin.update(self, value=value)
+        if self._needs_update() or force:
+            self.updates += 1
+            ResizableMixin.update(self, value=value)
+            ProgressBarBase.update(self, value=value)
+            StdRedirectMixin.update(self, value=value)
 
     def start(self, max_value=None):
         '''Starts measuring time, and prints the bar at 0%.
@@ -452,7 +490,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         ...
         >>> pbar.finish()
         '''
-        super(ProgressBar, self).start()
+        DefaultFdMixin.start(self, max_value=max_value)
+        ResizableMixin.start(self, max_value=max_value)
+        ProgressBarBase.start(self, max_value=max_value)
 
         self.max_value = max_value or self.max_value
         if self.max_value is None:
@@ -479,7 +519,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.update_interval = self.max_value / self.num_intervals
 
         self.start_time = self.last_update_time = datetime.now()
-        self.update(self.min_value)
+        self.update(self.min_value, force=True)
 
         return self
 

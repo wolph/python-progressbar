@@ -5,10 +5,11 @@ from __future__ import print_function
 
 import sys
 import time
+import random
 
 from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
     FileTransferSpeed, FormatLabel, Percentage, \
-    ProgressBar, ReverseBar, RotatingMarker, \
+    ProgressBar, ReverseBar, RotatingMarker, DynamicMessage, \
     SimpleProgress, Timer, AdaptiveETA, AbsoluteETA, AdaptiveTransferSpeed
 
 examples = []
@@ -233,7 +234,7 @@ def example17():
 def with_example18():
     with ProgressBar(max_value=10, term_width=20, left_justify=False) as \
             progress:
-        assert progress._env_size() is not None
+        assert progress.term_width is not None
         for i in range(10):
             progress.update(i)
 
@@ -359,8 +360,22 @@ def example29():
     pbar = ProgressBar(widgets=widgets, maxval=500).start()
     for i in range(500):
         time.sleep(0.01)
-        pbar.update(i+1)
+        pbar.update(i + 1)
     pbar.finish()
+
+
+@example
+def example30():
+    # Use DynamicMessage to keep track of some parameter(s) during your
+    # calculations
+    widgets = [Percentage(), Bar(), DynamicMessage('loss')]
+    with ProgressBar(max_value=100, widgets=widgets) as pbar:
+        min_so_far = 1
+        for i in range(100):
+            val = random.random()
+            if val < min_so_far:
+                min_so_far = val
+            pbar.update(i, loss=min_so_far)
 
 
 def test():
