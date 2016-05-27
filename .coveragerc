@@ -10,7 +10,7 @@ omit =
 source =
     progressbar
 [report]
-# fail_under = 100
+fail_under = 100
 exclude_lines =
     pragma: no cover
     @abc.abstractmethod
