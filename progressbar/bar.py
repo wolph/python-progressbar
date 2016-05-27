@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import collections
 
 from . import widgets
+from . import widgets as widgets_module  # Avoid name collision
 from . import six
 from . import utils
 from . import base
@@ -209,6 +210,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         self.poll_interval = poll_interval
 
+        # A dictionary of names of DynamicMessage's and their values.
+        if self.widgets:
+            dyn_msg_widgets = [widget for widget in self.widgets if
+                               isinstance(widget,
+                                          widgets_module.DynamicMessage)]
+        else:
+            dyn_msg_widgets = []
+        self.dynamic_messages = {dynamic_message.name: None for
+                                 dynamic_message in dyn_msg_widgets}
+
     @property
     def percentage(self):
         '''Return current percentage, returns None if no max_value is given
@@ -265,6 +276,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         - time_elapsed: Shortcut for HH:MM:SS time since the bar started
         including days
         - percentage: Percentage as a float
+        - dynamic_messages: A dictionary of user-defined DynamicMessage's
         '''
         self.last_update_time = datetime.now()
         elapsed = self.last_update_time - self.start_time
@@ -301,6 +313,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             time_elapsed=elapsed,
             # Percentage as a float or `None` if no max_value is available
             percentage=self.percentage,
+            # Dictionary of DynamicMessage's
+            dynamic_messages=self.dynamic_messages
         )
 
     def default_widgets(self):
@@ -426,11 +440,20 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         return self.value > self.next_update or poll_status or self.end_time
 
-    def update(self, value=None):
+    def update(self, value=None, force=False, **kwargs):
         'Updates the ProgressBar to a new value.'
         if self.start_time is None:
             self.start()
             return self.update(value)
+
+        # Save the updated values for dynamic messages
+        for key in kwargs:
+            if key in self.dynamic_messages:
+                self.dynamic_messages[key] = kwargs[key]
+            else:
+                raise TypeError(
+                    'update() got an unexpected keyword ' +
+                    'argument \'{}\''.format(key))
 
         if value is not None and value is not base.UnknownLength:
             if self.max_value is base.UnknownLength:
@@ -447,13 +470,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.previous_value = self.value
             self.value = value
 
-        if not self._needs_update():
-            return
-
-        self.updates += 1
-        ResizableMixin.update(self, value=value)
-        ProgressBarBase.update(self, value=value)
-        StdRedirectMixin.update(self, value=value)
+        if self._needs_update() or force:
+            self.updates += 1
+            ResizableMixin.update(self, value=value)
+            ProgressBarBase.update(self, value=value)
+            StdRedirectMixin.update(self, value=value)
 
     def start(self, max_value=None):
         '''Starts measuring time, and prints the bar at 0%.
@@ -496,7 +517,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.update_interval = self.max_value / self.num_intervals
 
         self.start_time = self.last_update_time = datetime.now()
-        self.update(self.min_value)
+        self.update(self.min_value, force=True)
 
         return self
 
