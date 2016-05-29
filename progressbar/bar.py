@@ -172,6 +172,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
+                 widget_kwargs=None,
                  **kwargs):
         '''Initializes a progress bar with sane defaults'''
         StdRedirectMixin.__init__(self, **kwargs)
@@ -194,6 +195,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.min_value = min_value
         self.max_value = max_value
         self.widgets = widgets
+        self.widget_kwargs = widget_kwargs or {}
         self.left_justify = left_justify
 
         self._iterable = None
@@ -320,17 +322,17 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     def default_widgets(self):
         if self.max_value:
             return [
-                widgets.Percentage(),
-                ' (', widgets.SimpleProgress(), ')',
-                ' ', widgets.Bar(),
-                ' ', widgets.Timer(),
-                ' ', widgets.AdaptiveETA(),
+                widgets.Percentage(**self.widget_kwargs),
+                ' (', widgets.SimpleProgress(**self.widget_kwargs), ')',
+                ' ', widgets.Bar(**self.widget_kwargs),
+                ' ', widgets.Timer(**self.widget_kwargs),
+                ' ', widgets.AdaptiveETA(**self.widget_kwargs),
             ]
         else:
             return [
-                widgets.AnimatedMarker(),
-                ' ', widgets.Counter(),
-                ' ', widgets.Timer(),
+                widgets.AnimatedMarker(**self.widget_kwargs),
+                ' ', widgets.Counter(**self.widget_kwargs),
+                ' ', widgets.Timer(**self.widget_kwargs),
             ]
 
     def __call__(self, iterable, max_value=None):
