@@ -5,6 +5,7 @@ import datetime
 import abc
 import sys
 import pprint
+from python_utils import converters
 
 from . import utils
 from . import six
@@ -501,11 +502,11 @@ class Bar(AutoWidthWidgetBase):
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
 
-        left = self.left(progress, data, width)
-        right = self.right(progress, data, width)
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
         width -= len(left) + len(right)
-        marker = self.marker(progress, data, width)
-        fill = self.fill(progress, data, width)
+        marker = converters.to_unicode(self.marker(progress, data, width))
+        fill = converters.to_unicode(self.fill(progress, data, width))
 
         if self.fill_left:
             marker = marker.ljust(width, fill)
@@ -576,3 +577,24 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
     def __call__(self, progress, data):
         return FormatWidgetMixin.__call__(self, progress, self.mapping,
                                           self.format)
+
+
+class DynamicMessage(FormatWidgetMixin, WidgetBase):
+    '''Displays a custom variable.'''
+
+    def __init__(self, name):
+        '''Creates a DynamicMessage associated with the given name.'''
+        if not isinstance(name, str):
+            raise TypeError('DynamicMessage(): argument must be a string')
+        if len(name.split()) > 1:
+            raise ValueError(
+                'DynamicMessage(): argument must be single word')
+
+        self.name = name
+
+    def __call__(self, progress, data):
+        val = data['dynamic_messages'][self.name]
+        if val:
+            return self.name + ': ' + '{:6.3g}'.format(val)
+        else:
+            return self.name + ': ' + 6 * '-'
