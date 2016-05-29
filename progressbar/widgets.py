@@ -555,18 +555,19 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
         fill = converters.to_unicode(self.fill(progress, data, width))
 
-        value = int(
-            data['total_seconds_elapsed'] / self.INTERVAL.total_seconds())
+        if width:
+            value = int(
+                data['total_seconds_elapsed'] / self.INTERVAL.total_seconds())
 
-        a = value % width
-        b = width - a - 1
-        if value % (width * 2) >= width:
-            a, b = b, a
+            a = value % width
+            b = width - a - 1
+            if value % (width * 2) >= width:
+                a, b = b, a
 
-        if self.fill_left:
-            marker = a * fill + marker + b * fill
-        else:
-            marker = b * fill + marker + a * fill
+            if self.fill_left:
+                marker = a * fill + marker + b * fill
+            else:
+                marker = b * fill + marker + a * fill
 
         return left + marker + right
 
@@ -580,11 +581,8 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidthWidgetMixin.__init__(self, **kwargs)
 
-    def update_str(self, new_format):
-        self.format = new_format
-
-    def update_mapping(self, new_mapping):
-        self.mapping.update(new_mapping)
+    def update_mapping(self, **mapping):
+        self.mapping.update(mapping)
 
     def __call__(self, progress, data):
         return FormatWidgetMixin.__call__(self, progress, self.mapping,

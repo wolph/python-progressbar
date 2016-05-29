@@ -18,6 +18,7 @@ from progressbar.widgets import (
     BouncingBar,
     RotatingMarker,
     DynamicMessage,
+    FormatCustomText
 )
 
 from .bar import ProgressBar, DataTransferBar
@@ -55,6 +56,7 @@ __all__ = [
     'format_updatable',
     'RotatingMarker',
     'DynamicMessage',
+    'FormatCustomText',
     '__author__',
     '__version__',
 ]

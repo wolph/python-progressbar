@@ -447,6 +447,26 @@ def dynamic_message():
 
 
 @example
+def format_custom_text():
+    format_custom_text = progressbar.FormatCustomText(
+        'Spam: %(spam).1f kg, eggs: %(eggs)d',
+        dict(
+            spam=0.25,
+            eggs=3,
+        ),
+    )
+
+    bar = progressbar.ProgressBar(widgets=[
+        format_custom_text,
+        ' :: ',
+        progressbar.Percentage(),
+    ])
+    for i in bar(range(25)):
+        format_custom_text.update_mapping(eggs=i * 2)
+        time.sleep(0.1)
+
+
+@example
 def simple_api_example():
     bar = progressbar.ProgressBar(widget_kwargs=dict(fill='█'))
     for i in bar(range(200)):
