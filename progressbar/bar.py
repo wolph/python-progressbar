@@ -557,3 +557,20 @@ class DataTransferBar(ProgressBar):
                 ' ', widgets.DataSize(),
                 ' ', widgets.Timer(),
             ]
+
+
+class NullBar(ProgressBar):
+
+    '''
+    Progress bar that does absolutely nothing. Useful for single verbosity
+    flags
+    '''
+
+    def start(self, *args, **kwargs):
+        return self
+
+    def update(self, *args, **kwargs):
+        return self
+
+    def finish(self, *args, **kwargs):
+        return self

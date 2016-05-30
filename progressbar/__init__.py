@@ -21,7 +21,7 @@ from progressbar.widgets import (
     FormatCustomText
 )
 
-from .bar import ProgressBar, DataTransferBar
+from .bar import ProgressBar, DataTransferBar, NullBar
 from .base import UnknownLength
 
 
@@ -57,6 +57,7 @@ __all__ = [
     'RotatingMarker',
     'DynamicMessage',
     'FormatCustomText',
+    'NullBar',
     '__author__',
     '__version__',
 ]

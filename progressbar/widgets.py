@@ -555,7 +555,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
         fill = converters.to_unicode(self.fill(progress, data, width))
 
-        if width:
+        if width:  # pragma: no branch
             value = int(
                 data['total_seconds_elapsed'] / self.INTERVAL.total_seconds())
 
