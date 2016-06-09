@@ -49,8 +49,12 @@ if sys.argv[-1] == 'info':
         print('%s: %s' % (k, v))
     sys.exit()
 
-with open('README.rst') as fh:
-    readme = fh.read()
+if os.path.isfile('README.rst'):
+    with open('README.rst') as fh:
+        readme = fh.read()
+else:
+    readme = \
+        'See http://pypi.python.org/pypi/%(__package_name__)s/' % about
 
 
 if __name__ == '__main__':

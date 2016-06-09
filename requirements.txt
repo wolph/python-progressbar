@@ -1,2 +1,2 @@
 # In case of future requirements
-python-utils
+python-utils>=2.0.0

@@ -42,16 +42,23 @@ extensions = [
     'changelog'
 ]
 
+# Monkey patch to disable nonlocal image warning
+import sphinx
+if hasattr(sphinx, 'environment'):
+    original_warn_mode = sphinx.environment.BuildEnvironment.warn_node
 
-# For testing purposes, ignore non-local image reference warnings
-import sphinx.environment
-from docutils.utils import get_source_line
+    def allow_nonlocal_image_warn_node(self, msg, *args, **kwargs):
+        if not msg.startswith('nonlocal image URI found:'):
+            original_warn_mode(self, msg, *args, **kwargs)
 
-def _warn_node(self, msg, node):
-    if not msg.startswith('nonlocal image URI found:'):
-        self._warnfunc(msg, '%s:%s' % get_source_line(node))
+    sphinx.environment.BuildEnvironment.warn_node = \
+        allow_nonlocal_image_warn_node
 
-sphinx.environment.BuildEnvironment.warn_node = _warn_node
+suppress_warnings = [
+    'image.nonlocal_uri',
+]
+
+needs_sphinx = '1.4'
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
