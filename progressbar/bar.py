@@ -212,15 +212,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         self.poll_interval = poll_interval
 
-        # A dictionary of names of DynamicMessage's and their values.
-        if self.widgets:
-            dyn_msg_widgets = [widget for widget in self.widgets if
-                               isinstance(widget,
-                                          widgets_module.DynamicMessage)]
-        else:
-            dyn_msg_widgets = []
-        self.dynamic_messages = {dynamic_message.name: None for
-                                 dynamic_message in dyn_msg_widgets}
+        # A dictionary of names of DynamicMessage's
+        self.dynamic_messages = {}
+        for widget in (self.widgets or []):
+            if isinstance(widget, widgets_module.DynamicMessage):
+                self.dynamic_messages[widget.name] = None
 
     @property
     def percentage(self):
