@@ -5,13 +5,41 @@ import datetime
 import abc
 import sys
 import pprint
+from python_utils import converters
 
 from . import utils
 from . import six
 from . import base
 
 
+def string_or_lambda(input_):
+    if isinstance(input_, six.basestring):
+        def render_input(progress, data, width):
+            return input_ % data
+
+        return render_input
+    else:
+        return input_
+
+
+def create_marker(marker):
+    def _marker(progress, data, width):
+        if progress.max_value is not base.UnknownLength \
+                and progress.max_value > 0:
+            length = int(progress.value / progress.max_value * width)
+            return (marker * length)
+        else:
+            return marker
+
+    if isinstance(marker, six.basestring):
+        assert len(marker) == 1, 'Markers are required to be 1 char'
+        return _marker
+    else:
+        return marker
+
+
 class FormatWidgetMixin(object):
+
     '''Mixin to format widgets using a formatstring
 
     Variables available:
@@ -67,7 +95,7 @@ class WidgetBase(object):
     be updated. The widget's size may change between calls, but the widget may
     display incorrectly if the size changes drastically and repeatedly.
 
-    The boolean TIME_SENSITIVE informs the ProgressBar that it should be
+    The boolean INTERVAL informs the ProgressBar that it should be
     updated more often because it is time sensitive.
 
     WARNING: Widgets can be shared between multiple progressbars so any state
@@ -222,7 +250,10 @@ class ETA(Timer):
         else:
             eta = elapsed * progress.max_value / value \
                 - data['total_seconds_elapsed']
-            return 'ETA:  %s' % self.format_time(eta)
+            if eta > 0:
+                return 'ETA:  %s' % self.format_time(eta)
+            else:
+                return 'ETA:  0:00:00'
 
     def __call__(self, progress, data):
         '''Updates the widget to show the ETA or total time when finished.'''
@@ -451,6 +482,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
 class Bar(AutoWidthWidgetBase):
 
     '''A progress bar which stretches to fill the line.'''
+
     def __init__(self, marker='#', left='|', right='|', fill=' ',
                  fill_left=True, **kwargs):
         '''Creates a customizable progress bar.
@@ -463,31 +495,8 @@ class Bar(AutoWidthWidgetBase):
         fill - character to use for the empty part of the progress bar
         fill_left - whether to fill from the left or the right
         '''
-        def string_or_lambda(input_):
-            if isinstance(input_, six.basestring):
-                def render_input(progress, data, width):
-                    return input_ % data
 
-                return render_input
-            else:
-                return input_
-
-        def _marker(marker):
-            def __marker(progress, data, width):
-                if progress.max_value is not base.UnknownLength \
-                        and progress.max_value > 0:
-                    length = int(progress.value / progress.max_value * width)
-                    return (marker * length)
-                else:
-                    return ''
-
-            if isinstance(marker, six.basestring):
-                assert len(marker) == 1, 'Markers are required to be 1 char'
-                return __marker
-            else:
-                return marker
-
-        self.marker = _marker(marker)
+        self.marker = create_marker(marker)
         self.left = string_or_lambda(left)
         self.right = string_or_lambda(right)
         self.fill = string_or_lambda(fill)
@@ -498,11 +507,11 @@ class Bar(AutoWidthWidgetBase):
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
 
-        left = self.left(progress, data, width)
-        right = self.right(progress, data, width)
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
         width -= len(left) + len(right)
-        marker = self.marker(progress, data, width)
-        fill = self.fill(progress, data, width)
+        marker = converters.to_unicode(self.marker(progress, data, width))
+        fill = converters.to_unicode(self.fill(progress, data, width))
 
         if self.fill_left:
             marker = marker.ljust(width, fill)
@@ -514,7 +523,7 @@ class Bar(AutoWidthWidgetBase):
 
 class ReverseBar(Bar):
 
-    '''A bar which has a marker which bounces from side to side.'''
+    '''A bar which has a marker that goes from right to left'''
 
     def __init__(self, marker='#', left='|', right='|', fill=' ',
                  fill_left=False, **kwargs):
@@ -530,26 +539,73 @@ class ReverseBar(Bar):
                      fill_left=fill_left, **kwargs)
 
 
-class BouncingBar(Bar):
+class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
-    def update(self, progress, width):  # pragma: no cover
+    '''A bar which has a marker which bounces from side to side.'''
+
+    INTERVAL = datetime.timedelta(milliseconds=100)
+
+    def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
 
-        left, marker, right = (i for i in (self.left, self.marker, self.right))
-
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
         width -= len(left) + len(right)
+        marker = converters.to_unicode(self.marker(progress, data, width))
 
-        if progress.finished:
-            return '%s%s%s' % (left, width * marker, right)
+        fill = converters.to_unicode(self.fill(progress, data, width))
 
-        position = int(progress.value % (width * 2 - 1))
-        if position > width:
-            position = width * 2 - position
-        lpad = self.fill * (position - 1)
-        rpad = self.fill * (width - len(marker) - len(lpad))
+        if width:  # pragma: no branch
+            value = int(
+                data['total_seconds_elapsed'] / self.INTERVAL.total_seconds())
 
-        # Swap if we want to bounce the other way
-        if not self.fill_left:
-            rpad, lpad = lpad, rpad
+            a = value % width
+            b = width - a - 1
+            if value % (width * 2) >= width:
+                a, b = b, a
 
-        return '%s%s%s%s%s' % (left, lpad, marker, rpad, right)
+            if self.fill_left:
+                marker = a * fill + marker + b * fill
+            else:
+                marker = b * fill + marker + a * fill
+
+        return left + marker + right
+
+
+class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
+    mapping = {}
+
+    def __init__(self, format, mapping=mapping, **kwargs):
+        self.format = format
+        self.mapping = mapping
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
+
+    def update_mapping(self, **mapping):
+        self.mapping.update(mapping)
+
+    def __call__(self, progress, data):
+        return FormatWidgetMixin.__call__(self, progress, self.mapping,
+                                          self.format)
+
+
+class DynamicMessage(FormatWidgetMixin, WidgetBase):
+
+    '''Displays a custom variable.'''
+
+    def __init__(self, name):
+        '''Creates a DynamicMessage associated with the given name.'''
+        if not isinstance(name, str):
+            raise TypeError('DynamicMessage(): argument must be a string')
+        if len(name.split()) > 1:
+            raise ValueError(
+                'DynamicMessage(): argument must be single word')
+
+        self.name = name
+
+    def __call__(self, progress, data):
+        val = data['dynamic_messages'][self.name]
+        if val:
+            return self.name + ': ' + '{:6.3g}'.format(val)
+        else:
+            return self.name + ': ' + 6 * '-'

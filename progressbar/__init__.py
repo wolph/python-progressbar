@@ -17,9 +17,15 @@ from progressbar.widgets import (
     ReverseBar,
     BouncingBar,
     RotatingMarker,
+    DynamicMessage,
+    FormatCustomText
 )
 
-from .bar import ProgressBar, DataTransferBar
+from .bar import (
+    ProgressBar,
+    DataTransferBar,
+    NullBar,
+)
 from .base import UnknownLength
 
 
@@ -30,9 +36,6 @@ from .__about__ import (
 
 __date__ = str(date.today())
 __all__ = [
-    'AbstractWidget',
-    'Widget',
-    'WidgetHFill',
     'Timer',
     'ETA',
     'AdaptiveETA',
@@ -51,8 +54,10 @@ __all__ = [
     'UnknownLength',
     'ProgressBar',
     'DataTransferBar',
-    'format_updatable',
     'RotatingMarker',
+    'DynamicMessage',
+    'FormatCustomText',
+    'NullBar',
     '__author__',
     '__version__',
 ]

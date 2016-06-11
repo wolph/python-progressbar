@@ -43,6 +43,7 @@ of widgets:
  - `ReverseBar`
  - `BouncingBar`
  - `RotatingMarker`
+ - `DynamicMessage`
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
