@@ -418,11 +418,12 @@ def iterator_with_max_value():
 def eta():
     widgets = [
         'Test: ', progressbar.Percentage(),
-        ' | ', progressbar.ETA(),
-        ' | ', progressbar.AbsoluteETA(),
+        ' | ETA: ', progressbar.ETA(),
+        ' | AbsoluteETA: ', progressbar.AbsoluteETA(),
+        ' | AdaptiveETA: ', progressbar.AdaptiveETA(),
     ]
-    bar = progressbar.ProgressBar(widgets=widgets, maxval=500).start()
-    for i in range(500):
+    bar = progressbar.ProgressBar(widgets=widgets, maxval=50).start()
+    for i in range(50):
         sleep(0.1)
         bar.update(i + 1)
     bar.finish()

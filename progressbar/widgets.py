@@ -12,6 +12,11 @@ from . import six
 from . import base
 
 
+MAX_DATE = datetime.date(year=datetime.MAXYEAR, month=12, day=31)
+MAX_TIME = datetime.time(23, 59, 59)
+MAX_DATETIME = datetime.datetime.combine(MAX_DATE, MAX_TIME)
+
+
 def string_or_lambda(input_):
     if isinstance(input_, six.basestring):
         def render_input(progress, data, width):
@@ -116,6 +121,7 @@ class WidgetBase(object):
 
 
 class AutoWidthWidgetBase(WidgetBase):
+
     '''The base class for all variable width widgets.
 
     This widget is much like the \\hfill command in TeX, it will expand to
@@ -133,6 +139,7 @@ class AutoWidthWidgetBase(WidgetBase):
 
 
 class TimeSensitiveWidgetBase(WidgetBase):
+
     '''The base class for all time sensitive widgets.
 
     Some widgets like timers would become out of date unless updated at least
@@ -141,12 +148,8 @@ class TimeSensitiveWidgetBase(WidgetBase):
     INTERVAL = datetime.timedelta(seconds=1)
 
 
-def _format_time(seconds):
-    '''Formats time as the string "HH:MM:SS".'''
-    return str(datetime.timedelta(seconds=int(seconds)))
-
-
 class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
+
     '''Displays a formatted label
 
     >>> label = FormatLabel('%(value)s', min_width=5, max_width=10)
@@ -176,7 +179,7 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
         'max': ('max_value', None),
         'seconds': ('seconds_elapsed', None),
         'start': ('start_time', None),
-        'elapsed': ('total_seconds_elapsed', _format_time),
+        'elapsed': ('total_seconds_elapsed', utils.format_time),
         'value': ('value', None),
     }
 
@@ -184,7 +187,7 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidthWidgetMixin.__init__(self, **kwargs)
 
-    def __call__(self, progress, data):
+    def __call__(self, progress, data, **kwargs):
         if not self.check_size(progress):
             return ''
 
@@ -197,7 +200,7 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
             except:  # pragma: no cover
                 pass
 
-        return FormatWidgetMixin.__call__(self, progress, data)
+        return FormatWidgetMixin.__call__(self, progress, data, **kwargs)
 
 
 class Timer(FormatLabel, TimeSensitiveWidgetBase):
@@ -208,7 +211,7 @@ class Timer(FormatLabel, TimeSensitiveWidgetBase):
         TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     # This is exposed as a static method for backwards compatibility
-    format_time = staticmethod(_format_time)
+    format_time = staticmethod(utils.format_time)
 
 
 class SamplesMixin(object):
@@ -239,53 +242,85 @@ class SamplesMixin(object):
 
 
 class ETA(Timer):
+
     '''WidgetBase which attempts to estimate the time of arrival.'''
 
-    def _eta(self, progress, data, value, elapsed):
-        if value == progress.min_value:
-            return 'ETA:  --:--:--'
-        elif progress.end_time:
-            return 'Time: %s' % self.format_time(
-                data['total_seconds_elapsed'])
-        else:
-            eta = elapsed * progress.max_value / value \
-                - data['total_seconds_elapsed']
-            if eta > 0:
-                return 'ETA:  %s' % self.format_time(eta)
-            else:
-                return 'ETA:  0:00:00'
+    def __init__(
+            self,
+            format_not_started='ETA:  --:--:--',
+            format_finished='Time: %(elapsed)s',
+            format='ETA: %(eta)s',
+            format_zero='ETA:  0:00:00',
+            **kwargs):
+        self.format_not_started = format_not_started
+        self.format_finished = format_finished
+        self.format = format
+        self.format_zero = format_zero
+        Timer.__init__(self, **kwargs)
 
-    def __call__(self, progress, data):
+    def _calculate_eta(self, progress, data, value, elapsed):
         '''Updates the widget to show the ETA or total time when finished.'''
-        return self._eta(progress, data, data['value'],
-                         data['total_seconds_elapsed'])
+        if elapsed and value:
+            eta_seconds = elapsed * progress.max_value / value - elapsed
+        else:
+            eta_seconds = 0
+
+        return eta_seconds
+
+    def __call__(self, progress, data, value=None, elapsed=None):
+        '''Updates the widget to show the ETA or total time when finished.'''
+
+        if value is None:
+            value = data['value']
+
+        if elapsed is None:
+            elapsed = data['total_seconds_elapsed']
+
+        data['eta_seconds'] = self._calculate_eta(
+            progress, data, elapsed, value)
+        if data['eta_seconds']:
+            data['eta'] = utils.format_time(data['eta_seconds'])
+        else:
+            data['eta'] = None
+
+        if data['value'] == progress.min_value:
+            format = self.format_not_started
+        elif progress.end_time:
+            format = self.format_finished
+        elif data['eta']:
+            format = self.format
+        else:
+            format = self.format_zero
+
+        return Timer.__call__(self, progress, data, format=format)
 
 
-class AbsoluteETA(Timer):
+class AbsoluteETA(ETA):
+
     '''Widget which attempts to estimate the absolute time of arrival.'''
 
-    def _eta(self, progress, data, value, elapsed):
-        """Update the widget to show the ETA or total time when finished."""
-        if value == progress.min_value:  # pragma: no cover
-            return 'Estimated finish time: ----/--/-- --:--:--'
-        elif progress.end_time:
-            return 'Finished at: %s' % self._format(progress.end_time)
-        else:
-            eta = elapsed * progress.max_value / value - elapsed
-            now = datetime.datetime.now()
-            eta_abs = now + datetime.timedelta(seconds=eta)
-            return 'Estimated finish time: %s' % self._format(eta_abs)
+    def _calculate_eta(self, progress, data, value, elapsed):
+        eta_seconds = ETA._calculate_eta(self, progress, data, value, elapsed)
+        now = datetime.datetime.now()
+        try:
+            return now + datetime.timedelta(seconds=eta_seconds)
+        except OverflowError:
+            return datetime.datetime.max
 
-    def _format(self, t):
-        return t.strftime("%Y/%m/%d %H:%M:%S")
-
-    def __call__(self, progress, data):
-        '''Updates the widget to show the ETA or total time when finished.'''
-        return self._eta(progress, data, data['value'],
-                         data['total_seconds_elapsed'])
+    def __init__(
+            self,
+            format_not_started='Estimated finish time:  ----/--/-- --:--:--',
+            format_finished='Finished at: %(elapsed)s',
+            format='Estimated finish time: %(eta)s',
+            **kwargs):
+        self.format_not_started = format_not_started
+        self.format_finished = format_finished
+        self.format = format
+        Timer.__init__(self, **kwargs)
 
 
 class AdaptiveETA(ETA, SamplesMixin):
+
     '''WidgetBase which attempts to estimate the time of arrival.
 
     Uses a sampled average of the speed based on the 10 last updates.
@@ -301,19 +336,24 @@ class AdaptiveETA(ETA, SamplesMixin):
 
         if len(times) <= 1:
             # No samples so just return the normal ETA calculation
-            return ETA.__call__(self, progress, data)
+            value = None
+            elapsed = 0
         else:
-            return self._eta(progress, data, values[-1] - values[0],
-                             utils.timedelta_to_seconds(times[-1] - times[0]))
+            value = values[-1] - values[0]
+            elapsed = utils.timedelta_to_seconds(times[-1] - times[0])
+
+        return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
 
 
 class DataSize(FormatWidgetMixin):
+
     '''
     Widget for showing an amount of data transferred/processed.
 
     Automatically formats the value (assumed to be a count of bytes) with an
     appropriate sized unit, based on the IEC binary prefixes (powers of 1024).
     '''
+
     def __init__(
             self, variable='value',
             format='%(scaled)5.1f %(prefix)s%(unit)s', unit='B',
