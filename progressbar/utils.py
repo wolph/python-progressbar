@@ -250,7 +250,7 @@ def format_time(time, precision=datetime.timedelta(seconds=1)):
 
 
 def timestamp(dt):  # pragma: no cover
-    if six.PY3:
+    if hasattr(dt, 'timestamp'):
         return dt.timestamp()
     else:
         return (dt - epoch).total_seconds()
