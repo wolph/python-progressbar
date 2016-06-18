@@ -72,7 +72,7 @@ if __name__ == '__main__':
         include_package_data=True,
         install_requires=install_reqs,
         tests_require=tests_reqs,
-        setup_requires=['setuptools', 'pytest-runner'],
+        setup_requires=['setuptools', 'pytest-runner>=2.8'],
         zip_safe=False,
         classifiers=[
             'Development Status :: 5 - Production/Stable',
