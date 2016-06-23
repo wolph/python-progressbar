@@ -252,16 +252,17 @@ class ETA(Timer):
             format='ETA: %(eta)s',
             format_zero='ETA:  0:00:00',
             **kwargs):
+        Timer.__init__(self, **kwargs)
         self.format_not_started = format_not_started
         self.format_finished = format_finished
         self.format = format
         self.format_zero = format_zero
-        Timer.__init__(self, **kwargs)
 
     def _calculate_eta(self, progress, data, value, elapsed):
         '''Updates the widget to show the ETA or total time when finished.'''
         if elapsed and value:
-            eta_seconds = elapsed * progress.max_value / value - elapsed
+            eta_seconds = elapsed * progress.max_value / value - \
+                    data['total_seconds_elapsed']
         else:
             eta_seconds = 0
 
@@ -277,7 +278,7 @@ class ETA(Timer):
             elapsed = data['total_seconds_elapsed']
 
         data['eta_seconds'] = self._calculate_eta(
-            progress, data, elapsed, value)
+            progress, data, value=value, elapsed=elapsed)
         if data['eta_seconds']:
             data['eta'] = utils.format_time(data['eta_seconds'])
         else:
@@ -313,10 +314,10 @@ class AbsoluteETA(ETA):
             format_finished='Finished at: %(elapsed)s',
             format='Estimated finish time: %(eta)s',
             **kwargs):
+        Timer.__init__(self, **kwargs)
         self.format_not_started = format_not_started
         self.format_finished = format_finished
         self.format = format
-        Timer.__init__(self, **kwargs)
 
 
 class AdaptiveETA(ETA, SamplesMixin):
