@@ -88,20 +88,24 @@ class StdRedirectMixin(DefaultFdMixin):
         self.stdout = sys.stdout
         self.stderr = sys.stderr
 
-    def _init(self):
-        if self.redirect_stderr:
-            self._stderr = sys.stderr
+    @property
+    def _stderr(self):
+        if not hasattr(self, '__stderr'):
+            self.__stderr = sys.stderr
             self.stderr = sys.stderr = six.StringIO()
 
-        if self.redirect_stdout:
-            self._stdout = sys.stdout
+        return self.__stderr
+
+    @property
+    def _stdout(self):
+        if not hasattr(self, '__stdout'):
+            self.__stdout = sys.stdout
             self.stdout = sys.stdout = six.StringIO()
+
+        return self.__stdout
 
     def update(self, value=None):
         if self.redirect_stderr and sys.stderr.tell():
-            if not hasattr(self, '_stderr'):
-                self._init()
-
             self.fd.write('\r' + ' ' * self.term_width + '\r')
 
             # Not atomic unfortunately, but writing to the same stream from
@@ -113,9 +117,6 @@ class StdRedirectMixin(DefaultFdMixin):
             self._stderr.flush()
 
         if self.redirect_stdout and sys.stdout.tell():
-            if not hasattr(self, '_stdout'):
-                self._init()
-
             self.fd.write('\r' + ' ' * self.term_width + '\r')
 
             # Not atomic unfortunately, but writing to the same stream from

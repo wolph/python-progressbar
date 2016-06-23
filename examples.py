@@ -14,10 +14,13 @@ import progressbar
 examples = []
 
 
+non_interactive_sleep_factor = 100
+
+
 def sleep(delay):
     '''Make non-interactive examples faster by a factor'''
     if __name__ != '__main__':
-        delay /= 100.
+        delay /= non_interactive_sleep_factor
     time.sleep(delay)
 
 
