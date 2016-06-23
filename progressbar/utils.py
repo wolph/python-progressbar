@@ -1,5 +1,13 @@
 import os
 import math
+import datetime
+
+from . import six
+
+
+# There might be a better way to get the epoch with tzinfo, please create
+# a pull request if you know a better way that functions for Python 2 and 3
+epoch = datetime.datetime(year=1970, month=1, day=1)
 
 
 def timedelta_to_seconds(delta):
@@ -36,7 +44,10 @@ def scale_1024(x, n_prefixes):
     >>> scale_1024(2048, 3)
     (2.0, 1)
     '''
-    power = min(int(math.log(x, 2) / 10), n_prefixes - 1)
+    if x == 0:
+        power = 0
+    else:
+        power = min(int(math.log(x, 2) / 10), n_prefixes - 1)
     scaled = float(x) / (2 ** (10 * power))
     return scaled, power
 
@@ -180,3 +191,67 @@ def _get_terminal_size_linux():  # pragma: no cover
             return None
 
     return int(size[1]), int(size[0])
+
+
+def format_time(time, precision=datetime.timedelta(seconds=1)):
+    '''Formats timedelta/datetime/seconds
+
+    >>> format_time('1')
+    '0:00:01'
+    >>> format_time(1.234)
+    '0:00:01'
+    >>> format_time(1)
+    '0:00:01'
+    >>> format_time(datetime.datetime(2000, 1, 2, 3, 4, 5, 6))
+    '2000-01-02 03:04:05'
+    >>> format_time(datetime.date(2000, 1, 2))
+    '2000-01-02'
+    >>> format_time(datetime.timedelta(seconds=3661))
+    '1:01:01'
+    >>> format_time(None)
+    '--:--:--'
+    >>> format_time(format_time)  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    TypeError: Unknown type ...
+
+    '''
+    precision_seconds = precision.total_seconds()
+
+    if isinstance(time, six.basestring + six.numeric_types):
+        time = datetime.timedelta(seconds=int(time))
+
+    if isinstance(time, datetime.timedelta):
+        seconds = time.total_seconds()
+        # Truncate the number to the given precision
+        seconds = seconds - (seconds % precision_seconds)
+
+        return str(datetime.timedelta(seconds=seconds))
+    elif isinstance(time, datetime.datetime):
+        # Python 2 doesn't have the timestamp method
+        seconds = timestamp(time)
+        # Truncate the number to the given precision
+        seconds = seconds - (seconds % precision_seconds)
+
+        try:  # pragma: no cover
+            if six.PY3:
+                dt = datetime.datetime.fromtimestamp(seconds)
+            else:
+                dt = datetime.datetime.utcfromtimestamp(seconds)
+        except ValueError:  # pragma: no cover
+            dt = datetime.datetime.max
+        return str(dt)
+    elif isinstance(time, datetime.date):
+        return str(time)
+    elif time is None:
+        return '--:--:--'
+    else:
+        raise TypeError('Unknown type %s: %r' % (type(time), time))
+
+
+def timestamp(dt):  # pragma: no cover
+    if hasattr(dt, 'timestamp'):
+        return dt.timestamp()
+    else:
+        return (dt - epoch).total_seconds()
+

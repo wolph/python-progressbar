@@ -7,7 +7,7 @@ Contents
 ------------------------------------------------------------------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    usage
    examples
@@ -15,6 +15,7 @@ Contents
    history
    installation
    progressbar.bar
+   progressbar.base
    progressbar.six
    progressbar.utils
    progressbar.widgets

@@ -17,10 +17,15 @@ except ImportError:  # pragma: no cover
 PY3 = sys.version_info[0] == 3
 
 if PY3:  # pragma: no cover
-    basestring = str
+    basestring = str,
 else:  # pragma: no cover
-    import __builtin__
-    basestring = __builtin__.basestring
+    basestring = str, unicode  # NOQA
+
+
+if PY3:  # pragma: no cover
+    numeric_types = int, float
+else:  # pragma: no cover
+    numeric_types = int, long, float  # NOQA
 
 # Copied from the public six library: -----------------------------------------
 

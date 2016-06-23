@@ -92,3 +92,18 @@ def test_deprecated_poll():
     progressbar.ProgressBar(poll=5)
 
 
+def test_unexpected_update_keyword_arg():
+    p = progressbar.ProgressBar(max_value=10)
+    with pytest.raises(TypeError):
+        for i in range(10):
+            p.update(i, foo=10)
+
+
+def test_dynamic_message_not_str():
+    with pytest.raises(TypeError):
+        progressbar.DynamicMessage(1)
+
+
+def test_dynamic_message_too_many_strs():
+    with pytest.raises(ValueError):
+        progressbar.DynamicMessage('too long')
