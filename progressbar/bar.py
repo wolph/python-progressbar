@@ -85,25 +85,45 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
+        self.stdout = sys.stdout
+        self.stderr = sys.stderr
 
+    def _init(self):
         if self.redirect_stderr:
             self._stderr = sys.stderr
-            sys.stderr = six.StringIO()
+            self.stderr = sys.stderr = six.StringIO()
 
         if self.redirect_stdout:
             self._stdout = sys.stdout
-            sys.stdout = six.StringIO()
+            self.stdout = sys.stdout = six.StringIO()
 
     def update(self, value=None):
         if self.redirect_stderr and sys.stderr.tell():
+            if not hasattr(self, '_stderr'):
+                self._init()
+
             self.fd.write('\r' + ' ' * self.term_width + '\r')
+
+            # Not atomic unfortunately, but writing to the same stream from
+            # multiple threads is a bad idea anyhow
             self._stderr.write(sys.stderr.getvalue())
+            sys.stderr.seek(0)
+            sys.stderr.truncate(0)
+
             self._stderr.flush()
-            sys.stderr = six.StringIO()
 
         if self.redirect_stdout and sys.stdout.tell():
+            if not hasattr(self, '_stdout'):
+                self._init()
+
             self.fd.write('\r' + ' ' * self.term_width + '\r')
+
+            # Not atomic unfortunately, but writing to the same stream from
+            # multiple threads is a bad idea anyhow
             self._stdout.write(sys.stdout.getvalue())
+            sys.stdout.seek(0)
+            sys.stdout.truncate(0)
+
             self._stdout.flush()
             sys.stdout = six.StringIO()
 
@@ -114,11 +134,11 @@ class StdRedirectMixin(DefaultFdMixin):
 
         if self.redirect_stderr:
             self._stderr.write(sys.stderr.getvalue())
-            sys.stderr = self._stderr
+            self.stderr = sys.stderr = self._stderr
 
         if self.redirect_stdout:
             self._stdout.write(sys.stdout.getvalue())
-            sys.stdout = self._stdout
+            self.stdout = sys.stdout = self._stdout
 
 
 class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
