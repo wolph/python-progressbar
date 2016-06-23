@@ -364,7 +364,9 @@ def increment_bar_with_output_redirection():
                                   redirect_stdout=True).start()
     for i in range(100):
         # do something
+        sleep(0.01)
         bar += 10
+        print('Got', i)
     bar.finish()
 
 
