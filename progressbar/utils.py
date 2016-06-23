@@ -238,7 +238,7 @@ def format_time(time, precision=datetime.timedelta(seconds=1)):
                 dt = datetime.datetime.fromtimestamp(seconds)
             else:
                 dt = datetime.datetime.utcfromtimestamp(seconds)
-        except ValueError:
+        except ValueError:  # pragma: no cover
             dt = datetime.datetime.max
         return str(dt)
     elif isinstance(time, datetime.date):

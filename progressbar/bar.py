@@ -90,7 +90,7 @@ class StdRedirectMixin(DefaultFdMixin):
 
     @property
     def _stderr(self):
-        if not hasattr(self, '__stderr'):
+        if not hasattr(self, '__stderr'):  # pragma: no branch
             self.__stderr = sys.stderr
             self.stderr = sys.stderr = six.StringIO()
 
@@ -98,7 +98,7 @@ class StdRedirectMixin(DefaultFdMixin):
 
     @property
     def _stdout(self):
-        if not hasattr(self, '__stdout'):
+        if not hasattr(self, '__stdout'):  # pragma: no branch
             self.__stdout = sys.stdout
             self.stdout = sys.stdout = six.StringIO()
 

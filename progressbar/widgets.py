@@ -303,7 +303,7 @@ class AbsoluteETA(ETA):
         now = datetime.datetime.now()
         try:
             return now + datetime.timedelta(seconds=eta_seconds)
-        except OverflowError:
+        except OverflowError:  # pragma: no cover
             return datetime.datetime.max
 
     def __init__(
