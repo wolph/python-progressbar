@@ -107,7 +107,6 @@ class WidgetBase(object):
     information specific to a progressbar should be stored within the
     progressbar instead of the widget.
     '''
-    INTERVAL = None
 
     def __init__(self, **kwargs):
         pass
@@ -145,7 +144,7 @@ class TimeSensitiveWidgetBase(WidgetBase):
     Some widgets like timers would become out of date unless updated at least
     every `INTERVAL`
     '''
-    INTERVAL = datetime.timedelta(seconds=1)
+    INTERVAL = datetime.timedelta(milliseconds=100)
 
 
 class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
@@ -261,8 +260,7 @@ class ETA(Timer):
     def _calculate_eta(self, progress, data, value, elapsed):
         '''Updates the widget to show the ETA or total time when finished.'''
         if elapsed and value:
-            eta_seconds = elapsed * progress.max_value / value - \
-                    data['total_seconds_elapsed']
+            eta_seconds = elapsed * progress.max_value / value - elapsed
         else:
             eta_seconds = 0
 
