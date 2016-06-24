@@ -9,7 +9,6 @@ Contents
 .. toctree::
    :maxdepth: 4
 
-   usage
    examples
    contributing
    history
