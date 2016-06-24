@@ -228,7 +228,12 @@ class SamplesMixin(object):
         sample_times = self.get_sample_times(progress, data)
         sample_values = self.get_sample_values(progress, data)
 
-        if progress.value != progress.previous_value:
+        if sample_times:
+            sample_time = sample_times[-1]
+        else:
+            sample_time = datetime.datetime.min
+
+        if progress.last_update_time - sample_time > self.INTERVAL:
             # Add a sample but limit the size to `num_samples`
             sample_times.append(progress.last_update_time)
             sample_values.append(progress.value)
@@ -259,8 +264,11 @@ class ETA(Timer):
 
     def _calculate_eta(self, progress, data, value, elapsed):
         '''Updates the widget to show the ETA or total time when finished.'''
-        if elapsed and value:
-            eta_seconds = elapsed * progress.max_value / value - elapsed
+        if elapsed:
+            # The max() prevents zero division errors
+            per_item = elapsed / max(value, 0.0000000001)
+            remaining = progress.max_value - data['value']
+            eta_seconds = remaining * per_item
         else:
             eta_seconds = 0
 
