@@ -1,4 +1,5 @@
 import time
+import datetime
 import progressbar
 
 
@@ -47,13 +48,18 @@ def test_adaptive_eta():
     widgets = [
         progressbar.AdaptiveETA(),
     ]
-    p = progressbar.ProgressBar(max_value=2, widgets=widgets,
-                                poll_interval=0.0001)
+    widgets[0].INTERVAL = datetime.timedelta(microseconds=1)
+    p = progressbar.ProgressBar(
+        max_value=2,
+        samples=2,
+        widgets=widgets,
+        poll_interval=0.0001,
+    )
 
     p.start()
-    p.update(1)
-    time.sleep(0.001)
-    p.update(1)
+    for i in range(20):
+        p.update(1)
+        time.sleep(0.001)
     p.finish()
 
 
