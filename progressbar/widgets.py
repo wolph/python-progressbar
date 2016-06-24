@@ -260,7 +260,8 @@ class ETA(Timer):
     def _calculate_eta(self, progress, data, value, elapsed):
         '''Updates the widget to show the ETA or total time when finished.'''
         if elapsed and value:
-            eta_seconds = elapsed * progress.max_value / value - elapsed
+            res_value = progress.max_value - data['value']
+            eta_seconds = elapsed / value * res_value
         else:
             eta_seconds = 0
 
@@ -338,8 +339,8 @@ class AdaptiveETA(ETA, SamplesMixin):
             value = None
             elapsed = 0
         else:
-            value = values[-1] - values[0]
-            elapsed = utils.timedelta_to_seconds(times[-1] - times[0])
+            value = values[-1] - values[-2]
+            elapsed = utils.timedelta_to_seconds(times[-1] - times[-2])
 
         return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
 
