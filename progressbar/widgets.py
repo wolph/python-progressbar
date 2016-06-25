@@ -269,7 +269,6 @@ class ETA(Timer):
 
     def __call__(self, progress, data, value=None, elapsed=None):
         '''Updates the widget to show the ETA or total time when finished.'''
-        print('update', progress, data, value, elapsed)
 
         if value is None:
             value = data['value']
