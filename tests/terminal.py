@@ -82,6 +82,16 @@ def test_stdout_redirection():
         p.update(i)
 
 
+def test_double_stdout_redirection():
+    p = progressbar.ProgressBar(max_value=10, redirect_stdout=True)
+    p2 = progressbar.ProgressBar(max_value=10, redirect_stdout=True)
+
+    for i in range(10):
+        print('', file=sys.stdout)
+        p.update(i)
+        p2.update(i)
+
+
 def test_stderr_redirection():
     p = progressbar.ProgressBar(max_value=10, redirect_stderr=True)
 
