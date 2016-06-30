@@ -27,6 +27,13 @@ if PY3:  # pragma: no cover
 else:  # pragma: no cover
     numeric_types = int, long, float  # NOQA
 
+
+if PY3:  # pragma: no cover
+    long_int = int
+else:  # pragma: no cover
+    long_int = long  # NOQA
+
+
 # Copied from the public six library: -----------------------------------------
 
 # Copyright (c) 2010-2015 Benjamin Peterson
