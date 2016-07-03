@@ -43,8 +43,14 @@ def scale_1024(x, n_prefixes):
     (310.0, 0)
     >>> scale_1024(2048, 3)
     (2.0, 1)
+    >>> scale_1024(0, 2)
+    (0.0, 0)
+    >>> scale_1024(0.5, 2)
+    (0.5, 0)
+    >>> scale_1024(1, 2)
+    (1.0, 0)
     '''
-    if x == 0:
+    if x <= 0:
         power = 0
     else:
         power = min(int(math.log(x, 2) / 10), n_prefixes - 1)
