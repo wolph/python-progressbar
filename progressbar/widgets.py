@@ -107,7 +107,6 @@ class WidgetBase(object):
     information specific to a progressbar should be stored within the
     progressbar instead of the widget.
     '''
-    INTERVAL = None
 
     def __init__(self, **kwargs):
         pass
@@ -145,7 +144,7 @@ class TimeSensitiveWidgetBase(WidgetBase):
     Some widgets like timers would become out of date unless updated at least
     every `INTERVAL`
     '''
-    INTERVAL = datetime.timedelta(seconds=1)
+    INTERVAL = datetime.timedelta(milliseconds=100)
 
 
 class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
@@ -229,7 +228,12 @@ class SamplesMixin(object):
         sample_times = self.get_sample_times(progress, data)
         sample_values = self.get_sample_values(progress, data)
 
-        if progress.value != progress.previous_value:
+        if sample_times:
+            sample_time = sample_times[-1]
+        else:
+            sample_time = datetime.datetime.min
+
+        if progress.last_update_time - sample_time > self.INTERVAL:
             # Add a sample but limit the size to `num_samples`
             sample_times.append(progress.last_update_time)
             sample_values.append(progress.value)
@@ -252,16 +256,19 @@ class ETA(Timer):
             format='ETA: %(eta)s',
             format_zero='ETA:  0:00:00',
             **kwargs):
+        Timer.__init__(self, **kwargs)
         self.format_not_started = format_not_started
         self.format_finished = format_finished
         self.format = format
         self.format_zero = format_zero
-        Timer.__init__(self, **kwargs)
 
     def _calculate_eta(self, progress, data, value, elapsed):
         '''Updates the widget to show the ETA or total time when finished.'''
-        if elapsed and value:
-            eta_seconds = elapsed * progress.max_value / value - elapsed
+        if elapsed:
+            # The max() prevents zero division errors
+            per_item = elapsed / max(value, 0.0000000001)
+            remaining = progress.max_value - data['value']
+            eta_seconds = remaining * per_item
         else:
             eta_seconds = 0
 
@@ -277,7 +284,7 @@ class ETA(Timer):
             elapsed = data['total_seconds_elapsed']
 
         data['eta_seconds'] = self._calculate_eta(
-            progress, data, elapsed, value)
+            progress, data, value=value, elapsed=elapsed)
         if data['eta_seconds']:
             data['eta'] = utils.format_time(data['eta_seconds'])
         else:
@@ -304,7 +311,7 @@ class AbsoluteETA(ETA):
         now = datetime.datetime.now()
         try:
             return now + datetime.timedelta(seconds=eta_seconds)
-        except OverflowError:
+        except OverflowError:  # pragma: no cover
             return datetime.datetime.max
 
     def __init__(
@@ -313,10 +320,10 @@ class AbsoluteETA(ETA):
             format_finished='Finished at: %(elapsed)s',
             format='Estimated finish time: %(eta)s',
             **kwargs):
+        Timer.__init__(self, **kwargs)
         self.format_not_started = format_not_started
         self.format_finished = format_finished
         self.format = format
-        Timer.__init__(self, **kwargs)
 
 
 class AdaptiveETA(ETA, SamplesMixin):

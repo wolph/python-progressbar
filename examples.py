@@ -14,10 +14,13 @@ import progressbar
 examples = []
 
 
+non_interactive_sleep_factor = 100
+
+
 def sleep(delay):
     '''Make non-interactive examples faster by a factor'''
     if __name__ != '__main__':
-        delay /= 100.
+        delay /= non_interactive_sleep_factor
     time.sleep(delay)
 
 
@@ -364,7 +367,9 @@ def increment_bar_with_output_redirection():
                                   redirect_stdout=True).start()
     for i in range(100):
         # do something
+        sleep(0.01)
         bar += 10
+        print('Got', i)
     bar.finish()
 
 
@@ -372,10 +377,11 @@ def increment_bar_with_output_redirection():
 def eta_types_demonstration():
     widgets = [
         progressbar.Percentage(),
+        ' ETA: ', progressbar.ETA(),
+        ' Adaptive ETA: ', progressbar.AdaptiveETA(),
+        ' Absolute ETA: ', progressbar.AbsoluteETA(),
+        ' Adaptive Transfer Speed: ', progressbar.AdaptiveTransferSpeed(),
         ' ', progressbar.Bar(),
-        ' ', progressbar.ETA(),
-        ' ', progressbar.AdaptiveETA(),
-        ' ', progressbar.AdaptiveTransferSpeed(),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=500)
     bar.start()
@@ -398,9 +404,9 @@ def adaptive_eta_without_value_change():
         progressbar.AdaptiveTransferSpeed(),
     ], max_value=2, poll=0.0001)
     bar.start()
-    bar.update(1)
-    sleep(0.1)
-    bar.update(1)
+    for i in range(100):
+        bar.update(1)
+        sleep(0.1)
     bar.finish()
 
 
