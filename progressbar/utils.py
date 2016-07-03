@@ -225,7 +225,10 @@ def format_time(time, precision=datetime.timedelta(seconds=1)):
     precision_seconds = precision.total_seconds()
 
     if isinstance(time, six.basestring + six.numeric_types):
-        time = datetime.timedelta(seconds=int(time))
+        try:
+            time = datetime.timedelta(seconds=six.long_int(time))
+        except OverflowError:  # pragma: no cover
+            time = None
 
     if isinstance(time, datetime.timedelta):
         seconds = time.total_seconds()

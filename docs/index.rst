@@ -4,7 +4,7 @@ Welcome to Progress Bar's documentation!
 .. include:: ../README.rst
 
 Contents
-------------------------------------------------------------------------------
+--------
 
 .. toctree::
    :maxdepth: 4
