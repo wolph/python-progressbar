@@ -1,24 +1,54 @@
-sudo: false
+# sudo: false
+#
 language: python
 python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "pypy"
-  - "pypy3"
-
-# command to install dependencies
+    - '2.7'
+    - '3.3'
+    - '3.4'
+    - '3.5'
+    - pypy
+    - pypy3
 install:
-  - pip install .
-  - pip install -r tests/requirements.txt
+    # Regular Python test
+    - pip install .
+    - pip install -r tests/requirements.txt
+
+    # Conda test
+    - sudo apt-get update
+    # We do this conditionally because it saves us some downloading if the
+    # version is the same.
+    - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+        wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+    else
+        wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    - hash -r
+    - conda config --set always_yes yes --set changeps1 no
+    - conda update -q conda
+    # Useful for debugging any issues with conda
+    - conda info -a
+
+    # Replace dep1 dep2 ... with your dependencies
+    - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
+    - source activate test-environment
+    - python setup.py install
 
 before_script: flake8 --ignore=W391 progressbar tests
-
-# command to run tests
 script:
     - python setup.py test
-
 after_success:
     - coveralls
 
+deploy:
+  provider: pypi
+  user: WoLpH
+  password:
+    secure: CQs9mqSqKbZLoO9+YrqCTKm8K5kzHv45zYsXgl07TZBWZ+LFRjVniROeykreI0L7psaYOsyuNV2DMBxVBqgU805Crun0nhCak1wNRoWzqy9y5xfLc+BIAGyh+MN45up3gnRxDDrzkudwbZiEa0hUgrPgGZ2uxnPC3BQM2Lea/SE=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: WoLpH/python-progressbar
+
+script:
