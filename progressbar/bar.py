@@ -1,6 +1,8 @@
 from __future__ import division, absolute_import, with_statement
+import io
 import sys
 import math
+import logging
 import warnings
 from datetime import datetime, timedelta
 import collections
@@ -10,6 +12,9 @@ from . import widgets as widgets_module  # Avoid name collision
 from . import six
 from . import utils
 from . import base
+
+
+logger = logging.getLogger()
 
 
 class ProgressBarMixinBase(object):
@@ -105,28 +110,38 @@ class StdRedirectMixin(DefaultFdMixin):
         return self.__stdout
 
     def update(self, value=None):
-        if self.redirect_stderr and sys.stderr.tell():
-            self.fd.write('\r' + ' ' * self.term_width + '\r')
+        try:
+            if self.redirect_stderr and sys.stderr.tell():
+                self.fd.write('\r' + ' ' * self.term_width + '\r')
 
-            # Not atomic unfortunately, but writing to the same stream from
-            # multiple threads is a bad idea anyhow
-            self._stderr.write(sys.stderr.getvalue())
-            sys.stderr.seek(0)
-            sys.stderr.truncate(0)
+                # Not atomic unfortunately, but writing to the same stream from
+                # multiple threads is a bad idea anyhow
+                self._stderr.write(sys.stderr.getvalue())
+                sys.stderr.seek(0)
+                sys.stderr.truncate(0)
 
-            self._stderr.flush()
+                self._stderr.flush()
+        except io.UnsupportedOperation:
+            logger.warn('Disabling stderr redirection, %r is not seekable',
+                        sys.stderr)
+            self.redirect_stderr = False
 
-        if self.redirect_stdout and sys.stdout.tell():
-            self.fd.write('\r' + ' ' * self.term_width + '\r')
+        try:
+            if self.redirect_stdout and sys.stdout.tell():
+                self.fd.write('\r' + ' ' * self.term_width + '\r')
 
-            # Not atomic unfortunately, but writing to the same stream from
-            # multiple threads is a bad idea anyhow
-            self._stdout.write(sys.stdout.getvalue())
-            sys.stdout.seek(0)
-            sys.stdout.truncate(0)
+                # Not atomic unfortunately, but writing to the same stream from
+                # multiple threads is a bad idea anyhow
+                self._stdout.write(sys.stdout.getvalue())
+                sys.stdout.seek(0)
+                sys.stdout.truncate(0)
 
-            self._stdout.flush()
-            sys.stdout = six.StringIO()
+                self._stdout.flush()
+                sys.stdout = six.StringIO()
+        except io.UnsupportedOperation:
+            logger.warn('Disabling stdout redirection, %r is not seekable',
+                        sys.stdout)
+            self.redirect_stdout = False
 
         DefaultFdMixin.update(self, value=value)
 
