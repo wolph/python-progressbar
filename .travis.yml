@@ -51,4 +51,3 @@ deploy:
     distributions: sdist bdist_wheel
     repo: WoLpH/python-progressbar
 
-script:
