@@ -121,7 +121,7 @@ class StdRedirectMixin(DefaultFdMixin):
                 sys.stderr.truncate(0)
 
                 self._stderr.flush()
-        except io.UnsupportedOperation:  # pragma: no cover
+        except (io.UnsupportedOperation, AttributeError):  # pragma: no cover
             logger.warn('Disabling stderr redirection, %r is not seekable',
                         sys.stderr)
             self.redirect_stderr = False
@@ -138,7 +138,7 @@ class StdRedirectMixin(DefaultFdMixin):
 
                 self._stdout.flush()
                 sys.stdout = six.StringIO()
-        except io.UnsupportedOperation:  # pragma: no cover
+        except (io.UnsupportedOperation, AttributeError):  # pragma: no cover
             logger.warn('Disabling stdout redirection, %r is not seekable',
                         sys.stdout)
             self.redirect_stdout = False
