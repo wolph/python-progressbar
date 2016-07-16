@@ -100,7 +100,7 @@ def get_terminal_size():  # pragma: no cover
 
     try:
         # Default to 79 characters for IPython notebooks
-        ipython = get_ipython()  # NOQA
+        ipython = globals().get('get_ipython')()
         from ipykernel import zmqshell
         if isinstance(ipython, zmqshell.ZMQInteractiveShell):
             return 79, 24
