@@ -77,7 +77,7 @@ def get_terminal_size():  # pragma: no cover
             # The off by one is needed due to progressbars in some cases, for
             # safety we'll always substract it.
             return w - 1, h
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
         pass
 
     try:
@@ -85,7 +85,7 @@ def get_terminal_size():  # pragma: no cover
         h = int(os.environ.get('LINES'))
         if w and h:
             return w, h
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
         pass
 
     try:
@@ -95,14 +95,23 @@ def get_terminal_size():  # pragma: no cover
         h = terminal.height
         if w and h:
             return w, h
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
+        pass
+
+    try:
+        # Default to 79 characters for IPython notebooks
+        ipython = get_ipython()  # NOQA
+        from ipykernel import zmqshell
+        if isinstance(ipython, zmqshell.ZMQInteractiveShell):
+            return 79, 24
+    except Exception:  # pragma: no cover
         pass
 
     try:
         w, h = _get_terminal_size_linux()
         if w and h:
             return w, h
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
         pass
 
     try:
@@ -110,7 +119,7 @@ def get_terminal_size():  # pragma: no cover
         w, h = _get_terminal_size_windows()
         if w and h:
             return w, h
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
         pass
 
     try:
@@ -118,7 +127,7 @@ def get_terminal_size():  # pragma: no cover
         w, h = _get_terminal_size_tput()
         if w and h:
             return w, h
-    except:  # pragma: no cover
+    except Exception:  # pragma: no cover
         pass
 
     return 79, 24
@@ -136,7 +145,7 @@ def _get_terminal_size_windows():  # pragma: no cover
         h = windll.kernel32.GetStdHandle(-12)
         csbi = create_string_buffer(22)
         res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
-    except:
+    except Exception:
         return None
 
     if res:
@@ -165,7 +174,7 @@ def _get_terminal_size_tput():  # pragma: no cover
         output = proc.communicate(input=None)
         h = int(output[0])
         return w, h
-    except:
+    except Exception:
         return None
 
 
@@ -177,7 +186,7 @@ def _get_terminal_size_linux():  # pragma: no cover
             import struct
             size = struct.unpack(
                 'hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
-        except:
+        except Exception:
             return None
         return size
 
@@ -188,12 +197,12 @@ def _get_terminal_size_linux():  # pragma: no cover
             fd = os.open(os.ctermid(), os.O_RDONLY)
             size = ioctl_GWINSZ(fd)
             os.close(fd)
-        except:
+        except Exception:
             pass
     if not size:
         try:
             size = os.environ['LINES'], os.environ['COLUMNS']
-        except:
+        except Exception:
             return None
 
     return int(size[1]), int(size[0])
