@@ -142,11 +142,11 @@ class StdRedirectMixin(DefaultFdMixin):
     def finish(self):
         DefaultFdMixin.finish(self)
 
-        if self.redirect_stderr:
+        if self.redirect_stderr and hasattr(sys.stderr, 'getvalue'):
             self._stderr.write(sys.stderr.getvalue())
             self.stderr = sys.stderr = self._stderr
 
-        if self.redirect_stdout:
+        if self.redirect_stdout and hasattr(sys.stdout, 'getvalue'):
             self._stdout.write(sys.stdout.getvalue())
             self.stdout = sys.stdout = self._stdout
 
