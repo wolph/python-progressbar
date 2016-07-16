@@ -1,0 +1,15 @@
+#### Description
+
+Description of the problem
+
+#### Code
+
+If applicable, code to reproduce the issue and/or the stacktrace of the issue
+
+#### Versions
+
+- Python version: `import sys; print(sys.version)`
+- Python distribution/environment: CPython/Anaconda/IPython/IDLE
+- Operating System: Windows 10, Ubuntu Linux, etc.
+- Package version: `import progressbar; print(progressbar.__version__)`
+

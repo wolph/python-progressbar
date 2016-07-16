@@ -1,24 +1,26 @@
 sudo: false
 language: python
 python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "pypy"
-  - "pypy3"
-
-# command to install dependencies
+    - '2.7'
+    - '3.3'
+    - '3.4'
+    - '3.5'
+    - pypy
+    - pypy3
 install:
-  - pip install .
-  - pip install -r tests/requirements.txt
-
+    - pip install .
+    - pip install -r tests/requirements.txt
 before_script: flake8 --ignore=W391 progressbar tests
-
-# command to run tests
 script:
     - python setup.py test
-
 after_success:
     - coveralls
-
+deploy:
+  provider: pypi
+  user: WoLpH
+  password:
+    secure: CQs9mqSqKbZLoO9+YrqCTKm8K5kzHv45zYsXgl07TZBWZ+LFRjVniROeykreI0L7psaYOsyuNV2DMBxVBqgU805Crun0nhCak1wNRoWzqy9y5xfLc+BIAGyh+MN45up3gnRxDDrzkudwbZiEa0hUgrPgGZ2uxnPC3BQM2Lea/SE=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: WoLpH/python-progressbar
