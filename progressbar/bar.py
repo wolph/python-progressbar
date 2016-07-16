@@ -90,8 +90,8 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
-        self.stdout = sys.stdout
-        self.stderr = sys.stderr
+        self._stdout = self.stdout = sys.stdout
+        self._stderr = self.stderr = sys.stderr
 
     def start(self, *args, **kwargs):
         self.stderr = self._stderr = sys.stderr
@@ -101,6 +101,8 @@ class StdRedirectMixin(DefaultFdMixin):
         self.stdout = self._stdout = sys.stdout
         if self.redirect_stdout:
             self.stdout = sys.stdout = six.StringIO()
+
+        DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value=None):
         try:
