@@ -93,57 +93,43 @@ class StdRedirectMixin(DefaultFdMixin):
         self.stdout = sys.stdout
         self.stderr = sys.stderr
 
-    @property
-    def _stderr(self):
-        if not hasattr(self, '__stderr'):  # pragma: no branch
-            self.__stderr = sys.stderr
+    def start(self, *args, **kwargs):
+        self.stderr = self._stderr = sys.stderr
+        if self.redirect_stderr:
             self.stderr = sys.stderr = six.StringIO()
 
-        return self.__stderr
-
-    @property
-    def _stdout(self):
-        if not hasattr(self, '__stdout'):  # pragma: no branch
-            self.__stdout = sys.stdout
+        self.stdout = self._stdout = sys.stdout
+        if self.redirect_stdout:
             self.stdout = sys.stdout = six.StringIO()
-
-        return self.__stdout
 
     def update(self, value=None):
         try:
-            if self.redirect_stderr:
-                # Make sure the redirection is initialized
-                _stderr = self._stderr
-                if sys.stderr.tell():
-                    self.fd.write('\r' + ' ' * self.term_width + '\r')
+            if self.redirect_stderr and sys.stderr.tell():
+                self.fd.write('\r' + ' ' * self.term_width + '\r')
 
-                    # Not atomic unfortunately, but writing to the same stream
-                    # from multiple threads is a bad idea anyhow
-                    _stderr.write(sys.stderr.getvalue())
-                    sys.stderr.seek(0)
-                    sys.stderr.truncate(0)
+                # Not atomic unfortunately, but writing to the same stream
+                # from multiple threads is a bad idea anyhow
+                self._stderr.write(sys.stderr.getvalue())
+                sys.stderr.seek(0)
+                sys.stderr.truncate(0)
 
-                    self._stderr.flush()
+                self._stderr.flush()
         except (io.UnsupportedOperation, AttributeError):  # pragma: no cover
             logger.warn('Disabling stderr redirection, %r is not seekable',
                         sys.stderr)
             self.redirect_stderr = False
 
         try:
-            if self.redirect_stdout:
-                # Make sure the redirection is initialized
-                _stdout = self._stdout
-                if sys.stdout.tell():
-                    self.fd.write('\r' + ' ' * self.term_width + '\r')
+            if self.redirect_stdout and sys.stdout.tell():
+                self.fd.write('\r' + ' ' * self.term_width + '\r')
 
-                    # Not atomic unfortunately, but writing to the same stream
-                    # from multiple threads is a bad idea anyhow
-                    _stdout.write(sys.stdout.getvalue())
-                    sys.stdout.seek(0)
-                    sys.stdout.truncate(0)
+                # Not atomic unfortunately, but writing to the same stream
+                # from multiple threads is a bad idea anyhow
+                self._stdout.write(sys.stdout.getvalue())
+                sys.stdout.seek(0)
+                sys.stdout.truncate(0)
 
-                    self._stdout.flush()
-                    sys.stdout = six.StringIO()
+                self._stdout.flush()
         except (io.UnsupportedOperation, AttributeError):  # pragma: no cover
             logger.warn('Disabling stdout redirection, %r is not seekable',
                         sys.stdout)
