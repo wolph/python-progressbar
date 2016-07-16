@@ -70,7 +70,7 @@ Usage
 ******************************************************************************
 
 There are many ways to use Python Progressbar, you can see a few basic examples
-here but there are many more in the :doc:`examples` file.
+here but there are many more in the examples file.
 
 Wrapping an iterable
 ==============================================================================
