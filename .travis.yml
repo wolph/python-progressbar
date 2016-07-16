@@ -15,12 +15,3 @@ script:
     - python setup.py test
 after_success:
     - coveralls
-deploy:
-  provider: pypi
-  user: WoLpH
-  password:
-    secure: CQs9mqSqKbZLoO9+YrqCTKm8K5kzHv45zYsXgl07TZBWZ+LFRjVniROeykreI0L7psaYOsyuNV2DMBxVBqgU805Crun0nhCak1wNRoWzqy9y5xfLc+BIAGyh+MN45up3gnRxDDrzkudwbZiEa0hUgrPgGZ2uxnPC3BQM2Lea/SE=
-  on:
-    tags: true
-    distributions: sdist bdist_wheel
-    repo: WoLpH/python-progressbar
