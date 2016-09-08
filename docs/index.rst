@@ -11,7 +11,6 @@ Contents
 
    examples
    contributing
-   history
    installation
    progressbar.bar
    progressbar.base
