@@ -45,10 +45,12 @@ class DefaultFdMixin(ProgressBarMixinBase):
     def update(self, *args, **kwargs):
         ProgressBarMixinBase.update(self, *args, **kwargs)
         self.fd.write('\r' + self._format_line())
+        self.fd.flush()
 
     def finish(self, *args, **kwargs):  # pragma: no cover
         ProgressBarMixinBase.finish(self, *args, **kwargs)
         self.fd.write('\n')
+        self.fd.flush()
 
 
 class ResizableMixin(ProgressBarMixinBase):
