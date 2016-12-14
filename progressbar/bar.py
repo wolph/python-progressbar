@@ -210,7 +210,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         StdRedirectMixin.__init__(self, **kwargs)
         ResizableMixin.__init__(self, **kwargs)
         ProgressBarBase.__init__(self, **kwargs)
-        if not max_value and kwargs.get('maxval'):
+        if not max_value and kwargs.get('maxval') is not None:
             warnings.warn('The usage of `maxval` is deprecated, please use '
                           '`max_value` instead', DeprecationWarning)
             max_value = kwargs.get('maxval')
