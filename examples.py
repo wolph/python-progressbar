@@ -3,16 +3,14 @@
 
 from __future__ import print_function
 
+import functools
+import random
 import sys
 import time
-import random
-import functools
 
 import progressbar
 
-
 examples = []
-
 
 non_interactive_sleep_factor = 100
 
@@ -26,6 +24,7 @@ def sleep(delay):
 
 def example(fn):
     '''Wrap the examples so they generate readable output'''
+
     @functools.wraps(fn)
     def wrapped():
         try:
@@ -480,12 +479,26 @@ def simple_api_example():
         sleep(0.02)
 
 
+@example
+def ETA_on_generators():
+    def gen():
+        for x in range(200):
+            yield None
+
+    widgets = [progressbar.AdaptiveETA(), ' ', progressbar.ETA(), ' ', progressbar.Timer()]
+
+    bar = progressbar.ProgressBar(widgets=widgets)
+    for i in bar(gen()):
+        sleep(0.02)
+
+
 def test(*tests):
     for example in examples:
         if not tests or example.__name__ in tests:
             example()
         else:
             print('Skipping', example.__name__)
+
 
 if __name__ == '__main__':
     try:

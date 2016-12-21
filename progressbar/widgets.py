@@ -1,16 +1,16 @@
 from __future__ import division, absolute_import, with_statement
 from __future__ import print_function
 
-import datetime
 import abc
-import sys
+import datetime
 import pprint
+import sys
+
 from python_utils import converters
 
-from . import utils
-from . import six
 from . import base
-
+from . import six
+from . import utils
 
 MAX_DATE = datetime.date(year=datetime.MAXYEAR, month=12, day=31)
 MAX_TIME = datetime.time(23, 59, 59)
@@ -44,7 +44,6 @@ def create_marker(marker):
 
 
 class FormatWidgetMixin(object):
-
     '''Mixin to format widgets using a formatstring
 
     Variables available:
@@ -79,6 +78,7 @@ class WidthWidgetMixin(object):
     specified size range so the progressbar fits on both large and small
     screens..
     '''
+
     def __init__(self, min_width=None, max_width=None, **kwargs):
         self.min_width = min_width
         self.max_width = max_width
@@ -120,7 +120,6 @@ class WidgetBase(object):
 
 
 class AutoWidthWidgetBase(WidgetBase):
-
     '''The base class for all variable width widgets.
 
     This widget is much like the \\hfill command in TeX, it will expand to
@@ -138,7 +137,6 @@ class AutoWidthWidgetBase(WidgetBase):
 
 
 class TimeSensitiveWidgetBase(WidgetBase):
-
     '''The base class for all time sensitive widgets.
 
     Some widgets like timers would become out of date unless updated at least
@@ -148,7 +146,6 @@ class TimeSensitiveWidgetBase(WidgetBase):
 
 
 class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
-
     '''Displays a formatted label
 
     >>> label = FormatLabel('%(value)s', min_width=5, max_width=10)
@@ -173,13 +170,13 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
     '''
 
     mapping = {
-        'finished': ('end_time', None),
+        'finished'   : ('end_time', None),
         'last_update': ('last_update_time', None),
-        'max': ('max_value', None),
-        'seconds': ('seconds_elapsed', None),
-        'start': ('start_time', None),
-        'elapsed': ('total_seconds_elapsed', utils.format_time),
-        'value': ('value', None),
+        'max'        : ('max_value', None),
+        'seconds'    : ('seconds_elapsed', None),
+        'start'      : ('start_time', None),
+        'elapsed'    : ('total_seconds_elapsed', utils.format_time),
+        'value'      : ('value', None),
     }
 
     def __init__(self, format, **kwargs):
@@ -246,7 +243,6 @@ class SamplesMixin(object):
 
 
 class ETA(Timer):
-
     '''WidgetBase which attempts to estimate the time of arrival.'''
 
     def __init__(
@@ -255,12 +251,15 @@ class ETA(Timer):
             format_finished='Time: %(elapsed)s',
             format='ETA: %(eta)s',
             format_zero='ETA:  0:00:00',
+            format_NA='ETA: N/A',
             **kwargs):
+
         Timer.__init__(self, **kwargs)
         self.format_not_started = format_not_started
         self.format_finished = format_finished
         self.format = format
         self.format_zero = format_zero
+        self.format_NA = format_NA
 
     def _calculate_eta(self, progress, data, value, elapsed):
         '''Updates the widget to show the ETA or total time when finished.'''
@@ -283,8 +282,14 @@ class ETA(Timer):
         if elapsed is None:
             elapsed = data['total_seconds_elapsed']
 
-        data['eta_seconds'] = self._calculate_eta(
-            progress, data, value=value, elapsed=elapsed)
+        ETA_NA = False
+        try:
+            data['eta_seconds'] = self._calculate_eta(
+                progress, data, value=value, elapsed=elapsed)
+        except TypeError:
+            data['eta_seconds'] = None
+            ETA_NA = True
+
         if data['eta_seconds']:
             data['eta'] = utils.format_time(data['eta_seconds'])
         else:
@@ -296,6 +301,8 @@ class ETA(Timer):
             format = self.format_finished
         elif data['eta']:
             format = self.format
+        elif ETA_NA:
+            format = self.format_NA
         else:
             format = self.format_zero
 
@@ -303,7 +310,6 @@ class ETA(Timer):
 
 
 class AbsoluteETA(ETA):
-
     '''Widget which attempts to estimate the absolute time of arrival.'''
 
     def _calculate_eta(self, progress, data, value, elapsed):
@@ -327,7 +333,6 @@ class AbsoluteETA(ETA):
 
 
 class AdaptiveETA(ETA, SamplesMixin):
-
     '''WidgetBase which attempts to estimate the time of arrival.
 
     Uses a sampled average of the speed based on the 10 last updates.
@@ -353,7 +358,6 @@ class AdaptiveETA(ETA, SamplesMixin):
 
 
 class DataSize(FormatWidgetMixin):
-
     '''
     Widget for showing an amount of data transferred/processed.
 
@@ -470,6 +474,7 @@ class AnimatedMarker(WidgetBase):
 
         return self.markers[data['updates'] % len(self.markers)]
 
+
 # Alias for backwards compatibility
 RotatingMarker = AnimatedMarker
 
@@ -527,7 +532,6 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
 
 
 class Bar(AutoWidthWidgetBase):
-
     '''A progress bar which stretches to fill the line.'''
 
     def __init__(self, marker='#', left='|', right='|', fill=' ',
@@ -569,7 +573,6 @@ class Bar(AutoWidthWidgetBase):
 
 
 class ReverseBar(Bar):
-
     '''A bar which has a marker that goes from right to left'''
 
     def __init__(self, marker='#', left='|', right='|', fill=' ',
@@ -587,7 +590,6 @@ class ReverseBar(Bar):
 
 
 class BouncingBar(Bar, TimeSensitiveWidgetBase):
-
     '''A bar which has a marker which bounces from side to side.'''
 
     INTERVAL = datetime.timedelta(milliseconds=100)
@@ -637,7 +639,6 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
 
 
 class DynamicMessage(FormatWidgetMixin, WidgetBase):
-
     '''Displays a custom variable.'''
 
     def __init__(self, name):
