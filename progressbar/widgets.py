@@ -170,13 +170,13 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
     '''
 
     mapping = {
-        'finished'   : ('end_time', None),
+        'finished': ('end_time', None),
         'last_update': ('last_update_time', None),
-        'max'        : ('max_value', None),
-        'seconds'    : ('seconds_elapsed', None),
-        'start'      : ('start_time', None),
-        'elapsed'    : ('total_seconds_elapsed', utils.format_time),
-        'value'      : ('value', None),
+        'max': ('max_value', None),
+        'seconds': ('seconds_elapsed', None),
+        'start': ('start_time', None),
+        'elapsed': ('total_seconds_elapsed', utils.format_time),
+        'value': ('value', None),
     }
 
     def __init__(self, format, **kwargs):
@@ -497,7 +497,8 @@ class Percentage(FormatWidgetMixin, WidgetBase):
     def __call__(self, progress, data, format=None):
         # If percentage is not available, display N/A%
         if 'percentage' in data and not data['percentage']:
-            return FormatWidgetMixin.__call__(self, progress, data, format='N/A%%')
+            return FormatWidgetMixin.__call__(self, progress, data,
+                                              format='N/A%%')
 
         return FormatWidgetMixin.__call__(self, progress, data)
 

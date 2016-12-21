@@ -485,7 +485,9 @@ def ETA_on_generators():
         for x in range(200):
             yield None
 
-    widgets = [progressbar.AdaptiveETA(), ' ', progressbar.ETA(), ' ', progressbar.Timer()]
+    widgets = [progressbar.AdaptiveETA(), ' ',
+               progressbar.ETA(), ' ',
+               progressbar.Timer()]
 
     bar = progressbar.ProgressBar(widgets=widgets)
     for i in bar(gen()):
@@ -498,7 +500,8 @@ def percentage_on_generators():
         for x in range(200):
             yield None
 
-    widgets = [progressbar.Counter(), ' ',  progressbar.Percentage(), ' ',
+    widgets = [progressbar.Counter(), ' ',
+               progressbar.Percentage(), ' ',
                progressbar.SimpleProgress(), ' ']
 
     bar = progressbar.ProgressBar(widgets=widgets)
