@@ -492,6 +492,20 @@ def ETA_on_generators():
         sleep(0.02)
 
 
+@example
+def percentage_on_generators():
+    def gen():
+        for x in range(200):
+            yield None
+
+    widgets = [progressbar.Counter(), ' ',  progressbar.Percentage(), ' ',
+               progressbar.SimpleProgress(), ' ']
+
+    bar = progressbar.ProgressBar(widgets=widgets)
+    for i in bar(gen()):
+        sleep(0.02)
+
+
 def test(*tests):
     for example in examples:
         if not tests or example.__name__ in tests:
