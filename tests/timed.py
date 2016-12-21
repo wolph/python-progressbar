@@ -94,3 +94,18 @@ def test_non_changing_eta():
     p.update(1)
     p.finish()
 
+
+def test_eta_not_available():
+    """
+     When ETA is not available (data coming from a generator),
+     ETAs should not raise exceptions.
+    """
+    def gen():
+        for x in range(200):
+            yield x
+
+    widgets = [progressbar.AdaptiveETA(), progressbar.ETA()]
+
+    bar = progressbar.ProgressBar(widgets=widgets)
+    for i in bar(gen()):
+        pass

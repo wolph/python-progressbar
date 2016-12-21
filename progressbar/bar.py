@@ -49,6 +49,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
     def finish(self, *args, **kwargs):  # pragma: no cover
         ProgressBarMixinBase.finish(self, *args, **kwargs)
         self.fd.write('\n')
+        self.fd.flush()
 
 
 class ResizableMixin(ProgressBarMixinBase):
@@ -209,7 +210,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         StdRedirectMixin.__init__(self, **kwargs)
         ResizableMixin.__init__(self, **kwargs)
         ProgressBarBase.__init__(self, **kwargs)
-        if not max_value and kwargs.get('maxval'):
+        if not max_value and kwargs.get('maxval') is not None:
             warnings.warn('The usage of `maxval` is deprecated, please use '
                           '`max_value` instead', DeprecationWarning)
             max_value = kwargs.get('maxval')
@@ -348,6 +349,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def default_widgets(self):
         if self.max_value:
+            self.widget_kwargs.setdefault(
+                'samples', max(10, self.max_value / 100))
+
             return [
                 widgets.Percentage(**self.widget_kwargs),
                 ' (', widgets.SimpleProgress(**self.widget_kwargs), ')',
@@ -504,6 +508,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             ResizableMixin.update(self, value=value)
             ProgressBarBase.update(self, value=value)
             StdRedirectMixin.update(self, value=value)
+
+            # Only flush if something was actually written
+            self.fd.flush()
 
     def start(self, max_value=None):
         '''Starts measuring time, and prints the bar at 0%.
