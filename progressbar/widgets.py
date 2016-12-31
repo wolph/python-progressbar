@@ -506,20 +506,25 @@ class Percentage(FormatWidgetMixin, WidgetBase):
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
     '''Returns progress as a count of the total (e.g.: "5 of 47")'''
 
-    def __init__(self, format='%(value)d of %(max_value)d', max_width=None,
-                 **kwargs):
+    DEFAULT_FORMAT = '%(value_s)s of %(max_value_s)s'
+
+    def __init__(self, format=DEFAULT_FORMAT, max_width=None, **kwargs):
         self.max_width = dict(default=max_width)
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
     def __call__(self, progress, data, format=None):
         # If max_value is not available, display N/A
-        if 'max_value' in data and not data['max_value']:
-            format = "%(value)d of N/A"
+        if data.get('max_value'):
+            data['max_value_s'] = data.get('max_value')
+        else:
+            data['max_value_s'] = 'N/A'
 
         # if value is not available it's the zeroth iteration
-        if 'value' in data and not data['value']:
-            format = "0 of N/A"
+        if data.get('value'):
+            data['value_s'] = data['value']
+        else:
+            data['value_s'] = 0
 
         formatted = FormatWidgetMixin.__call__(self, progress, data,
                                                format=format)
@@ -544,6 +549,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
         # Adjust the output to have a consistent size in all cases
         if max_width:  # pragma: no branch
             formatted = formatted.rjust(max_width)
+
         return formatted
 
 

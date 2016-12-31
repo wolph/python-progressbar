@@ -354,7 +354,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
             return [
                 widgets.Percentage(**self.widget_kwargs),
-                ' (', widgets.SimpleProgress(**self.widget_kwargs), ')',
+                ' ', widgets.SimpleProgress(
+                    format='(%s)' % widgets.SimpleProgress.DEFAULT_FORMAT,
+                    **self.widget_kwargs),
                 ' ', widgets.Bar(**self.widget_kwargs),
                 ' ', widgets.Timer(**self.widget_kwargs),
                 ' ', widgets.AdaptiveETA(**self.widget_kwargs),
