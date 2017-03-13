@@ -1,3 +1,4 @@
+import progressbar
 import logging
 
 
@@ -12,5 +13,8 @@ LOG_LEVELS = {
 def pytest_configure(config):
     logging.basicConfig(
         level=LOG_LEVELS.get(config.option.verbose, logging.DEBUG))
+
+    # Remove the update limit for tests by default
+    progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL = 0.000001
 
 

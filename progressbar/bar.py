@@ -2,6 +2,7 @@ from __future__ import division, absolute_import, with_statement
 import io
 import sys
 import math
+import time
 import logging
 import warnings
 from datetime import datetime, timedelta
@@ -201,6 +202,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     '''
 
     _DEFAULT_MAXVAL = 100
+    _MINIMUM_UPDATE_INTERVAL = 0.01  # update up to a 100 times per second
 
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
@@ -242,6 +244,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if poll_interval and isinstance(poll_interval, (int, float)):
             poll_interval = timedelta(seconds=poll_interval)
 
+        # Note that the _MINIMUM_UPDATE_INTERVAL sets the minimum in case of
+        # low values.
         self.poll_interval = poll_interval
 
         # A dictionary of names of DynamicMessage's
@@ -293,6 +297,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         return percentage * 100
 
+    def get_last_update_time(self):
+        if self._last_update_time:
+            return datetime.fromtimestamp(self._last_update_time)
+
+    def set_last_update_time(self, value):
+        if value:
+            self._last_update_time = time.mktime(value.timetuple())
+        else:
+            self._last_update_time = None
+
+    last_update_time = property(get_last_update_time, set_last_update_time)
+
     def data(self):
         '''
         Variables available:
@@ -308,7 +324,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         - percentage: Percentage as a float
         - dynamic_messages: A dictionary of user-defined DynamicMessage's
         '''
-        self.last_update_time = datetime.now()
+        self._last_update_time = time.time()
         elapsed = self.last_update_time - self.start_time
         # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
         # want to support older versions as well
@@ -479,7 +495,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Updates the ProgressBar to a new value.'
         if self.start_time is None:
             self.start()
-            return self.update(value)
+            return self.update(value, force=force, **kwargs)
+
+        current_time = time.time()
+        minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
+        if current_time - self._last_update_time < minimum_update_interval:
+            # Prevent updating too often
+            return
 
         # Save the updated values for dynamic messages
         for key in kwargs:
@@ -488,7 +510,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             else:
                 raise TypeError(
                     'update() got an unexpected keyword ' +
-                    'argument \'{}\''.format(key))
+                    'argument {0!r}'.format(key))
 
         if value is not None and value is not base.UnknownLength:
             if self.max_value is base.UnknownLength:
