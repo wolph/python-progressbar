@@ -2,7 +2,16 @@
 Changelog
 =========
 
-Here you can find the recent changes to Python Progressbar..
+For the most recent changes to the Python Progressbar please look at the Git
+releases or the commit log:
+
+ - https://github.com/WoLpH/python-progressbar/releases
+ - https://github.com/WoLpH/python-progressbar/commits/develop
+
+Hint: click on the `...` button to see the change message.
+
+The list below should be the same as the list of releases above but tends to be
+out of date and/or incomplete:
 
 .. changelog::
     :version: dev
@@ -12,6 +21,26 @@ Here you can find the recent changes to Python Progressbar..
         :tags:  docs
 
         Updated CHANGES.
+
+.. changelog::
+    :version: 3.15
+    :released: 2017-03-15
+
+    .. change::
+        Large performance improvements
+
+    .. change::
+        Dropped Pypy3 support in Travis tests
+
+    .. change::
+        Improved output redirection (fixed several bugs)
+
+    .. change::
+        Showing N/A when no numbers are available
+
+    .. change::
+        Improved docs
+
 
 .. changelog::
     :version: 3.5
