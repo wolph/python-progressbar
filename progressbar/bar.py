@@ -202,13 +202,29 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     '''
 
     _DEFAULT_MAXVAL = 100
-    _MINIMUM_UPDATE_INTERVAL = 0.01  # update up to a 100 times per second
+    _MINIMUM_UPDATE_INTERVAL = 0.05  # update up to a 20 times per second
 
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
                  widget_kwargs=None,
                  **kwargs):
-        '''Initializes a progress bar with sane defaults'''
+        '''
+        Initializes a progress bar with sane defaults
+
+        Args:
+            min_value (int): The minimum/start value for the progress bar
+            max_value (int): The maximum/end value for the progress bar.
+                             Defaults to `_DEFAULT_MAXVAL`
+            widgets (list): The widgets to render, defaults to the result of
+                            `default_widget()`
+            left_justify (bool): Justify to the left if `True` or the right if
+                                 `False`
+            initial_value (int): The value to start with
+            poll_interval (float): The update interval in time. Note that this
+                                   is always limited by
+                                   `_MINIMUM_UPDATE_INTERVAL`
+            widget_kwargs (dict): The default keyword arguments for widgets
+        '''
         StdRedirectMixin.__init__(self, **kwargs)
         ResizableMixin.__init__(self, **kwargs)
         ProgressBarBase.__init__(self, **kwargs)
@@ -571,10 +587,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.num_intervals = max(100, self.term_width)
         self.next_update = 0
 
-        if self.max_value is not base.UnknownLength:
-            if self.max_value < 0:
-                raise ValueError('Value out of range')
-            self.update_interval = self.max_value / self.num_intervals
+        if self.max_value is not base.UnknownLength and self.max_value < 0:
+            raise ValueError('Value out of range')
 
         self.start_time = self.last_update_time = datetime.now()
         self.update(self.min_value, force=True)
