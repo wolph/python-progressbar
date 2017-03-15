@@ -1,6 +1,9 @@
 from __future__ import division, absolute_import, with_statement
+import io
 import sys
 import math
+import time
+import logging
 import warnings
 from datetime import datetime, timedelta
 import collections
@@ -10,6 +13,9 @@ from . import widgets as widgets_module  # Avoid name collision
 from . import six
 from . import utils
 from . import base
+
+
+logger = logging.getLogger()
 
 
 class ProgressBarMixinBase(object):
@@ -44,6 +50,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
     def finish(self, *args, **kwargs):  # pragma: no cover
         ProgressBarMixinBase.finish(self, *args, **kwargs)
         self.fd.write('\n')
+        self.fd.flush()
 
 
 class ResizableMixin(ProgressBarMixinBase):
@@ -58,6 +65,7 @@ class ResizableMixin(ProgressBarMixinBase):
             try:
                 self._handle_resize()
                 import signal
+                self._prev_handle = signal.getsignal(signal.SIGWINCH)
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
             except Exception:  # pragma: no cover
@@ -74,7 +82,7 @@ class ResizableMixin(ProgressBarMixinBase):
         if self.signal_set:
             try:
                 import signal
-                signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+                signal.signal(signal.SIGWINCH, self._prev_handle)
             except Exception:  # pragma no cover
                 pass
 
@@ -85,59 +93,63 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
-        self.stdout = sys.stdout
-        self.stderr = sys.stderr
+        self._stdout = self.stdout = sys.stdout
+        self._stderr = self.stderr = sys.stderr
 
-    @property
-    def _stderr(self):
-        if not hasattr(self, '__stderr'):  # pragma: no branch
-            self.__stderr = sys.stderr
+    def start(self, *args, **kwargs):
+        self.stderr = self._stderr = sys.stderr
+        if self.redirect_stderr:
             self.stderr = sys.stderr = six.StringIO()
 
-        return self.__stderr
-
-    @property
-    def _stdout(self):
-        if not hasattr(self, '__stdout'):  # pragma: no branch
-            self.__stdout = sys.stdout
+        self.stdout = self._stdout = sys.stdout
+        if self.redirect_stdout:
             self.stdout = sys.stdout = six.StringIO()
 
-        return self.__stdout
+        DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value=None):
-        if self.redirect_stderr and sys.stderr.tell():
-            self.fd.write('\r' + ' ' * self.term_width + '\r')
+        try:
+            if self.redirect_stderr and sys.stderr.tell():
+                self.fd.write('\r' + ' ' * self.term_width + '\r')
 
-            # Not atomic unfortunately, but writing to the same stream from
-            # multiple threads is a bad idea anyhow
-            self._stderr.write(sys.stderr.getvalue())
-            sys.stderr.seek(0)
-            sys.stderr.truncate(0)
+                # Not atomic unfortunately, but writing to the same stream
+                # from multiple threads is a bad idea anyhow
+                self._stderr.write(sys.stderr.getvalue())
+                sys.stderr.seek(0)
+                sys.stderr.truncate(0)
 
-            self._stderr.flush()
+                self._stderr.flush()
+        except (io.UnsupportedOperation, AttributeError):  # pragma: no cover
+            logger.warn('Disabling stderr redirection, %r is not seekable',
+                        sys.stderr)
+            self.redirect_stderr = False
 
-        if self.redirect_stdout and sys.stdout.tell():
-            self.fd.write('\r' + ' ' * self.term_width + '\r')
+        try:
+            if self.redirect_stdout and sys.stdout.tell():
+                self.fd.write('\r' + ' ' * self.term_width + '\r')
 
-            # Not atomic unfortunately, but writing to the same stream from
-            # multiple threads is a bad idea anyhow
-            self._stdout.write(sys.stdout.getvalue())
-            sys.stdout.seek(0)
-            sys.stdout.truncate(0)
+                # Not atomic unfortunately, but writing to the same stream
+                # from multiple threads is a bad idea anyhow
+                self._stdout.write(sys.stdout.getvalue())
+                sys.stdout.seek(0)
+                sys.stdout.truncate(0)
 
-            self._stdout.flush()
-            sys.stdout = six.StringIO()
+                self._stdout.flush()
+        except (io.UnsupportedOperation, AttributeError):  # pragma: no cover
+            logger.warn('Disabling stdout redirection, %r is not seekable',
+                        sys.stdout)
+            self.redirect_stdout = False
 
         DefaultFdMixin.update(self, value=value)
 
     def finish(self):
         DefaultFdMixin.finish(self)
 
-        if self.redirect_stderr:
+        if self.redirect_stderr and hasattr(sys.stderr, 'getvalue'):
             self._stderr.write(sys.stderr.getvalue())
             self.stderr = sys.stderr = self._stderr
 
-        if self.redirect_stdout:
+        if self.redirect_stdout and hasattr(sys.stdout, 'getvalue'):
             self._stdout.write(sys.stdout.getvalue())
             self.stdout = sys.stdout = self._stdout
 
@@ -190,16 +202,33 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     '''
 
     _DEFAULT_MAXVAL = 100
+    _MINIMUM_UPDATE_INTERVAL = 0.05  # update up to a 20 times per second
 
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
                  widget_kwargs=None,
                  **kwargs):
-        '''Initializes a progress bar with sane defaults'''
+        '''
+        Initializes a progress bar with sane defaults
+
+        Args:
+            min_value (int): The minimum/start value for the progress bar
+            max_value (int): The maximum/end value for the progress bar.
+                             Defaults to `_DEFAULT_MAXVAL`
+            widgets (list): The widgets to render, defaults to the result of
+                            `default_widget()`
+            left_justify (bool): Justify to the left if `True` or the right if
+                                 `False`
+            initial_value (int): The value to start with
+            poll_interval (float): The update interval in time. Note that this
+                                   is always limited by
+                                   `_MINIMUM_UPDATE_INTERVAL`
+            widget_kwargs (dict): The default keyword arguments for widgets
+        '''
         StdRedirectMixin.__init__(self, **kwargs)
         ResizableMixin.__init__(self, **kwargs)
         ProgressBarBase.__init__(self, **kwargs)
-        if not max_value and kwargs.get('maxval'):
+        if not max_value and kwargs.get('maxval') is not None:
             warnings.warn('The usage of `maxval` is deprecated, please use '
                           '`max_value` instead', DeprecationWarning)
             max_value = kwargs.get('maxval')
@@ -231,6 +260,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if poll_interval and isinstance(poll_interval, (int, float)):
             poll_interval = timedelta(seconds=poll_interval)
 
+        # Note that the _MINIMUM_UPDATE_INTERVAL sets the minimum in case of
+        # low values.
         self.poll_interval = poll_interval
 
         # A dictionary of names of DynamicMessage's
@@ -282,6 +313,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         return percentage * 100
 
+    def get_last_update_time(self):
+        if self._last_update_time:
+            return datetime.fromtimestamp(self._last_update_time)
+
+    def set_last_update_time(self, value):
+        if value:
+            self._last_update_time = time.mktime(value.timetuple())
+        else:
+            self._last_update_time = None
+
+    last_update_time = property(get_last_update_time, set_last_update_time)
+
     def data(self):
         '''
         Variables available:
@@ -297,7 +340,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         - percentage: Percentage as a float
         - dynamic_messages: A dictionary of user-defined DynamicMessage's
         '''
-        self.last_update_time = datetime.now()
+        self._last_update_time = time.time()
         elapsed = self.last_update_time - self.start_time
         # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
         # want to support older versions as well
@@ -338,9 +381,14 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def default_widgets(self):
         if self.max_value:
+            self.widget_kwargs.setdefault(
+                'samples', max(10, self.max_value / 100))
+
             return [
                 widgets.Percentage(**self.widget_kwargs),
-                ' (', widgets.SimpleProgress(**self.widget_kwargs), ')',
+                ' ', widgets.SimpleProgress(
+                    format='(%s)' % widgets.SimpleProgress.DEFAULT_FORMAT,
+                    **self.widget_kwargs),
                 ' ', widgets.Bar(**self.widget_kwargs),
                 ' ', widgets.Timer(**self.widget_kwargs),
                 ' ', widgets.AdaptiveETA(**self.widget_kwargs),
@@ -463,7 +511,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Updates the ProgressBar to a new value.'
         if self.start_time is None:
             self.start()
-            return self.update(value)
+            return self.update(value, force=force, **kwargs)
+
+        current_time = time.time()
+        minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
+        if current_time - self._last_update_time < minimum_update_interval:
+            # Prevent updating too often
+            return
 
         # Save the updated values for dynamic messages
         for key in kwargs:
@@ -472,7 +526,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             else:
                 raise TypeError(
                     'update() got an unexpected keyword ' +
-                    'argument \'{}\''.format(key))
+                    'argument {0!r}'.format(key))
 
         if value is not None and value is not base.UnknownLength:
             if self.max_value is base.UnknownLength:
@@ -495,6 +549,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             ProgressBarBase.update(self, value=value)
             StdRedirectMixin.update(self, value=value)
 
+            # Only flush if something was actually written
+            self.fd.flush()
+
     def start(self, max_value=None):
         '''Starts measuring time, and prints the bar at 0%.
 
@@ -507,7 +564,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         ...
         >>> pbar.finish()
         '''
-        DefaultFdMixin.start(self, max_value=max_value)
+        StdRedirectMixin.start(self, max_value=max_value)
         ResizableMixin.start(self, max_value=max_value)
         ProgressBarBase.start(self, max_value=max_value)
 
@@ -530,10 +587,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.num_intervals = max(100, self.term_width)
         self.next_update = 0
 
-        if self.max_value is not base.UnknownLength:
-            if self.max_value < 0:
-                raise ValueError('Value out of range')
-            self.update_interval = self.max_value / self.num_intervals
+        if self.max_value is not base.UnknownLength and self.max_value < 0:
+            raise ValueError('Value out of range')
 
         self.start_time = self.last_update_time = datetime.now()
         self.update(self.min_value, force=True)

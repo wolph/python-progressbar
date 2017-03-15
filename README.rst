@@ -70,11 +70,11 @@ Usage
 ******************************************************************************
 
 There are many ways to use Python Progressbar, you can see a few basic examples
-here but there are many more in the :doc:`examples` file.
+here but there are many more in the examples file.
 
 Wrapping an iterable
 ==============================================================================
-::
+.. code:: python
 
    import time
    import progressbar
@@ -85,7 +85,7 @@ Wrapping an iterable
 
 Context wrapper
 ==============================================================================
-::
+.. code:: python
 
    import time
    import progressbar
@@ -97,7 +97,7 @@ Context wrapper
 
 Combining progressbars with print output
 ==============================================================================
-::
+.. code:: python
 
     import time
     import progressbar
@@ -110,7 +110,7 @@ Combining progressbars with print output
 
 Progressbar with unknown length
 ==============================================================================
-::
+.. code:: python
 
     import time
     import progressbar
@@ -122,7 +122,7 @@ Progressbar with unknown length
 
 Bar with custom widgets
 ==============================================================================
-::
+.. code:: python
 
     import time
     import progressbar

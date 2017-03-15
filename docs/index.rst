@@ -4,14 +4,13 @@ Welcome to Progress Bar's documentation!
 .. include:: ../README.rst
 
 Contents
-------------------------------------------------------------------------------
+--------
 
 .. toctree::
    :maxdepth: 4
 
    examples
    contributing
-   history
    installation
    progressbar.bar
    progressbar.base

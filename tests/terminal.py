@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import sys
+import time
 import signal
 import progressbar
 
@@ -106,6 +107,7 @@ def test_stdout_stderr_redirection():
     p.start()
 
     for i in range(10):
+        time.sleep(0.01)
         print('', file=sys.stdout)
         print('', file=sys.stderr)
         p.update(i)

@@ -1,24 +1,16 @@
 sudo: false
 language: python
 python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "pypy"
-  - "pypy3"
-
-# command to install dependencies
+    - '2.7'
+    - '3.3'
+    - '3.4'
+    - '3.5'
+    - pypy
 install:
-  - pip install .
-  - pip install -r tests/requirements.txt
-
+    - pip install .
+    - pip install -r tests/requirements.txt
 before_script: flake8 --ignore=W391 progressbar tests
-
-# command to run tests
 script:
     - python setup.py test
-
 after_success:
     - coveralls
-
