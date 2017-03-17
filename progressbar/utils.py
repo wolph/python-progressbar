@@ -32,6 +32,40 @@ def timedelta_to_seconds(delta):
     return total
 
 
+def scale_1000(x, n_prefixes):
+    '''Scale a number down to a suitable size, based on powers of 1000.
+
+    Returns the scaled number and the power of 1000 used.
+
+    Use to format numbers of bytes to KB, MB, etc.
+
+    >>> scale_1000(310, 3)
+    (310.0, 0)
+    >>> scale_1000(999, 3)
+    (999.0, 0)
+    >>> scale_1000(1000, 3)
+    (1.0, 1)
+    >>> scale_1000(1001, 3)
+    (1.001, 1)
+    >>> scale_1000(2000, 3)
+    (2.0, 1)
+    >>> scale_1000(1000000, 3)
+    (1.0, 2)
+    >>> scale_1000(0, 2)
+    (0.0, 0)
+    >>> scale_1000(0.5, 2)
+    (0.5, 0)
+    >>> scale_1000(1, 2)
+    (1.0, 0)
+    '''
+    if x <= 0:
+        power = 0
+    else:
+        power = min(int(math.log(x, 1000)), n_prefixes - 1)
+    scaled = float(x) / (10 ** (3 * power))
+    return scaled, power
+
+
 def scale_1024(x, n_prefixes):
     '''Scale a number down to a suitable size, based on powers of 1024.
 
@@ -41,6 +75,10 @@ def scale_1024(x, n_prefixes):
 
     >>> scale_1024(310, 3)
     (310.0, 0)
+    >>> scale_1024(1023, 3)
+    (1023.0, 0)
+    >>> scale_1024(1024, 3)
+    (1.0, 1)
     >>> scale_1024(2048, 3)
     (2.0, 1)
     >>> scale_1024(0, 2)

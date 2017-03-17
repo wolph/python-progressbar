@@ -389,17 +389,23 @@ class DataSize(FormatWidgetMixin):
         return FormatWidgetMixin.__call__(self, progress, data)
 
 
-class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
-    '''
-    WidgetBase for showing the transfer speed (useful for file transfers).
-    '''
+class TransferSpeedBase(FormatWidgetMixin, TimeSensitiveWidgetBase):
+
+    _default_format = '%(scaled)5.1f %(prefix)s%(unit)-s/s'
+    _default_inverse_format = '%(scaled)5.1f s/%(prefix)s%(unit)-s'
+    _default_prefixes = '', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'
+    _default_unit = 'i'
 
     def __init__(
-            self, format='%(scaled)5.1f %(prefix)s%(unit)-s/s',
-            inverse_format='%(scaled)5.1f s/%(prefix)s%(unit)-s', unit='B',
-            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+            self,
+            format=_default_format,
+            inverse_format=_default_inverse_format,
+            unit=_default_unit,
+            prefixes=_default_prefixes,
+            binary=False,
             **kwargs):
         self.unit = unit
+        self.binary = binary
         self.prefixes = prefixes
         self.inverse_format = inverse_format
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
@@ -407,7 +413,12 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
 
     def _speed(self, value, elapsed):
         speed = float(value) / elapsed
-        return utils.scale_1024(speed, len(self.prefixes))
+        if self.binary:
+            scale = utils.scale_1024
+        else:
+            scale = utils.scale_1000
+
+        return scale(speed, len(self.prefixes))
 
     def __call__(self, progress, data, value=None, total_seconds_elapsed=None):
         '''Updates the widget with the current SI prefixed speed.'''
@@ -434,13 +445,11 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
             return FormatWidgetMixin.__call__(self, progress, data)
 
 
-class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
-    '''WidgetBase for showing the transfer speed, based on the last X samples
-    '''
+class AdaptiveTransferSpeedBase(TransferSpeedBase, SamplesMixin):
 
-    def __init__(self, **kwargs):
-        FileTransferSpeed.__init__(self, **kwargs)
-        SamplesMixin.__init__(self, **kwargs)
+    def __init__(self, *args, **kwargs):
+        SamplesMixin.__init__(self, *args, **kwargs)
+        TransferSpeedBase.__init__(self, *args, **kwargs)
 
     def __call__(self, progress, data):
         times, values = SamplesMixin.__call__(self, progress, data)
@@ -452,7 +461,81 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
             value = values[-1] - values[0]
             elapsed = utils.timedelta_to_seconds(times[-1] - times[0])
 
-        return FileTransferSpeed.__call__(self, progress, data, value, elapsed)
+        return TransferSpeedBase.__call__(self, progress, data, value, elapsed)
+
+
+class ItemTransferSpeed(TransferSpeedBase):
+    '''
+    WidgetBase for showing transfer speed in items
+    '''
+
+    def __init__(
+            self,
+            format=TransferSpeedBase._default_format,
+            inverse_format=TransferSpeedBase._default_inverse_format,
+            unit=TransferSpeedBase._default_unit,
+            prefixes=TransferSpeedBase._default_prefixes,
+            **kwargs):
+
+        TransferSpeedBase.__init__(
+            self, format=format, inverse_format=inverse_format, unit=unit,
+            prefixes=prefixes, **kwargs)
+
+
+class AdaptiveItemTransferSpeed(AdaptiveTransferSpeedBase):
+    '''
+    WidgetBase for showing transfer speed in items
+    '''
+
+    def __init__(
+            self,
+            format=TransferSpeedBase._default_format,
+            inverse_format=TransferSpeedBase._default_inverse_format,
+            unit=TransferSpeedBase._default_unit,
+            prefixes=TransferSpeedBase._default_prefixes,
+            **kwargs):
+
+        AdaptiveTransferSpeedBase.__init__(
+            self, format=format, inverse_format=inverse_format, unit=unit,
+            prefixes=prefixes, **kwargs)
+
+
+class FileTransferSpeed(TransferSpeedBase):
+    '''
+    WidgetBase for showing binary transfer speed in bytes (useful for file
+    transfers).
+    '''
+
+    def __init__(
+            self,
+            format=TransferSpeedBase._default_format,
+            inverse_format=TransferSpeedBase._default_inverse_format,
+            unit='B',
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+            binary=True,
+            **kwargs):
+
+        TransferSpeedBase.__init__(
+            self, format=format, inverse_format=inverse_format, unit=unit,
+            prefixes=prefixes, binary=binary, **kwargs)
+
+
+class AdaptiveTransferSpeed(AdaptiveTransferSpeedBase):
+    '''WidgetBase for showing the transfer speed, based on the last X samples
+    '''
+
+    def __init__(
+            self,
+            format=TransferSpeedBase._default_format,
+            inverse_format=TransferSpeedBase._default_inverse_format,
+            unit='B',
+            prefixes=('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi'),
+            binary=True,
+            **kwargs):
+
+        AdaptiveTransferSpeedBase.__init__(
+            self, format=format, inverse_format=inverse_format, unit=unit,
+            prefixes=prefixes, binary=binary, **kwargs)
 
 
 class AnimatedMarker(WidgetBase):

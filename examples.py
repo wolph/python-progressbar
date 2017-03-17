@@ -380,6 +380,7 @@ def eta_types_demonstration():
         ' Adaptive ETA: ', progressbar.AdaptiveETA(),
         ' Absolute ETA: ', progressbar.AbsoluteETA(),
         ' Adaptive Transfer Speed: ', progressbar.AdaptiveTransferSpeed(),
+        ' Adaptive Transfer Speed: ', progressbar.AdaptiveItemTransferSpeed(),
         ' ', progressbar.Bar(),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=500)
