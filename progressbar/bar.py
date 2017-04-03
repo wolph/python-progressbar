@@ -1,4 +1,8 @@
-from __future__ import division, absolute_import, with_statement
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import with_statement
+
 import io
 import sys
 import math
@@ -7,6 +11,8 @@ import logging
 import warnings
 from datetime import datetime, timedelta
 import collections
+
+from python_utils import converters
 
 from . import widgets
 from . import widgets as widgets_module  # Avoid name collision
@@ -45,7 +51,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
     def update(self, *args, **kwargs):
         ProgressBarMixinBase.update(self, *args, **kwargs)
-        self.fd.write('\r' + self._format_line())
+        line = converters.to_str('\r' + self._format_line())
+        self.fd.write(line)
 
     def finish(self, *args, **kwargs):  # pragma: no cover
         ProgressBarMixinBase.finish(self, *args, **kwargs)
@@ -458,7 +465,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 result.append(widget)
                 width -= len(widget)
             else:
-                widget_output = widget(self, data)
+                widget_output = converters.to_unicode(widget(self, data))
                 result.append(widget_output)
                 width -= len(widget_output)
 
@@ -475,10 +482,15 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         return result
 
+    @classmethod
+    def _to_unicode(cls, args):
+        for arg in args:
+            yield converters.to_unicode(arg)
+
     def _format_line(self):
         'Joins the widgets and justifies the line'
 
-        widgets = ''.join(self._format_widgets())
+        widgets = ''.join(self._to_unicode(self._format_widgets()))
 
         if self.left_justify:
             return widgets.ljust(self.term_width)

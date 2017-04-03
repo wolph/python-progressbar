@@ -1,5 +1,8 @@
-from __future__ import division, absolute_import, with_statement
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import with_statement
 
 import abc
 import datetime
@@ -37,6 +40,7 @@ def create_marker(marker):
             return marker
 
     if isinstance(marker, six.basestring):
+        marker = converters.to_unicode(marker)
         assert len(marker) == 1, 'Markers are required to be 1 char'
         return _marker
     else:
@@ -153,20 +157,21 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
     ...     pass
 
     >>> Progress.term_width = 0
-    >>> label(Progress, dict(value='test'))
+    >>> str(label(Progress, dict(value='test')))
     ''
 
     >>> Progress.term_width = 5
-    >>> label(Progress, dict(value='test'))
+    >>> str(label(Progress, dict(value='test')))
     'test'
 
     >>> Progress.term_width = 10
-    >>> label(Progress, dict(value='test'))
+    >>> str(label(Progress, dict(value='test')))
     'test'
 
     >>> Progress.term_width = 11
-    >>> label(Progress, dict(value='test'))
+    >>> str(label(Progress, dict(value='test')))
     ''
+
     '''
 
     mapping = {
