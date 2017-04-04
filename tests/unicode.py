@@ -22,7 +22,8 @@ def test_markers(name, markers, as_unicode):
         '%s: ' % name.capitalize(),
         progressbar.AnimatedMarker(markers=markers),
     ]
-    pbar = progressbar.ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(24))):
+    bar = progressbar.ProgressBar(widgets=widgets)
+    bar._MINIMUM_UPDATE_INTERVAL = 1e-12
+    for i in bar((i for i in range(24))):
         time.sleep(0.001)
 
