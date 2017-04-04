@@ -51,7 +51,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
     def update(self, *args, **kwargs):
         ProgressBarMixinBase.update(self, *args, **kwargs)
-        line = converters.to_str('\r' + self._format_line())
+        line = converters.to_unicode('\r' + self._format_line())
         self.fd.write(line)
 
     def finish(self, *args, **kwargs):  # pragma: no cover
