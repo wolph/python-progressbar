@@ -12,5 +12,6 @@ install:
 before_script: flake8 --ignore=W391 progressbar tests
 script:
     - python setup.py test
+    - python examples.py
 after_success:
     - coveralls

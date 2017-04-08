@@ -4,6 +4,7 @@ import sys
 import time
 import signal
 import progressbar
+from datetime import timedelta
 
 
 def test_left_justify():
@@ -73,6 +74,22 @@ def test_fill_left():
     assert p.term_width is not None
     for i in range(100):
         p.update(i)
+
+
+def test_no_fill(monkeypatch):
+    '''Simply bounce within the terminal width'''
+    bar = progressbar.BouncingBar()
+    bar.INTERVAL = timedelta(seconds=1)
+    p = progressbar.ProgressBar(
+        widgets=[bar],
+        max_value=progressbar.UnknownLength,
+        term_width=20)
+
+    assert p.term_width is not None
+    for i in range(30):
+        p.update(i, force=True)
+        # Fake the start time so we can actually emulate a moving progress bar
+        p.start_time = p.start_time - timedelta(seconds=i)
 
 
 def test_stdout_redirection():

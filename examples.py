@@ -34,7 +34,7 @@ def example(fn):
         except KeyboardInterrupt:
             sys.stdout.write('\nSkipping example.\n\n')
             # Sleep a bit to make killing the script easier
-            time.sleep(0.2)
+            sleep(0.2)
 
     examples.append(wrapped)
     return wrapped
@@ -329,7 +329,7 @@ def rotating_bouncing_marker():
     with progressbar.ProgressBar(widgets=widgets, max_value=20,
                                  term_width=10) as progress:
         for i in range(20):
-            time.sleep(0.1)
+            sleep(0.1)
             progress.update(i)
 
     widgets = [progressbar.BouncingBar(marker=progressbar.RotatingMarker(),
@@ -337,7 +337,7 @@ def rotating_bouncing_marker():
     with progressbar.ProgressBar(widgets=widgets, max_value=20,
                                  term_width=10) as progress:
         for i in range(20):
-            time.sleep(0.1)
+            sleep(0.1)
             progress.update(i)
 
 
@@ -469,7 +469,7 @@ def format_custom_text():
     ])
     for i in bar(range(25)):
         format_custom_text.update_mapping(eggs=i * 2)
-        time.sleep(0.1)
+        sleep(0.1)
 
 
 @example
