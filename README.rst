@@ -13,6 +13,20 @@ Coverage:
   :target: https://coveralls.io/r/WoLpH/python-progressbar?branch=master
 
 ******************************************************************************
+Install
+******************************************************************************
+
+The package can be installed through `pip` (this is the recommended method):
+
+    pip install progressbar2
+    
+Or if `pip` is not available, `easy_install` should work as well:
+
+    easy_install progressbar2
+    
+Or download the latest release from Pypi (https://pypi.python.org/pypi/progressbar2) or Github.
+
+******************************************************************************
 Introduction
 ******************************************************************************
 
