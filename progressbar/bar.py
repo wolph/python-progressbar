@@ -525,9 +525,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.start()
             return self.update(value, force=force, **kwargs)
 
-        current_time = time.time()
         minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
-        if current_time - self._last_update_time < minimum_update_interval:
+        update_delta = time.time() - self._last_update_time
+        if update_delta < minimum_update_interval and not force:
             # Prevent updating too often
             return
 
@@ -611,7 +611,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Puts the ProgressBar bar in the finished state.'
 
         self.end_time = datetime.now()
-        self.update(self.max_value)
+        self.update(self.max_value, force=True)
 
         StdRedirectMixin.finish(self)
         ResizableMixin.finish(self)

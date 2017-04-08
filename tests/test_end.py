@@ -1,4 +1,12 @@
+import pytest
 import progressbar
+
+
+@pytest.fixture(autouse=True)
+def large_interval(monkeypatch):
+    # Remove the update limit for tests by default
+    monkeypatch.setattr(
+        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 0.1)
 
 
 def test_end():
@@ -11,13 +19,19 @@ def test_end():
     for x in range(0, m, 8192):
         p.update(x)
 
+    data = p.data()
+    assert data['percentage'] < 100.
+
     p.finish()
+
     data = p.data()
     assert data['percentage'] >= 100.
+
     assert p.value == m
 
 
-def test_end_100():
+def test_end_100(monkeypatch):
+    progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL = 0.1
     p = progressbar.ProgressBar(
         widgets=[progressbar.Percentage(), progressbar.Bar()],
         max_value=101,
@@ -27,7 +41,10 @@ def test_end_100():
         p.update(x)
 
     data = p.data()
-    assert data['percentage'] >= 100.
+    assert data['percentage'] < 100.
+
     p.finish()
+
+    data = p.data()
     assert data['percentage'] >= 100.
 
