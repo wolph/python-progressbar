@@ -149,3 +149,26 @@ Bar with custom widgets
     for i in bar(range(20)):
         time.sleep(0.1)
 
+Multiprocessing with progress bar
+==============================================================================
+
+.. code::
+
+    import time
+    import random
+    import progressbar
+    import multiprocessing
+
+
+    def some_function(i):
+        time.sleep(random.random())
+        return i + 1
+
+
+    # list() to make sure this code sample also works on Python 3
+    items = list(range(100))
+    bar = progressbar.ProgressBar(max_value=len(items), redirect_stdout=True)
+
+    pool = multiprocessing.Pool()
+    for i in bar(pool.imap_unordered(some_function, items)):
+        print i
