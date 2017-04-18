@@ -1,5 +1,5 @@
 ##############################################################################
-Text progress bar library for Python.
+Text progress bar library for Python 2 and Python 3.
 ##############################################################################
 
 Travis status:
