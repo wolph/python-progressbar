@@ -152,7 +152,7 @@ Bar with custom widgets
 Multiprocessing with progress bar
 ==============================================================================
 
-.. code::
+.. code:: python
 
     import time
     import random
