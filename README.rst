@@ -83,6 +83,38 @@ Wrapping an iterable
    for i in bar(range(100)):
        time.sleep(0.02)
 
+Progressbars with logging
+==============================================================================
+
+Progressbars with logging require `stderr` redirection _before_ the
+`StreamHandler` is initialized. To make sure the `stderr` stream has been
+redirected on time make sure to call `progressbar.streams.wrap_stderr()` before
+you initialize the `logger`.
+
+One option to force early initialization is by using the `WRAP_STDERR`
+environment variable, on Linux/Unix systems this can be done through:
+
+.. code:: sh
+   
+   # WRAP_STDERR=true python your_script.py
+
+In most cases the following will work as well, as long as you initialize the
+`StreamHandler` after the wrapping has taken place.
+
+.. code:: python
+
+    import time
+    import logging
+    import progressbar
+
+    progressbar.streams.wrap_stderr()
+    logging.basicConfig()
+
+    bar = progressbar.ProgressBar()
+    for i in bar(range(10)):
+        logging.error('Got %d', i)
+        time.sleep(0.2)
+
 Context wrapper
 ==============================================================================
 .. code:: python

@@ -19,7 +19,7 @@ A Python Progressbar library to provide visual (yet text based) progress to
 long running operations.
 '''.strip().split())
 __email__ = 'wolph@wol.ph'
-__version__ = '3.18.0'
+__version__ = '3.20.0'
 __license__ = 'BSD'
 __copyright__ = 'Copyright 2015 Rick van Hattem (Wolph)'
 __url__ = 'https://github.com/WoLpH/python-progressbar'
