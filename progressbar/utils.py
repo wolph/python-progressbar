@@ -1,5 +1,8 @@
+import io
 import os
+import sys
 import math
+import logging
 import datetime
 
 from . import six
@@ -8,6 +11,89 @@ from . import six
 # There might be a better way to get the epoch with tzinfo, please create
 # a pull request if you know a better way that functions for Python 2 and 3
 epoch = datetime.datetime(year=1970, month=1, day=1)
+
+
+class StreamWrapper(object):
+    '''Wrap stdout and stderr globally'''
+
+    def __init__(self):
+        self.stdout = self.original_stdout = sys.stdout
+        self.stderr = self.original_stderr = sys.stderr
+        self.wrapped_stdout = 0
+        self.wrapped_stderr = 0
+
+        if os.environ.get('WRAP_STDOUT'):  # pragma: no cover
+            self.wrap_stdout()
+
+        if os.environ.get('WRAP_STDERR'):  # pragma: no cover
+            self.wrap_stderr()
+
+    def wrap(self, stdout=False, stderr=False):
+        if stdout:
+            self.wrap_stdout()
+
+        if stderr:
+            self.wrap_stderr()
+
+    def wrap_stdout(self):
+        if not self.wrapped_stdout:
+            self.stdout = sys.stdout = six.StringIO()
+        self.wrapped_stdout += 1
+
+        return sys.stdout
+
+    def wrap_stderr(self):
+        if not self.wrapped_stderr:
+            self.stderr = sys.stderr = six.StringIO()
+        self.wrapped_stderr += 1
+
+        return sys.stderr
+
+    def unwrap(self, stdout=False, stderr=False):
+        if stdout:
+            self.unwrap_stdout()
+
+        if stderr:
+            self.unwrap_stderr()
+
+    def unwrap_stdout(self):
+        if self.wrapped_stdout > 0:
+            self.wrapped_stdout -= 1
+        else:
+            sys.stdout = self.original_stdout
+
+    def unwrap_stderr(self):
+        if self.wrapped_stderr > 0:
+            self.wrapped_stderr -= 1
+        else:
+            sys.stderr = self.original_stderr
+
+    def flush(self):
+        if self.wrapped_stdout:
+            try:
+                self.original_stdout.write(self.stdout.getvalue())
+                self.stdout.seek(0)
+                self.stdout.truncate(0)
+            except (io.UnsupportedOperation,
+                    AttributeError):  # pragma: no cover
+                self.wrapped_stdout = False
+                logger.warn('Disabling stdout redirection, %r is not seekable',
+                            sys.stdout)
+
+        if self.wrapped_stderr:
+            try:
+                self.original_stderr.write(self.stderr.getvalue())
+                self.stderr.seek(0)
+                self.stderr.truncate(0)
+            except (io.UnsupportedOperation,
+                    AttributeError):  # pragma: no cover
+                self.wrapped_stderr = False
+                logger.warn('Disabling stderr redirection, %r is not seekable',
+                            sys.stderr)
+
+
+streams = StreamWrapper()
+logger = logging.getLogger(__name__)
 
 
 def timedelta_to_seconds(delta):
@@ -272,4 +358,3 @@ def timestamp(dt):  # pragma: no cover
         return dt.timestamp()
     else:
         return (dt - epoch).total_seconds()
-

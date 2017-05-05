@@ -93,7 +93,8 @@ def test_no_fill(monkeypatch):
 
 
 def test_stdout_redirection():
-    p = progressbar.ProgressBar(max_value=10, redirect_stdout=True)
+    p = progressbar.ProgressBar(fd=sys.stdout, max_value=10,
+                                redirect_stdout=True)
 
     for i in range(10):
         print('', file=sys.stdout)

@@ -41,9 +41,11 @@ def example(fn):
 
 
 @example
-def with_example():
+def with_example_without_stdout_redirection():
     with progressbar.ProgressBar(max_value=10) as progress:
         for i in range(10):
+            if i % 3 == 0:
+                print('Some print statement %i' % i)
             # do something
             sleep(0.1)
             progress.update(i)
@@ -53,6 +55,8 @@ def with_example():
 def with_example_stdout_redirection():
     with progressbar.ProgressBar(max_value=10, redirect_stdout=True) as p:
         for i in range(10):
+            if i % 3 == 0:
+                print('Some print statement %i' % i)
             # do something
             p.update(i)
             sleep(0.1)

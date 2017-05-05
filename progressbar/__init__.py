@@ -1,6 +1,8 @@
 from datetime import date
 
-from progressbar.widgets import (
+from .utils import streams
+
+from .widgets import (
     Timer,
     ETA,
     AdaptiveETA,
@@ -36,6 +38,7 @@ from .__about__ import (
 
 __date__ = str(date.today())
 __all__ = [
+    'streams',
     'Timer',
     'ETA',
     'AdaptiveETA',

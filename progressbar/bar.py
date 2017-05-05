@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import with_statement
 
-import io
 import sys
 import math
 import time
@@ -17,11 +16,11 @@ from python_utils import converters
 from . import widgets
 from . import widgets as widgets_module  # Avoid name collision
 from . import six
-from . import utils
 from . import base
+from . import utils
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class ProgressBarMixinBase(object):
@@ -46,6 +45,12 @@ class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
 class DefaultFdMixin(ProgressBarMixinBase):
 
     def __init__(self, fd=sys.stderr, **kwargs):
+        if fd is sys.stdout:
+            fd = utils.streams.original_stdout
+
+        elif fd is sys.stderr:
+            fd = utils.streams.original_stderr
+
         self.fd = fd
         ProgressBarMixinBase.__init__(self, **kwargs)
 
@@ -104,61 +109,33 @@ class StdRedirectMixin(DefaultFdMixin):
         self._stderr = self.stderr = sys.stderr
 
     def start(self, *args, **kwargs):
-        self.stderr = self._stderr = sys.stderr
-        if self.redirect_stderr:
-            self.stderr = sys.stderr = six.StringIO()
-
-        self.stdout = self._stdout = sys.stdout
         if self.redirect_stdout:
-            self.stdout = sys.stdout = six.StringIO()
+            utils.streams.wrap_stdout()
+
+        if self.redirect_stderr:
+            utils.streams.wrap_stderr()
+
+        self._stdout = utils.streams.original_stdout
+        self._stderr = utils.streams.original_stderr
+
+        self.stdout = utils.streams.stdout
+        self.stderr = utils.streams.stderr
 
         DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value=None):
-        try:
-            if self.redirect_stderr and sys.stderr.tell():
-                self.fd.write('\r' + ' ' * self.term_width + '\r')
-
-                # Not atomic unfortunately, but writing to the same stream
-                # from multiple threads is a bad idea anyhow
-                self._stderr.write(sys.stderr.getvalue())
-                sys.stderr.seek(0)
-                sys.stderr.truncate(0)
-
-                self._stderr.flush()
-        except (io.UnsupportedOperation, AttributeError):  # pragma: no cover
-            logger.warn('Disabling stderr redirection, %r is not seekable',
-                        sys.stderr)
-            self.redirect_stderr = False
-
-        try:
-            if self.redirect_stdout and sys.stdout.tell():
-                self.fd.write('\r' + ' ' * self.term_width + '\r')
-
-                # Not atomic unfortunately, but writing to the same stream
-                # from multiple threads is a bad idea anyhow
-                self._stdout.write(sys.stdout.getvalue())
-                sys.stdout.seek(0)
-                sys.stdout.truncate(0)
-
-                self._stdout.flush()
-        except (io.UnsupportedOperation, AttributeError):  # pragma: no cover
-            logger.warn('Disabling stdout redirection, %r is not seekable',
-                        sys.stdout)
-            self.redirect_stdout = False
-
+        self.fd.write('\r' + ' ' * self.term_width + '\r')
+        utils.streams.flush()
         DefaultFdMixin.update(self, value=value)
 
     def finish(self):
         DefaultFdMixin.finish(self)
+        utils.streams.flush()
+        if self.redirect_stdout:
+            utils.streams.unwrap_stdout()
 
-        if self.redirect_stderr and hasattr(sys.stderr, 'getvalue'):
-            self._stderr.write(sys.stderr.getvalue())
-            self.stderr = sys.stderr = self._stderr
-
-        if self.redirect_stdout and hasattr(sys.stdout, 'getvalue'):
-            self._stdout.write(sys.stdout.getvalue())
-            self.stdout = sys.stdout = self._stdout
+        if self.redirect_stderr:
+            utils.streams.unwrap_stderr()
 
 
 class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
