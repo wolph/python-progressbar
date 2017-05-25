@@ -68,6 +68,16 @@ def get_terminal_size():  # pragma: no cover
     Returns:
         width, height: Two integers containing width and height
     '''
+
+    try:
+        # Default to 79 characters for IPython notebooks
+        ipython = globals().get('get_ipython')()
+        from ipykernel import zmqshell
+        if isinstance(ipython, zmqshell.ZMQInteractiveShell):
+            return 79, 24
+    except Exception:  # pragma: no cover
+        pass
+
     try:
         # This works for Python 3, but not Pypy3. Probably the best method if
         # it's supported so let's always try
@@ -95,15 +105,6 @@ def get_terminal_size():  # pragma: no cover
         h = terminal.height
         if w and h:
             return w, h
-    except Exception:  # pragma: no cover
-        pass
-
-    try:
-        # Default to 79 characters for IPython notebooks
-        ipython = globals().get('get_ipython')()
-        from ipykernel import zmqshell
-        if isinstance(ipython, zmqshell.ZMQInteractiveShell):
-            return 79, 24
     except Exception:  # pragma: no cover
         pass
 
