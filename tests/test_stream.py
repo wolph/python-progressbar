@@ -1,3 +1,4 @@
+import io
 import sys
 import progressbar
 
@@ -38,3 +39,11 @@ def test_wrap():
     progressbar.streams.unwrap(stderr=True, stdout=True)
     progressbar.streams.unwrap(stderr=True, stdout=True)
     progressbar.streams.unwrap(stderr=True, stdout=True)
+
+
+def test_fd_as_io_stream():
+    stream = io.StringIO()
+    with progressbar.ProgressBar(fd=stream) as pb:
+        for i in range(101):
+            pb.update(i)
+    stream.close()
