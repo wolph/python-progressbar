@@ -296,7 +296,6 @@ class ETA(Timer):
             ETA_NA = True
 
         if data['eta_seconds']:
-            print('eta', data['eta_seconds'])
             data['eta'] = utils.format_time(data['eta_seconds'])
         else:
             data['eta'] = None
