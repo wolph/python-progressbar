@@ -270,7 +270,7 @@ class ETA(Timer):
         '''Updates the widget to show the ETA or total time when finished.'''
         if elapsed:
             # The max() prevents zero division errors
-            per_item = elapsed / max(value, 0.0000000001)
+            per_item = elapsed / max(value, 0.000000001)
             remaining = progress.max_value - data['value']
             eta_seconds = remaining * per_item
         else:
@@ -296,6 +296,7 @@ class ETA(Timer):
             ETA_NA = True
 
         if data['eta_seconds']:
+            print('eta', data['eta_seconds'])
             data['eta'] = utils.format_time(data['eta_seconds'])
         else:
             data['eta'] = None
