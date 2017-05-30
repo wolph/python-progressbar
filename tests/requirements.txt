@@ -1,6 +1,6 @@
 -r ../requirements.txt
 flake8
-pytest
+pytest>=2.8
 pytest-cache
 pytest-cov
 pytest-flakes
