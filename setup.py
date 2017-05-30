@@ -41,8 +41,6 @@ def parse_requirements(filename):
 
     return requirements
 
-install_reqs += parse_requirements('requirements.txt')
-tests_reqs += parse_requirements('tests/requirements.txt')
 
 if sys.argv[-1] == 'info':
     for k, v in about.items():
@@ -70,10 +68,27 @@ if __name__ == '__main__':
         packages=find_packages(exclude=['docs']),
         long_description=readme,
         include_package_data=True,
-        install_requires=install_reqs,
+        install_requires=[
+            'python-utils>=2.1.0',
+        ],
         tests_require=tests_reqs,
         setup_requires=['setuptools', 'pytest-runner>=2.8'],
         zip_safe=False,
+        extras_require={
+            'docs': [
+                'changelog',
+                'sphinx>=1.5.0',
+            ],
+            'tests': [
+                'flake8',
+                'pytest>=2.8',
+                'pytest-cache',
+                'pytest-cov',
+                'pytest-flakes',
+                'pytest-pep8',
+                'sphinx',
+            ],
+        },
         classifiers=[
             'Development Status :: 5 - Production/Stable',
             'Intended Audience :: Developers',

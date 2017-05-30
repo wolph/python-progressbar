@@ -57,16 +57,18 @@ class StreamWrapper(object):
             self.unwrap_stderr()
 
     def unwrap_stdout(self):
-        if self.wrapped_stdout > 0:
+        if self.wrapped_stdout > 1:
             self.wrapped_stdout -= 1
         else:
             sys.stdout = self.original_stdout
+            self.wrapped_stdout = 0
 
     def unwrap_stderr(self):
-        if self.wrapped_stderr > 0:
+        if self.wrapped_stderr > 1:
             self.wrapped_stderr -= 1
         else:
             sys.stderr = self.original_stderr
+            self.wrapped_stderr = 0
 
     def flush(self):
         if self.wrapped_stdout:
@@ -157,7 +159,8 @@ def get_terminal_size():  # pragma: no cover
 
     try:
         # Default to 79 characters for IPython notebooks
-        ipython = globals().get('get_ipython')()
+        from IPython import get_ipython
+        ipython = get_ipython()
         from ipykernel import zmqshell
         if isinstance(ipython, zmqshell.ZMQInteractiveShell):
             return 79, 24
