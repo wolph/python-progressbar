@@ -60,8 +60,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.fd.write(line)
 
     def finish(self, *args, **kwargs):  # pragma: no cover
+        end = kwargs.pop('end', '\n')
         ProgressBarMixinBase.finish(self, *args, **kwargs)
-        self.fd.write('\n')
+        if end:
+            self.fd.write(end)
         self.fd.flush()
 
 
@@ -128,8 +130,8 @@ class StdRedirectMixin(DefaultFdMixin):
         utils.streams.flush()
         DefaultFdMixin.update(self, value=value)
 
-    def finish(self):
-        DefaultFdMixin.finish(self)
+    def finish(self, end='\n'):
+        DefaultFdMixin.finish(self, end=end)
         utils.streams.flush()
         if self.redirect_stdout:
             utils.streams.unwrap_stdout()
@@ -584,13 +586,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         return self
 
-    def finish(self):
+    def finish(self, end='\n'):
         'Puts the ProgressBar bar in the finished state.'
 
         self.end_time = datetime.now()
         self.update(self.max_value, force=True)
 
-        StdRedirectMixin.finish(self)
+        StdRedirectMixin.finish(self, end=end)
         ResizableMixin.finish(self)
         ProgressBarBase.finish(self)
 
