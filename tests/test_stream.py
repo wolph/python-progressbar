@@ -1,9 +1,14 @@
 import io
 import sys
+import pytest
 import progressbar
 
 
 def test_nowrap():
+    # Make sure we definitely unwrap
+    for i in range(5):
+        progressbar.streams.unwrap(stderr=True, stdout=True)
+
     stdout = sys.stdout
     stderr = sys.stderr
 
@@ -17,8 +22,16 @@ def test_nowrap():
     assert stdout == sys.stdout
     assert stderr == sys.stderr
 
+    # Make sure we definitely unwrap
+    for i in range(5):
+        progressbar.streams.unwrap(stderr=True, stdout=True)
+
 
 def test_wrap():
+    # Make sure we definitely unwrap
+    for i in range(5):
+        progressbar.streams.unwrap(stderr=True, stdout=True)
+
     stdout = sys.stdout
     stderr = sys.stderr
 
@@ -36,9 +49,9 @@ def test_wrap():
     assert stdout == sys.stdout
     assert stderr == sys.stderr
 
-    progressbar.streams.unwrap(stderr=True, stdout=True)
-    progressbar.streams.unwrap(stderr=True, stdout=True)
-    progressbar.streams.unwrap(stderr=True, stdout=True)
+    # Make sure we definitely unwrap
+    for i in range(5):
+        progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
 def test_fd_as_io_stream():
@@ -47,3 +60,10 @@ def test_fd_as_io_stream():
         for i in range(101):
             pb.update(i)
     stream.close()
+
+
+@pytest.mark.parametrize('stream', [sys.__stdout__, sys.__stderr__])
+def test_fd_as_standard_streams(stream):
+    with progressbar.ProgressBar(fd=stream) as pb:
+        for i in range(101):
+            pb.update(i)
