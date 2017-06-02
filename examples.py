@@ -405,7 +405,7 @@ def adaptive_eta_without_value_change():
     bar = progressbar.ProgressBar(widgets=[
         progressbar.AdaptiveETA(),
         progressbar.AdaptiveTransferSpeed(),
-    ], max_value=2, poll=0.0001)
+    ], max_value=2, poll_interval=0.0001)
     bar.start()
     for i in range(100):
         bar.update(1)
@@ -431,7 +431,7 @@ def eta():
         ' | AbsoluteETA: ', progressbar.AbsoluteETA(),
         ' | AdaptiveETA: ', progressbar.AdaptiveETA(),
     ]
-    bar = progressbar.ProgressBar(widgets=widgets, maxval=50).start()
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=50).start()
     for i in range(50):
         sleep(0.1)
         bar.update(i + 1)

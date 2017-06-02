@@ -85,11 +85,13 @@ def test_incorrect_max_value():
 
 
 def test_deprecated_maxval():
-    progressbar.ProgressBar(maxval=5)
+    with pytest.warns(DeprecationWarning):
+        progressbar.ProgressBar(maxval=5)
 
 
 def test_deprecated_poll():
-    progressbar.ProgressBar(poll=5)
+    with pytest.warns(DeprecationWarning):
+        progressbar.ProgressBar(poll=5)
 
 
 def test_unexpected_update_keyword_arg():

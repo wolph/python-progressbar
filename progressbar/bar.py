@@ -60,8 +60,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.fd.write(line)
 
     def finish(self, *args, **kwargs):  # pragma: no cover
+        end = kwargs.pop('end', '\n')
         ProgressBarMixinBase.finish(self, *args, **kwargs)
-        self.fd.write('\n')
+        if end:
+            self.fd.write(end)
         self.fd.flush()
 
 
@@ -128,8 +130,8 @@ class StdRedirectMixin(DefaultFdMixin):
         utils.streams.flush()
         DefaultFdMixin.update(self, value=value)
 
-    def finish(self):
-        DefaultFdMixin.finish(self)
+    def finish(self, end='\n'):
+        DefaultFdMixin.finish(self, end=end)
         utils.streams.flush()
         if self.redirect_stdout:
             utils.streams.unwrap_stdout()
@@ -502,21 +504,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.start()
             return self.update(value, force=force, **kwargs)
 
-        minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
-        update_delta = time.time() - self._last_update_time
-        if update_delta < minimum_update_interval and not force:
-            # Prevent updating too often
-            return
-
-        # Save the updated values for dynamic messages
-        for key in kwargs:
-            if key in self.dynamic_messages:
-                self.dynamic_messages[key] = kwargs[key]
-            else:
-                raise TypeError(
-                    'update() got an unexpected keyword ' +
-                    'argument {0!r}'.format(key))
-
         if value is not None and value is not base.UnknownLength:
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
@@ -531,6 +518,21 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
             self.previous_value = self.value
             self.value = value
+
+        minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
+        update_delta = time.time() - self._last_update_time
+        if update_delta < minimum_update_interval and not force:
+            # Prevent updating too often
+            return
+
+        # Save the updated values for dynamic messages
+        for key in kwargs:
+            if key in self.dynamic_messages:
+                self.dynamic_messages[key] = kwargs[key]
+            else:
+                raise TypeError(
+                    'update() got an unexpected keyword ' +
+                    'argument {0!r}'.format(key))
 
         if self._needs_update() or force:
             self.updates += 1
@@ -584,13 +586,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         return self
 
-    def finish(self):
+    def finish(self, end='\n'):
         'Puts the ProgressBar bar in the finished state.'
 
         self.end_time = datetime.now()
         self.update(self.max_value, force=True)
 
-        StdRedirectMixin.finish(self)
+        StdRedirectMixin.finish(self, end=end)
         ResizableMixin.finish(self)
         ProgressBarBase.finish(self)
 

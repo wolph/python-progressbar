@@ -34,13 +34,15 @@ def test_end_100(monkeypatch):
     progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL = 0.1
     p = progressbar.ProgressBar(
         widgets=[progressbar.Percentage(), progressbar.Bar()],
-        max_value=101,
+        max_value=103,
     )
 
     for x in range(0, 102):
         p.update(x)
 
     data = p.data()
+    import pprint
+    pprint.pprint(data)
     assert data['percentage'] < 100.
 
     p.finish()
