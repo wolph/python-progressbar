@@ -681,6 +681,9 @@ class DynamicMessage(FormatWidgetMixin, WidgetBase):
     def __call__(self, progress, data):
         val = data['dynamic_messages'][self.name]
         if val:
-            return self.name + ': ' + '{:6.3g}'.format(val)
+            if isinstance(val, str):
+                return self.name + ': ' + val
+            else:
+                return self.name + ': ' + '{:6.3g}'.format(val)
         else:
             return self.name + ': ' + 6 * '-'
