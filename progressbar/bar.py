@@ -181,7 +181,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     Useful methods and attributes include (Public API):
      - value: current progress (min_value <= value <= max_value)
      - max_value: maximum (and final) value
-     - finished: True if the bar has finished (reached 100%)
+     - end_time: not None if the bar has finished (reached 100%)
      - start_time: the time when start() method of ProgressBar was called
      - seconds_elapsed: seconds elapsed since start_time and last call to
                         update
