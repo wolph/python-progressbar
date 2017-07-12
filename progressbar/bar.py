@@ -513,8 +513,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 pass
             else:
                 raise ValueError(
-                    'Value out of range, should be between %s and %s'
-                    % (self.min_value, self.max_value))
+                    'Value %s is out of range, should be between %s and %s'
+                    % (value, self.min_value, self.max_value))
 
             self.previous_value = self.value
             self.value = value
