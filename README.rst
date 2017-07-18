@@ -30,13 +30,6 @@ Or download the latest release from Pypi (https://pypi.python.org/pypi/progressb
 Introduction
 ******************************************************************************
 
-.. highlights::
-
-    **NOTE:** This version has been completely rewritten and might not be
-    100% compatible with the old version. If you encounter any problems
-    while using it please let me know:
-    https://github.com/WoLpH/python-progressbar/issues
-
 A text progress bar is typically used to display the progress of a long
 running operation, providing a visual cue that processing is underway.
 
@@ -63,6 +56,15 @@ of widgets:
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
+
+******************************************************************************
+Known issues
+******************************************************************************
+
+Due to limitations in both the IDLE shell and the Jetbrains (Pycharm) shells this progressbar cannot function properly within those.
+
+- The IDLE editor doesn't support these types of progress bars at all: http://bugs.python.org/issue23220
+- The Jetbrains (Pycharm) editors partially work but break with fast output. As a workaround make sure you only write to either `sys.stdout` (regular print) or `sys.stderr` at the same time. If you do plan to use both, make sure you wait about ~200 milliseconds for the next output or it will break regularly. Linked issue: https://github.com/WoLpH/python-progressbar/issues/115
 
 ******************************************************************************
 Links
