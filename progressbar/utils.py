@@ -19,8 +19,10 @@ class StreamWrapper(object):
     def __init__(self):
         self.stdout = self.original_stdout = sys.stdout
         self.stderr = self.original_stderr = sys.stderr
+        self.original_excepthook = sys.excepthook
         self.wrapped_stdout = 0
         self.wrapped_stderr = 0
+        self.wrapped_excepthook = 0
 
         if os.environ.get('WRAP_STDOUT'):  # pragma: no cover
             self.wrap_stdout()
@@ -36,6 +38,8 @@ class StreamWrapper(object):
             self.wrap_stderr()
 
     def wrap_stdout(self):
+        self.wrap_excepthook()
+
         if not self.wrapped_stdout:
             self.stdout = sys.stdout = six.StringIO()
         self.wrapped_stdout += 1
@@ -43,11 +47,24 @@ class StreamWrapper(object):
         return sys.stdout
 
     def wrap_stderr(self):
+        self.wrap_excepthook()
+
         if not self.wrapped_stderr:
             self.stderr = sys.stderr = six.StringIO()
         self.wrapped_stderr += 1
 
         return sys.stderr
+
+    def unwrap_excepthook(self):
+        if self.wrapped_excepthook:
+            self.wrapped_excepthook -= 1
+            sys.excepthook = self.original_excepthook
+
+    def wrap_excepthook(self):
+        if not self.wrapped_excepthook:
+            print('wrapping excepthook')
+            self.wrapped_excepthook += 1
+            sys.excepthook = self.excepthook
 
     def unwrap(self, stdout=False, stderr=False):
         if stdout:
@@ -92,6 +109,10 @@ class StreamWrapper(object):
                 self.wrapped_stderr = False
                 logger.warn('Disabling stderr redirection, %r is not seekable',
                             sys.stderr)
+
+    def excepthook(self, exc_type, exc_value, exc_traceback):
+        self.original_excepthook(exc_type, exc_value, exc_traceback)
+        self.flush()
 
 
 streams = StreamWrapper()

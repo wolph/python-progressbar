@@ -684,3 +684,31 @@ class DynamicMessage(FormatWidgetMixin, WidgetBase):
             return self.name + ': ' + '{:6.3g}'.format(val)
         else:
             return self.name + ': ' + 6 * '-'
+
+
+class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):
+    '''Widget which displays the current (date)time with seconds resolution.'''
+    INTERVAL = datetime.timedelta(seconds=1)
+
+    def __init__(self, format='Current Time: %(current_time)s',
+                 microseconds=False, **kwargs):
+        self.microseconds = microseconds
+        FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        TimeSensitiveWidgetBase.__init__(self, **kwargs)
+
+    def __call__(self, progress, data):
+        data['current_time'] = self.current_time()
+        data['current_datetime'] = self.current_datetime()
+
+        return FormatWidgetMixin.__call__(self, progress, data)
+
+    def current_datetime(self):
+        now = datetime.datetime.now()
+        if not self.microseconds:
+            now = now.replace(microsecond=0)
+
+        return now
+
+    def current_time(self):
+        return self.current_datetime().time()
+
