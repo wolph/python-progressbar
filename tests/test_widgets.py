@@ -70,6 +70,9 @@ def test_all_widgets_small_values():
         progressbar.Bar(),
         progressbar.ReverseBar(),
         progressbar.BouncingBar(),
+        progressbar.CurrentTime(),
+        progressbar.CurrentTime(microseconds=False),
+        progressbar.CurrentTime(microseconds=True),
     ]
     p = progressbar.ProgressBar(widgets=widgets, max_value=10)
     for i in range(10):

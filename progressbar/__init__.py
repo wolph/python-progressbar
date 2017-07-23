@@ -20,7 +20,8 @@ from .widgets import (
     BouncingBar,
     RotatingMarker,
     DynamicMessage,
-    FormatCustomText
+    FormatCustomText,
+    CurrentTime
 )
 
 from .bar import (
@@ -60,6 +61,7 @@ __all__ = [
     'RotatingMarker',
     'DynamicMessage',
     'FormatCustomText',
+    'CurrentTime',
     'NullBar',
     '__author__',
     '__version__',

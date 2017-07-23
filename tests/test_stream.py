@@ -54,6 +54,19 @@ def test_wrap():
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
+def test_excepthook():
+    progressbar.streams.wrap(stderr=True, stdout=True)
+
+    try:
+        raise RuntimeError()
+    except:
+        progressbar.streams.excepthook(sys.exc_type, sys.exc_value,
+                                       sys.exc_traceback)
+
+    progressbar.streams.unwrap_excepthook()
+    progressbar.streams.unwrap_excepthook()
+
+
 def test_fd_as_io_stream():
     stream = io.StringIO()
     with progressbar.ProgressBar(fd=stream) as pb:

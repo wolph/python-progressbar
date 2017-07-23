@@ -181,7 +181,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     Useful methods and attributes include (Public API):
      - value: current progress (min_value <= value <= max_value)
      - max_value: maximum (and final) value
-     - finished: True if the bar has finished (reached 100%)
+     - end_time: not None if the bar has finished (reached 100%)
      - start_time: the time when start() method of ProgressBar was called
      - seconds_elapsed: seconds elapsed since start_time and last call to
                         update
@@ -513,8 +513,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 pass
             else:
                 raise ValueError(
-                    'Value out of range, should be between %s and %s'
-                    % (self.min_value, self.max_value))
+                    'Value %s is out of range, should be between %s and %s'
+                    % (value, self.min_value, self.max_value))
 
             self.previous_value = self.value
             self.value = value
