@@ -4,12 +4,12 @@ Text progress bar library for Python.
 
 Travis status:
 
-.. image:: https://travis-ci.org/WoLpH/python-progressbar.png?branch=master
+.. image:: https://travis-ci.org/WoLpH/python-progressbar.svg?branch=master
   :target: https://travis-ci.org/WoLpH/python-progressbar
 
 Coverage:
 
-.. image:: https://coveralls.io/repos/WoLpH/python-progressbar/badge.png?branch=master
+.. image:: https://coveralls.io/repos/WoLpH/python-progressbar/badge.svg?branch=master
   :target: https://coveralls.io/r/WoLpH/python-progressbar?branch=master
 
 ******************************************************************************
@@ -25,6 +25,10 @@ Or if `pip` is not available, `easy_install` should work as well:
     easy_install progressbar2
     
 Or download the latest release from Pypi (https://pypi.python.org/pypi/progressbar2) or Github.
+
+Note that the releases on Pypi are signed with my GPG key (https://pgp.mit.edu/pks/lookup?op=vindex&search=0xE81444E9CE1F695D) and can be checked using GPG:
+
+     gpg --verify progressbar2-<version>.tar.gz.asc progressbar2-<version>.tar.gz
 
 ******************************************************************************
 Introduction
@@ -63,7 +67,7 @@ Known issues
 
 Due to limitations in both the IDLE shell and the Jetbrains (Pycharm) shells this progressbar cannot function properly within those.
 
-- The IDLE editor doesn't support these types of progress bars at all: http://bugs.python.org/issue23220
+- The IDLE editor doesn't support these types of progress bars at all: https://bugs.python.org/issue23220
 - The Jetbrains (Pycharm) editors partially work but break with fast output. As a workaround make sure you only write to either `sys.stdout` (regular print) or `sys.stderr` at the same time. If you do plan to use both, make sure you wait about ~200 milliseconds for the next output or it will break regularly. Linked issue: https://github.com/WoLpH/python-progressbar/issues/115
 
 ******************************************************************************
@@ -71,7 +75,7 @@ Links
 ******************************************************************************
 
 * Documentation
-    - http://progressbar-2.readthedocs.org/en/latest/
+    - https://progressbar-2.readthedocs.org/en/latest/
 * Source
     - https://github.com/WoLpH/python-progressbar
 * Bug reports 
@@ -79,7 +83,7 @@ Links
 * Package homepage
     - https://pypi.python.org/pypi/progressbar2
 * My blog
-    - http://w.wol.ph/
+    - https://w.wol.ph/
 
 ******************************************************************************
 Usage
