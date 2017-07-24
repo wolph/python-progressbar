@@ -62,7 +62,7 @@ class StreamWrapper(object):
 
     def wrap_excepthook(self):
         if not self.wrapped_excepthook:
-            print('wrapping excepthook')
+            logger.debug('wrapping excepthook')
             self.wrapped_excepthook += 1
             sys.excepthook = self.excepthook
 
