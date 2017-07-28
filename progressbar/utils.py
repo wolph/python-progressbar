@@ -13,6 +13,25 @@ from . import six
 epoch = datetime.datetime(year=1970, month=1, day=1)
 
 
+class WrappingIO:
+
+    def __init__(self, target, capturing=False):
+        self.buffer = six.StringIO()
+        self.target = target
+        self.capturing = capturing
+
+    def write(self, value):
+        if self.capturing:
+            self.buffer.write(value)
+        else:
+            self.target.write(value)
+
+    def flush(self):
+        self.target.write(self.buffer.getvalue())
+        self.buffer.seek(0)
+        self.buffer.truncate(0)
+
+
 class StreamWrapper(object):
     '''Wrap stdout and stderr globally'''
 
@@ -23,12 +42,31 @@ class StreamWrapper(object):
         self.wrapped_stdout = 0
         self.wrapped_stderr = 0
         self.wrapped_excepthook = 0
+        self.capturing = 0
 
         if os.environ.get('WRAP_STDOUT'):  # pragma: no cover
             self.wrap_stdout()
 
         if os.environ.get('WRAP_STDERR'):  # pragma: no cover
             self.wrap_stderr()
+
+    def start_capturing(self):
+        self.capturing += 1
+        self.update_capturing()
+
+    def stop_capturing(self):
+        self.capturing -= 1
+        self.update_capturing()
+
+    def update_capturing(self):  # pragma: no cover
+        if isinstance(self.stdout, WrappingIO):
+            self.stdout.capturing = self.capturing > 0
+
+        if isinstance(self.stderr, WrappingIO):
+            self.stderr.capturing = self.capturing > 0
+
+        if self.capturing <= 0:
+            self.flush()
 
     def wrap(self, stdout=False, stderr=False):
         if stdout:
@@ -41,7 +79,7 @@ class StreamWrapper(object):
         self.wrap_excepthook()
 
         if not self.wrapped_stdout:
-            self.stdout = sys.stdout = six.StringIO()
+            self.stdout = sys.stdout = WrappingIO(self.original_stdout)
         self.wrapped_stdout += 1
 
         return sys.stdout
@@ -50,7 +88,7 @@ class StreamWrapper(object):
         self.wrap_excepthook()
 
         if not self.wrapped_stderr:
-            self.stderr = sys.stderr = six.StringIO()
+            self.stderr = sys.stderr = WrappingIO(self.original_stderr)
         self.wrapped_stderr += 1
 
         return sys.stderr
@@ -88,22 +126,18 @@ class StreamWrapper(object):
             self.wrapped_stderr = 0
 
     def flush(self):
-        if self.wrapped_stdout:
+        if self.wrapped_stdout:  # pragma: no branch
             try:
-                self.original_stdout.write(self.stdout.getvalue())
-                self.stdout.seek(0)
-                self.stdout.truncate(0)
+                self.stdout.flush()
             except (io.UnsupportedOperation,
                     AttributeError):  # pragma: no cover
                 self.wrapped_stdout = False
                 logger.warn('Disabling stdout redirection, %r is not seekable',
                             sys.stdout)
 
-        if self.wrapped_stderr:
+        if self.wrapped_stderr:  # pragma: no branch
             try:
-                self.original_stderr.write(self.stderr.getvalue())
-                self.stderr.seek(0)
-                self.stderr.truncate(0)
+                self.stderr.flush()
             except (io.UnsupportedOperation,
                     AttributeError):  # pragma: no cover
                 self.wrapped_stderr = False

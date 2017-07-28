@@ -118,6 +118,14 @@ environment variable, on Linux/Unix systems this can be done through:
    
    # WRAP_STDERR=true python your_script.py
 
+If you need to flush manually while wrapping, you can do so using:
+
+.. code:: python
+
+    import progressbar
+
+    progressbar.streams.flush()
+
 In most cases the following will work as well, as long as you initialize the
 `StreamHandler` after the wrapping has taken place.
 
