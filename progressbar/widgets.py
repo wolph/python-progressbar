@@ -254,9 +254,9 @@ class ETA(Timer):
             self,
             format_not_started='ETA:  --:--:--',
             format_finished='Time: %(elapsed)s',
-            format='ETA: %(eta)s',
+            format='ETA:  %(eta)s',
             format_zero='ETA:  0:00:00',
-            format_NA='ETA: N/A',
+            format_NA='ETA:      N/A',
             **kwargs):
 
         Timer.__init__(self, **kwargs)
