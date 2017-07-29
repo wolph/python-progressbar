@@ -26,9 +26,13 @@ class WrappingIO:
         else:
             self.target.write(value)
 
+    def flush(self):
+        self.buffer.flush()
+
     def _flush(self):
         value = self.buffer.getvalue()
         if value:
+            self.flush()
             self.target.write(value)
             self.buffer.seek(0)
             self.buffer.truncate(0)
