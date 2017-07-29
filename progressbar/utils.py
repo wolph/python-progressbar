@@ -26,10 +26,12 @@ class WrappingIO:
         else:
             self.target.write(value)
 
-    def flush(self):
-        self.target.write(self.buffer.getvalue())
-        self.buffer.seek(0)
-        self.buffer.truncate(0)
+    def _flush(self):
+        value = self.buffer.getvalue()
+        if value:
+            self.target.write(value)
+            self.buffer.seek(0)
+            self.buffer.truncate(0)
 
 
 class StreamWrapper(object):
@@ -128,7 +130,7 @@ class StreamWrapper(object):
     def flush(self):
         if self.wrapped_stdout:  # pragma: no branch
             try:
-                self.stdout.flush()
+                self.stdout._flush()
             except (io.UnsupportedOperation,
                     AttributeError):  # pragma: no cover
                 self.wrapped_stdout = False
@@ -137,7 +139,7 @@ class StreamWrapper(object):
 
         if self.wrapped_stderr:  # pragma: no branch
             try:
-                self.stderr.flush()
+                self.stderr._flush()
             except (io.UnsupportedOperation,
                     AttributeError):  # pragma: no cover
                 self.wrapped_stderr = False
