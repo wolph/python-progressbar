@@ -145,6 +145,23 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     '''The ProgressBar class which updates and prints the bar.
 
+    Args:
+        min_value (int): The minimum/start value for the progress bar
+        max_value (int): The maximum/end value for the progress bar.
+                            Defaults to `_DEFAULT_MAXVAL`
+        widgets (list): The widgets to render, defaults to the result of
+                        `default_widget()`
+        left_justify (bool): Justify to the left if `True` or the right if
+                                `False`
+        initial_value (int): The value to start with
+        poll_interval (float): The update interval in time. Note that this
+                                is always limited by
+                                `_MINIMUM_UPDATE_INTERVAL`
+        widget_kwargs (dict): The default keyword arguments for widgets
+        custom_len (function): Method to override how the line width is
+            calculated. When using non-latin characters the width
+            calculation might be off by default
+
     A common way of using it is like:
 
     >>> progress = ProgressBar().start()
@@ -193,24 +210,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
-                 widget_kwargs=None,
+                 widget_kwargs=None, custom_len=len,
                  **kwargs):
         '''
         Initializes a progress bar with sane defaults
-
-        Args:
-            min_value (int): The minimum/start value for the progress bar
-            max_value (int): The maximum/end value for the progress bar.
-                             Defaults to `_DEFAULT_MAXVAL`
-            widgets (list): The widgets to render, defaults to the result of
-                            `default_widget()`
-            left_justify (bool): Justify to the left if `True` or the right if
-                                 `False`
-            initial_value (int): The value to start with
-            poll_interval (float): The update interval in time. Note that this
-                                   is always limited by
-                                   `_MINIMUM_UPDATE_INTERVAL`
-            widget_kwargs (dict): The default keyword arguments for widgets
         '''
         StdRedirectMixin.__init__(self, **kwargs)
         ResizableMixin.__init__(self, **kwargs)
@@ -234,15 +237,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.widgets = widgets
         self.widget_kwargs = widget_kwargs or {}
         self.left_justify = left_justify
-
-        self._iterable = None
-        self.previous_value = None
         self.value = initial_value
-        self.last_update_time = None
-        self.start_time = None
-        self.updates = 0
-        self.end_time = None
-        self.extra = dict()
+        self._iterable = None
+        self.custom_len = custom_len
+        self.init()
 
         if poll_interval and isinstance(poll_interval, (int, float)):
             poll_interval = timedelta(seconds=poll_interval)
@@ -256,6 +254,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         for widget in (self.widgets or []):
             if isinstance(widget, widgets_module.DynamicMessage):
                 self.dynamic_messages[widget.name] = None
+
+    def init(self):
+        '''
+        (re)initialize values to original state so the progressbar can be
+        used (again)
+        '''
+        self.previous_value = None
+        self.last_update_time = None
+        self.start_time = None
+        self.updates = 0
+        self.end_time = None
+        self.extra = dict()
 
     @property
     def percentage(self):
@@ -314,18 +324,30 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def data(self):
         '''
-        Variables available:
-        - max_value: The maximum value (can be None with iterators)
-        - value: The current value
-        - total_seconds_elapsed: The seconds since the bar started
-        - seconds_elapsed: The seconds since the bar started modulo 60
-        - minutes_elapsed: The minutes since the bar started modulo 60
-        - hours_elapsed: The hours since the bar started modulo 24
-        - days_elapsed: The hours since the bar started
-        - time_elapsed: Shortcut for HH:MM:SS time since the bar started
-        including days
-        - percentage: Percentage as a float
-        - dynamic_messages: A dictionary of user-defined DynamicMessage's
+
+        Returns:
+            dict:
+                - `max_value`: The maximum value (can be None with
+                  iterators)
+                - `start_time`: Start time of the widget
+                - `last_update_time`: Last update time of the widget
+                - `end_time`: End time of the widget
+                - `value`: The current value
+                - `previous_value`: The previous value
+                - `updates`: The total update count
+                - `total_seconds_elapsed`: The seconds since the bar started
+                - `seconds_elapsed`: The seconds since the bar started modulo
+                  60
+                - `minutes_elapsed`: The minutes since the bar started modulo
+                  60
+                - `hours_elapsed`: The hours since the bar started modulo 24
+                - `days_elapsed`: The hours since the bar started
+                - `time_elapsed`: The raw elapsed `datetime.timedelta` object
+                - `percentage`: Percentage as a float or `None` if no max_value
+                  is available
+                - `dynamic_messages`: Dictionary of user-defined
+                  :py:class:`~progressbar.widgets.DynamicMessage`'s
+
         '''
         self._last_update_time = time.time()
         elapsed = self.last_update_time - self.start_time
@@ -362,7 +384,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             time_elapsed=elapsed,
             # Percentage as a float or `None` if no max_value is available
             percentage=self.percentage,
-            # Dictionary of DynamicMessage's
+            # Dictionary of user-defined
+            # :py:class:`progressbar.widgets.DynamicMessage`'s
             dynamic_messages=self.dynamic_messages
         )
 
@@ -443,11 +466,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 expanding.insert(0, index)
             elif isinstance(widget, six.basestring):
                 result.append(widget)
-                width -= len(widget)
+                width -= self.custom_len(widget)
             else:
                 widget_output = converters.to_unicode(widget(self, data))
                 result.append(widget_output)
-                width -= len(widget_output)
+                width -= self.custom_len(widget_output)
 
         count = len(expanding)
         while expanding:
@@ -457,7 +480,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             count -= 1
 
             widget_output = widget(self, data, portion)
-            width -= len(widget_output)
+            width -= self.custom_len(widget_output)
             result[index] = widget_output
 
         return result
@@ -544,10 +567,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             # Only flush if something was actually written
             self.fd.flush()
 
-    def start(self, max_value=None):
+    def start(self, max_value=None, init=True):
         '''Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
+
+        Args:
+            max_value (int): The maximum value of the progressbar
+            reinit (bool): Initialize the progressbar, this is useful if you
+                wish to reuse the same progressbar but can be disabled if
+                data needs to be passed along to the next run
 
         >>> pbar = ProgressBar().start()
         >>> for i in range(100):
@@ -556,6 +585,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         ...
         >>> pbar.finish()
         '''
+        if init:
+            self.init()
+
         StdRedirectMixin.start(self, max_value=max_value)
         ResizableMixin.start(self, max_value=max_value)
         ProgressBarBase.start(self, max_value=max_value)
@@ -588,7 +620,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         return self
 
     def finish(self, end='\n'):
-        'Puts the ProgressBar bar in the finished state.'
+        '''
+        Puts the ProgressBar bar in the finished state.
+
+        Also flushes and disables output buffering if this was the last
+        progressbar running.
+
+        Args:
+            end (str): The string to end the progressbar with, defaults to a
+                newline
+        '''
 
         self.end_time = datetime.now()
         self.update(self.max_value, force=True)

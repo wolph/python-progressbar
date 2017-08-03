@@ -42,21 +42,25 @@ is given by a number of widgets. A widget is an object that may display
 differently depending on the state of the progress bar. There are many types
 of widgets:
 
- - `Timer`
- - `ETA`
- - `AdaptiveETA`
- - `FileTransferSpeed`
- - `AdaptiveTransferSpeed`
- - `AnimatedMarker`
- - `Counter`
- - `Percentage`
- - `FormatLabel`
- - `SimpleProgress`
- - `Bar`
- - `ReverseBar`
- - `BouncingBar`
- - `RotatingMarker`
- - `DynamicMessage`
+ - `AbsoluteETA <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#AbsoluteETA>`_
+ - `AdaptiveETA <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#AdaptiveETA>`_
+ - `AdaptiveTransferSpeed <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#AdaptiveTransferSpeed>`_
+ - `AnimatedMarker <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#AnimatedMarker>`_
+ - `Bar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Bar>`_
+ - `BouncingBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#BouncingBar>`_
+ - `Counter <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Counter>`_
+ - `CurrentTime <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#CurrentTime>`_
+ - `DataSize <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#DataSize>`_
+ - `DynamicMessage <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#DynamicMessage>`_
+ - `ETA <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#ETA>`_
+ - `FileTransferSpeed <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FileTransferSpeed>`_
+ - `FormatCustomText <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatCustomText>`_
+ - `FormatLabel <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatLabel>`_
+ - `Percentage <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Percentage>`_
+ - `ReverseBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#ReverseBar>`_
+ - `RotatingMarker <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#RotatingMarker>`_
+ - `SimpleProgress <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#SimpleProgress>`_
+ - `Timer <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Timer>`_
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
@@ -195,3 +199,38 @@ Bar with custom widgets
     for i in bar(range(20)):
         time.sleep(0.1)
 
+Bar with wide Chinese (or other multibyte) characters
+==============================================================================
+
+.. code:: python
+
+    # vim: fileencoding=utf-8
+    import time
+    import progressbar
+
+
+    def custom_len(value):
+        # These characters take up more space
+        characters = {
+            '进': 2,
+            '度': 2,
+        }
+
+        total = 0
+        for c in value:
+            total += characters.get(c, 1)
+
+        return total
+
+
+    bar = progressbar.ProgressBar(
+        widgets=[
+            '进度: ',
+            progressbar.Bar(),
+            ' ',
+            progressbar.Counter(format='%(value)02d/%(max_value)d'),
+        ],
+        len_func=custom_len,
+    )
+    for i in bar(range(10)):
+        time.sleep(0.1)
