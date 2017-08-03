@@ -42,25 +42,25 @@ is given by a number of widgets. A widget is an object that may display
 differently depending on the state of the progress bar. There are many types
 of widgets:
 
- - :py:class:`~progressbar.widgets.AbsoluteETA`
- - :py:class:`~progressbar.widgets.AdaptiveETA`
- - :py:class:`~progressbar.widgets.AdaptiveTransferSpeed`
- - :py:class:`~progressbar.widgets.AnimatedMarker`
- - :py:class:`~progressbar.widgets.Bar`
- - :py:class:`~progressbar.widgets.BouncingBar`
- - :py:class:`~progressbar.widgets.Counter`
- - :py:class:`~progressbar.widgets.CurrentTime`
- - :py:class:`~progressbar.widgets.DataSize`
- - :py:class:`~progressbar.widgets.DynamicMessage`
- - :py:class:`~progressbar.widgets.ETA`
- - :py:class:`~progressbar.widgets.FileTransferSpeed`
- - :py:class:`~progressbar.widgets.FormatCustomText`
- - :py:class:`~progressbar.widgets.FormatLabel`
- - :py:class:`~progressbar.widgets.Percentage`
- - :py:class:`~progressbar.widgets.ReverseBar`
- - :py:class:`~progressbar.widgets.RotatingMarker`
- - :py:class:`~progressbar.widgets.SimpleProgress`
- - :py:class:`~progressbar.widgets.Timer`
+ - `AbsoluteETA <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#AbsoluteETA>`_
+ - `AdaptiveETA <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#AdaptiveETA>`_
+ - `AdaptiveTransferSpeed <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#AdaptiveTransferSpeed>`_
+ - `AnimatedMarker <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#AnimatedMarker>`_
+ - `Bar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Bar>`_
+ - `BouncingBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#BouncingBar>`_
+ - `Counter <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Counter>`_
+ - `CurrentTime <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#CurrentTime>`_
+ - `DataSize <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#DataSize>`_
+ - `DynamicMessage <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#DynamicMessage>`_
+ - `ETA <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#ETA>`_
+ - `FileTransferSpeed <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FileTransferSpeed>`_
+ - `FormatCustomText <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatCustomText>`_
+ - `FormatLabel <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatLabel>`_
+ - `Percentage <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Percentage>`_
+ - `ReverseBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#ReverseBar>`_
+ - `RotatingMarker <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#RotatingMarker>`_
+ - `SimpleProgress <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#SimpleProgress>`_
+ - `Timer <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Timer>`_
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
