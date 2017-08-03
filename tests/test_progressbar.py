@@ -14,3 +14,23 @@ def test_examples_nullbar(monkeypatch):
     examples.non_interactive_sleep_factor = 10000
     for example in examples.examples:
         example()
+
+
+def test_reuse():
+    import progressbar
+
+    bar = progressbar.ProgressBar()
+    bar.start()
+    for i in range(10):
+        bar.update(i)
+    bar.finish()
+
+    bar.start(init=True)
+    for i in range(10):
+        bar.update(i)
+    bar.finish()
+
+    bar.start(init=False)
+    for i in range(10):
+        bar.update(i)
+    bar.finish()
