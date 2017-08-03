@@ -577,7 +577,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         ...
         >>> pbar.finish()
         '''
-        if reinit:
+        if init:
             self.init()
 
         StdRedirectMixin.start(self, max_value=max_value)
