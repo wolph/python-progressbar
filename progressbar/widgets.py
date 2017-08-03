@@ -544,7 +544,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
                     continue
 
                 temporary_data['value'] = value
-                width = len(FormatWidgetMixin.__call__(
+                width = progress.len_func(FormatWidgetMixin.__call__(
                     self, progress, temporary_data, format=format))
                 if width:  # pragma: no branch
                     max_width = max(max_width or 0, width)
@@ -587,7 +587,7 @@ class Bar(AutoWidthWidgetBase):
 
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
-        width -= len(left) + len(right)
+        width -= progress.len_func(left) + progress.len_func(right)
         marker = converters.to_unicode(self.marker(progress, data, width))
         fill = converters.to_unicode(self.fill(progress, data, width))
 
@@ -626,7 +626,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
-        width -= len(left) + len(right)
+        width -= progress.len_func(left) + progress.len_func(right)
         marker = converters.to_unicode(self.marker(progress, data, width))
 
         fill = converters.to_unicode(self.fill(progress, data, width))
