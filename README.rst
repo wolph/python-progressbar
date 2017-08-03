@@ -42,21 +42,25 @@ is given by a number of widgets. A widget is an object that may display
 differently depending on the state of the progress bar. There are many types
 of widgets:
 
- - `Timer`
- - `ETA`
- - `AdaptiveETA`
- - `FileTransferSpeed`
- - `AdaptiveTransferSpeed`
- - `AnimatedMarker`
- - `Counter`
- - `Percentage`
- - `FormatLabel`
- - `SimpleProgress`
- - `Bar`
- - `ReverseBar`
- - `BouncingBar`
- - `RotatingMarker`
- - `DynamicMessage`
+ - :py:class:`~progressbar.widgets.AbsoluteETA`
+ - :py:class:`~progressbar.widgets.AdaptiveETA`
+ - :py:class:`~progressbar.widgets.AdaptiveTransferSpeed`
+ - :py:class:`~progressbar.widgets.AnimatedMarker`
+ - :py:class:`~progressbar.widgets.Bar`
+ - :py:class:`~progressbar.widgets.BouncingBar`
+ - :py:class:`~progressbar.widgets.Counter`
+ - :py:class:`~progressbar.widgets.CurrentTime`
+ - :py:class:`~progressbar.widgets.DataSize`
+ - :py:class:`~progressbar.widgets.DynamicMessage`
+ - :py:class:`~progressbar.widgets.ETA`
+ - :py:class:`~progressbar.widgets.FileTransferSpeed`
+ - :py:class:`~progressbar.widgets.FormatCustomText`
+ - :py:class:`~progressbar.widgets.FormatLabel`
+ - :py:class:`~progressbar.widgets.Percentage`
+ - :py:class:`~progressbar.widgets.ReverseBar`
+ - :py:class:`~progressbar.widgets.RotatingMarker`
+ - :py:class:`~progressbar.widgets.SimpleProgress`
+ - :py:class:`~progressbar.widgets.Timer`
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
