@@ -158,7 +158,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                                 is always limited by
                                 `_MINIMUM_UPDATE_INTERVAL`
         widget_kwargs (dict): The default keyword arguments for widgets
-        len_func (function): Method to override how the line width is
+        custom_len (function): Method to override how the line width is
             calculated. When using non-latin characters the width
             calculation might be off by default
 
@@ -210,7 +210,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
-                 widget_kwargs=None, len_func=len,
+                 widget_kwargs=None, custom_len=len,
                  **kwargs):
         '''
         Initializes a progress bar with sane defaults
@@ -239,7 +239,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.left_justify = left_justify
         self.value = initial_value
         self._iterable = None
-        self.len_func = len_func
+        self.custom_len = custom_len
         self.init()
 
         if poll_interval and isinstance(poll_interval, (int, float)):
@@ -466,11 +466,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 expanding.insert(0, index)
             elif isinstance(widget, six.basestring):
                 result.append(widget)
-                width -= self.len_func(widget)
+                width -= self.custom_len(widget)
             else:
                 widget_output = converters.to_unicode(widget(self, data))
                 result.append(widget_output)
-                width -= self.len_func(widget_output)
+                width -= self.custom_len(widget_output)
 
         count = len(expanding)
         while expanding:
@@ -480,7 +480,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             count -= 1
 
             widget_output = widget(self, data, portion)
-            width -= self.len_func(widget_output)
+            width -= self.custom_len(widget_output)
             result[index] = widget_output
 
         return result
