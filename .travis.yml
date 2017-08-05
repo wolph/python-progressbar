@@ -16,14 +16,14 @@ script:
 - python examples.py
 after_success:
 - coveralls
+before_deploy: "python setup.py sdist bdist_wheel"
 deploy:
-    before_deploy: "python setup.py sdist bdist_wheel"
-    provider: releases
-        api_key:
-            secure: DmqlCoHxPh5465T5DQgdFE7Peqy7MVF034n7t/hpV2Lf4LH9fHUo2r1dpICpBIxRuDNCXtM3PJLk59OMqCchpcAlC7VkH6dTOLpigk/IXYtlJVr3cXQUEC0gmPuFsrZ/fpWUR0PBfUD/fBA0RW64xFZ6ksfc+76tdQrKj1appz0=
-        file: dist/*
-        file_glob: true
-        skip_cleanup: true
-        on:
-            tags: true
-            repo: WoLpH/python-progressbar
+  provider: releases
+  api_key:
+    secure: DmqlCoHxPh5465T5DQgdFE7Peqy7MVF034n7t/hpV2Lf4LH9fHUo2r1dpICpBIxRuDNCXtM3PJLk59OMqCchpcAlC7VkH6dTOLpigk/IXYtlJVr3cXQUEC0gmPuFsrZ/fpWUR0PBfUD/fBA0RW64xFZ6ksfc+76tdQrKj1appz0=
+  file: dist/*
+  file_glob: true
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: WoLpH/python-progressbar
