@@ -10,6 +10,13 @@ try:
 except ImportError:
     from distutils.core import setup, find_packages
 
+
+# Not all systems use utf8 encoding by default, this works around that issue
+if sys.version_info > (3,):
+    from functools import partial
+    open = partial(open, encoding='utf8')
+
+
 # To prevent importing about and thereby breaking the coverage info we use this
 # exec hack
 about = {}
