@@ -198,7 +198,7 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
                     data[name] = data[key]
                 else:
                     data[name] = transform(data[key])
-            except:  # pragma: no cover
+            except (KeyError, ValueError, IndexError):  # pragma: no cover
                 pass
 
         return FormatWidgetMixin.__call__(self, progress, data, **kwargs)
