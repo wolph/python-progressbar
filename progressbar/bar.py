@@ -161,6 +161,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         custom_len (function): Method to override how the line width is
             calculated. When using non-latin characters the width
             calculation might be off by default
+        max_error (bool): When True the progressbar will raise an error if it
+            goes beyond it's set max_value. Otherwise the max_value is simply
+            raised when needed
 
     A common way of using it is like:
 
@@ -210,7 +213,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
-                 widget_kwargs=None, custom_len=len,
+                 widget_kwargs=None, custom_len=len, max_error=True,
                  **kwargs):
         '''
         Initializes a progress bar with sane defaults
@@ -234,6 +237,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                                  'value')
         self.min_value = min_value
         self.max_value = max_value
+        self.max_error = max_error
         self.widgets = widgets
         self.widget_kwargs = widget_kwargs or {}
         self.left_justify = left_justify
@@ -535,10 +539,12 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             elif self.min_value <= value <= self.max_value:
                 # Correct value, let's accept
                 pass
-            else:
+            elif self.max_error:
                 raise ValueError(
                     'Value %s is out of range, should be between %s and %s'
                     % (value, self.min_value, self.max_value))
+            else:
+                self.max_value = value
 
             self.previous_value = self.value
             self.value = value
