@@ -59,7 +59,7 @@ def test_excepthook():
 
     try:
         raise RuntimeError()
-    except:
+    except RuntimeError:
         progressbar.streams.excepthook(*sys.exc_info())
 
     progressbar.streams.unwrap_excepthook()
