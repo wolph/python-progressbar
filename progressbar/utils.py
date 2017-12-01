@@ -7,8 +7,6 @@ import datetime
 
 import six
 
-from . import _six
-
 
 # There might be a better way to get the epoch with tzinfo, please create
 # a pull request if you know a better way that functions for Python 2 and 3
@@ -406,7 +404,7 @@ def format_time(tval, precision=datetime.timedelta(seconds=1)):
         seconds = seconds - (seconds % precision_seconds)
 
         try:  # pragma: no cover
-            if _six.PY3:
+            if six.PY3:
                 dt = datetime.datetime.fromtimestamp(seconds)
             else:
                 dt = datetime.datetime.utcfromtimestamp(seconds)
