@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class ProgressBarMixinBase(object):
 
     def __init__(self, **kwargs):
-        pass
+        self._finished = False
 
     def start(self, **kwargs):
         pass
@@ -36,7 +36,14 @@ class ProgressBarMixinBase(object):
         pass
 
     def finish(self):  # pragma: no cover
-        pass
+        self._finished = True
+
+    def __del__(self):
+        if not self._finished:
+            try:
+                self.finish()
+            except Exception:  # pragma: no cover
+                pass
 
 
 class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
