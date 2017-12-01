@@ -3,7 +3,3 @@ import sys
 
 PY3 = sys.version_info[0] == 3
 
-if PY3:  # pragma: no cover
-    long_int = int
-else:  # pragma: no cover
-    long_int = long  # NOQA

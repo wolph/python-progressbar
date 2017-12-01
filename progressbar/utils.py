@@ -361,7 +361,7 @@ def _get_terminal_size_linux():  # pragma: no cover
     return int(size[1]), int(size[0])
 
 
-def format_time(time, precision=datetime.timedelta(seconds=1)):
+def format_time(tval, precision=datetime.timedelta(seconds=1)):
     '''Formats timedelta/datetime/seconds
 
     >>> format_time('1')
@@ -386,21 +386,22 @@ def format_time(time, precision=datetime.timedelta(seconds=1)):
     '''
     precision_seconds = precision.total_seconds()
 
-    if isinstance(time, six.string_types + six.integer_types + (float, )):
+    if isinstance(tval, six.string_types + six.integer_types + (float, )):
         try:
-            time = datetime.timedelta(seconds=_six.long_int(time))
+            tval = datetime.timedelta(seconds=(long(tval) if six.PY2
+                                               else int(tval)))
         except OverflowError:  # pragma: no cover
-            time = None
+            tval = None
 
-    if isinstance(time, datetime.timedelta):
-        seconds = time.total_seconds()
+    if isinstance(tval, datetime.timedelta):
+        seconds = tval.total_seconds()
         # Truncate the number to the given precision
         seconds = seconds - (seconds % precision_seconds)
 
         return str(datetime.timedelta(seconds=seconds))
-    elif isinstance(time, datetime.datetime):
+    elif isinstance(tval, datetime.datetime):
         # Python 2 doesn't have the timestamp method
-        seconds = timestamp(time)
+        seconds = timestamp(tval)
         # Truncate the number to the given precision
         seconds = seconds - (seconds % precision_seconds)
 
@@ -412,12 +413,12 @@ def format_time(time, precision=datetime.timedelta(seconds=1)):
         except ValueError:  # pragma: no cover
             dt = datetime.datetime.max
         return str(dt)
-    elif isinstance(time, datetime.date):
-        return str(time)
-    elif time is None:
+    elif isinstance(tval, datetime.date):
+        return str(tval)
+    elif tval is None:
         return '--:--:--'
     else:
-        raise TypeError('Unknown type %s: %r' % (type(time), time))
+        raise TypeError('Unknown type %s: %r' % (type(tval), tval))
 
 
 def timestamp(dt):  # pragma: no cover
