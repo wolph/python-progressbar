@@ -77,6 +77,7 @@ if __name__ == '__main__':
         include_package_data=True,
         install_requires=[
             'python-utils>=2.1.0',
+            'six',
         ],
         tests_require=tests_reqs,
         setup_requires=['setuptools', 'pytest-runner>=2.8'],
