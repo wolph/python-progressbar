@@ -5,7 +5,7 @@ import math
 import logging
 import datetime
 
-from . import six
+from . import _six
 
 
 # There might be a better way to get the epoch with tzinfo, please create
@@ -16,7 +16,7 @@ epoch = datetime.datetime(year=1970, month=1, day=1)
 class WrappingIO:
 
     def __init__(self, target, capturing=False):
-        self.buffer = six.StringIO()
+        self.buffer = _six.StringIO()
         self.target = target
         self.capturing = capturing
 
@@ -384,9 +384,9 @@ def format_time(time, precision=datetime.timedelta(seconds=1)):
     '''
     precision_seconds = precision.total_seconds()
 
-    if isinstance(time, six.basestring + six.numeric_types):
+    if isinstance(time, _six.basestring + _six.numeric_types):
         try:
-            time = datetime.timedelta(seconds=six.long_int(time))
+            time = datetime.timedelta(seconds=_six.long_int(time))
         except OverflowError:  # pragma: no cover
             time = None
 
@@ -403,7 +403,7 @@ def format_time(time, precision=datetime.timedelta(seconds=1)):
         seconds = seconds - (seconds % precision_seconds)
 
         try:  # pragma: no cover
-            if six.PY3:
+            if _six.PY3:
                 dt = datetime.datetime.fromtimestamp(seconds)
             else:
                 dt = datetime.datetime.utcfromtimestamp(seconds)
