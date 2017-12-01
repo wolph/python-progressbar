@@ -5,6 +5,8 @@ import math
 import logging
 import datetime
 
+import six
+
 from . import _six
 
 
@@ -16,7 +18,7 @@ epoch = datetime.datetime(year=1970, month=1, day=1)
 class WrappingIO:
 
     def __init__(self, target, capturing=False):
-        self.buffer = _six.StringIO()
+        self.buffer = six.StringIO()
         self.target = target
         self.capturing = capturing
 
