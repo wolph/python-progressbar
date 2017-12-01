@@ -14,12 +14,6 @@ else:  # pragma: no cover
 
 
 if PY3:  # pragma: no cover
-    numeric_types = int, float
-else:  # pragma: no cover
-    numeric_types = int, long, float  # NOQA
-
-
-if PY3:  # pragma: no cover
     long_int = int
 else:  # pragma: no cover
     long_int = long  # NOQA
