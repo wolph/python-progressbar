@@ -1,4 +1,5 @@
-from .six import with_metaclass
+# -*- mode: python; coding: utf-8 -*-
+import six
 
 
 class FalseMeta(type):
@@ -11,5 +12,5 @@ class FalseMeta(type):
     __nonzero__ = __bool__
 
 
-class UnknownLength(with_metaclass(FalseMeta, object)):
+class UnknownLength(six.with_metaclass(FalseMeta, object)):
     pass
