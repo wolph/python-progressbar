@@ -386,8 +386,8 @@ def format_time(tval, precision=datetime.timedelta(seconds=1)):
 
     if isinstance(tval, six.string_types + six.integer_types + (float, )):
         try:
-            tval = datetime.timedelta(seconds=(long(tval) if six.PY2
-                                               else int(tval)))
+            castfunc = long if six.PY2 else int  # NOQA
+            tval = datetime.timedelta(seconds=castfunc(tval))
         except OverflowError:  # pragma: no cover
             tval = None
 
