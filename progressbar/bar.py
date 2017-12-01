@@ -13,9 +13,10 @@ import collections
 
 from python_utils import converters
 
+import six
+
 from . import widgets
 from . import widgets as widgets_module  # Avoid name collision
-from . import _six
 from . import base
 from . import utils
 
@@ -468,7 +469,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             if isinstance(widget, widgets.AutoWidthWidgetBase):
                 result.append(widget)
                 expanding.insert(0, index)
-            elif isinstance(widget, _six.basestring):
+            elif isinstance(widget, six.string_types):
                 result.append(widget)
                 width -= self.custom_len(widget)
             else:

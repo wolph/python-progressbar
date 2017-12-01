@@ -386,7 +386,7 @@ def format_time(time, precision=datetime.timedelta(seconds=1)):
     '''
     precision_seconds = precision.total_seconds()
 
-    if isinstance(time, _six.basestring + six.integer_types + (float, )):
+    if isinstance(time, six.string_types + six.integer_types + (float, )):
         try:
             time = datetime.timedelta(seconds=_six.long_int(time))
         except OverflowError:  # pragma: no cover

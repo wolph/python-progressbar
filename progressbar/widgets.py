@@ -11,8 +11,9 @@ import sys
 
 from python_utils import converters
 
+import six
+
 from . import base
-from . import _six
 from . import utils
 
 MAX_DATE = datetime.date(year=datetime.MAXYEAR, month=12, day=31)
@@ -21,7 +22,7 @@ MAX_DATETIME = datetime.datetime.combine(MAX_DATE, MAX_TIME)
 
 
 def string_or_lambda(input_):
-    if isinstance(input_, _six.basestring):
+    if isinstance(input_, six.string_types):
         def render_input(progress, data, width):
             return input_ % data
 
@@ -39,7 +40,7 @@ def create_marker(marker):
         else:
             return marker
 
-    if isinstance(marker, _six.basestring):
+    if isinstance(marker, six.string_types):
         marker = converters.to_unicode(marker)
         assert len(marker) == 1, 'Markers are required to be 1 char'
         return _marker
