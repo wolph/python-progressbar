@@ -424,3 +424,11 @@ def timestamp(dt):  # pragma: no cover
         return dt.timestamp()
     else:
         return (dt - epoch).total_seconds()
+
+
+def to_unicode(value):
+    '''Convert objects to unicode'''
+    if isinstance(value, six.binary_type):
+        return value.decode('utf-8', 'replace')
+    return six.text_type(value)
+
