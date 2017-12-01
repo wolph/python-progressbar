@@ -431,4 +431,3 @@ def to_unicode(value):
     if isinstance(value, six.binary_type):
         return value.decode('utf-8', 'replace')
     return six.text_type(value)
-

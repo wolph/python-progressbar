@@ -3,7 +3,14 @@
 import time
 import pytest
 import progressbar
-from python_utils import converters
+
+import six
+
+
+def _to_str(value):
+    if isinstance(value, six.binary_type):
+        return value
+    return value.encode('utf-8', 'replace')
 
 
 @pytest.mark.parametrize('name,markers', [
@@ -14,9 +21,9 @@ from python_utils import converters
 @pytest.mark.parametrize('as_unicode', [True, False])
 def test_markers(name, markers, as_unicode):
     if as_unicode:
-        markers = converters.to_unicode(markers)
+        markers = progressbar.utils.to_unicode(markers)
     else:
-        markers = converters.to_str(markers)
+        markers = _to_str(markers)
 
     widgets = [
         '%s: ' % name.capitalize(),
