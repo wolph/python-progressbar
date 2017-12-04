@@ -1,5 +1,8 @@
-import progressbar
+import sys
 from datetime import timedelta
+
+import pytest
+import progressbar
 
 
 def test_poll_interval():
@@ -21,6 +24,9 @@ def test_poll_interval():
     assert bar.poll_interval.microseconds < 1001
 
 
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="resolution of timer is expected to be on windows "
+                    "lower")
 def test_intervals():
     bar = progressbar.ProgressBar(max_value=100)
     bar._MINIMUM_UPDATE_INTERVAL = 1
