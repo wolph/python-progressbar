@@ -9,8 +9,6 @@ import datetime
 import pprint
 import sys
 
-from python_utils import converters
-
 import six
 
 from . import base
@@ -41,7 +39,7 @@ def create_marker(marker):
             return marker
 
     if isinstance(marker, six.string_types):
-        marker = converters.to_unicode(marker)
+        marker = utils.to_unicode(marker)
         assert len(marker) == 1, 'Markers are required to be 1 char'
         return _marker
     else:
@@ -586,11 +584,11 @@ class Bar(AutoWidthWidgetBase):
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
 
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
+        left = utils.to_unicode(self.left(progress, data, width))
+        right = utils.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
-        marker = converters.to_unicode(self.marker(progress, data, width))
-        fill = converters.to_unicode(self.fill(progress, data, width))
+        marker = utils.to_unicode(self.marker(progress, data, width))
+        fill = utils.to_unicode(self.fill(progress, data, width))
 
         if self.fill_left:
             marker = marker.ljust(width, fill)
@@ -625,12 +623,12 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
 
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
+        left = utils.to_unicode(self.left(progress, data, width))
+        right = utils.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
-        marker = converters.to_unicode(self.marker(progress, data, width))
+        marker = utils.to_unicode(self.marker(progress, data, width))
 
-        fill = converters.to_unicode(self.fill(progress, data, width))
+        fill = utils.to_unicode(self.fill(progress, data, width))
 
         if width:  # pragma: no branch
             value = int(
