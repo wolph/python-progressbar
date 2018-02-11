@@ -6,6 +6,7 @@ from __future__ import with_statement
 import sys
 import math
 import time
+import timeit
 import logging
 import warnings
 from datetime import datetime, timedelta
@@ -253,6 +254,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self._iterable = None
         self.custom_len = custom_len
         self.init()
+        self._version = timeit.default_timer()
 
         if poll_interval and isinstance(poll_interval, (int, float)):
             poll_interval = timedelta(seconds=poll_interval)
@@ -516,8 +518,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Returns whether the ProgressBar should redraw the line.'
 
         if self.poll_interval:
-            delta = datetime.now() - self.last_update_time
-            poll_status = delta > self.poll_interval
+            delta = timeit.default_timer() - self._version
+            poll_status = delta > self.poll_interval.total_seconds()
         else:
             poll_status = False
 
@@ -554,11 +556,12 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             else:
                 self.max_value = value
 
+            self._version = timeit.default_timer()
             self.previous_value = self.value
             self.value = value
 
         minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
-        update_delta = time.time() - self._last_update_time
+        update_delta = timeit.default_timer() - self._version
         if update_delta < minimum_update_interval and not force:
             # Prevent updating too often
             return
@@ -629,6 +632,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             raise ValueError('Value out of range')
 
         self.start_time = self.last_update_time = datetime.now()
+        self._version = timeit.default_timer()
         self.update(self.min_value, force=True)
 
         return self
