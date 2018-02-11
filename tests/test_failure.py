@@ -1,6 +1,3 @@
-import sys
-import time
-
 import pytest
 import progressbar
 
@@ -102,9 +99,6 @@ def test_unexpected_update_keyword_arg():
     with pytest.raises(TypeError):
         for i in range(10):
             p.update(i, foo=10)
-            if sys.platform == "win32":
-                # resolution of timer is expected to be on windows lower
-                time.sleep(0.01)
 
 
 def test_dynamic_message_not_str():
