@@ -39,10 +39,10 @@ class ProgressBarMixinBase(object):
         self._finished = True
 
     def __del__(self):
-        if not self._finished:
+        if not self._finished:  # pragma: no cover
             try:
                 self.finish()
-            except Exception:  # pragma: no cover
+            except Exception:
                 pass
 
 
