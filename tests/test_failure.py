@@ -1,4 +1,5 @@
 import sys
+import time
 
 import pytest
 import progressbar
@@ -96,14 +97,14 @@ def test_deprecated_poll():
         progressbar.ProgressBar(poll=5)
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="resolution of timer is expected to be on windows "
-                    "lower")
 def test_unexpected_update_keyword_arg():
     p = progressbar.ProgressBar(max_value=10)
     with pytest.raises(TypeError):
         for i in range(10):
             p.update(i, foo=10)
+            if sys.platform == "win32":
+                # resolution of timer is expected to be on windows lower
+                time.sleep(0.01)
 
 
 def test_dynamic_message_not_str():
