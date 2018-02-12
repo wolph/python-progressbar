@@ -4,24 +4,25 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import with_statement
 
-import abc
 import datetime
 import pprint
+import abc
 import sys
 
 from python_utils import converters
 
+import six
+
 from . import base
-from . import six
 from . import utils
 
-MAX_DATE = datetime.date(year=datetime.MAXYEAR, month=12, day=31)
-MAX_TIME = datetime.time(23, 59, 59)
-MAX_DATETIME = datetime.datetime.combine(MAX_DATE, MAX_TIME)
+MAX_DATE = datetime.date.max
+MAX_TIME = datetime.time.max
+MAX_DATETIME = datetime.datetime.max
 
 
 def string_or_lambda(input_):
-    if isinstance(input_, six.basestring):
+    if isinstance(input_, six.string_types):
         def render_input(progress, data, width):
             return input_ % data
 
@@ -39,7 +40,7 @@ def create_marker(marker):
         else:
             return marker
 
-    if isinstance(marker, six.basestring):
+    if isinstance(marker, six.string_types):
         marker = converters.to_unicode(marker)
         assert len(marker) == 1, 'Markers are required to be 1 char'
         return _marker

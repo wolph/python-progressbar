@@ -6,6 +6,7 @@ from __future__ import with_statement
 import sys
 import math
 import time
+import timeit
 import logging
 import warnings
 from datetime import datetime, timedelta
@@ -13,9 +14,10 @@ import collections
 
 from python_utils import converters
 
+import six
+
 from . import widgets
 from . import widgets as widgets_module  # Avoid name collision
-from . import six
 from . import base
 from . import utils
 
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 class ProgressBarMixinBase(object):
 
     def __init__(self, **kwargs):
-        pass
+        self._finished = False
 
     def start(self, **kwargs):
         pass
@@ -35,7 +37,14 @@ class ProgressBarMixinBase(object):
         pass
 
     def finish(self):  # pragma: no cover
-        pass
+        self._finished = True
+
+    def __del__(self):
+        if not self._finished:  # pragma: no cover
+            try:
+                self.finish()
+            except Exception:
+                pass
 
 
 class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
@@ -75,14 +84,14 @@ class ResizableMixin(ProgressBarMixinBase):
         self.signal_set = False
         if term_width:
             self.term_width = term_width
-        else:
+        else:  # pragma: no cover
             try:
                 self._handle_resize()
                 import signal
                 self._prev_handle = signal.getsignal(signal.SIGWINCH)
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
-            except Exception:  # pragma: no cover
+            except Exception:
                 pass
 
     def _handle_resize(self, signum=None, frame=None):
@@ -245,6 +254,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self._iterable = None
         self.custom_len = custom_len
         self.init()
+        self._version = timeit.default_timer()
 
         if poll_interval and isinstance(poll_interval, (int, float)):
             poll_interval = timedelta(seconds=poll_interval)
@@ -468,7 +478,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             if isinstance(widget, widgets.AutoWidthWidgetBase):
                 result.append(widget)
                 expanding.insert(0, index)
-            elif isinstance(widget, six.basestring):
+            elif isinstance(widget, six.string_types):
                 result.append(widget)
                 width -= self.custom_len(widget)
             else:
@@ -508,8 +518,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Returns whether the ProgressBar should redraw the line.'
 
         if self.poll_interval:
-            delta = datetime.now() - self.last_update_time
-            poll_status = delta > self.poll_interval
+            delta = timeit.default_timer() - self._version
+            poll_status = delta > self.poll_interval.total_seconds()
         else:
             poll_status = False
 
@@ -546,11 +556,12 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             else:
                 self.max_value = value
 
+            self._version = timeit.default_timer()
             self.previous_value = self.value
             self.value = value
 
         minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
-        update_delta = time.time() - self._last_update_time
+        update_delta = timeit.default_timer() - self._version
         if update_delta < minimum_update_interval and not force:
             # Prevent updating too often
             return
@@ -621,6 +632,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             raise ValueError('Value out of range')
 
         self.start_time = self.last_update_time = datetime.now()
+        self._version = timeit.default_timer()
         self.update(self.min_value, force=True)
 
         return self

@@ -6,14 +6,14 @@ environment:
     - PYTHON: "C:\\Python27"
       TOX_ENV: "py27"
 
-    - PYTHON: "C:\\Python33"
-      TOX_ENV: "py33"
-
     - PYTHON: "C:\\Python34"
       TOX_ENV: "py34"
 
     - PYTHON: "C:\\Python35"
       TOX_ENV: "py35"
+
+    - PYTHON: "C:\\Python36"
+      TOX_ENV: "py36"
 
 
 init:
