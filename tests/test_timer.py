@@ -1,5 +1,6 @@
-import progressbar
 from datetime import timedelta
+
+import progressbar
 
 
 def test_poll_interval():
