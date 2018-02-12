@@ -76,7 +76,7 @@ if __name__ == '__main__':
         long_description=readme,
         include_package_data=True,
         install_requires=[
-            'python-utils>=2.1.0',
+            'python-utils>=2.3.0',
             'six',
         ],
         tests_require=tests_reqs,

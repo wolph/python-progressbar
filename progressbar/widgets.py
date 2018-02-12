@@ -4,9 +4,9 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import with_statement
 
-import abc
 import datetime
 import pprint
+import abc
 import sys
 
 from python_utils import converters
@@ -16,9 +16,9 @@ import six
 from . import base
 from . import utils
 
-MAX_DATE = datetime.date(year=datetime.MAXYEAR, month=12, day=31)
-MAX_TIME = datetime.time(23, 59, 59)
-MAX_DATETIME = datetime.datetime.combine(MAX_DATE, MAX_TIME)
+MAX_DATE = datetime.date.max
+MAX_TIME = datetime.time.max
+MAX_DATETIME = datetime.datetime.max
 
 
 def string_or_lambda(input_):
