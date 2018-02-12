@@ -84,14 +84,14 @@ class ResizableMixin(ProgressBarMixinBase):
         self.signal_set = False
         if term_width:
             self.term_width = term_width
-        else:
+        else:  # pragma: no cover
             try:
                 self._handle_resize()
                 import signal
                 self._prev_handle = signal.getsignal(signal.SIGWINCH)
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
-            except Exception:  # pragma: no cover
+            except Exception:
                 pass
 
     def _handle_resize(self, signum=None, frame=None):
