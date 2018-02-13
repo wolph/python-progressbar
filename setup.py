@@ -84,8 +84,7 @@ if __name__ == '__main__':
         zip_safe=False,
         extras_require={
             'docs': [
-                'changelog',
-                'sphinx>=1.5.0',
+                'sphinx>=1.7.0',
             ],
             'tests': [
                 'flake8',
