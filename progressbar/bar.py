@@ -279,7 +279,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.updates = 0
         self.end_time = None
         self.extra = dict()
-        self._last_update = timeit.default_timer()
+        self._last_update_timer = timeit.default_timer()
 
     @property
     def percentage(self):
@@ -364,6 +364,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         '''
         self._last_update_time = time.time()
+        self._last_update_timer = timeit.default_timer()
         elapsed = self.last_update_time - self.start_time
         # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
         # want to support older versions as well
@@ -518,7 +519,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Returns whether the ProgressBar should redraw the line.'
 
         if self.poll_interval:
-            delta = timeit.default_timer() - self._last_update
+            delta = timeit.default_timer() - self._last_update_timer
             poll_status = delta > self.poll_interval.total_seconds()
         else:
             poll_status = False
@@ -542,12 +543,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.start()
             return self.update(value, force=force, **kwargs)
 
-        minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
-        delta = timeit.default_timer() - self._last_update
-        if delta < minimum_update_interval and not force:
-            # Prevent updating too often
-            return
-
         if value is not None and value is not base.UnknownLength:
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
@@ -562,9 +557,14 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             else:
                 self.max_value = value
 
-            self._last_update = timeit.default_timer()
             self.previous_value = self.value
             self.value = value
+
+        minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
+        delta = timeit.default_timer() - self._last_update_timer
+        if delta < minimum_update_interval and not force:
+            # Prevent updating too often
+            return
 
         # Save the updated values for dynamic messages
         for key in kwargs:
@@ -632,7 +632,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             raise ValueError('Value out of range')
 
         self.start_time = self.last_update_time = datetime.now()
-        self._last_update = timeit.default_timer()
+        self._last_update_timer = timeit.default_timer()
         self.update(self.min_value, force=True)
 
         return self
