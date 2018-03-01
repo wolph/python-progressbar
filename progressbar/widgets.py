@@ -223,26 +223,32 @@ class SamplesMixin(TimeSensitiveWidgetBase):
     Note that samples can be either an integer or a timedelta to indicate a
     certain amount of time
 
-    >>> samples = SamplesMixin(samples=10)
-    >>> samples = SamplesMixin(samples=datetime.timedelta(seconds=1))
     >>> class progress:
     ...     last_update_time = datetime.datetime.now()
     ...     value = 1
     ...     extra = dict()
 
-    >>> _, value = samples(progress, None)
-    >>> value
-    [1]
-
+    >>> samples = SamplesMixin(samples=2)
     >>> samples(progress, None, True)
     (None, None)
+    >>> progress.last_update_time += datetime.timedelta(seconds=1)
+    >>> samples(progress, None, True)
+    (datetime.timedelta(0, 1), 0)
+    >>> progress.last_update_time += datetime.timedelta(seconds=1)
+    >>> samples(progress, None, True)
+    (datetime.timedelta(0, 1), 0)
+
+    >>> samples = SamplesMixin(samples=datetime.timedelta(seconds=1))
+    >>> _, value = samples(progress, None)
+    >>> value
+    [1, 1]
+
+    >>> samples(progress, None, True)
+    (datetime.timedelta(0, 1), 0)
     '''
 
-    def __init__(self, samples=datetime.timedelta(seconds=5), key_prefix=None,
+    def __init__(self, samples=datetime.timedelta(seconds=2), key_prefix=None,
                  **kwargs):
-        if isinstance(samples, datetime.timedelta):
-            samples = int(samples / self.INTERVAL)
-
         self.samples = samples
         self.key_prefix = (self.__class__.__name__ or key_prefix) + '_'
 
@@ -266,9 +272,15 @@ class SamplesMixin(TimeSensitiveWidgetBase):
             sample_times.append(progress.last_update_time)
             sample_values.append(progress.value)
 
-            if len(sample_times) > self.samples:
-                sample_times.pop(0)
-                sample_values.pop(0)
+            if isinstance(self.samples, datetime.timedelta):
+                begin = progress.last_update_time - self.samples
+                while sample_times[2:] and begin > sample_times[0]:
+                    sample_times.pop(0)
+                    sample_values.pop(0)
+            else:
+                if len(sample_times) > self.samples:
+                    sample_times.pop(0)
+                    sample_values.pop(0)
 
         if delta:
             delta_time = sample_times[-1] - sample_times[0]

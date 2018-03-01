@@ -406,9 +406,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def default_widgets(self):
         if self.max_value:
-            self.widget_kwargs.setdefault(
-                'samples', max(10, self.max_value / 100))
-
             return [
                 widgets.Percentage(**self.widget_kwargs),
                 ' ', widgets.SimpleProgress(
