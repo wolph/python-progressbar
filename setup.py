@@ -84,16 +84,16 @@ if __name__ == '__main__':
         zip_safe=False,
         extras_require={
             'docs': [
-                'sphinx>=1.7.0',
+                'sphinx>=1.7.1',
             ],
             'tests': [
-                'flake8',
-                'pytest>=2.8',
-                'pytest-cache',
-                'pytest-cov',
-                'pytest-flakes',
-                'pytest-pep8',
-                'sphinx',
+                'flake8>=3.5.0',
+                'pytest>=3.4.0',
+                'pytest-cache>=1.0',
+                'pytest-cov>=2.5.1',
+                'pytest-flakes>=2.0.0',
+                'pytest-pep8>=1.0.6',
+                'sphinx>=1.7.1',
             ],
         },
         classifiers=[

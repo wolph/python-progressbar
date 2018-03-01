@@ -39,7 +39,6 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
-    'changelog'
 ]
 
 # Monkey patch to disable nonlocal image warning
