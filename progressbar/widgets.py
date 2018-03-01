@@ -220,7 +220,11 @@ class SamplesMixin(TimeSensitiveWidgetBase):
     '''
     Mixing for widgets that average multiple measurements
 
-    >>> samples = SamplesMixin()
+    Note that samples can be either an integer or a timedelta to indicate a
+    certain amount of time
+
+    >>> samples = SamplesMixin(samples=10)
+    >>> samples = SamplesMixin(samples=datetime.timedelta(seconds=1))
     >>> class progress:
     ...     last_update_time = datetime.datetime.now()
     ...     value = 1
@@ -234,7 +238,11 @@ class SamplesMixin(TimeSensitiveWidgetBase):
     (None, None)
     '''
 
-    def __init__(self, samples=10, key_prefix=None, **kwargs):
+    def __init__(self, samples=datetime.timedelta(seconds=5), key_prefix=None,
+                 **kwargs):
+        if isinstance(samples, datetime.timedelta):
+            samples = int(samples / self.INTERVAL)
+
         self.samples = samples
         self.key_prefix = (self.__class__.__name__ or key_prefix) + '_'
 
