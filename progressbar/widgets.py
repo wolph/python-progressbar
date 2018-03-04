@@ -4,10 +4,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import with_statement
 
-import datetime
-import pprint
 import abc
 import sys
+import pprint
+import datetime
 
 from python_utils import converters
 
@@ -216,8 +216,39 @@ class Timer(FormatLabel, TimeSensitiveWidgetBase):
     format_time = staticmethod(utils.format_time)
 
 
-class SamplesMixin(object):
-    def __init__(self, samples=10, key_prefix=None, **kwargs):
+class SamplesMixin(TimeSensitiveWidgetBase):
+    '''
+    Mixing for widgets that average multiple measurements
+
+    Note that samples can be either an integer or a timedelta to indicate a
+    certain amount of time
+
+    >>> class progress:
+    ...     last_update_time = datetime.datetime.now()
+    ...     value = 1
+    ...     extra = dict()
+
+    >>> samples = SamplesMixin(samples=2)
+    >>> samples(progress, None, True)
+    (None, None)
+    >>> progress.last_update_time += datetime.timedelta(seconds=1)
+    >>> samples(progress, None, True)
+    (datetime.timedelta(0, 1), 0)
+    >>> progress.last_update_time += datetime.timedelta(seconds=1)
+    >>> samples(progress, None, True)
+    (datetime.timedelta(0, 1), 0)
+
+    >>> samples = SamplesMixin(samples=datetime.timedelta(seconds=1))
+    >>> _, value = samples(progress, None)
+    >>> value
+    [1, 1]
+
+    >>> samples(progress, None, True)
+    (datetime.timedelta(0, 1), 0)
+    '''
+
+    def __init__(self, samples=datetime.timedelta(seconds=2), key_prefix=None,
+                 **kwargs):
         self.samples = samples
         self.key_prefix = (self.__class__.__name__ or key_prefix) + '_'
 
@@ -227,7 +258,7 @@ class SamplesMixin(object):
     def get_sample_values(self, progress, data):
         return progress.extra.setdefault(self.key_prefix + 'sample_values', [])
 
-    def __call__(self, progress, data):
+    def __call__(self, progress, data, delta=False):
         sample_times = self.get_sample_times(progress, data)
         sample_values = self.get_sample_values(progress, data)
 
@@ -241,11 +272,25 @@ class SamplesMixin(object):
             sample_times.append(progress.last_update_time)
             sample_values.append(progress.value)
 
-            if len(sample_times) > self.samples:
-                sample_times.pop(0)
-                sample_values.pop(0)
+            if isinstance(self.samples, datetime.timedelta):
+                begin = progress.last_update_time - self.samples
+                while sample_times[2:] and begin > sample_times[0]:
+                    sample_times.pop(0)
+                    sample_values.pop(0)
+            else:
+                if len(sample_times) > self.samples:
+                    sample_times.pop(0)
+                    sample_values.pop(0)
 
-        return sample_times, sample_values
+        if delta:
+            delta_time = sample_times[-1] - sample_times[0]
+            delta_value = sample_values[-1] - sample_values[0]
+            if delta_time:
+                return delta_time, delta_value
+            else:
+                return None, None
+        else:
+            return sample_times, sample_values
 
 
 class ETA(Timer):
@@ -350,15 +395,12 @@ class AdaptiveETA(ETA, SamplesMixin):
         SamplesMixin.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
-        times, values = SamplesMixin.__call__(self, progress, data)
+        elapsed, value = SamplesMixin.__call__(self, progress, data,
+                                               delta=True)
 
-        if len(times) <= 1:
-            # No samples so just return the normal ETA calculation
+        if not elapsed:
             value = None
             elapsed = 0
-        else:
-            value = values[-1] - values[0]
-            elapsed = utils.timedelta_to_seconds(times[-1] - times[0])
 
         return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
 
@@ -449,15 +491,8 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
         SamplesMixin.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
-        times, values = SamplesMixin.__call__(self, progress, data)
-        if len(times) <= 1:
-            # No samples so just return the normal transfer speed calculation
-            value = None
-            elapsed = None
-        else:
-            value = values[-1] - values[0]
-            elapsed = utils.timedelta_to_seconds(times[-1] - times[0])
-
+        elapsed, value = SamplesMixin.__call__(self, progress, data,
+                                               delta=True)
         return FileTransferSpeed.__call__(self, progress, data, value, elapsed)
 
 

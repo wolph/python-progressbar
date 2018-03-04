@@ -10,7 +10,6 @@ Welcome to Progress Bar's documentation!
    installation
    progressbar.bar
    progressbar.base
-   progressbar.six
    progressbar.utils
    progressbar.widgets
 
