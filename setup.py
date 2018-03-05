@@ -93,7 +93,7 @@ if __name__ == '__main__':
                 'pytest-cov>=2.5.1',
                 'pytest-flakes>=2.0.0',
                 'pytest-pep8>=1.0.6',
-                'pytext-xdist>=1.22.2',
+                'pytest-xdist>=1.22.2',
                 'sphinx>=1.7.1',
             ],
         },
