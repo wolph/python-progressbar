@@ -20,7 +20,7 @@ def test_list_example(testdir):
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
     result.stderr.re_match_lines([
         r'N/A% \(0 of 10\) \|\s+\| Elapsed Time: 0:00:00 ETA:  --:--:--',
-        r' 10% \(1 of 10\) \|\s+\| Elapsed Time: 0:00:00 ETA:  0:00:0[01]',
+        r' 10% \(1 of 10\) \|\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
         r' 20% \(2 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
         r' 30% \(3 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
         r' 40% \(4 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
@@ -29,7 +29,7 @@ def test_list_example(testdir):
         r' 70% \(7 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
         r' 80% \(8 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
         r' 90% \(9 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r'100% \(10 of 10\) \|#+\| Elapsed Time: 0:00:01 Time: 0:00:0',
+        r'100% \(10 of 10\) \|#+\| Elapsed Time: 0:00:00 Time: 0:00:00',
     ])
 
 
@@ -64,7 +64,7 @@ def test_generator_example(testdir):
         r'\| 7 Elapsed Time: 0:00:00',
         r'/ 8 Elapsed Time: 0:00:00',
         r'- 9 Elapsed Time: 0:00:00',
-        r'\| 9 Elapsed Time: 0:00:0[01]',
+        r'\| 9 Elapsed Time: 0:00:00',
     ])
 
 
