@@ -12,24 +12,23 @@ def test_list_example(testdir):
         import progressbar
 
         bar = progressbar.ProgressBar(term_width=60)
-        for i in bar(list(range(10))):
-            time.sleep(0.05)
+        for i in bar(list(range(9))):
+            time.sleep(0.1)
 
     ''')
     result = testdir.runpython(v)
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
     result.stderr.re_match_lines([
-        r'N/A% \(0 of 10\) \|\s+\| Elapsed Time: 0:00:00 ETA:  --:--:--',
-        r' 10% \(1 of 10\) \|\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 20% \(2 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 30% \(3 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 40% \(4 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 50% \(5 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 60% \(6 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 70% \(7 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 80% \(8 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 90% \(9 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r'100% \(10 of 10\) \|#+\| Elapsed Time: 0:00:00 Time: 0:00:00',
+        r'N/A% \(0 of 9\) \|\s+\| Elapsed Time: 0:00:00 ETA:  --:--:--',
+        r' 11% \(1 of 9\) \|\s+\| Elapsed Time: 0:00:00 ETA:  0:00:0[01]',
+        r' 22% \(2 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
+        r' 33% \(3 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
+        r' 44% \(4 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
+        r' 55% \(5 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
+        r' 66% \(6 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
+        r' 77% \(7 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
+        r' 88% \(8 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
+        r'100% \(9 of 9\) \|#+\| Elapsed Time: 0:00:00 Time: 0:00:00',
     ])
 
 
@@ -44,15 +43,11 @@ def test_generator_example(testdir):
         import progressbar
 
         bar = progressbar.ProgressBar(term_width=60)
-        for i in bar(iter(range(10))):
-            time.sleep(0.05)
+        for i in bar(iter(range(9))):
+            time.sleep(0.1)
 
     ''')
     result = testdir.runpython(v)
-    print('##################')
-    import pprint
-    pprint.pprint([l.strip() for l in result.stderr.lines if l.strip()])
-    print('##################')
     result.stderr.re_match_lines([
         r'/ 0 Elapsed Time: 0:00:00',
         r'- 1 Elapsed Time: 0:00:00',
@@ -63,8 +58,6 @@ def test_generator_example(testdir):
         r'\\ 6 Elapsed Time: 0:00:00',
         r'\| 7 Elapsed Time: 0:00:00',
         r'/ 8 Elapsed Time: 0:00:00',
-        r'- 9 Elapsed Time: 0:00:00',
-        r'\| 9 Elapsed Time: 0:00:00',
     ])
 
 
@@ -79,7 +72,7 @@ def test_rapid_updates(testdir):
         bar = progressbar.ProgressBar(term_width=60)
         for i in bar(range(100)):
             if i % 10 == 0:
-                time.sleep(0.05)
+                time.sleep(0.1)
 
     ''')
     result = testdir.runpython(v)
