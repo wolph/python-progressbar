@@ -13,7 +13,7 @@ def test_list_example(testdir):
 
         bar = progressbar.ProgressBar(term_width=60)
         for i in bar(list(range(10))):
-            time.sleep(0.1)
+            time.sleep(0.05)
 
     ''')
     result = testdir.runpython(v)
@@ -45,7 +45,7 @@ def test_generator_example(testdir):
 
         bar = progressbar.ProgressBar(term_width=60)
         for i in bar(iter(range(10))):
-            time.sleep(0.1)
+            time.sleep(0.05)
 
     ''')
     result = testdir.runpython(v)
@@ -79,7 +79,7 @@ def test_rapid_updates(testdir):
         bar = progressbar.ProgressBar(term_width=60)
         for i in bar(range(100)):
             if i % 10 == 0:
-                time.sleep(0.1)
+                time.sleep(0.05)
 
     ''')
     result = testdir.runpython(v)
