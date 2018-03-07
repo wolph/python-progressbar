@@ -28,7 +28,7 @@ def test_list_example(testdir):
         r' 66% \(6 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
         r' 77% \(7 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
         r' 88% \(8 of 9\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r'100% \(9 of 9\) \|#+\| Elapsed Time: 0:00:00 Time: 0:00:00',
+        r'100% \(9 of 9\) \|#+\| Elapsed Time: 0:00:0[01] Time: 0:00:0[01]',
     ])
 
 
