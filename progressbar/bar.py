@@ -459,7 +459,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.finish()
 
     def __enter__(self):
-        return self.start()
+        return self
 
     # Create an alias so that Python 2.x won't complain about not being
     # an iterator.

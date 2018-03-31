@@ -1,3 +1,6 @@
+import six
+import time
+import progressbar
 pytest_plugins = 'pytester'
 
 
@@ -89,3 +92,36 @@ def test_rapid_updates(testdir):
         r' 91% \(91 of 100\)',
         r'100% \(100 of 100\)'
     ])
+
+
+def test_context_wrapper(testdir):
+    fd = six.StringIO()
+
+    with progressbar.ProgressBar(term_width=60, fd=fd) as bar:
+        bar._MINIMUM_UPDATE_INTERVAL = 0.0001
+        for _ in bar(range(5)):
+            time.sleep(0.001)
+
+    expected = (
+        '',
+        '                                                            ',
+        '',
+        'N/A% (0 of 5) |       | Elapsed Time: 0:00:00 ETA:  --:--:--',
+        '                                                            ',
+        '',
+        ' 20% (1 of 5) |#       | Elapsed Time: 0:00:00 ETA:  0:00:00',
+        '                                                            ',
+        '',
+        ' 40% (2 of 5) |###     | Elapsed Time: 0:00:00 ETA:  0:00:00',
+        '                                                            ',
+        '',
+        ' 60% (3 of 5) |####    | Elapsed Time: 0:00:00 ETA:  0:00:00',
+        '                                                            ',
+        '',
+        ' 80% (4 of 5) |######  | Elapsed Time: 0:00:00 ETA:  0:00:00',
+        '                                                            ',
+        '',
+        '100% (5 of 5) |########| Elapsed Time: 0:00:00 Time: 0:00:00',
+    )
+    for line, expected_line in zip(fd.getvalue().split('\r'), expected):
+        assert line == expected_line
