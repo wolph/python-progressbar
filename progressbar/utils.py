@@ -19,14 +19,17 @@ assert epoch
 
 class WrappingIO:
 
-    def __init__(self, target, capturing=False):
+    def __init__(self, target, capturing=False, listeners=set()):
         self.buffer = six.StringIO()
         self.target = target
         self.capturing = capturing
+        self.listeners = listeners
 
     def write(self, value):
         if self.capturing:
             self.buffer.write(value)
+            for listener in self.listeners:  # pragma: no branch
+                listener.update()
         else:
             self.target.write(value)
 
@@ -53,6 +56,7 @@ class StreamWrapper(object):
         self.wrapped_stderr = 0
         self.wrapped_excepthook = 0
         self.capturing = 0
+        self.listeners = set()
 
         if os.environ.get('WRAP_STDOUT'):  # pragma: no cover
             self.wrap_stdout()
@@ -60,11 +64,20 @@ class StreamWrapper(object):
         if os.environ.get('WRAP_STDERR'):  # pragma: no cover
             self.wrap_stderr()
 
-    def start_capturing(self):
+    def start_capturing(self, bar=None):
+        if bar:  # pragma: no branch
+            self.listeners.add(bar)
+
         self.capturing += 1
         self.update_capturing()
 
-    def stop_capturing(self):
+    def stop_capturing(self, bar=None):
+        if bar:  # pragma: no branch
+            try:
+                self.listeners.remove(bar)
+            except KeyError:
+                pass
+
         self.capturing -= 1
         self.update_capturing()
 
@@ -89,7 +102,8 @@ class StreamWrapper(object):
         self.wrap_excepthook()
 
         if not self.wrapped_stdout:
-            self.stdout = sys.stdout = WrappingIO(self.original_stdout)
+            self.stdout = sys.stdout = WrappingIO(self.original_stdout,
+                                                  listeners=self.listeners)
         self.wrapped_stdout += 1
 
         return sys.stdout
@@ -98,7 +112,8 @@ class StreamWrapper(object):
         self.wrap_excepthook()
 
         if not self.wrapped_stderr:
-            self.stderr = sys.stderr = WrappingIO(self.original_stderr)
+            self.stderr = sys.stderr = WrappingIO(self.original_stderr,
+                                                  listeners=self.listeners)
         self.wrapped_stderr += 1
 
         return sys.stderr

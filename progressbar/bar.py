@@ -136,7 +136,7 @@ class StdRedirectMixin(DefaultFdMixin):
         self.stdout = utils.streams.stdout
         self.stderr = utils.streams.stderr
 
-        utils.streams.start_capturing()
+        utils.streams.start_capturing(self)
         DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value=None):
@@ -146,7 +146,7 @@ class StdRedirectMixin(DefaultFdMixin):
 
     def finish(self, end='\n'):
         DefaultFdMixin.finish(self, end=end)
-        utils.streams.stop_capturing()
+        utils.streams.stop_capturing(self)
         if self.redirect_stdout:
             utils.streams.unwrap_stdout()
 
