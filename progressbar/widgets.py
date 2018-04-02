@@ -377,10 +377,8 @@ class AbsoluteETA(ETA):
             format_finished='Finished at: %(elapsed)s',
             format='Estimated finish time: %(eta)s',
             **kwargs):
-        Timer.__init__(self, **kwargs)
-        self.format_not_started = format_not_started
-        self.format_finished = format_finished
-        self.format = format
+        ETA.__init__(self, format_not_started=format_not_started,
+                     format_finished=format_finished, format=format, **kwargs)
 
 
 class AdaptiveETA(ETA, SamplesMixin):
@@ -697,8 +695,8 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
         self.mapping.update(mapping)
 
     def __call__(self, progress, data):
-        return FormatWidgetMixin.__call__(self, progress, self.mapping,
-                                          self.format)
+        return FormatWidgetMixin.__call__(
+            self, progress, self.mapping, self.format)
 
 
 class DynamicMessage(FormatWidgetMixin, WidgetBase):
