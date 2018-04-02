@@ -100,12 +100,11 @@ Wrapping an iterable
 ==============================================================================
 .. code:: python
 
-   import time
-   import progressbar
-
-   bar = progressbar.ProgressBar()
-   for i in bar(range(100)):
-       time.sleep(0.02)
+    import time
+    import progressbar
+ 
+    for i in progressbar.progressbar(range(100)):
+        time.sleep(0.02)
 
 Progressbars with logging
 ==============================================================================
@@ -120,7 +119,7 @@ environment variable, on Linux/Unix systems this can be done through:
 
 .. code:: sh
    
-   # WRAP_STDERR=true python your_script.py
+    # WRAP_STDERR=true python your_script.py
 
 If you need to flush manually while wrapping, you can do so using:
 
@@ -142,8 +141,7 @@ In most cases the following will work as well, as long as you initialize the
     progressbar.streams.wrap_stderr()
     logging.basicConfig()
 
-    bar = progressbar.ProgressBar()
-    for i in bar(range(10)):
+    for i in progressbar.progressbar(range(10)):
         logging.error('Got %d', i)
         time.sleep(0.2)
 
@@ -166,11 +164,9 @@ Combining progressbars with print output
     import time
     import progressbar
 
-    bar = progressbar.ProgressBar(redirect_stdout=True)
-    for i in range(100):
-        print 'Some text', i
+    for i in progressbar.progressbar(range(100), redirect_stdout=True):
+        print('Some text', i)
         time.sleep(0.1)
-        bar.update(i)
 
 Progressbar with unknown length
 ==============================================================================
@@ -191,12 +187,12 @@ Bar with custom widgets
     import time
     import progressbar
 
-    bar = progressbar.ProgressBar(widgets=[
+    widgets=[
         ' [', progressbar.Timer(), '] ',
         progressbar.Bar(),
         ' (', progressbar.ETA(), ') ',
-    ])
-    for i in bar(range(20)):
+    ]
+    for i in progressbar.progressbar(range(20), widgets=widgets):
         time.sleep(0.1)
 
 Bar with wide Chinese (or other multibyte) characters

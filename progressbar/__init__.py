@@ -1,6 +1,7 @@
 from datetime import date
 
 from .utils import streams
+from .shortcuts import progressbar
 
 from .widgets import (
     Timer,
@@ -39,6 +40,7 @@ from .__about__ import (
 
 __date__ = str(date.today())
 __all__ = [
+    'progressbar',
     'streams',
     'Timer',
     'ETA',

@@ -32,6 +32,12 @@ def example(fn):
 
 
 @example
+def shortcut_example():
+    for i in progressbar.progressbar(range(10)):
+        time.sleep(0.1)
+
+
+@example
 def with_example_stdout_redirection():
     with progressbar.ProgressBar(max_value=10, redirect_stdout=True) as p:
         for i in range(10):

@@ -225,7 +225,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     _DEFAULT_MAXVAL = base.UnknownLength
     _MINIMUM_UPDATE_INTERVAL = 0.05  # update up to a 20 times per second
 
-    def __init__(self, min_value=0, max_value=base.UnknownLength,
+    def __init__(self, min_value=0, max_value=None,
                  widgets=None, left_justify=True, initial_value=0,
                  poll_interval=None, widget_kwargs=None, custom_len=len,
                  max_error=True, **kwargs):
