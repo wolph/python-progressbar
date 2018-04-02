@@ -77,6 +77,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         if end:
             self.fd.write(end)
+
         self.fd.flush()
 
 

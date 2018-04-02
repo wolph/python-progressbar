@@ -28,8 +28,9 @@ class WrappingIO:
     def write(self, value):
         if self.capturing:
             self.buffer.write(value)
-            for listener in self.listeners:  # pragma: no branch
-                listener.update()
+            if '\n' in value:
+                for listener in self.listeners:  # pragma: no branch
+                    listener.update()
         else:
             self.target.write(value)
 
