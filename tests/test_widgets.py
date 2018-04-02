@@ -1,5 +1,15 @@
 import time
+import pytest
 import progressbar
+
+
+max_values = [None, 10, progressbar.UnknownLength]
+
+
+@pytest.fixture(autouse=True)
+def sleep_faster(monkeypatch):
+    sleep = time.sleep
+    monkeypatch.setattr('time.sleep', lambda t: sleep(t))
 
 
 def test_widgets_small_values():
@@ -23,7 +33,8 @@ def test_widgets_small_values():
     p.finish()
 
 
-def test_widgets_large_values():
+@pytest.mark.parametrize('max_value', [10 ** 6, 10 ** 8])
+def test_widgets_large_values(max_value):
     widgets = [
         'Test: ',
         progressbar.Percentage(),
@@ -36,7 +47,7 @@ def test_widgets_large_values():
         ' ',
         progressbar.FileTransferSpeed(),
     ]
-    p = progressbar.ProgressBar(widgets=widgets, max_value=10 ** 6).start()
+    p = progressbar.ProgressBar(widgets=widgets, max_value=max_value).start()
     for i in range(0, 10 ** 6, 10 ** 4):
         time.sleep(0.001)
         p.update(i + 1)
@@ -53,7 +64,8 @@ def test_format_widget():
         time.sleep(0.001)
 
 
-def test_all_widgets_small_values():
+@pytest.mark.parametrize('max_value', [None, 10])
+def test_all_widgets_small_values(max_value):
     widgets = [
         progressbar.Timer(),
         progressbar.ETA(),
@@ -65,7 +77,7 @@ def test_all_widgets_small_values():
         progressbar.AnimatedMarker(),
         progressbar.Counter(),
         progressbar.Percentage(),
-        progressbar.FormatLabel('%(value)d/%(max_value)d'),
+        progressbar.FormatLabel('%(value)d'),
         progressbar.SimpleProgress(),
         progressbar.Bar(),
         progressbar.ReverseBar(),
@@ -74,14 +86,15 @@ def test_all_widgets_small_values():
         progressbar.CurrentTime(microseconds=False),
         progressbar.CurrentTime(microseconds=True),
     ]
-    p = progressbar.ProgressBar(widgets=widgets, max_value=10)
+    p = progressbar.ProgressBar(widgets=widgets, max_value=max_value)
     for i in range(10):
         time.sleep(0.001)
         p.update(i + 1)
     p.finish()
 
 
-def test_all_widgets_large_values():
+@pytest.mark.parametrize('max_value', [10 ** 6, 10 ** 7])
+def test_all_widgets_large_values(max_value):
     widgets = [
         progressbar.Timer(),
         progressbar.ETA(),
@@ -98,10 +111,9 @@ def test_all_widgets_large_values():
         progressbar.Bar(fill=lambda progress, data, width: '#'),
         progressbar.ReverseBar(),
         progressbar.BouncingBar(),
+        progressbar.FormatCustomText('Custom %(text)s', dict(text='text')),
     ]
-    p = progressbar.ProgressBar(widgets=widgets, max_value=10 ** 6)
+    p = progressbar.ProgressBar(widgets=widgets, max_value=max_value)
     for i in range(0, 10 ** 6, 10 ** 4):
         time.sleep(0.001)
-        p.update(i + 1)
-    p.finish()
-
+        p.update(i)

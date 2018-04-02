@@ -1,5 +1,6 @@
 import six
 import time
+import pprint
 import progressbar
 pytest_plugins = 'pytester'
 
@@ -21,6 +22,7 @@ def test_list_example(testdir):
     ''')
     result = testdir.runpython(v)
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
+    pprint.pprint(result.stderr.lines)
     result.stderr.re_match_lines([
         r'N/A% \(0 of 9\) \|\s+\| Elapsed Time: 0:00:00 ETA:  --:--:--',
         r' 11% \(1 of 9\) \|\s+\| Elapsed Time: 0:00:00 ETA:  0:00:0[01]',
@@ -51,16 +53,19 @@ def test_generator_example(testdir):
 
     ''')
     result = testdir.runpython(v)
+    result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
+    pprint.pprint(result.stderr.lines)
     result.stderr.re_match_lines([
-        r'/ 0 Elapsed Time: 0:00:00',
-        r'- 1 Elapsed Time: 0:00:00',
-        r'\\ 2 Elapsed Time: 0:00:00',
-        r'\| 3 Elapsed Time: 0:00:00',
-        r'/ 4 Elapsed Time: 0:00:00',
-        r'- 5 Elapsed Time: 0:00:00',
-        r'\\ 6 Elapsed Time: 0:00:00',
-        r'\| 7 Elapsed Time: 0:00:00',
-        r'/ 8 Elapsed Time: 0:00:00',
+        '/ |#                               | 0 Elapsed Time: 0:00:00',
+        '- | #                              | 1 Elapsed Time: 0:00:00',
+        '\\ |  #                             | 2 Elapsed Time: 0:00:00',
+        '| |   #                            | 3 Elapsed Time: 0:00:00',
+        '/ |    #                           | 4 Elapsed Time: 0:00:00',
+        '- |     #                          | 5 Elapsed Time: 0:00:00',
+        '\\ |      #                         | 6 Elapsed Time: 0:00:00',
+        '| |       #                        | 7 Elapsed Time: 0:00:00',
+        '/ |        #                       | 8 Elapsed Time: 0:00:00',
+        '| |         #                      | 8 Elapsed Time: 0:00:00',
     ])
 
 
@@ -79,6 +84,7 @@ def test_rapid_updates(testdir):
 
     ''')
     result = testdir.runpython(v)
+    pprint.pprint(result.stderr.lines)
     result.stderr.re_match_lines([
         r'  1% \(1 of 100\)',
         r' 11% \(11 of 100\)',
@@ -99,7 +105,7 @@ def test_context_wrapper(testdir):
 
     with progressbar.ProgressBar(term_width=60, fd=fd) as bar:
         bar._MINIMUM_UPDATE_INTERVAL = 0.0001
-        for _ in bar(range(5)):
+        for _ in bar(list(range(5))):
             time.sleep(0.001)
 
     expected = (
