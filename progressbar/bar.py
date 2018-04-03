@@ -71,8 +71,13 @@ class DefaultFdMixin(ProgressBarMixinBase):
     def finish(self, *args, **kwargs):  # pragma: no cover
         end = kwargs.pop('end', '\n')
         ProgressBarMixinBase.finish(self, *args, **kwargs)
+
+        if self._finished:
+            return
+
         if end:
             self.fd.write(end)
+
         self.fd.flush()
 
 
@@ -132,7 +137,7 @@ class StdRedirectMixin(DefaultFdMixin):
         self.stdout = utils.streams.stdout
         self.stderr = utils.streams.stderr
 
-        utils.streams.start_capturing()
+        utils.streams.start_capturing(self)
         DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value=None):
@@ -142,7 +147,7 @@ class StdRedirectMixin(DefaultFdMixin):
 
     def finish(self, end='\n'):
         DefaultFdMixin.finish(self, end=end)
-        utils.streams.stop_capturing()
+        utils.streams.stop_capturing(self)
         if self.redirect_stdout:
             utils.streams.unwrap_stdout()
 
@@ -217,13 +222,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                         update
     '''
 
-    _DEFAULT_MAXVAL = 100
+    _DEFAULT_MAXVAL = base.UnknownLength
     _MINIMUM_UPDATE_INTERVAL = 0.05  # update up to a 20 times per second
 
-    def __init__(self, min_value=0, max_value=None, widgets=None,
-                 left_justify=True, initial_value=0, poll_interval=None,
-                 widget_kwargs=None, custom_len=len, max_error=True,
-                 **kwargs):
+    def __init__(self, min_value=0, max_value=None,
+                 widgets=None, left_justify=True, initial_value=0,
+                 poll_interval=None, widget_kwargs=None, custom_len=len,
+                 max_error=True, **kwargs):
         '''
         Initializes a progress bar with sane defaults
         '''
@@ -418,6 +423,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         else:
             return [
                 widgets.AnimatedMarker(**self.widget_kwargs),
+                ' ', widgets.BouncingBar(**self.widget_kwargs),
                 ' ', widgets.Counter(**self.widget_kwargs),
                 ' ', widgets.Timer(**self.widget_kwargs),
             ]
@@ -427,7 +433,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if max_value is None:
             try:
                 self.max_value = len(iterable)
-            except TypeError:
+            except TypeError:  # pragma: no cover
                 if self.max_value is None:
                     self.max_value = base.UnknownLength
         else:
@@ -455,7 +461,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.finish()
 
     def __enter__(self):
-        return self.start()
+        return self
 
     # Create an alias so that Python 2.x won't complain about not being
     # an iterator.
@@ -602,13 +608,19 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if init:
             self.init()
 
+        # Prevent multiple starts
+        if self.start_time is not None:  # pragma: no cover
+            return self
+
+        if max_value is not None:
+            self.max_value = max_value
+
+        if self.max_value is None:
+            self.max_value = self._DEFAULT_MAXVAL
+
         StdRedirectMixin.start(self, max_value=max_value)
         ResizableMixin.start(self, max_value=max_value)
         ProgressBarBase.start(self, max_value=max_value)
-
-        self.max_value = max_value or self.max_value
-        if self.max_value is None:
-            self.max_value = self._DEFAULT_MAXVAL
 
         # Constructing the default widgets is only done when we know max_value
         if self.widgets is None:
@@ -659,9 +671,6 @@ class DataTransferBar(ProgressBar):
 
     This assumes that the values its given are numbers of bytes.
     '''
-    # Base class defaults to 100, but that makes no sense here
-    _DEFAULT_MAXVAL = base.UnknownLength
-
     def default_widgets(self):
         if self.max_value:
             return [

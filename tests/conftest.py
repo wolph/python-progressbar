@@ -1,3 +1,4 @@
+import time
 import pytest
 import progressbar
 import logging
@@ -21,4 +22,10 @@ def small_interval(monkeypatch):
     # Remove the update limit for tests by default
     monkeypatch.setattr(
         progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 0.000001)
+
+
+@pytest.fixture(autouse=True)
+def sleep_faster(monkeypatch):
+    sleep = time.sleep
+    monkeypatch.setattr('time.sleep', lambda t: sleep(t / 1e6))
 

@@ -8,6 +8,7 @@ Welcome to Progress Bar's documentation!
    examples
    contributing
    installation
+   progressbar.shortcuts
    progressbar.bar
    progressbar.base
    progressbar.utils
