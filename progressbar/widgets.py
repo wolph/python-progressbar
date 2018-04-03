@@ -273,8 +273,11 @@ class SamplesMixin(TimeSensitiveWidgetBase):
             sample_values.append(progress.value)
 
             if isinstance(self.samples, datetime.timedelta):
-                begin = progress.last_update_time - self.samples
-                while sample_times[2:] and begin > sample_times[0]:
+                begin_time = progress.last_update_time - self.samples
+                begin_value = sample_values[0]
+                while (sample_times[2:]
+                       and begin_time > sample_times[0]
+                       and begin_value > sample_values[0]):
                     sample_times.pop(0)
                     sample_values.pop(0)
             else:
@@ -395,7 +398,6 @@ class AdaptiveETA(ETA, SamplesMixin):
     def __call__(self, progress, data):
         elapsed, value = SamplesMixin.__call__(self, progress, data,
                                                delta=True)
-
         if not elapsed:
             value = None
             elapsed = 0
