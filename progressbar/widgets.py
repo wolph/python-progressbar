@@ -299,9 +299,9 @@ class ETA(Timer):
     def __init__(
             self,
             format_not_started='ETA:  --:--:--',
-            format_finished='Time: %(elapsed)s',
-            format='ETA:  %(eta)s',
-            format_zero='ETA:  0:00:00',
+            format_finished='Time: %(elapsed)8s',
+            format='ETA:  %(eta)8s',
+            format_zero='ETA:  00:00:00',
             format_NA='ETA:      N/A',
             **kwargs):
 
