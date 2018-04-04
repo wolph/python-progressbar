@@ -75,6 +75,7 @@ if __name__ == '__main__':
                 'pytest-cov>=2.5.1',
                 'pytest-flakes>=2.0.0',
                 'pytest-pep8>=1.0.6',
+                'freezegun>=0.3.10',
                 'sphinx>=1.7.1',
             ],
         },
