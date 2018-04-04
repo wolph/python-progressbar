@@ -273,11 +273,11 @@ class SamplesMixin(TimeSensitiveWidgetBase):
             sample_values.append(progress.value)
 
             if isinstance(self.samples, datetime.timedelta):
-                begin_time = progress.last_update_time - self.samples
-                begin_value = sample_values[0]
-                while (sample_times[2:]
-                       and begin_time > sample_times[0]
-                       and begin_value > sample_values[0]):
+                minimum_time = progress.last_update_time - self.samples
+                minimum_value = sample_values[-1]
+                while (sample_times[2:] and
+                       minimum_time > sample_times[1] and
+                       minimum_value > sample_values[1]):
                     sample_times.pop(0)
                     sample_values.pop(0)
             else:
