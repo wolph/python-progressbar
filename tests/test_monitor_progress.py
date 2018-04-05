@@ -22,18 +22,20 @@ def test_list_example(testdir):
             fake_time.tick(1)
     ''')
     result = testdir.runpython(v)
-    result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
-    pprint.pprint(result.stderr.lines)
-    result.stderr.re_match_lines([
-        'N/A% (0 of 9) |            | Elapsed Time: 2:00:00 ETA:  --:--:--',
-        ' 11% (1 of 9) |#           | Elapsed Time: 2:00:01 ETA:   0:00:08',
-        ' 22% (2 of 9) |##          | Elapsed Time: 2:00:02 ETA:   0:00:07',
-        ' 33% (3 of 9) |####        | Elapsed Time: 2:00:03 ETA:   0:00:06',
-        ' 44% (4 of 9) |#####       | Elapsed Time: 2:00:04 ETA:   0:00:05',
-        ' 55% (5 of 9) |######      | Elapsed Time: 2:00:05 ETA:   0:00:04',
-        ' 66% (6 of 9) |########    | Elapsed Time: 2:00:06 ETA:   0:00:03',
-        ' 77% (7 of 9) |#########   | Elapsed Time: 2:00:07 ETA:   0:00:02',
-        ' 88% (8 of 9) |##########  | Elapsed Time: 2:00:08 ETA:   0:00:01',
+    result.stderr.lines = [l.rstrip() for l in result.stderr.lines
+                           if l.strip()]
+    pprint.pprint(result.stderr.lines, width=70)
+    result.stderr.fnmatch_lines([
+        'N/A% (0 of 9) |            | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        ' 11% (1 of 9) |#           | Elapsed Time: ?:00:01 ETA:   ?:00:08',
+        ' 22% (2 of 9) |##          | Elapsed Time: ?:00:02 ETA:   ?:00:07',
+        ' 33% (3 of 9) |####        | Elapsed Time: ?:00:03 ETA:   ?:00:06',
+        ' 44% (4 of 9) |#####       | Elapsed Time: ?:00:04 ETA:   ?:00:05',
+        ' 55% (5 of 9) |######      | Elapsed Time: ?:00:05 ETA:   ?:00:04',
+        ' 66% (6 of 9) |########    | Elapsed Time: ?:00:06 ETA:   ?:00:03',
+        ' 77% (7 of 9) |#########   | Elapsed Time: ?:00:07 ETA:   ?:00:02',
+        ' 88% (8 of 9) |##########  | Elapsed Time: ?:00:08 ETA:   ?:00:01',
+        '100% (9 of 9) |############| Elapsed Time: ?:00:09 Time:  ?:00:09',
     ])
 
 
@@ -57,12 +59,13 @@ def test_generator_example(testdir):
     ''')
     result = testdir.runpython(v)
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
-    pprint.pprint(result.stderr.lines)
+    pprint.pprint(result.stderr.lines, width=70)
 
     lines = []
     for i in range(9):
-        lines.append(r'[/\\|-] \|\s*#\s*\| %(i)d Elapsed Time: 2:00:%(i)02d' %
-                     dict(i=i))
+        lines.append(
+            r'[/\\|\-]\s+\|\s*#\s*\| %(i)d Elapsed Time: \d:00:%(i)02d' %
+            dict(i=i))
 
     result.stderr.re_match_lines(lines)
 
@@ -86,19 +89,19 @@ def test_rapid_updates(testdir):
     ''')
     result = testdir.runpython(v)
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
-    pprint.pprint(result.stderr.lines)
-    result.stderr.re_match_lines([
-        'N/A% (0 of 10) |      | Elapsed Time: 2:00:00 ETA:  --:--:--',
-        ' 10% (1 of 10) |      | Elapsed Time: 2:00:01 ETA:   0:00:09',
-        ' 20% (2 of 10) |#     | Elapsed Time: 2:00:01 ETA:   0:00:08',
-        ' 30% (3 of 10) |#     | Elapsed Time: 2:00:02 ETA:   0:00:04',
-        ' 40% (4 of 10) |##    | Elapsed Time: 2:00:02 ETA:   0:00:04',
-        ' 50% (5 of 10) |###   | Elapsed Time: 2:00:03 ETA:   0:00:03',
-        ' 60% (6 of 10) |###   | Elapsed Time: 2:00:03 ETA:   0:00:02',
-        ' 70% (7 of 10) |####  | Elapsed Time: 2:00:04 ETA:   0:00:01',
-        ' 80% (8 of 10) |####  | Elapsed Time: 2:00:04 ETA:   0:00:01',
-        ' 90% (9 of 10) |##### | Elapsed Time: 2:00:05 ETA:   0:00:00',
-        '100% (10 of 10) |#####| Elapsed Time: 2:00:05 Time:  2:00:05',
+    pprint.pprint(result.stderr.lines, width=70)
+    result.stderr.fnmatch_lines([
+        'N/A% (0 of 10) |      | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        ' 10% (1 of 10) |      | Elapsed Time: ?:00:01 ETA:   ?:00:09',
+        ' 20% (2 of 10) |#     | Elapsed Time: ?:00:01 ETA:   ?:00:08',
+        ' 30% (3 of 10) |#     | Elapsed Time: ?:00:02 ETA:   ?:00:04',
+        ' 40% (4 of 10) |##    | Elapsed Time: ?:00:02 ETA:   ?:00:04',
+        ' 50% (5 of 10) |###   | Elapsed Time: ?:00:03 ETA:   ?:00:03',
+        ' 60% (6 of 10) |###   | Elapsed Time: ?:00:03 ETA:   ?:00:02',
+        ' 70% (7 of 10) |####  | Elapsed Time: ?:00:04 ETA:   ?:00:01',
+        ' 80% (8 of 10) |####  | Elapsed Time: ?:00:04 ETA:   ?:00:01',
+        ' 90% (9 of 10) |##### | Elapsed Time: ?:00:05 ETA:   ?:00:00',
+        '100% (10 of 10) |#####| Elapsed Time: ?:00:05 Time:  ?:00:05',
     ])
 
 
@@ -117,12 +120,12 @@ def test_context_wrapper(testdir):
 
     result = testdir.runpython(v)
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
-    pprint.pprint(result.stderr.lines)
-    result.stderr.re_match_lines([
-        'N/A% (0 of 5) |       | Elapsed Time: 2:00:00 ETA:  --:--:--',
-        ' 20% (1 of 5) |#      | Elapsed Time: 2:00:01 ETA:   0:00:04',
-        ' 40% (2 of 5) |##     | Elapsed Time: 2:00:02 ETA:   0:00:03',
-        ' 60% (3 of 5) |####   | Elapsed Time: 2:00:03 ETA:   0:00:02',
-        ' 80% (4 of 5) |#####  | Elapsed Time: 2:00:04 ETA:   0:00:01',
-        '100% (5 of 5) |#######| Elapsed Time: 2:00:05 Time:  2:00:05',
+    pprint.pprint(result.stderr.lines, width=70)
+    result.stderr.fnmatch_lines([
+        'N/A% (0 of 5) |       | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        ' 20% (1 of 5) |#      | Elapsed Time: ?:00:01 ETA:   ?:00:04',
+        ' 40% (2 of 5) |##     | Elapsed Time: ?:00:02 ETA:   ?:00:03',
+        ' 60% (3 of 5) |####   | Elapsed Time: ?:00:03 ETA:   ?:00:02',
+        ' 80% (4 of 5) |#####  | Elapsed Time: ?:00:04 ETA:   ?:00:01',
+        '100% (5 of 5) |#######| Elapsed Time: ?:00:05 Time:  ?:00:05',
     ])
