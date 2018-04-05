@@ -84,8 +84,10 @@ def test_rapid_updates(testdir):
         bar = progressbar.ProgressBar(term_width=60)
         bar._MINIMUM_UPDATE_INTERVAL = 1e-9
         for i in bar(range(10)):
-            if i % 2 == 0:
+            if i < 5:
                 fake_time.tick(1)
+            else:
+                fake_time.tick(2)
     ''')
     result = testdir.runpython(v)
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
@@ -93,15 +95,15 @@ def test_rapid_updates(testdir):
     result.stderr.fnmatch_lines([
         'N/A% (0 of 10) |      | Elapsed Time: ?:00:00 ETA:  --:--:--',
         ' 10% (1 of 10) |      | Elapsed Time: ?:00:01 ETA:   ?:00:09',
-        ' 20% (2 of 10) |#     | Elapsed Time: ?:00:01 ETA:   ?:00:08',
-        ' 30% (3 of 10) |#     | Elapsed Time: ?:00:02 ETA:   ?:00:04',
-        ' 40% (4 of 10) |##    | Elapsed Time: ?:00:02 ETA:   ?:00:04',
-        ' 50% (5 of 10) |###   | Elapsed Time: ?:00:03 ETA:   ?:00:03',
-        ' 60% (6 of 10) |###   | Elapsed Time: ?:00:03 ETA:   ?:00:02',
-        ' 70% (7 of 10) |####  | Elapsed Time: ?:00:04 ETA:   ?:00:01',
-        ' 80% (8 of 10) |####  | Elapsed Time: ?:00:04 ETA:   ?:00:01',
-        ' 90% (9 of 10) |##### | Elapsed Time: ?:00:05 ETA:   ?:00:00',
-        '100% (10 of 10) |#####| Elapsed Time: ?:00:05 Time:  ?:00:05',
+        ' 20% (2 of 10) |#     | Elapsed Time: ?:00:02 ETA:   ?:00:08',
+        ' 30% (3 of 10) |#     | Elapsed Time: ?:00:03 ETA:   ?:00:07',
+        ' 40% (4 of 10) |##    | Elapsed Time: ?:00:04 ETA:   ?:00:06',
+        ' 50% (5 of 10) |###   | Elapsed Time: ?:00:05 ETA:   ?:00:05',
+        ' 60% (6 of 10) |###   | Elapsed Time: ?:00:07 ETA:   ?:00:06',
+        ' 70% (7 of 10) |####  | Elapsed Time: ?:00:09 ETA:   ?:00:06',
+        ' 80% (8 of 10) |####  | Elapsed Time: ?:00:11 ETA:   ?:00:04',
+        ' 90% (9 of 10) |##### | Elapsed Time: ?:00:13 ETA:   ?:00:02',
+        '100% (10 of 10) |#####| Elapsed Time: ?:00:15 Time:  ?:00:15'
     ])
 
 
