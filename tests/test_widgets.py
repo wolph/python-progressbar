@@ -6,12 +6,6 @@ import progressbar
 max_values = [None, 10, progressbar.UnknownLength]
 
 
-@pytest.fixture(autouse=True)
-def sleep_faster(monkeypatch):
-    sleep = time.sleep
-    monkeypatch.setattr('time.sleep', lambda t: sleep(t))
-
-
 def test_widgets_small_values():
     widgets = [
         'Test: ',
@@ -28,7 +22,7 @@ def test_widgets_small_values():
     p = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
     p.update(0)
     for i in range(10):
-        time.sleep(0.001)
+        time.sleep(1)
         p.update(i + 1)
     p.finish()
 
@@ -49,7 +43,7 @@ def test_widgets_large_values(max_value):
     ]
     p = progressbar.ProgressBar(widgets=widgets, max_value=max_value).start()
     for i in range(0, 10 ** 6, 10 ** 4):
-        time.sleep(0.001)
+        time.sleep(1)
         p.update(i + 1)
     p.finish()
 
@@ -61,7 +55,7 @@ def test_format_widget():
 
     p = progressbar.ProgressBar(widgets=widgets)
     for i in p(range(10)):
-        time.sleep(0.001)
+        time.sleep(1)
 
 
 @pytest.mark.parametrize('max_value', [None, 10])
@@ -88,7 +82,7 @@ def test_all_widgets_small_values(max_value):
     ]
     p = progressbar.ProgressBar(widgets=widgets, max_value=max_value)
     for i in range(10):
-        time.sleep(0.001)
+        time.sleep(1)
         p.update(i + 1)
     p.finish()
 
@@ -114,6 +108,10 @@ def test_all_widgets_large_values(max_value):
         progressbar.FormatCustomText('Custom %(text)s', dict(text='text')),
     ]
     p = progressbar.ProgressBar(widgets=widgets, max_value=max_value)
+    p.update()
+    time.sleep(1)
+    p.update()
+
     for i in range(0, 10 ** 6, 10 ** 4):
-        time.sleep(0.001)
+        time.sleep(1)
         p.update(i)
