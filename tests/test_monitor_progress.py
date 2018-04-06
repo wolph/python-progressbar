@@ -1,3 +1,5 @@
+import pprint
+
 pytest_plugins = 'pytester'
 
 
@@ -7,29 +9,33 @@ def test_list_example(testdir):
         best capture its stderr. We expect to see match_lines in order in the
         output.  This test is just a sanity check to ensure that the progress
         bar progresses from 1 to 10, it does not make sure that the '''
+
     v = testdir.makepyfile('''
-        import time
-        import progressbar
+    import time
+    import freezegun
+    import progressbar
 
-        bar = progressbar.ProgressBar(term_width=60)
-        for i in bar(list(range(10))):
-            time.sleep(0.1)
-
+    with freezegun.freeze_time() as fake_time:
+        bar = progressbar.ProgressBar(term_width=65)
+        bar._MINIMUM_UPDATE_INTERVAL = 1e-9
+        for i in bar(list(range(9))):
+            fake_time.tick(1)
     ''')
     result = testdir.runpython(v)
-    result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
-    result.stderr.re_match_lines([
-        r'N/A% \(0 of 10\) \|\s+\| Elapsed Time: 0:00:00 ETA:  --:--:--',
-        r' 10% \(1 of 10\) \|\s+\| Elapsed Time: 0:00:00 ETA:  0:00:0[01]',
-        r' 20% \(2 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 30% \(3 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 40% \(4 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 50% \(5 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 60% \(6 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 70% \(7 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 80% \(8 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r' 90% \(9 of 10\) \|#+\s+\| Elapsed Time: 0:00:00 ETA:  0:00:00',
-        r'100% \(10 of 10\) \|#+\| Elapsed Time: 0:00:01 Time: 0:00:0',
+    result.stderr.lines = [l.rstrip() for l in result.stderr.lines
+                           if l.strip()]
+    pprint.pprint(result.stderr.lines, width=70)
+    result.stderr.fnmatch_lines([
+        'N/A% (0 of 9) |            | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        ' 11% (1 of 9) |#           | Elapsed Time: ?:00:01 ETA:   ?:00:08',
+        ' 22% (2 of 9) |##          | Elapsed Time: ?:00:02 ETA:   ?:00:07',
+        ' 33% (3 of 9) |####        | Elapsed Time: ?:00:03 ETA:   ?:00:06',
+        ' 44% (4 of 9) |#####       | Elapsed Time: ?:00:04 ETA:   ?:00:05',
+        ' 55% (5 of 9) |######      | Elapsed Time: ?:00:05 ETA:   ?:00:04',
+        ' 66% (6 of 9) |########    | Elapsed Time: ?:00:06 ETA:   ?:00:03',
+        ' 77% (7 of 9) |#########   | Elapsed Time: ?:00:07 ETA:   ?:00:02',
+        ' 88% (8 of 9) |##########  | Elapsed Time: ?:00:08 ETA:   ?:00:01',
+        '100% (9 of 9) |############| Elapsed Time: ?:00:09 Time:  ?:00:09',
     ])
 
 
@@ -39,60 +45,89 @@ def test_generator_example(testdir):
         best capture its stderr. We expect to see match_lines in order in the
         output.  This test is just a sanity check to ensure that the progress
         bar progresses from 1 to 10, it does not make sure that the '''
+
     v = testdir.makepyfile('''
-        import time
-        import progressbar
+    import time
+    import freezegun
+    import progressbar
 
+    with freezegun.freeze_time() as fake_time:
         bar = progressbar.ProgressBar(term_width=60)
-        for i in bar(iter(range(10))):
-            time.sleep(0.1)
-
+        bar._MINIMUM_UPDATE_INTERVAL = 1e-9
+        for i in bar(iter(range(9))):
+            fake_time.tick(1)
     ''')
     result = testdir.runpython(v)
-    print('##################')
-    import pprint
-    pprint.pprint([l.strip() for l in result.stderr.lines if l.strip()])
-    print('##################')
-    result.stderr.re_match_lines([
-        r'/ 0 Elapsed Time: 0:00:00',
-        r'- 1 Elapsed Time: 0:00:00',
-        r'\\ 2 Elapsed Time: 0:00:00',
-        r'\| 3 Elapsed Time: 0:00:00',
-        r'/ 4 Elapsed Time: 0:00:00',
-        r'- 5 Elapsed Time: 0:00:00',
-        r'\\ 6 Elapsed Time: 0:00:00',
-        r'\| 7 Elapsed Time: 0:00:00',
-        r'/ 8 Elapsed Time: 0:00:00',
-        r'- 9 Elapsed Time: 0:00:00',
-        r'\| 9 Elapsed Time: 0:00:0[01]',
-    ])
+    result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
+    pprint.pprint(result.stderr.lines, width=70)
+
+    lines = []
+    for i in range(9):
+        lines.append(
+            r'[/\\|\-]\s+\|\s*#\s*\| %(i)d Elapsed Time: \d:00:%(i)02d' %
+            dict(i=i))
+
+    result.stderr.re_match_lines(lines)
 
 
 def test_rapid_updates(testdir):
     ''' Run some example code that updates 10 times, then sleeps .1 seconds,
         this is meant to test that the progressbar progresses normally with
         this sample code, since there were issues with it in the past '''
+
     v = testdir.makepyfile('''
-        import time
-        import progressbar
+    import time
+    import freezegun
+    import progressbar
 
+    with freezegun.freeze_time() as fake_time:
         bar = progressbar.ProgressBar(term_width=60)
-        for i in bar(range(100)):
-            if i % 10 == 0:
-                time.sleep(0.1)
-
+        bar._MINIMUM_UPDATE_INTERVAL = 1e-9
+        for i in bar(range(10)):
+            if i < 5:
+                fake_time.tick(1)
+            else:
+                fake_time.tick(2)
     ''')
     result = testdir.runpython(v)
-    result.stderr.re_match_lines([
-        r'  1% \(1 of 100\)',
-        r' 11% \(11 of 100\)',
-        r' 21% \(21 of 100\)',
-        r' 31% \(31 of 100\)',
-        r' 41% \(41 of 100\)',
-        r' 51% \(51 of 100\)',
-        r' 61% \(61 of 100\)',
-        r' 71% \(71 of 100\)',
-        r' 81% \(81 of 100\)',
-        r' 91% \(91 of 100\)',
-        r'100% \(100 of 100\)'
+    result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
+    pprint.pprint(result.stderr.lines, width=70)
+    result.stderr.fnmatch_lines([
+        'N/A% (0 of 10) |      | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        ' 10% (1 of 10) |      | Elapsed Time: ?:00:01 ETA:   ?:00:09',
+        ' 20% (2 of 10) |#     | Elapsed Time: ?:00:02 ETA:   ?:00:08',
+        ' 30% (3 of 10) |#     | Elapsed Time: ?:00:03 ETA:   ?:00:07',
+        ' 40% (4 of 10) |##    | Elapsed Time: ?:00:04 ETA:   ?:00:06',
+        ' 50% (5 of 10) |###   | Elapsed Time: ?:00:05 ETA:   ?:00:05',
+        ' 60% (6 of 10) |###   | Elapsed Time: ?:00:07 ETA:   ?:00:06',
+        ' 70% (7 of 10) |####  | Elapsed Time: ?:00:09 ETA:   ?:00:06',
+        ' 80% (8 of 10) |####  | Elapsed Time: ?:00:11 ETA:   ?:00:04',
+        ' 90% (9 of 10) |##### | Elapsed Time: ?:00:13 ETA:   ?:00:02',
+        '100% (10 of 10) |#####| Elapsed Time: ?:00:15 Time:  ?:00:15'
+    ])
+
+
+def test_context_wrapper(testdir):
+    v = testdir.makepyfile('''
+    import time
+    import freezegun
+    import progressbar
+
+    with freezegun.freeze_time() as fake_time:
+        with progressbar.ProgressBar(term_width=60) as bar:
+            bar._MINIMUM_UPDATE_INTERVAL = 1e-9
+            for _ in bar(list(range(5))):
+                fake_time.tick(1)
+    ''')
+
+    result = testdir.runpython(v)
+    result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
+    pprint.pprint(result.stderr.lines, width=70)
+    result.stderr.fnmatch_lines([
+        'N/A% (0 of 5) |       | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        ' 20% (1 of 5) |#      | Elapsed Time: ?:00:01 ETA:   ?:00:04',
+        ' 40% (2 of 5) |##     | Elapsed Time: ?:00:02 ETA:   ?:00:03',
+        ' 60% (3 of 5) |####   | Elapsed Time: ?:00:03 ETA:   ?:00:02',
+        ' 80% (4 of 5) |#####  | Elapsed Time: ?:00:04 ETA:   ?:00:01',
+        '100% (5 of 5) |#######| Elapsed Time: ?:00:05 Time:  ?:00:05',
     ])

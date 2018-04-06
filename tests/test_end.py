@@ -31,7 +31,7 @@ def test_end():
 
 
 def test_end_100(monkeypatch):
-    progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL = 0.1
+    assert progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL == 0.1
     p = progressbar.ProgressBar(
         widgets=[progressbar.Percentage(), progressbar.Bar()],
         max_value=103,
@@ -49,4 +49,3 @@ def test_end_100(monkeypatch):
 
     data = p.data()
     assert data['percentage'] >= 100.
-

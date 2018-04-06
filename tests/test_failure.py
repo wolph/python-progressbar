@@ -1,3 +1,4 @@
+import time
 import pytest
 import progressbar
 
@@ -20,6 +21,7 @@ def test_no_max_value():
     p = progressbar.ProgressBar()
     p.start()
     for i in range(5):
+        time.sleep(1)
         p.update(i)
 
 
@@ -27,6 +29,7 @@ def test_correct_max_value():
     '''Looping up to 5 when max_value is 10? No problem'''
     p = progressbar.ProgressBar(max_value=10)
     for i in range(5):
+        time.sleep(1)
         p.update(i)
 
 
@@ -62,7 +65,7 @@ def test_changing_max_value():
     '''Changing max_value? No problem'''
     p = progressbar.ProgressBar(max_value=10)(range(20), max_value=20)
     for i in p:
-        pass
+        time.sleep(1)
 
 
 def test_backwards():
@@ -77,10 +80,12 @@ def test_incorrect_max_value():
     '''Looping up to 10 when max_value is 5? This is madness!'''
     p = progressbar.ProgressBar(max_value=5)
     for i in range(5):
+        time.sleep(1)
         p.update(i)
 
     with pytest.raises(ValueError):
         for i in range(5, 10):
+            time.sleep(1)
             p.update(i)
 
 
@@ -98,6 +103,7 @@ def test_unexpected_update_keyword_arg():
     p = progressbar.ProgressBar(max_value=10)
     with pytest.raises(TypeError):
         for i in range(10):
+            time.sleep(1)
             p.update(i, foo=10)
 
 

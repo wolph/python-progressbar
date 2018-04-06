@@ -1,6 +1,8 @@
+import time
 import pytest
-import progressbar
 import logging
+import freezegun
+import progressbar
 
 
 LOG_LEVELS = {
@@ -20,5 +22,12 @@ def pytest_configure(config):
 def small_interval(monkeypatch):
     # Remove the update limit for tests by default
     monkeypatch.setattr(
-        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 0.000001)
+        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1e-6)
 
+
+@pytest.fixture(autouse=True)
+def sleep_faster(monkeypatch):
+    with freezegun.freeze_time() as fake_time:
+        monkeypatch.setattr('time.sleep', fake_time.tick)
+        monkeypatch.setattr('timeit.default_timer', time.time)
+        yield

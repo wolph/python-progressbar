@@ -15,6 +15,8 @@ script:
 - python examples.py
 after_success:
 - coveralls
+- pip install codecov
+- codecov
 before_deploy: "python setup.py sdist bdist_wheel"
 deploy:
   provider: releases

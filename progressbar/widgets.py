@@ -273,8 +273,11 @@ class SamplesMixin(TimeSensitiveWidgetBase):
             sample_values.append(progress.value)
 
             if isinstance(self.samples, datetime.timedelta):
-                begin = progress.last_update_time - self.samples
-                while sample_times[2:] and begin > sample_times[0]:
+                minimum_time = progress.last_update_time - self.samples
+                minimum_value = sample_values[-1]
+                while (sample_times[2:] and
+                       minimum_time > sample_times[1] and
+                       minimum_value > sample_values[1]):
                     sample_times.pop(0)
                     sample_values.pop(0)
             else:
@@ -299,9 +302,9 @@ class ETA(Timer):
     def __init__(
             self,
             format_not_started='ETA:  --:--:--',
-            format_finished='Time: %(elapsed)s',
-            format='ETA:  %(eta)s',
-            format_zero='ETA:  0:00:00',
+            format_finished='Time: %(elapsed)8s',
+            format='ETA:  %(eta)8s',
+            format_zero='ETA:  00:00:00',
             format_NA='ETA:      N/A',
             **kwargs):
 
@@ -377,10 +380,8 @@ class AbsoluteETA(ETA):
             format_finished='Finished at: %(elapsed)s',
             format='Estimated finish time: %(eta)s',
             **kwargs):
-        Timer.__init__(self, **kwargs)
-        self.format_not_started = format_not_started
-        self.format_finished = format_finished
-        self.format = format
+        ETA.__init__(self, format_not_started=format_not_started,
+                     format_finished=format_finished, format=format, **kwargs)
 
 
 class AdaptiveETA(ETA, SamplesMixin):
@@ -397,7 +398,6 @@ class AdaptiveETA(ETA, SamplesMixin):
     def __call__(self, progress, data):
         elapsed, value = SamplesMixin.__call__(self, progress, data,
                                                delta=True)
-
         if not elapsed:
             value = None
             elapsed = 0
@@ -697,8 +697,8 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
         self.mapping.update(mapping)
 
     def __call__(self, progress, data):
-        return FormatWidgetMixin.__call__(self, progress, self.mapping,
-                                          self.format)
+        return FormatWidgetMixin.__call__(
+            self, progress, self.mapping, self.format)
 
 
 class DynamicMessage(FormatWidgetMixin, WidgetBase):

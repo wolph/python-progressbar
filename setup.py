@@ -31,24 +31,6 @@ if sys.version_info < (2, 7):
     tests_reqs += ['unittest2']
 
 
-def parse_requirements(filename):
-    '''Read the requirements from the filename, supports includes'''
-    requirements = []
-
-    if os.path.isfile(filename):
-        with open(filename) as fh:
-            for line in fh:
-                line = line.strip()
-                if line.startswith('-r'):
-                    requirements += parse_requirements(
-                        os.path.join(os.path.dirname(filename),
-                                     line.split(' ', 1)[-1]))
-                elif line and not line.startswith('#'):
-                    requirements.append(line)
-
-    return requirements
-
-
 if sys.argv[-1] == 'info':
     for k, v in about.items():
         print('%s: %s' % (k, v))
@@ -84,7 +66,7 @@ if __name__ == '__main__':
         zip_safe=False,
         extras_require={
             'docs': [
-                'sphinx>=1.7.1',
+                'sphinx<1.7.0',
             ],
             'tests': [
                 'flake8>=3.5.0',
@@ -93,6 +75,7 @@ if __name__ == '__main__':
                 'pytest-cov>=2.5.1',
                 'pytest-flakes>=2.0.0',
                 'pytest-pep8>=1.0.6',
+                'freezegun>=0.3.10',
                 'sphinx>=1.7.1',
             ],
         },
