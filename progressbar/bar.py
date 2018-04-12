@@ -69,11 +69,11 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.fd.write(line)
 
     def finish(self, *args, **kwargs):  # pragma: no cover
-        end = kwargs.pop('end', '\n')
-        ProgressBarMixinBase.finish(self, *args, **kwargs)
-
         if self._finished:
             return
+
+        end = kwargs.pop('end', '\n')
+        ProgressBarMixinBase.finish(self, *args, **kwargs)
 
         if end:
             self.fd.write(end)
