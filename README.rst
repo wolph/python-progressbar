@@ -141,7 +141,7 @@ In most cases the following will work as well, as long as you initialize the
     progressbar.streams.wrap_stderr()
     logging.basicConfig()
 
-    for i in progressbar.progressbar(range(10)):
+    for i in progressbar.ProgressBar(range(10)):
         logging.error('Got %d', i)
         time.sleep(0.2)
 
@@ -164,7 +164,7 @@ Combining progressbars with print output
     import time
     import progressbar
 
-    for i in progressbar.progressbar(range(100), redirect_stdout=True):
+    for i in progressbar.ProgressBar(range(100), redirect_stdout=True):
         print('Some text', i)
         time.sleep(0.1)
 
@@ -192,7 +192,7 @@ Bar with custom widgets
         progressbar.Bar(),
         ' (', progressbar.ETA(), ') ',
     ]
-    for i in progressbar.progressbar(range(20), widgets=widgets):
+    for i in progressbar.ProgressBar(range(20), widgets=widgets):
         time.sleep(0.1)
 
 Bar with wide Chinese (or other multibyte) characters
