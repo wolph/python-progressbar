@@ -178,6 +178,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         max_error (bool): When True the progressbar will raise an error if it
             goes beyond it's set max_value. Otherwise the max_value is simply
             raised when needed
+            prefix (str): Prefix the progressbar with the given string
+            suffix (str): Prefix the progressbar with the given string
 
     A common way of using it is like:
 
@@ -228,7 +230,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     def __init__(self, min_value=0, max_value=None,
                  widgets=None, left_justify=True, initial_value=0,
                  poll_interval=None, widget_kwargs=None, custom_len=len,
-                 max_error=True, **kwargs):
+                 max_error=True, prefix=None, suffix=None, **kwargs):
         '''
         Initializes a progress bar with sane defaults
         '''
@@ -253,6 +255,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.max_value = max_value
         self.max_error = max_error
         self.widgets = widgets
+        self.prefix = prefix
+        self.suffix = suffix
         self.widget_kwargs = widget_kwargs or {}
         self.left_justify = left_justify
         self.value = initial_value
@@ -625,6 +629,14 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         # Constructing the default widgets is only done when we know max_value
         if self.widgets is None:
             self.widgets = self.default_widgets()
+
+        if self.prefix:
+            self.widgets.insert(0, widgets.FormatLabel(
+                self.prefix, new_style=True))
+
+        if self.suffix:
+            self.widgets.append(widgets.FormatLabel(
+                self.suffix, new_style=True))
 
         for widget in self.widgets:
             interval = getattr(widget, 'INTERVAL', None)

@@ -38,6 +38,18 @@ def shortcut_example():
 
 
 @example
+def prefixed_shortcut_example():
+    for i in progressbar.progressbar(range(10), prefix='Hi: '):
+        time.sleep(0.1)
+
+
+@example
+def templated_shortcut_example():
+    for i in progressbar.progressbar(range(10), suffix='{seconds_elapsed:.1}'):
+        time.sleep(0.1)
+
+
+@example
 def with_example_stdout_redirection():
     with progressbar.ProgressBar(max_value=10, redirect_stdout=True) as p:
         for i in range(10):
