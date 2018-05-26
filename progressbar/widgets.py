@@ -65,13 +65,17 @@ class FormatWidgetMixin(object):
     '''
     required_values = []
 
-    def __init__(self, format, **kwargs):
+    def __init__(self, format, new_style=False, **kwargs):
+        self.new_style = new_style
         self.format = format
 
     def __call__(self, progress, data, format=None):
         '''Formats the widget into a string'''
         try:
-            return (format or self.format) % data
+            if self.new_style:
+                return (format or self.format).format(**data)
+            else:
+                return (format or self.format) % data
         except (TypeError, KeyError):
             print('Error while formatting %r' % self.format, file=sys.stderr)
             pprint.pprint(data, stream=sys.stderr)
@@ -172,6 +176,10 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
     >>> Progress.term_width = 11
     >>> str(label(Progress, dict(value='test')))
     ''
+
+    >>> label = FormatLabel('{value} :: {value:^6}', new_style=True)
+    >>> str(label(Progress, dict(value='test')))
+    'test ::  test '
 
     '''
 
