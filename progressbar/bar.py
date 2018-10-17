@@ -434,14 +434,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __call__(self, iterable, max_value=None):
         'Use a ProgressBar to iterate through an iterable'
-        if max_value is None:
+        if max_value is not None:
+            self.max_value = max_value
+        elif self.max_value is None:
             try:
                 self.max_value = len(iterable)
             except TypeError:  # pragma: no cover
-                if self.max_value is None:
-                    self.max_value = base.UnknownLength
-        else:
-            self.max_value = max_value
+                self.max_value = base.UnknownLength
 
         self._iterable = iter(iterable)
         return self
