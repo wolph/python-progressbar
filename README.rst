@@ -73,6 +73,7 @@ Due to limitations in both the IDLE shell and the Jetbrains (Pycharm) shells thi
 
 - The IDLE editor doesn't support these types of progress bars at all: https://bugs.python.org/issue23220
 - The Jetbrains (Pycharm) editors partially work but break with fast output. As a workaround make sure you only write to either `sys.stdout` (regular print) or `sys.stderr` at the same time. If you do plan to use both, make sure you wait about ~200 milliseconds for the next output or it will break regularly. Linked issue: https://github.com/WoLpH/python-progressbar/issues/115
+ - Jupyter notebooks buffer `sys.stdout` which can cause mixed output. This issue can be resolved easily using: `import sys; sys.stdout.flush()`. Linked issue: https://github.com/WoLpH/python-progressbar/issues/173
 
 ******************************************************************************
 Links
