@@ -352,10 +352,12 @@ class ETA(Timer):
             data['eta_seconds'] = None
             ETA_NA = True
 
+        data['eta'] = None
         if data['eta_seconds']:
-            data['eta'] = utils.format_time(data['eta_seconds'])
-        else:
-            data['eta'] = None
+            try:
+                data['eta'] = utils.format_time(data['eta_seconds'])
+            except ValueError:
+                pass
 
         if data['value'] == progress.min_value:
             format = self.format_not_started
