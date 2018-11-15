@@ -1,4 +1,5 @@
 import time
+import timeit
 import pytest
 import logging
 import freezegun
@@ -23,6 +24,7 @@ def small_interval(monkeypatch):
     # Remove the update limit for tests by default
     monkeypatch.setattr(
         progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1e-6)
+    monkeypatch.setattr(timeit, 'default_timer', time.time)
 
 
 @pytest.fixture(autouse=True)

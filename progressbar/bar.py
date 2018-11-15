@@ -528,6 +528,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             delta = timeit.default_timer() - self._last_update_timer
             poll_status = delta > self.poll_interval.total_seconds()
         else:
+            delta = 0
             poll_status = False
 
         # Do not update if value increment is not large enough to
@@ -541,7 +542,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             # ignore any division errors
             pass
 
-        return self.value > self.next_update or poll_status or self.end_time
+        return poll_status or self.end_time
 
     def update(self, value=None, force=False, **kwargs):
         'Updates the ProgressBar to a new value.'
@@ -646,7 +647,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 )
 
         self.num_intervals = max(100, self.term_width)
-        self.next_update = 0
 
         if self.max_value is not base.UnknownLength and self.max_value < 0:
             raise ValueError('Value out of range')
