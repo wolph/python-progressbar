@@ -175,5 +175,5 @@ class StreamWrapper(object):
         self.flush()
 
 
-streams = StreamWrapper()
 logger = logging.getLogger(__name__)
+streams = StreamWrapper()
