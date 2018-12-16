@@ -1,5 +1,9 @@
+import pytest
+
 import examples
 import progressbar
+
+import original_examples
 
 
 def test_examples(monkeypatch):
@@ -8,6 +12,12 @@ def test_examples(monkeypatch):
             example()
         except ValueError:
             pass
+
+
+@pytest.mark.filterwarnings('ignore::DeprecationWarning')
+def test_original_examples(monkeypatch):
+    for example in original_examples.examples:
+        example()
 
 
 def test_examples_nullbar(monkeypatch):

@@ -434,14 +434,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __call__(self, iterable, max_value=None):
         'Use a ProgressBar to iterate through an iterable'
-        if max_value is None:
+        if max_value is not None:
+            self.max_value = max_value
+        elif self.max_value is None:
             try:
                 self.max_value = len(iterable)
             except TypeError:  # pragma: no cover
-                if self.max_value is None:
-                    self.max_value = base.UnknownLength
-        else:
-            self.max_value = max_value
+                self.max_value = base.UnknownLength
 
         self._iterable = iter(iterable)
         return self
@@ -529,6 +528,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             delta = timeit.default_timer() - self._last_update_timer
             poll_status = delta > self.poll_interval.total_seconds()
         else:
+            delta = 0
             poll_status = False
 
         # Do not update if value increment is not large enough to
@@ -542,7 +542,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             # ignore any division errors
             pass
 
-        return self.value > self.next_update or poll_status or self.end_time
+        return poll_status or self.end_time
 
     def update(self, value=None, force=False, **kwargs):
         'Updates the ProgressBar to a new value.'
@@ -554,7 +554,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
                 pass
-            elif self.min_value <= value <= self.max_value:
+            elif self.min_value <= value <= self.max_value:  # pragma: no cover
                 # Correct value, let's accept
                 pass
             elif self.max_error:
@@ -647,7 +647,6 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 )
 
         self.num_intervals = max(100, self.term_width)
-        self.next_update = 0
 
         if self.max_value is not base.UnknownLength and self.max_value < 0:
             raise ValueError('Value out of range')

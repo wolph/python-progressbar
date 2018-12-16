@@ -9,7 +9,7 @@ python:
 install:
 - pip install .
 - pip install -r tests/requirements.txt
-before_script: flake8 --ignore=W391 progressbar tests
+before_script: flake8 progressbar tests
 script:
 - python setup.py test
 - python examples.py

@@ -25,6 +25,8 @@ with open("progressbar/__about__.py") as fp:
 
 
 install_reqs = []
+needs_pytest = set(['ptr', 'pytest', 'test']).intersection(sys.argv)
+pytest_runner = ['pytest-runner>=2.8'] if needs_pytest else []
 tests_reqs = []
 
 if sys.version_info < (2, 7):
@@ -62,7 +64,7 @@ if __name__ == '__main__':
             'six',
         ],
         tests_require=tests_reqs,
-        setup_requires=['setuptools', 'pytest-runner>=2.8'],
+        setup_requires=['setuptools'] + pytest_runner,
         zip_safe=False,
         extras_require={
             'docs': [

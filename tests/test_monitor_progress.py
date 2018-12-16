@@ -12,10 +12,12 @@ def test_list_example(testdir):
 
     v = testdir.makepyfile('''
     import time
+    import timeit
     import freezegun
     import progressbar
 
     with freezegun.freeze_time() as fake_time:
+        timeit.default_timer = time.time
         bar = progressbar.ProgressBar(term_width=65)
         bar._MINIMUM_UPDATE_INTERVAL = 1e-9
         for i in bar(list(range(9))):
@@ -48,10 +50,12 @@ def test_generator_example(testdir):
 
     v = testdir.makepyfile('''
     import time
+    import timeit
     import freezegun
     import progressbar
 
     with freezegun.freeze_time() as fake_time:
+        timeit.default_timer = time.time
         bar = progressbar.ProgressBar(term_width=60)
         bar._MINIMUM_UPDATE_INTERVAL = 1e-9
         for i in bar(iter(range(9))):
@@ -77,10 +81,12 @@ def test_rapid_updates(testdir):
 
     v = testdir.makepyfile('''
     import time
+    import timeit
     import freezegun
     import progressbar
 
     with freezegun.freeze_time() as fake_time:
+        timeit.default_timer = time.time
         bar = progressbar.ProgressBar(term_width=60)
         bar._MINIMUM_UPDATE_INTERVAL = 1e-9
         for i in bar(range(10)):
@@ -110,10 +116,12 @@ def test_rapid_updates(testdir):
 def test_context_wrapper(testdir):
     v = testdir.makepyfile('''
     import time
+    import timeit
     import freezegun
     import progressbar
 
     with freezegun.freeze_time() as fake_time:
+        timeit.default_timer = time.time
         with progressbar.ProgressBar(term_width=60) as bar:
             bar._MINIMUM_UPDATE_INTERVAL = 1e-9
             for _ in bar(list(range(5))):
