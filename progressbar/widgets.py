@@ -357,7 +357,7 @@ class ETA(Timer):
         if data['eta_seconds']:
             try:
                 data['eta'] = utils.format_time(data['eta_seconds'])
-            except ValueError:  # pragma: no cover
+            except (ValueError, OverflowError):  # pragma: no cover
                 pass
 
         if data['value'] == progress.min_value:
