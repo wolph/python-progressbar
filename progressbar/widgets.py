@@ -240,19 +240,20 @@ class SamplesMixin(TimeSensitiveWidgetBase):
     >>> samples(progress, None, True)
     (None, None)
     >>> progress.last_update_time += datetime.timedelta(seconds=1)
-    >>> samples(progress, None, True)
-    (datetime.timedelta(0, 1), 0)
+    >>> samples(progress, None, True) == (datetime.timedelta(seconds=1), 0)
+    True
+
     >>> progress.last_update_time += datetime.timedelta(seconds=1)
-    >>> samples(progress, None, True)
-    (datetime.timedelta(0, 1), 0)
+    >>> samples(progress, None, True) == (datetime.timedelta(seconds=1), 0)
+    True
 
     >>> samples = SamplesMixin(samples=datetime.timedelta(seconds=1))
     >>> _, value = samples(progress, None)
     >>> value
     [1, 1]
 
-    >>> samples(progress, None, True)
-    (datetime.timedelta(0, 1), 0)
+    >>> samples(progress, None, True) == (datetime.timedelta(seconds=1), 0)
+    True
     '''
 
     def __init__(self, samples=datetime.timedelta(seconds=2), key_prefix=None,
