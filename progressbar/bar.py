@@ -554,7 +554,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
                 pass
-            elif self.min_value <= value <= self.max_value:
+            elif self.min_value <= value <= self.max_value:  # pragma: no cover
                 # Correct value, let's accept
                 pass
             elif self.max_error:
