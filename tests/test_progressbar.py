@@ -47,3 +47,13 @@ def test_reuse():
     for i in range(10):
         bar.update(i)
     bar.finish()
+
+
+def test_dirty():
+    import progressbar
+
+    bar = progressbar.ProgressBar()
+    bar.start()
+    for i in range(10):
+        bar.update(i)
+    bar.finish(dirty=True)
