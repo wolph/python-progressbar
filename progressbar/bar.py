@@ -657,7 +657,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         return self
 
-    def finish(self, end='\n'):
+    def finish(self, end='\n', dirty=False):
         '''
         Puts the ProgressBar bar in the finished state.
 
@@ -667,10 +667,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         Args:
             end (str): The string to end the progressbar with, defaults to a
                 newline
+            dirty (bool): When True the progressbar kept the current state and
+                won't be set to 100 percent
         '''
 
-        self.end_time = datetime.now()
-        self.update(self.max_value, force=True)
+        if not dirty:
+            self.end_time = datetime.now()
+            self.update(self.max_value, force=True)
 
         StdRedirectMixin.finish(self, end=end)
         ResizableMixin.finish(self)
