@@ -139,3 +139,33 @@ def test_context_wrapper(testdir):
         ' 80% (4 of 5) |#####  | Elapsed Time: ?:00:04 ETA:   ?:00:01',
         '100% (5 of 5) |#######| Elapsed Time: ?:00:05 Time:  ?:00:05',
     ])
+
+
+def test_non_timed(testdir):
+    v = testdir.makepyfile('''
+    import time
+    import timeit
+    import freezegun
+    import progressbar
+
+    widgets = [progressbar.Percentage(), progressbar.Bar()]
+
+    with freezegun.freeze_time() as fake_time:
+        timeit.default_timer = time.time
+        with progressbar.ProgressBar(widgets=widgets, term_width=60) as bar:
+            bar._MINIMUM_UPDATE_INTERVAL = 1e-9
+            for _ in bar(list(range(5))):
+                fake_time.tick(1)
+    ''')
+
+    result = testdir.runpython(v)
+    result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
+    pprint.pprint(result.stderr.lines, width=70)
+    result.stderr.fnmatch_lines([
+        'N/A%|                                                      |',
+        ' 20%|##########                                            |',
+        ' 40%|#####################                                 |',
+        ' 60%|################################                      |',
+        ' 80%|###########################################           |',
+        '100%|######################################################|',
+    ])
