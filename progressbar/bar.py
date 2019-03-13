@@ -538,6 +538,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             divisor = self.max_value / self.term_width  # float division
             if self.value // divisor == self.previous_value // divisor:
                 return poll_status or self.end_time
+            else:
+                return True
         except Exception:
             # ignore any division errors
             pass
