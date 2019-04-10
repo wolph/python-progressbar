@@ -715,7 +715,7 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
 class DynamicMessage(FormatWidgetMixin, WidgetBase):
     '''Displays a custom variable.'''
 
-    def __init__(self, name):
+    def __init__(self, name, format='{:6.3g}'):
         '''Creates a DynamicMessage associated with the given name.'''
         if not isinstance(name, str):
             raise TypeError('DynamicMessage(): argument must be a string')
@@ -724,11 +724,12 @@ class DynamicMessage(FormatWidgetMixin, WidgetBase):
                 'DynamicMessage(): argument must be single word')
 
         self.name = name
+        self.format = format
 
     def __call__(self, progress, data):
         val = data['dynamic_messages'][self.name]
         if val:
-            return self.name + ': ' + '{:6.3g}'.format(val)
+            return self.name + ': ' + self.format.format(val)
         else:
             return self.name + ': ' + 6 * '-'
 
