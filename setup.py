@@ -68,7 +68,7 @@ if __name__ == '__main__':
         zip_safe=False,
         extras_require={
             'docs': [
-                'sphinx',
+                'sphinx>=1.7.4',
             ],
             'tests': [
                 'flake8>=3.7.7',
