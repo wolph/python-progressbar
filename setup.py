@@ -73,7 +73,6 @@ if __name__ == '__main__':
             'tests': [
                 'flake8>=3.7.7',
                 'pytest>=4.3.1',
-                'pytest-cache>=1.0',
                 'pytest-cov>=2.6.1',
                 'pytest-flakes>=4.0.0',
                 'pytest-pep8>=1.0.6',
