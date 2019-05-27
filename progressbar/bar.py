@@ -12,7 +12,7 @@ import warnings
 from datetime import datetime, timedelta
 try:  # pragma: no cover
     from collections import abc
-except ImportError:
+except ImportError:  # pragma: no cover
     import collections as abc
 
 from python_utils import converters
