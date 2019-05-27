@@ -10,7 +10,7 @@ import timeit
 import logging
 import warnings
 from datetime import datetime, timedelta
-try:
+try:  # pragma: no branch
     from collections import abc
 except ImportError:
     import collections as abc
