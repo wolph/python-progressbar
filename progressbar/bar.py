@@ -10,7 +10,10 @@ import timeit
 import logging
 import warnings
 from datetime import datetime, timedelta
-import collections
+try:  # pragma: no cover
+    from collections import abc
+except ImportError:  # pragma: no cover
+    import collections as abc
 
 from python_utils import converters
 
@@ -47,7 +50,7 @@ class ProgressBarMixinBase(object):
                 pass
 
 
-class ProgressBarBase(collections.Iterable, ProgressBarMixinBase):
+class ProgressBarBase(abc.Iterable, ProgressBarMixinBase):
     pass
 
 

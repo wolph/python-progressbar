@@ -41,18 +41,6 @@ extensions = [
     'sphinx.ext.napoleon',
 ]
 
-# Monkey patch to disable nonlocal image warning
-import sphinx
-if hasattr(sphinx, 'environment'):
-    original_warn_mode = sphinx.environment.BuildEnvironment.warn_node
-
-    def allow_nonlocal_image_warn_node(self, msg, *args, **kwargs):
-        if not msg.startswith('nonlocal image URI found:'):
-            original_warn_mode(self, msg, *args, **kwargs)
-
-    sphinx.environment.BuildEnvironment.warn_node = \
-        allow_nonlocal_image_warn_node
-
 suppress_warnings = [
     'image.nonlocal_uri',
 ]
