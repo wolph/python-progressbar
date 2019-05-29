@@ -40,11 +40,20 @@ def test_dynamic_message_widget():
         progressbar.Bar(),
         ' (', progressbar.ETA(), ') ',
         progressbar.DynamicMessage('loss'),
+        progressbar.DynamicMessage('text'),
+        progressbar.DynamicMessage('error', precision=None),
     ]
 
     p = progressbar.ProgressBar(widgets=widgets, max_value=1000)
     p.start()
     for i in range(0, 200, 5):
         time.sleep(0.1)
-        p.update(i + 1, loss=.5)
+        p.update(i + 1, loss=.5, text='spam', error=1)
+
+    i += 1
+    p.update(i, text=None)
+    i += 1
+    p.update(i, text=False)
+    i += 1
+    p.update(i, text=True, error='a')
     p.finish()
