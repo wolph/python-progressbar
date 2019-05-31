@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import io
 import os
+import re
 import sys
 import logging
 from python_utils.time import timedelta_to_seconds, epoch, format_time
@@ -15,6 +16,11 @@ assert get_terminal_size
 assert format_time
 assert scale_1024
 assert epoch
+
+
+def len_color(text):
+    '''Return the length of text without ANSI escape codes'''
+    return len(re.sub(u'\u001b\[.*?[@-~]', '', text))
 
 
 class WrappingIO:

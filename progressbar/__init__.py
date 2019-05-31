@@ -1,6 +1,9 @@
 from datetime import date
 
-from .utils import streams
+from .utils import (
+    len_color,
+    streams
+)
 from .shortcuts import progressbar
 
 from .widgets import (
@@ -41,6 +44,7 @@ from .__about__ import (
 __date__ = str(date.today())
 __all__ = [
     'progressbar',
+    'len_color',
     'streams',
     'Timer',
     'ETA',
