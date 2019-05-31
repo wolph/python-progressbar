@@ -444,7 +444,7 @@ def dynamic_message():
         progressbar.Percentage(),
         progressbar.Bar(),
         progressbar.DynamicMessage('loss'),
-        progressbar.DynamicMessage('username', width=12, precision=12),,
+        progressbar.DynamicMessage('username', width=12, precision=12),
     ]
     with progressbar.ProgressBar(max_value=100, widgets=widgets) as bar:
         min_so_far = 1
