@@ -20,7 +20,7 @@ assert epoch
 
 def len_color(text):
     '''Return the length of text without ANSI escape codes'''
-    return len(re.sub(u'\u001b\[.*?[@-~]', '', text))
+    return len(re.sub(u'\u001b\\[.*?[@-~]', '', text))
 
 
 class WrappingIO:
