@@ -86,6 +86,14 @@ class WidthWidgetMixin(object):
     '''Mixing to make sure widgets are only visible if the screen is within a
     specified size range so the progressbar fits on both large and small
     screens..
+
+    The widgets are only visible if the screen is within a
+    specified size range so the progressbar fits on both large and small
+    screens.
+
+    Variables available:
+     - min_width: Only display the widget if at least `min_width` is left
+     - max_width: Only display the widget if at most `max_width` is left
     '''
 
     def __init__(self, min_width=None, max_width=None, **kwargs):
@@ -154,7 +162,7 @@ class TimeSensitiveWidgetBase(WidgetBase):
     INTERVAL = datetime.timedelta(milliseconds=100)
 
 
-class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
+class FormatLabel(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
     '''Displays a formatted label
 
     >>> label = FormatLabel('%(value)s', min_width=5, max_width=10)
@@ -196,6 +204,7 @@ class FormatLabel(FormatWidgetMixin, WidthWidgetMixin):
     def __init__(self, format, **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidthWidgetMixin.__init__(self, **kwargs)
+        WidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data, **kwargs):
         if not self.check_size(progress):
@@ -416,7 +425,7 @@ class AdaptiveETA(ETA, SamplesMixin):
         return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
 
 
-class DataSize(FormatWidgetMixin):
+class DataSize(FormatWidgetMixin, WidthWidgetMixin):
     '''
     Widget for showing an amount of data transferred/processed.
 
@@ -433,6 +442,7 @@ class DataSize(FormatWidgetMixin):
         self.unit = unit
         self.prefixes = prefixes
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
         value = data[self.variable]
@@ -448,7 +458,7 @@ class DataSize(FormatWidgetMixin):
         return FormatWidgetMixin.__call__(self, progress, data)
 
 
-class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
+class FileTransferSpeed(FormatWidgetMixin, WidthWidgetMixin, TimeSensitiveWidgetBase):
     '''
     WidgetBase for showing the transfer speed (useful for file transfers).
     '''
@@ -462,6 +472,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
         self.prefixes = prefixes
         self.inverse_format = inverse_format
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
         TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     def _speed(self, value, elapsed):
@@ -507,7 +518,7 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
         return FileTransferSpeed.__call__(self, progress, data, value, elapsed)
 
 
-class AnimatedMarker(TimeSensitiveWidgetBase):
+class AnimatedMarker(WidthWidgetMixin, TimeSensitiveWidgetBase):
     '''An animated marker for the progress bar which defaults to appear as if
     it were rotating.
     '''
@@ -516,6 +527,7 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         self.markers = markers
         self.default = default or markers[0]
         self.fill = create_marker(fill) if fill else None
+        WidthWidgetMixin.__init__(self, **kwargs)
         WidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data, width=None):
@@ -548,19 +560,21 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
 RotatingMarker = AnimatedMarker
 
 
-class Counter(FormatWidgetMixin, WidgetBase):
+class Counter(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
     '''Displays the current count'''
 
     def __init__(self, format='%(value)d', **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
 
-class Percentage(FormatWidgetMixin, WidgetBase):
+class Percentage(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
     '''Displays the current percentage as a number with a percent sign.'''
 
     def __init__(self, format='%(percentage)3d%%', **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
     def __call__(self, progress, data, format=None):
@@ -572,15 +586,16 @@ class Percentage(FormatWidgetMixin, WidgetBase):
         return FormatWidgetMixin.__call__(self, progress, data)
 
 
-class SimpleProgress(FormatWidgetMixin, WidgetBase):
+class SimpleProgress(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
     '''Returns progress as a count of the total (e.g.: "5 of 47")'''
 
     DEFAULT_FORMAT = '%(value_s)s of %(max_value_s)s'
 
-    def __init__(self, format=DEFAULT_FORMAT, max_width=None, **kwargs):
-        self.max_width = dict(default=max_width)
+    def __init__(self, format=DEFAULT_FORMAT, **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
+        self.max_width_cache = dict(default=self.max_width)
 
     def __call__(self, progress, data, format=None):
         # If max_value is not available, display N/A
@@ -600,7 +615,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
 
         # Guess the maximum width from the min and max value
         key = progress.min_value, progress.max_value
-        max_width = self.max_width.get(key, self.max_width['default'])
+        max_width = self.max_width_cache.get(key, self.max_width)
         if not max_width:
             temporary_data = data.copy()
             for value in key:
@@ -613,7 +628,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
                 if width:  # pragma: no branch
                     max_width = max(max_width or 0, width)
 
-            self.max_width[key] = max_width
+            self.max_width_cache[key] = max_width
 
         # Adjust the output to have a consistent size in all cases
         if max_width:  # pragma: no branch
@@ -622,7 +637,7 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
         return formatted
 
 
-class Bar(AutoWidthWidgetBase):
+class Bar(WidthWidgetMixin, AutoWidthWidgetBase):
     '''A progress bar which stretches to fill the line.'''
 
     def __init__(self, marker='#', left='|', right='|', fill=' ',
@@ -644,6 +659,7 @@ class Bar(AutoWidthWidgetBase):
         self.fill = string_or_lambda(fill)
         self.fill_left = fill_left
 
+        WidthWidgetMixin.__init__(self, **kwargs)
         AutoWidthWidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data, width):
@@ -711,7 +727,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
         return left + marker + right
 
 
-class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
+class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
     mapping = {}
 
     def __init__(self, format, mapping=mapping, **kwargs):
@@ -719,6 +735,7 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
         self.mapping = mapping
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidthWidgetMixin.__init__(self, **kwargs)
+        WidgetBase.__init__(self, **kwargs)
 
     def update_mapping(self, **mapping):
         self.mapping.update(mapping)
@@ -728,11 +745,11 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
             self, progress, self.mapping, self.format)
 
 
-class DynamicMessage(FormatWidgetMixin, WidgetBase):
+class DynamicMessage(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
     '''Displays a custom variable.'''
 
     def __init__(self, name, format='{name}: {formatted_value}',
-                 width=6, precision=3):
+                 width=6, precision=3, **kwargs):
         '''Creates a DynamicMessage associated with the given name.'''
         self.format = format
         self.width = width
@@ -744,6 +761,7 @@ class DynamicMessage(FormatWidgetMixin, WidgetBase):
                 'DynamicMessage(): argument must be single word')
 
         self.name = name
+        WidthWidgetMixin.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
         value = data['dynamic_messages'][self.name]
@@ -766,7 +784,7 @@ class DynamicMessage(FormatWidgetMixin, WidgetBase):
         return self.format.format(**context)
 
 
-class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):
+class CurrentTime(FormatWidgetMixin, WidthWidgetMixin, TimeSensitiveWidgetBase):
     '''Widget which displays the current (date)time with seconds resolution.'''
     INTERVAL = datetime.timedelta(seconds=1)
 
@@ -774,6 +792,7 @@ class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):
                  microseconds=False, **kwargs):
         self.microseconds = microseconds
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
+        WidthWidgetMixin.__init__(self, **kwargs)
         TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
