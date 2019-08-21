@@ -22,19 +22,20 @@ def len_color(value):
     '''
     Return the length of `value` without ANSI escape codes
 
-    >>> len_color(u'\u001b[1234]abc')
-    3
     >>> len_color(b'\u001b[1234]abc')
+    3
+    >>> len_color(u'\u001b[1234]abc')
     3
     >>> len_color('\u001b[1234]abc')
     3
     '''
-    pattern = u'\u001b\\[.*?[@-~]'
     if isinstance(value, bytes):
+        pattern = '\\\u001b\\[.*?[@-~]'
         pattern = pattern.encode()
         replace = b''
         assert isinstance(pattern, bytes)
     else:
+        pattern = u'\x1b\\[.*?[@-~]'
         replace = ''
 
     value = re.sub(pattern, replace, value)
