@@ -507,7 +507,7 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
         return FileTransferSpeed.__call__(self, progress, data, value, elapsed)
 
 
-class AnimatedMarker(WidgetBase):
+class AnimatedMarker(TimeSensitiveWidgetBase):
     '''An animated marker for the progress bar which defaults to appear as if
     it were rotating.
     '''

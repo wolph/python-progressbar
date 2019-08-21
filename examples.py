@@ -513,11 +513,19 @@ def percentage_on_generators():
 
 
 def test(*tests):
-    for example in examples:
-        if not tests or example.__name__ in tests:
+    if tests:
+        for example in examples:
+
+            for test in tests:
+                if test in example.__name__:
+                    example()
+                    break
+
+            else:
+                print('Skipping', example.__name__)
+    else:
+        for example in examples:
             example()
-        else:
-            print('Skipping', example.__name__)
 
 
 if __name__ == '__main__':
