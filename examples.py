@@ -193,6 +193,17 @@ def animated_marker():
 
 
 @example
+def filling_bar_animated_marker():
+    bar = progressbar.ProgressBar(widgets=[
+        progressbar.Bar(
+            marker=progressbar.AnimatedMarker(fill='#'),
+        ),
+    ])
+    for i in bar(range(15)):
+        time.sleep(0.1)
+
+
+@example
 def counter_and_timer():
     widgets = ['Processed: ', progressbar.Counter('Counter: %(value)05d'),
                ' lines (', progressbar.Timer(), ')']

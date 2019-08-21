@@ -512,9 +512,10 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
     it were rotating.
     '''
 
-    def __init__(self, markers='|/-\\', default=None, **kwargs):
+    def __init__(self, markers='|/-\\', default=None, fill='', **kwargs):
         self.markers = markers
         self.default = default or markers[0]
+        self.fill = create_marker(fill) if fill else None
         WidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data, width=None):
@@ -524,7 +525,16 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         if progress.end_time:
             return self.default
 
-        return self.markers[data['updates'] % len(self.markers)]
+        if self.fill:
+            # Cut the last character so we can replace it with our marker
+            fill = self.fill(progress, data, width)[:-1]
+        else:
+            fill = ''
+
+        return '%s%s' % (
+            fill,
+            self.markers[data['updates'] % len(self.markers)],
+        )
 
 
 # Alias for backwards compatibility
@@ -637,7 +647,6 @@ class Bar(AutoWidthWidgetBase):
         width -= progress.custom_len(left) + progress.custom_len(right)
         marker = converters.to_unicode(self.marker(progress, data, width))
         fill = converters.to_unicode(self.fill(progress, data, width))
-
         if self.fill_left:
             marker = marker.ljust(width, fill)
         else:
