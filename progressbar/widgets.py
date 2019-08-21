@@ -531,10 +531,17 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         else:
             fill = ''
 
-        return '%s%s' % (
-            fill,
-            self.markers[data['updates'] % len(self.markers)],
-        )
+        marker = self.markers[data['updates'] % len(self.markers)]
+
+        # Python 3 returns an int when indexing bytes
+        if isinstance(marker, int):  # pragma: no cover
+            marker = bytes(marker)
+            fill = fill.encode()
+        else:
+            # cast fill to the same type as marker
+            fill = type(marker)(fill)
+
+        return fill + marker
 
 
 # Alias for backwards compatibility
