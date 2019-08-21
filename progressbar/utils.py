@@ -18,9 +18,27 @@ assert scale_1024
 assert epoch
 
 
-def len_color(text):
-    '''Return the length of text without ANSI escape codes'''
-    return len(re.sub(u'\u001b\\[.*?[@-~]', '', text))
+def len_color(value):
+    '''
+    Return the length of `value` without ANSI escape codes
+
+    >>> len_color(u'\u001b[1234]abc')
+    3
+    >>> len_color(b'\u001b[1234]abc')
+    3
+    >>> len_color('\u001b[1234]abc')
+    3
+    '''
+    pattern = u'\u001b\\[.*?[@-~]'
+    if isinstance(value, bytes):
+        pattern = pattern.encode()
+        replace = b''
+        assert isinstance(pattern, bytes)
+    else:
+        replace = ''
+
+    value = re.sub(pattern, replace, value)
+    return len(value)
 
 
 class WrappingIO:
