@@ -348,6 +348,9 @@ class ETA(Timer):
     def __call__(self, progress, data, value=None, elapsed=None):
         '''Updates the widget to show the ETA or total time when finished.'''
 
+        if not self.check_size(progress):
+            return ''
+
         if value is None:
             value = data['value']
 
@@ -416,6 +419,9 @@ class AdaptiveETA(ETA, SamplesMixin):
         SamplesMixin.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
+        if not self.check_size(progress):
+            return ''
+
         elapsed, value = SamplesMixin.__call__(self, progress, data,
                                                delta=True)
         if not elapsed:
@@ -445,6 +451,9 @@ class DataSize(FormatWidgetMixin, WidthWidgetMixin):
         WidthWidgetMixin.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
+        if not self.check_size(progress):
+            return ''
+
         value = data[self.variable]
         if value is not None:
             scaled, power = utils.scale_1024(value, len(self.prefixes))
@@ -481,6 +490,9 @@ class FileTransferSpeed(FormatWidgetMixin, WidthWidgetMixin, TimeSensitiveWidget
 
     def __call__(self, progress, data, value=None, total_seconds_elapsed=None):
         '''Updates the widget with the current SI prefixed speed.'''
+        if not self.check_size(progress):
+            return ''
+
         value = data['value'] or value
         elapsed = data['total_seconds_elapsed'] or total_seconds_elapsed
 
@@ -513,6 +525,9 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
         SamplesMixin.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
+        if not self.check_size(progress):
+            return ''
+
         elapsed, value = SamplesMixin.__call__(self, progress, data,
                                                delta=True)
         return FileTransferSpeed.__call__(self, progress, data, value, elapsed)
@@ -533,6 +548,9 @@ class AnimatedMarker(WidthWidgetMixin, TimeSensitiveWidgetBase):
     def __call__(self, progress, data, width=None):
         '''Updates the widget to show the next marker or the first marker when
         finished'''
+
+        if not self.check_size(progress):
+            return ''
 
         if progress.end_time:
             return self.default
@@ -568,6 +586,12 @@ class Counter(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
         WidthWidgetMixin.__init__(self, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
+    def __call__(self, progress, data, format=None):
+        if not self.check_size(progress):
+            return ''
+
+        return FormatWidgetMixin.__call__(self, progress, data, format)
+
 
 class Percentage(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
     '''Displays the current percentage as a number with a percent sign.'''
@@ -578,6 +602,9 @@ class Percentage(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
         WidgetBase.__init__(self, format=format, **kwargs)
 
     def __call__(self, progress, data, format=None):
+        if not self.check_size(progress):
+            return ''
+
         # If percentage is not available, display N/A%
         if 'percentage' in data and not data['percentage']:
             return FormatWidgetMixin.__call__(self, progress, data,
@@ -599,6 +626,9 @@ class SimpleProgress(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
 
     def __call__(self, progress, data, format=None):
         # If max_value is not available, display N/A
+        if not self.check_size(progress):
+            return ''
+
         if data.get('max_value'):
             data['max_value_s'] = data.get('max_value')
         else:
@@ -665,6 +695,9 @@ class Bar(WidthWidgetMixin, AutoWidthWidgetBase):
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
 
+        if not self.check_size(progress):
+            return ''
+
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
@@ -702,6 +735,9 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
+
+        if not self.check_size(progress):
+            return ''
 
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
@@ -741,6 +777,9 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
         self.mapping.update(mapping)
 
     def __call__(self, progress, data):
+        if not self.check_size(progress):
+            return ''
+
         return FormatWidgetMixin.__call__(
             self, progress, self.mapping, self.format)
 
@@ -764,6 +803,9 @@ class DynamicMessage(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
         WidthWidgetMixin.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
+        if not self.check_size(progress):
+            return ''
+
         value = data['dynamic_messages'][self.name]
         context = data.copy()
         context['value'] = value
@@ -796,6 +838,9 @@ class CurrentTime(FormatWidgetMixin, WidthWidgetMixin, TimeSensitiveWidgetBase):
         TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data):
+        if not self.check_size(progress):
+            return ''
+
         data['current_time'] = self.current_time()
         data['current_datetime'] = self.current_datetime()
 
