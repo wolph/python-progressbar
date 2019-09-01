@@ -467,7 +467,8 @@ class DataSize(FormatWidgetMixin, WidthWidgetMixin):
         return FormatWidgetMixin.__call__(self, progress, data)
 
 
-class FileTransferSpeed(FormatWidgetMixin, WidthWidgetMixin, TimeSensitiveWidgetBase):
+class FileTransferSpeed(FormatWidgetMixin, WidthWidgetMixin,
+                        TimeSensitiveWidgetBase):
     '''
     WidgetBase for showing the transfer speed (useful for file transfers).
     '''
@@ -826,7 +827,8 @@ class DynamicMessage(FormatWidgetMixin, WidthWidgetMixin, WidgetBase):
         return self.format.format(**context)
 
 
-class CurrentTime(FormatWidgetMixin, WidthWidgetMixin, TimeSensitiveWidgetBase):
+class CurrentTime(FormatWidgetMixin, WidthWidgetMixin,
+                  TimeSensitiveWidgetBase):
     '''Widget which displays the current (date)time with seconds resolution.'''
     INTERVAL = datetime.timedelta(seconds=1)
 
