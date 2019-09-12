@@ -8,6 +8,7 @@ import math
 import time
 import timeit
 import logging
+import os
 import warnings
 from datetime import datetime, timedelta
 try:  # pragma: no cover
@@ -56,7 +57,7 @@ class ProgressBarBase(abc.Iterable, ProgressBarMixinBase):
 
 class DefaultFdMixin(ProgressBarMixinBase):
 
-    def __init__(self, fd=sys.stderr, **kwargs):
+    def __init__(self, fd=sys.stderr, is_terminal=None, line_breaks=None, enable_colors=None, **kwargs):
         if fd is sys.stdout:
             fd = utils.streams.original_stdout
 
@@ -64,11 +65,43 @@ class DefaultFdMixin(ProgressBarMixinBase):
             fd = utils.streams.original_stderr
 
         self.fd = fd
+
+        # Check if this is an interactive terminal
+        if is_terminal is None:
+            is_terminal = utils.env_flag('PROGRESSBAR_IS_TERMINAL', None)
+        if is_terminal is None:
+            try:
+                is_terminal = fd.isatty()
+            except:
+                is_terminal = False
+        self.is_terminal = is_terminal
+
+        # Check if it should overwrite the current line (suitable for iteractive terminals)
+        # or write line breaks (suitable for log files)
+        if line_breaks is None:
+            line_breaks = utils.env_flag('PROGRESSBAR_LINE_BREAKS', not is_terminal)
+        self.line_breaks = line_breaks
+
+        # Check if ANSI escape characters are enabled (suitable for iteractive terminals),
+        # or should be stripped off (suitable for log files)
+        if enable_colors is None:
+            enable_colors = utils.env_flag('PROGRESSBAR_ENABLE_COLORS', is_terminal)
+        self.enable_colors = enable_colors
+
         ProgressBarMixinBase.__init__(self, **kwargs)
 
     def update(self, *args, **kwargs):
         ProgressBarMixinBase.update(self, *args, **kwargs)
-        line = converters.to_unicode('\r' + self._format_line())
+
+        line = converters.to_unicode(self._format_line())
+        if not self.enable_colors:
+            line = utils.no_color(line)
+
+        if self.line_breaks:
+            line = line.rstrip() + '\n'
+        else:
+            line = '\r' + line
+
         self.fd.write(line)
 
     def finish(self, *args, **kwargs):  # pragma: no cover
@@ -78,7 +111,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         end = kwargs.pop('end', '\n')
         ProgressBarMixinBase.finish(self, *args, **kwargs)
 
-        if end:
+        if end and not self.line_breaks:
             self.fd.write(end)
 
         self.fd.flush()
@@ -144,7 +177,8 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value=None):
-        self.fd.write('\r' + ' ' * self.term_width + '\r')
+        if not self.line_breaks:
+            self.fd.write('\r' + ' ' * self.term_width + '\r')
         utils.streams.flush()
         DefaultFdMixin.update(self, value=value)
 

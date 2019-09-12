@@ -42,7 +42,7 @@ def create_marker(marker):
 
     if isinstance(marker, six.string_types):
         marker = converters.to_unicode(marker)
-        assert len(marker) == 1, 'Markers are required to be 1 char'
+        assert utils.len_color(marker) == 1, 'Markers are required to be 1 char'
         return _marker
     else:
         return marker

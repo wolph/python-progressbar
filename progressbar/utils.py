@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import distutils.util
 import io
 import os
 import re
@@ -18,6 +19,29 @@ assert scale_1024
 assert epoch
 
 
+def no_color(value):
+    '''
+    Return the `value` without ANSI escape codes
+
+    >>> no_color(b'\u001b[1234]abc')
+    'abc'
+    >>> no_color(u'\u001b[1234]abc')
+    u'abc'
+    >>> no_color('\u001b[1234]abc')
+    'abc'
+    '''
+    if isinstance(value, bytes):
+        pattern = '\\\u001b\\[.*?[@-~]'
+        pattern = pattern.encode()
+        replace = b''
+        assert isinstance(pattern, bytes)
+    else:
+        pattern = u'\x1b\\[.*?[@-~]'
+        replace = ''
+
+    return re.sub(pattern, replace, value)
+
+
 def len_color(value):
     '''
     Return the length of `value` without ANSI escape codes
@@ -29,17 +53,19 @@ def len_color(value):
     >>> len_color('\u001b[1234]abc')
     3
     '''
-    if isinstance(value, bytes):
-        pattern = '\\\u001b\\[.*?[@-~]'
-        pattern = pattern.encode()
-        replace = b''
-        assert isinstance(pattern, bytes)
-    else:
-        pattern = u'\x1b\\[.*?[@-~]'
-        replace = ''
+    return len(no_color(value))
 
-    value = re.sub(pattern, replace, value)
-    return len(value)
+
+def env_flag(name, default=None):
+    '''
+    Accepts environt variables formatted as y/n, yes/no, 1/0, true/false, on/off, and returns it as a boolean
+
+    If the environt variable is not defined, or has an unknown value, returns `default`
+    '''
+    try:
+        return bool(distutils.util.strtobool(os.environ.get(name, "")))
+    except ValueError:
+        return default
 
 
 class WrappingIO:
@@ -84,10 +110,10 @@ class StreamWrapper(object):
         self.capturing = 0
         self.listeners = set()
 
-        if os.environ.get('WRAP_STDOUT'):  # pragma: no cover
+        if env_flag('WRAP_STDOUT', default=False):  # pragma: no cover
             self.wrap_stdout()
 
-        if os.environ.get('WRAP_STDERR'):  # pragma: no cover
+        if env_flag('WRAP_STDERR', default=False):  # pragma: no cover
             self.wrap_stderr()
 
     def start_capturing(self, bar=None):

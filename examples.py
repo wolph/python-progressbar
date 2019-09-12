@@ -72,6 +72,17 @@ def basic_widget_example():
 
 
 @example
+def color_bar_example():
+    widgets = ['\x1b[33mColorful example\x1b[39m', progressbar.Percentage(), progressbar.Bar(marker='\x1b[32m#\x1b[39m')]
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
+    for i in range(10):
+        # do something
+        time.sleep(0.1)
+        bar.update(i + 1)
+    bar.finish()
+
+
+@example
 def file_transfer_example():
     widgets = [
         'Test: ', progressbar.Percentage(),
