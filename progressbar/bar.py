@@ -183,6 +183,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             raised when needed
             prefix (str): Prefix the progressbar with the given string
             suffix (str): Prefix the progressbar with the given string
+        vars (dict): User-defined variables that can be used from a label using
+            `format="{vars.my_var}"`.
+            These values can be updated using `bar.update(my_var="newValue")`
+            This can also be used to set initial values for `DynamicMessage`s widgets
 
     A common way of using it is like:
 
@@ -233,7 +237,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
                  widget_kwargs=None, custom_len=utils.len_color,
-                 max_error=True, prefix=None, suffix=None, **kwargs):
+                 max_error=True, prefix=None, suffix=None, vars={}, **kwargs):
         '''
         Initializes a progress bar with sane defaults
         '''
@@ -274,11 +278,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         # low values.
         self.poll_interval = poll_interval
 
-        # A dictionary of names of DynamicMessage's
-        self.dynamic_messages = {}
+        # A dictionary of names that can be used by DynamicMessage and FormatWidget
+        self.dynamic_messages = utils.AttributeDict()
         for widget in (self.widgets or []):
             if isinstance(widget, widgets_module.DynamicMessage):
-                self.dynamic_messages[widget.name] = None
+                if widget.name not in  self.dynamic_messages:
+                    self.dynamic_messages[widget.name] = None
+        self.dynamic_messages.update(vars)
 
     def init(self):
         '''
@@ -371,8 +377,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 - `time_elapsed`: The raw elapsed `datetime.timedelta` object
                 - `percentage`: Percentage as a float or `None` if no max_value
                   is available
-                - `dynamic_messages`: Dictionary of user-defined
+                - `dynamic_messages`: Dictionary of user-defined variables
                   :py:class:`~progressbar.widgets.DynamicMessage`'s
+                - `vars`: alias for `dynamic_messages`, but shorter name for lazyness.
 
         '''
         self._last_update_time = time.time()
@@ -413,7 +420,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             percentage=self.percentage,
             # Dictionary of user-defined
             # :py:class:`progressbar.widgets.DynamicMessage`'s
-            dynamic_messages=self.dynamic_messages
+            dynamic_messages=self.dynamic_messages,
+            # alias for `dynamic_messages`
+            vars=self.dynamic_messages,
         )
 
     def default_widgets(self):

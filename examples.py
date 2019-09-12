@@ -467,6 +467,38 @@ def dynamic_message():
 
 
 @example
+def user_variables():
+    tasks = {
+        "Download": [
+            "SDK",
+            "IDE",
+            "Dependencies",
+        ],
+        "Build": [
+            "Compile",
+            "Link",
+        ],
+        "Test": [
+            "Unit tests",
+            "Integration tests",
+            "Regression tests",
+        ],
+        "Deploy": [
+            "Send to server",
+            "Restart server",
+        ],
+    }
+    num_subtasks = sum(len(x) for x in tasks.values())
+
+    with progressbar.ProgressBar(prefix="{vars.task} >> {vars.subtask}", vars={"task": '--', "subtask": '--'}, max_value=10*num_subtasks) as bar:
+        for tasks_name, subtasks in tasks.items():
+            for subtask_name in subtasks:
+                for i in range(10):
+                    bar.update(bar.value+1, task=tasks_name, subtask=subtask_name)
+                    time.sleep(0.1)
+
+
+@example
 def format_custom_text():
     format_custom_text = progressbar.FormatCustomText(
         'Spam: %(spam).1f kg, eggs: %(eggs)d',
