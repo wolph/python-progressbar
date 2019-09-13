@@ -5,6 +5,7 @@ from __future__ import with_statement
 
 import sys
 import math
+import os
 import time
 import timeit
 import logging
@@ -171,9 +172,15 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         left_justify (bool): Justify to the left if `True` or the right if
                                 `False`
         initial_value (int): The value to start with
-        poll_interval (float): The update interval in time. Note that this
-                                is always limited by
-                                `_MINIMUM_UPDATE_INTERVAL`
+        poll_interval (float): The update interval in seconds.
+            Note that if your widgets include timers or animations, the actual
+            interval may be smaller (faster updates).
+            Also note that updates never happens faster than `min_poll_interval`.
+        min_poll_interval (float): The minimum update interval in seconds.
+            The bar will _not_ be updated faster than this,
+            despite changes in the progress, unless `force=True`.
+            This is limited to be at least `_MINIMUM_UPDATE_INTERVAL`.
+            If available, it is also bound by the environment variable PROGRESSBAR_MINIMUM_UPDATE_INTERVAL
         widget_kwargs (dict): The default keyword arguments for widgets
         custom_len (function): Method to override how the line width is
             calculated. When using non-latin characters the width
@@ -228,12 +235,13 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     '''
 
     _DEFAULT_MAXVAL = base.UnknownLength
-    _MINIMUM_UPDATE_INTERVAL = 0.05  # update up to a 20 times per second
+    _MINIMUM_UPDATE_INTERVAL = timedelta(milliseconds=50)  # update up to a 20 times per second
 
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
                  widget_kwargs=None, custom_len=utils.len_color,
-                 max_error=True, prefix=None, suffix=None, **kwargs):
+                 max_error=True, prefix=None, suffix=None,
+                 min_poll_interval=None, **kwargs):
         '''
         Initializes a progress bar with sane defaults
         '''
@@ -270,9 +278,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if poll_interval and isinstance(poll_interval, (int, float)):
             poll_interval = timedelta(seconds=poll_interval)
 
+        if min_poll_interval and isinstance(min_poll_interval, (int, float)):
+            min_poll_interval = timedelta(seconds=min_poll_interval)
+
+
         # Note that the _MINIMUM_UPDATE_INTERVAL sets the minimum in case of
         # low values.
         self.poll_interval = poll_interval
+        self.min_poll_interval = max(
+            min_poll_interval or self._MINIMUM_UPDATE_INTERVAL,
+            self._MINIMUM_UPDATE_INTERVAL,
+            timedelta(seconds=float(os.environ.get('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', 0)))
+        )
 
         # A dictionary of names of DynamicMessage's
         self.dynamic_messages = {}
@@ -526,28 +543,28 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def _needs_update(self):
         'Returns whether the ProgressBar should redraw the line.'
+        delta = timeit.default_timer() - self._last_update_timer
+        if delta < self.min_poll_interval.total_seconds():
+            # Prevent updating too often
+            return False
+        elif self.poll_interval and delta > self.poll_interval.total_seconds():
+            # Needs to redraw timers and animations
+            return True
 
-        if self.poll_interval:
-            delta = timeit.default_timer() - self._last_update_timer
-            poll_status = delta > self.poll_interval.total_seconds()
-        else:
-            delta = 0
-            poll_status = False
 
-        # Do not update if value increment is not large enough to
+        # Update if value increment is not large enough to
         # add more bars to progressbar (according to current
         # terminal width)
         try:
             divisor = self.max_value / self.term_width  # float division
-            if self.value // divisor == self.previous_value // divisor:
-                return poll_status or self.end_time
-            else:
+            if self.value // divisor != self.previous_value // divisor:
                 return True
         except Exception:
             # ignore any division errors
             pass
 
-        return poll_status or self.end_time
+        # No need to redraw yet
+        return False
 
     def update(self, value=None, force=False, **kwargs):
         'Updates the ProgressBar to a new value.'
@@ -572,22 +589,19 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             self.previous_value = self.value
             self.value = value
 
-        minimum_update_interval = self._MINIMUM_UPDATE_INTERVAL
-        delta = timeit.default_timer() - self._last_update_timer
-        if delta < minimum_update_interval and not force:
-            # Prevent updating too often
-            return
-
         # Save the updated values for dynamic messages
+        dynamic_messages_changed = False
         for key in kwargs:
             if key in self.dynamic_messages:
-                self.dynamic_messages[key] = kwargs[key]
+                if self.dynamic_messages[key] != kwargs[key]:
+                    self.dynamic_messages[key] = kwargs[key]
+                    dynamic_messages_changed = True
             else:
                 raise TypeError(
                     'update() got an unexpected keyword ' +
                     'argument {0!r}'.format(key))
 
-        if self._needs_update() or force:
+        if self._needs_update() or dynamic_messages_changed or force:
             self.updates += 1
             ResizableMixin.update(self, value=value)
             ProgressBarBase.update(self, value=value)
