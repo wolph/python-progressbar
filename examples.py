@@ -455,15 +455,17 @@ def dynamic_message():
         progressbar.Percentage(),
         progressbar.Bar(),
         progressbar.DynamicMessage('loss'),
+        ", ",
         progressbar.DynamicMessage('username', width=12, precision=12),
     ]
     with progressbar.ProgressBar(max_value=100, widgets=widgets) as bar:
         min_so_far = 1
         for i in range(100):
+            time.sleep(0.01)
             val = random.random()
             if val < min_so_far:
                 min_so_far = val
-            bar.update(i, loss=min_so_far, username='Some user %02d' % i)
+            bar.update(i, loss=min_so_far, username='Some user')
 
 
 @example
