@@ -161,22 +161,6 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
     >>> class Progress(object):
     ...     pass
 
-    >>> Progress.term_width = 0
-    >>> str(label(Progress, dict(value='test')))
-    ''
-
-    >>> Progress.term_width = 5
-    >>> str(label(Progress, dict(value='test')))
-    'test'
-
-    >>> Progress.term_width = 10
-    >>> str(label(Progress, dict(value='test')))
-    'test'
-
-    >>> Progress.term_width = 11
-    >>> str(label(Progress, dict(value='test')))
-    ''
-
     >>> label = FormatLabel('{value} :: {value:^6}', new_style=True)
     >>> str(label(Progress, dict(value='test')))
     'test ::  test '
