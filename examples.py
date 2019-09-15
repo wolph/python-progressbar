@@ -490,7 +490,10 @@ def user_variables():
     }
     num_subtasks = sum(len(x) for x in tasks.values())
 
-    with progressbar.ProgressBar(prefix="{vars.task} >> {vars.subtask}", vars={"task": '--', "subtask": '--'}, max_value=10*num_subtasks) as bar:
+    with progressbar.ProgressBar(
+            prefix="{variables.task} >> {variables.subtask}",
+            variables={"task": '--', "subtask": '--'},
+            max_value=10*num_subtasks) as bar:
         for tasks_name, subtasks in tasks.items():
             for subtask_name in subtasks:
                 for i in range(10):
