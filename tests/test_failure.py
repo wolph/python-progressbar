@@ -107,11 +107,11 @@ def test_unexpected_update_keyword_arg():
             p.update(i, foo=10)
 
 
-def test_dynamic_message_not_str():
+def test_variable_not_str():
     with pytest.raises(TypeError):
-        progressbar.DynamicMessage(1)
+        progressbar.Variable(1)
 
 
-def test_dynamic_message_too_many_strs():
+def test_variable_too_many_strs():
     with pytest.raises(ValueError):
-        progressbar.DynamicMessage('too long')
+        progressbar.Variable('too long')

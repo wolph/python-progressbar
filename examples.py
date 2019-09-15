@@ -449,13 +449,13 @@ def eta():
 
 @example
 def dynamic_message():
-    # Use progressbar.DynamicMessage to keep track of some parameter(s) during
+    # Use progressbar.Variable to keep track of some parameter(s) during
     # your calculations
     widgets = [
         progressbar.Percentage(),
         progressbar.Bar(),
-        progressbar.DynamicMessage('loss'),
-        progressbar.DynamicMessage('username', width=12, precision=12),
+        progressbar.Variable('loss'),
+        progressbar.Variable('username', width=12, precision=12),
     ]
     with progressbar.ProgressBar(max_value=100, widgets=widgets) as bar:
         min_so_far = 1
