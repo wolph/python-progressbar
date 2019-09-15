@@ -200,5 +200,62 @@ class StreamWrapper(object):
         self.flush()
 
 
+class AttributeDict(dict):
+    '''
+    A dict that can be accessed with .attribute
+
+    >>> attrs = AttributeDict(spam=123)
+
+    # Reading
+    >>> attrs['spam']
+    123
+    >>> attrs.spam
+    123
+
+    # Read after update using attribute
+    >>> attrs.spam = 456
+    >>> attrs['spam']
+    456
+    >>> attrs.spam
+    456
+
+    # Read after update using dict access
+    >>> attrs['spam'] = 123
+    >>> attrs['spam']
+    123
+    >>> attrs.spam
+    123
+
+    # Read after update using dict access
+    >>> del attrs.spam
+    >>> attrs['spam']
+    Traceback (most recent call last):
+    ...
+    KeyError: 'spam'
+    >>> attrs.spam
+    Traceback (most recent call last):
+    ...
+    AttributeError: No such attribute: spam
+    >>> del attrs.spam
+    Traceback (most recent call last):
+    ...
+    AttributeError: No such attribute: spam
+    '''
+    def __getattr__(self, name):
+        if name in self:
+            return self[name]
+        else:
+            raise AttributeError("No such attribute: " + name)
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+    def __delattr__(self, name):
+        if name in self:
+            del self[name]
+        else:
+            raise AttributeError("No such attribute: " + name)
+
+
 logger = logging.getLogger(__name__)
 streams = StreamWrapper()

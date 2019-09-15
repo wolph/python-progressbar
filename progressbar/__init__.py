@@ -23,6 +23,7 @@ from .widgets import (
     ReverseBar,
     BouncingBar,
     RotatingMarker,
+    Variable,
     DynamicMessage,
     FormatCustomText,
     CurrentTime
