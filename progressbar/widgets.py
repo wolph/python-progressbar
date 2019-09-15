@@ -82,7 +82,45 @@ class FormatWidgetMixin(object):
             raise
 
 
-class WidgetBase(object):
+class WidthWidgetMixin(object):
+    '''Mixing to make sure widgets are only visible if the screen is within a
+    specified size range so the progressbar fits on both large and small
+    screens..
+
+    Variables available:
+     - min_width: Only display the widget if at least `min_width` is left
+     - max_width: Only display the widget if at most `max_width` is left
+
+    >>> class Progress(object):
+    ...     term_width = 0
+
+    >>> WidthWidgetMixin(5, 10).check_size(Progress)
+    False
+    >>> Progress.term_width = 5
+    >>> WidthWidgetMixin(5, 10).check_size(Progress)
+    True
+    >>> Progress.term_width = 10
+    >>> WidthWidgetMixin(5, 10).check_size(Progress)
+    True
+    >>> Progress.term_width = 11
+    >>> WidthWidgetMixin(5, 10).check_size(Progress)
+    False
+    '''
+
+    def __init__(self, min_width=None, max_width=None, **kwargs):
+        self.min_width = min_width
+        self.max_width = max_width
+
+    def check_size(self, progress):
+        if self.min_width and self.min_width > progress.term_width:
+            return False
+        elif self.max_width and self.max_width < progress.term_width:
+            return False
+        else:
+            return True
+
+
+class WidgetBase(WidthWidgetMixin):
     __metaclass__ = abc.ABCMeta
     '''The base class for all widgets
 
@@ -108,24 +146,12 @@ class WidgetBase(object):
        with a lower one
     '''
 
-    def __init__(self, min_width=None, max_width=None, **kwargs):
-        self.min_width = min_width
-        self.max_width = max_width
-
     @abc.abstractmethod
     def __call__(self, progress, data):
         '''Updates the widget.
 
         progress - a reference to the calling ProgressBar
         '''
-
-    def is_fitting(self, progress):
-        if self.min_width and self.min_width > progress.term_width:
-            return False
-        elif self.max_width and self.max_width < progress.term_width:
-            return False
-        else:
-            return True
 
 
 class AutoWidthWidgetBase(WidgetBase):
@@ -160,7 +186,6 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
     >>> label = FormatLabel('%(value)s', min_width=5, max_width=10)
     >>> class Progress(object):
     ...     pass
-
     >>> label = FormatLabel('{value} :: {value:^6}', new_style=True)
     >>> str(label(Progress, dict(value='test')))
     'test ::  test '

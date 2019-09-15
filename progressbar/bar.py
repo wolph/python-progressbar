@@ -486,7 +486,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         for index, widget in enumerate(self.widgets):
             if isinstance(widget, widgets.WidgetBase) \
-                    and not widget.is_fitting(self):
+                    and not widget.check_size(self):
                 continue
             elif isinstance(widget, widgets.AutoWidthWidgetBase):
                 result.append(widget)
