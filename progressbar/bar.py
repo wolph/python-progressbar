@@ -217,6 +217,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             raised when needed
             prefix (str): Prefix the progressbar with the given string
             suffix (str): Prefix the progressbar with the given string
+        variables (dict): User-defined variables variables that can be used
+            from a label using `format="{variables.my_var}"`.  These values can
+            be updated using `bar.update(my_var="newValue")` This can also be
+            used to set initial values for `Variable`s widgets
 
     A common way of using it is like:
 
@@ -267,7 +271,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     def __init__(self, min_value=0, max_value=None, widgets=None,
                  left_justify=True, initial_value=0, poll_interval=None,
                  widget_kwargs=None, custom_len=utils.len_color,
-                 max_error=True, prefix=None, suffix=None, **kwargs):
+                 max_error=True, prefix=None, suffix=None, variables=None,
+                 **kwargs):
         '''
         Initializes a progress bar with sane defaults
         '''
@@ -308,11 +313,20 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         # low values.
         self.poll_interval = poll_interval
 
-        # A dictionary of names of DynamicMessage's
-        self.dynamic_messages = {}
+        # A dictionary of names that can be used by Variable and FormatWidget
+        self.variables = utils.AttributeDict(variables or {})
         for widget in (self.widgets or []):
-            if isinstance(widget, widgets_module.DynamicMessage):
-                self.dynamic_messages[widget.name] = None
+            if isinstance(widget, widgets_module.Variable):
+                if widget.name not in self.variables:
+                    self.variables[widget.name] = None
+
+    @property
+    def dynamic_messages(self):  # pragma: no cover
+        return self.variables
+
+    @dynamic_messages.setter
+    def dynamic_messages(self, value):  # pragma: no cover
+        self.variables = value
 
     def init(self):
         '''
@@ -405,8 +419,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 - `time_elapsed`: The raw elapsed `datetime.timedelta` object
                 - `percentage`: Percentage as a float or `None` if no max_value
                   is available
-                - `dynamic_messages`: Dictionary of user-defined
-                  :py:class:`~progressbar.widgets.DynamicMessage`'s
+                - `dynamic_messages`: Deprecated, use `variables` instead.
+                - `variables`: Dictionary of user-defined variables for the
+                  :py:class:`~progressbar.widgets.Variable`'s
 
         '''
         self._last_update_time = time.time()
@@ -446,8 +461,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             # Percentage as a float or `None` if no max_value is available
             percentage=self.percentage,
             # Dictionary of user-defined
-            # :py:class:`progressbar.widgets.DynamicMessage`'s
-            dynamic_messages=self.dynamic_messages
+            # :py:class:`progressbar.widgets.Variable`'s
+            variables=self.variables,
+            # Deprecated alias for `variables`
+            dynamic_messages=self.variables,
         )
 
     def default_widgets(self):
@@ -614,8 +631,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         # Save the updated values for dynamic messages
         for key in kwargs:
-            if key in self.dynamic_messages:
-                self.dynamic_messages[key] = kwargs[key]
+            if key in self.variables:
+                self.variables[key] = kwargs[key]
             else:
                 raise TypeError(
                     'update() got an unexpected keyword ' +

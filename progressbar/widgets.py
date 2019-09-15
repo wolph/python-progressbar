@@ -728,25 +728,25 @@ class FormatCustomText(FormatWidgetMixin, WidthWidgetMixin):
             self, progress, self.mapping, self.format)
 
 
-class DynamicMessage(FormatWidgetMixin, WidgetBase):
+class Variable(FormatWidgetMixin, WidgetBase):
     '''Displays a custom variable.'''
 
     def __init__(self, name, format='{name}: {formatted_value}',
                  width=6, precision=3):
-        '''Creates a DynamicMessage associated with the given name.'''
+        '''Creates a Variable associated with the given name.'''
         self.format = format
         self.width = width
         self.precision = precision
         if not isinstance(name, str):
-            raise TypeError('DynamicMessage(): argument must be a string')
+            raise TypeError('Variable(): argument must be a string')
         if len(name.split()) > 1:
             raise ValueError(
-                'DynamicMessage(): argument must be single word')
+                'Variable(): argument must be single word')
 
         self.name = name
 
     def __call__(self, progress, data):
-        value = data['dynamic_messages'][self.name]
+        value = data['variables'][self.name]
         context = data.copy()
         context['value'] = value
         context['name'] = self.name
@@ -764,6 +764,11 @@ class DynamicMessage(FormatWidgetMixin, WidgetBase):
                 context['formatted_value'] = '-' * self.width
 
         return self.format.format(**context)
+
+
+class DynamicMessage(Variable):
+    '''Kept for backwards compatibility, please use `Variable` instead.'''
+    pass
 
 
 class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):

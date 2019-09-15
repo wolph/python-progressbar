@@ -39,12 +39,15 @@ def test_dynamic_message_widget():
         ' [', progressbar.Timer(), '] ',
         progressbar.Bar(),
         ' (', progressbar.ETA(), ') ',
-        progressbar.DynamicMessage('loss'),
-        progressbar.DynamicMessage('text'),
-        progressbar.DynamicMessage('error', precision=None),
+        progressbar.Variable('loss'),
+        progressbar.Variable('text'),
+        progressbar.Variable('error', precision=None),
+        progressbar.Variable('missing'),
+        progressbar.Variable('predefined'),
     ]
 
-    p = progressbar.ProgressBar(widgets=widgets, max_value=1000)
+    p = progressbar.ProgressBar(widgets=widgets, max_value=1000,
+                                variables=dict(predefined='predefined'))
     p.start()
     for i in range(0, 200, 5):
         time.sleep(0.1)

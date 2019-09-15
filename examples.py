@@ -460,13 +460,13 @@ def eta():
 
 @example
 def dynamic_message():
-    # Use progressbar.DynamicMessage to keep track of some parameter(s) during
+    # Use progressbar.Variable to keep track of some parameter(s) during
     # your calculations
     widgets = [
         progressbar.Percentage(),
         progressbar.Bar(),
-        progressbar.DynamicMessage('loss'),
-        progressbar.DynamicMessage('username', width=12, precision=12),
+        progressbar.Variable('loss'),
+        progressbar.Variable('username', width=12, precision=12),
     ]
     with progressbar.ProgressBar(max_value=100, widgets=widgets) as bar:
         min_so_far = 1
@@ -475,6 +475,41 @@ def dynamic_message():
             if val < min_so_far:
                 min_so_far = val
             bar.update(i, loss=min_so_far, username='Some user %02d' % i)
+
+
+@example
+def user_variables():
+    tasks = {
+        "Download": [
+            "SDK",
+            "IDE",
+            "Dependencies",
+        ],
+        "Build": [
+            "Compile",
+            "Link",
+        ],
+        "Test": [
+            "Unit tests",
+            "Integration tests",
+            "Regression tests",
+        ],
+        "Deploy": [
+            "Send to server",
+            "Restart server",
+        ],
+    }
+    num_subtasks = sum(len(x) for x in tasks.values())
+
+    with progressbar.ProgressBar(
+            prefix="{variables.task} >> {variables.subtask}",
+            variables={"task": '--', "subtask": '--'},
+            max_value=10*num_subtasks) as bar:
+        for tasks_name, subtasks in tasks.items():
+            for subtask_name in subtasks:
+                for i in range(10):
+                    bar.update(bar.value+1, task=tasks_name, subtask=subtask_name)
+                    time.sleep(0.1)
 
 
 @example

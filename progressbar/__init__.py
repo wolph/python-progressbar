@@ -23,6 +23,7 @@ from .widgets import (
     ReverseBar,
     BouncingBar,
     RotatingMarker,
+    Variable,
     DynamicMessage,
     FormatCustomText,
     CurrentTime
@@ -65,6 +66,7 @@ __all__ = [
     'ProgressBar',
     'DataTransferBar',
     'RotatingMarker',
+    'Variable',
     'DynamicMessage',
     'FormatCustomText',
     'CurrentTime',
