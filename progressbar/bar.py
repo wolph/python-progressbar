@@ -56,7 +56,8 @@ class ProgressBarBase(abc.Iterable, ProgressBarMixinBase):
 
 class DefaultFdMixin(ProgressBarMixinBase):
 
-    def __init__(self, fd=sys.stderr, is_terminal=None, line_breaks=None, enable_colors=None, **kwargs):
+    def __init__(self, fd=sys.stderr, is_terminal=None, line_breaks=None,
+                 enable_colors=None, **kwargs):
         if fd is sys.stdout:
             fd = utils.streams.original_stdout
 
