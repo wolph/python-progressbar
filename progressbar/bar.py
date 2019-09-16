@@ -8,7 +8,6 @@ import math
 import time
 import timeit
 import logging
-import os
 import warnings
 from datetime import datetime, timedelta
 try:  # pragma: no cover
