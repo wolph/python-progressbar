@@ -37,8 +37,8 @@ def example0():
 def example1():
     widgets = ['Test: ', Percentage(), ' ', Bar(marker=RotatingMarker()),
                ' ', ETA(), ' ', FileTransferSpeed()]
-    pbar = ProgressBar(widgets=widgets, maxval=10000000).start()
-    for i in range(1000000):
+    pbar = ProgressBar(widgets=widgets, maxval=10000).start()
+    for i in range(1000):
         # do something
         pbar.update(10*i+1)
     pbar.finish()
@@ -55,10 +55,10 @@ def example2():
 
     widgets = [CrazyFileTransferSpeed(),' <<<', Bar(), '>>> ',
                Percentage(),' ', ETA()]
-    pbar = ProgressBar(widgets=widgets, maxval=10000000)
+    pbar = ProgressBar(widgets=widgets, maxval=10000)
     # maybe do something
     pbar.start()
-    for i in range(2000000):
+    for i in range(2000):
         # do something
         pbar.update(5*i+1)
     pbar.finish()
@@ -66,8 +66,8 @@ def example2():
 @example
 def example3():
     widgets = [Bar('>'), ' ', ETA(), ' ', ReverseBar('<')]
-    pbar = ProgressBar(widgets=widgets, maxval=10000000).start()
-    for i in range(1000000):
+    pbar = ProgressBar(widgets=widgets, maxval=10000).start()
+    for i in range(1000):
         # do something
         pbar.update(10*i+1)
     pbar.finish()

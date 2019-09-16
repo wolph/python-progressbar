@@ -23,11 +23,11 @@ def no_color(value):
     '''
     Return the `value` without ANSI escape codes
 
-    >>> no_color(b'\u001b[1234]abc')
+    >>> no_color(b'\u001b[1234]abc') == b'abc'
+    True
+    >>> str(no_color(u'\u001b[1234]abc'))
     'abc'
-    >>> no_color(u'\u001b[1234]abc')
-    u'abc'
-    >>> no_color('\u001b[1234]abc')
+    >>> str(no_color('\u001b[1234]abc'))
     'abc'
     '''
     if isinstance(value, bytes):

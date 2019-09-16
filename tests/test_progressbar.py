@@ -16,15 +16,11 @@ def test_examples(monkeypatch):
 
 @pytest.mark.no_freezegun
 @pytest.mark.parametrize('example', original_examples.examples)
-def test_original_examples(example, monkeypatch, sleep_faster):
-    sleep_faster.stop()
+def test_original_examples(example, monkeypatch):
     monkeypatch.setattr(progressbar.ProgressBar,
                         '_MINIMUM_UPDATE_INTERVAL', 1)
     monkeypatch.setattr(time, 'sleep', lambda t: None)
-    try:
-        example()
-    finally:
-        sleep_faster.start()
+    example()
 
 
 def test_examples_nullbar(monkeypatch):
