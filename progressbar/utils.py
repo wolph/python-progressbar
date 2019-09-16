@@ -58,12 +58,14 @@ def len_color(value):
 
 def env_flag(name, default=None):
     '''
-    Accepts environt variables formatted as y/n, yes/no, 1/0, true/false, on/off, and returns it as a boolean
+    Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
+    on/off, and returns it as a boolean
 
-    If the environt variable is not defined, or has an unknown value, returns `default`
+    If the environt variable is not defined, or has an unknown value, returns
+    `default`
     '''
     try:
-        return bool(distutils.util.strtobool(os.environ.get(name, "")))
+        return bool(distutils.util.strtobool(os.environ.get(name, '')))
     except ValueError:
         return default
 

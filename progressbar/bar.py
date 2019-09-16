@@ -69,23 +69,25 @@ class DefaultFdMixin(ProgressBarMixinBase):
         # Check if this is an interactive terminal
         if is_terminal is None:
             is_terminal = utils.env_flag('PROGRESSBAR_IS_TERMINAL', None)
-        if is_terminal is None:
+        if is_terminal is None:  # pragma: no cover
             try:
                 is_terminal = fd.isatty()
-            except:
+            except Exception:
                 is_terminal = False
         self.is_terminal = is_terminal
 
-        # Check if it should overwrite the current line (suitable for iteractive terminals)
-        # or write line breaks (suitable for log files)
+        # Check if it should overwrite the current line (suitable for
+        # iteractive terminals) or write line breaks (suitable for log files)
         if line_breaks is None:
-            line_breaks = utils.env_flag('PROGRESSBAR_LINE_BREAKS', not is_terminal)
+            line_breaks = utils.env_flag('PROGRESSBAR_LINE_BREAKS', not
+                                         is_terminal)
         self.line_breaks = line_breaks
 
-        # Check if ANSI escape characters are enabled (suitable for iteractive terminals),
-        # or should be stripped off (suitable for log files)
+        # Check if ANSI escape characters are enabled (suitable for iteractive
+        # terminals), or should be stripped off (suitable for log files)
         if enable_colors is None:
-            enable_colors = utils.env_flag('PROGRESSBAR_ENABLE_COLORS', is_terminal)
+            enable_colors = utils.env_flag('PROGRESSBAR_ENABLE_COLORS',
+                                           is_terminal)
         self.enable_colors = enable_colors
 
         ProgressBarMixinBase.__init__(self, **kwargs)

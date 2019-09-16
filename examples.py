@@ -459,7 +459,7 @@ def eta():
 
 
 @example
-def dynamic_message():
+def variables():
     # Use progressbar.Variable to keep track of some parameter(s) during
     # your calculations
     widgets = [

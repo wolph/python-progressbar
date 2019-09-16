@@ -3,6 +3,44 @@ import pprint
 pytest_plugins = 'pytester'
 
 
+SCRIPT = '''
+import time
+import timeit
+import freezegun
+import progressbar
+
+
+with freezegun.freeze_time() as fake_time:
+    timeit.default_timer = time.time
+    with progressbar.ProgressBar(widgets={widgets}, **{kwargs!r}) as bar:
+        bar._MINIMUM_UPDATE_INTERVAL = 1e-9
+        for i in bar({items}):
+            {loop_code}
+'''
+
+
+def _create_script(widgets=None, items=list(range(9)),
+                   loop_code='fake_time.tick(1)', term_width=60,
+                   **kwargs):
+    kwargs['term_width'] = term_width
+
+    # Reindent the loop code
+    indent = '\n            '
+    loop_code = loop_code.strip('\n').split('\n')
+    dedent = len(loop_code[0]) - len(loop_code[0].lstrip())
+    for i, line in enumerate(loop_code):
+        loop_code[i] = line[dedent:]
+
+    script = SCRIPT.format(
+        items=items,
+        widgets=widgets,
+        kwargs=kwargs,
+        loop_code=indent.join(loop_code),
+    )
+    print(script)
+    return script
+
+
 def test_list_example(testdir):
     ''' Run the simple example code in a python subprocess and then compare its
         stderr to what we expect to see from it.  We run it in a subprocess to
@@ -10,20 +48,9 @@ def test_list_example(testdir):
         output.  This test is just a sanity check to ensure that the progress
         bar progresses from 1 to 10, it does not make sure that the '''
 
-    v = testdir.makepyfile('''
-    import time
-    import timeit
-    import freezegun
-    import progressbar
-
-    with freezegun.freeze_time() as fake_time:
-        timeit.default_timer = time.time
-        bar = progressbar.ProgressBar(term_width=65)
-        bar._MINIMUM_UPDATE_INTERVAL = 1e-9
-        for i in bar(list(range(9))):
-            fake_time.tick(1)
-    ''')
-    result = testdir.runpython(v)
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        term_width=65,
+    )))
     result.stderr.lines = [l.rstrip() for l in result.stderr.lines
                            if l.strip()]
     pprint.pprint(result.stderr.lines, width=70)
@@ -47,21 +74,9 @@ def test_generator_example(testdir):
         best capture its stderr. We expect to see match_lines in order in the
         output.  This test is just a sanity check to ensure that the progress
         bar progresses from 1 to 10, it does not make sure that the '''
-
-    v = testdir.makepyfile('''
-    import time
-    import timeit
-    import freezegun
-    import progressbar
-
-    with freezegun.freeze_time() as fake_time:
-        timeit.default_timer = time.time
-        bar = progressbar.ProgressBar(term_width=60)
-        bar._MINIMUM_UPDATE_INTERVAL = 1e-9
-        for i in bar(iter(range(9))):
-            fake_time.tick(1)
-    ''')
-    result = testdir.runpython(v)
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        items='iter(range(9))',
+    )))
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
     pprint.pprint(result.stderr.lines, width=70)
 
@@ -79,23 +94,16 @@ def test_rapid_updates(testdir):
         this is meant to test that the progressbar progresses normally with
         this sample code, since there were issues with it in the past '''
 
-    v = testdir.makepyfile('''
-    import time
-    import timeit
-    import freezegun
-    import progressbar
-
-    with freezegun.freeze_time() as fake_time:
-        timeit.default_timer = time.time
-        bar = progressbar.ProgressBar(term_width=60)
-        bar._MINIMUM_UPDATE_INTERVAL = 1e-9
-        for i in bar(range(10)):
-            if i < 5:
-                fake_time.tick(1)
-            else:
-                fake_time.tick(2)
-    ''')
-    result = testdir.runpython(v)
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        term_width=60,
+        items=list(range(10)),
+        loop_code='''
+        if i < 5:
+            fake_time.tick(1)
+        else:
+            fake_time.tick(2)
+        '''
+    )))
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
     pprint.pprint(result.stderr.lines, width=70)
     result.stderr.fnmatch_lines([
@@ -113,52 +121,11 @@ def test_rapid_updates(testdir):
     ])
 
 
-def test_context_wrapper(testdir):
-    v = testdir.makepyfile('''
-    import time
-    import timeit
-    import freezegun
-    import progressbar
-
-    with freezegun.freeze_time() as fake_time:
-        timeit.default_timer = time.time
-        with progressbar.ProgressBar(term_width=60) as bar:
-            bar._MINIMUM_UPDATE_INTERVAL = 1e-9
-            for _ in bar(list(range(5))):
-                fake_time.tick(1)
-    ''')
-
-    result = testdir.runpython(v)
-    result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
-    pprint.pprint(result.stderr.lines, width=70)
-    result.stderr.fnmatch_lines([
-        'N/A% (0 of 5) |       | Elapsed Time: ?:00:00 ETA:  --:--:--',
-        ' 20% (1 of 5) |#      | Elapsed Time: ?:00:01 ETA:   ?:00:04',
-        ' 40% (2 of 5) |##     | Elapsed Time: ?:00:02 ETA:   ?:00:03',
-        ' 60% (3 of 5) |####   | Elapsed Time: ?:00:03 ETA:   ?:00:02',
-        ' 80% (4 of 5) |#####  | Elapsed Time: ?:00:04 ETA:   ?:00:01',
-        '100% (5 of 5) |#######| Elapsed Time: ?:00:05 Time:  ?:00:05',
-    ])
-
-
 def test_non_timed(testdir):
-    v = testdir.makepyfile('''
-    import time
-    import timeit
-    import freezegun
-    import progressbar
-
-    widgets = [progressbar.Percentage(), progressbar.Bar()]
-
-    with freezegun.freeze_time() as fake_time:
-        timeit.default_timer = time.time
-        with progressbar.ProgressBar(widgets=widgets, term_width=60) as bar:
-            bar._MINIMUM_UPDATE_INTERVAL = 1e-9
-            for _ in bar(list(range(5))):
-                fake_time.tick(1)
-    ''')
-
-    result = testdir.runpython(v)
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        widgets='[progressbar.Percentage(), progressbar.Bar()]',
+        items=list(range(5)),
+    )))
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
     pprint.pprint(result.stderr.lines, width=70)
     result.stderr.fnmatch_lines([
@@ -169,3 +136,72 @@ def test_non_timed(testdir):
         ' 80%|###########################################           |',
         '100%|######################################################|',
     ])
+
+
+def test_line_breaks(testdir):
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        widgets='[progressbar.Percentage(), progressbar.Bar()]',
+        line_breaks=True,
+        items=list(range(5)),
+    )))
+    pprint.pprint(result.stderr.str(), width=70)
+    assert result.stderr.str() == u'\n'.join((
+        u'N/A%|                                                      |',
+        u' 20%|##########                                            |',
+        u' 40%|#####################                                 |',
+        u' 60%|################################                      |',
+        u' 80%|###########################################           |',
+        u'100%|######################################################|',
+        u'100%|######################################################|',
+    ))
+
+
+def test_no_line_breaks(testdir):
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        widgets='[progressbar.Percentage(), progressbar.Bar()]',
+        line_breaks=False,
+        items=list(range(5)),
+    )))
+    pprint.pprint(result.stderr.str(), width=70)
+    assert result.stderr.str() == u'\n'.join((
+        u'',
+        u'                                                            ',
+        u'',
+        u'N/A%|                                                      |',
+        u'                                                            ',
+        u'',
+        u' 20%|##########                                            |',
+        u'                                                            ',
+        u'',
+        u' 40%|#####################                                 |',
+        u'                                                            ',
+        u'',
+        u' 60%|################################                      |',
+        u'                                                            ',
+        u'',
+        u' 80%|###########################################           |',
+        u'                                                            ',
+        u'',
+        u'100%|######################################################|',
+        u'',
+        u'                                                            ',
+        u'',
+        u'100%|######################################################|'
+    ))
+
+
+def test_colors(testdir):
+    kwargs = dict(
+        items=range(1),
+        widgets=['\033[92mgreen\033[0m'],
+    )
+
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        enable_colors=True, **kwargs)))
+    pprint.pprint(result.stderr.lines, width=70)
+    assert result.stderr.lines == [u'\x1b[92mgreen\x1b[0m'] * 3
+
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        enable_colors=False, **kwargs)))
+    pprint.pprint(result.stderr.lines, width=70)
+    assert result.stderr.lines == [u'green'] * 3
