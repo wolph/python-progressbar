@@ -734,6 +734,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
                 )
 
         self.num_intervals = max(100, self.term_width)
+        # The `next_update` is kept for compatibility with external libs:
+        # https://github.com/WoLpH/python-progressbar/issues/207
+        self.next_update = 0
 
         if self.max_value is not base.UnknownLength and self.max_value < 0:
             raise ValueError('Value out of range')
