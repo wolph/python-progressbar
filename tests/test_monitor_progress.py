@@ -166,6 +166,50 @@ def test_line_breaks(testdir):
     ))
 
 
+def test_etas(testdir):
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        widgets='''[
+            progressbar.ETA(), ' ',
+            progressbar.AdaptiveETA(), ' ',
+            progressbar.FileTransferSpeed(), ' ',
+            progressbar.AdaptiveTransferSpeed(),
+        ]''',
+        loop_code='''
+        if i < 10:
+            fake_time.tick(1)
+        else:
+            fake_time.tick(3)
+        ''',
+        line_breaks=True,
+        items=range(20),
+    )))
+    pprint.pprint(result.stderr.str(), width=70)
+    assert result.stderr.str() == u'\n'.join((
+        'ETA:  --:--:-- ETA:  --:--:--   0.0 s/B   0.0 s/B\n'
+        'ETA:  1 day, 14:00:19 ETA:   0:00:19   0.1 YiB/s   1.0 B/s\n'
+        'ETA:  18:00:18 ETA:   0:00:18   0.3 YiB/s   1.0 B/s\n'
+        'ETA:  11:20:17 ETA:   0:00:17   0.4 YiB/s   1.0 B/s\n'
+        'ETA:   8:00:16 ETA:   0:00:16   0.6 YiB/s   1.0 B/s\n'
+        'ETA:   6:00:15 ETA:   0:00:15   0.7 YiB/s   1.0 B/s\n'
+        'ETA:   4:40:14 ETA:   0:00:14   0.9 YiB/s   1.0 B/s\n'
+        'ETA:   3:43:04 ETA:   0:00:13   1.0 YiB/s   1.0 B/s\n'
+        'ETA:   3:00:12 ETA:   0:00:12 901.0 s/B   1.0 B/s\n'
+        'ETA:   2:26:51 ETA:   0:00:11 801.0 s/B   1.0 B/s\n'
+        'ETA:   2:00:10 ETA:   0:00:10 721.0 s/B   1.0 B/s\n'
+        'ETA:   1:38:21 ETA:   0:00:27 655.7 s/B   0.3 B/s\n'
+        'ETA:   1:20:10 ETA:   0:00:24 601.3 s/B   0.3 B/s\n'
+        'ETA:   1:04:47 ETA:   0:00:21 555.3 s/B   0.3 B/s\n'
+        'ETA:   0:51:35 ETA:   0:00:18 515.9 s/B   0.3 B/s\n'
+        'ETA:   0:40:08 ETA:   0:00:15 481.7 s/B   0.3 B/s\n'
+        'ETA:   0:30:07 ETA:   0:00:12 451.8 s/B   0.3 B/s\n'
+        'ETA:   0:21:16 ETA:   0:00:09 425.4 s/B   0.3 B/s\n'
+        'ETA:   0:13:23 ETA:   0:00:06 401.9 s/B   0.3 B/s\n'
+        'ETA:   0:06:20 ETA:   0:00:03 380.9 s/B   0.3 B/s\n'
+        'Time:  2:00:40 Time:  2:00:40 362.0 s/B   0.3 B/s\n'
+        'Time:  2:00:40 Time:  2:00:40 362.0 s/B   0.3 B/s',
+    ))
+
+
 def test_no_line_breaks(testdir):
     result = testdir.runpython(testdir.makepyfile(_create_script(
         widgets='[progressbar.Percentage(), progressbar.Bar()]',
