@@ -20,7 +20,7 @@ assert scale_1024
 assert epoch
 
 
-def deltas_to_seconds(*deltas, default=ValueError):
+def deltas_to_seconds(*deltas, **kwargs):  # default=ValueError):
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing
 
@@ -45,6 +45,9 @@ def deltas_to_seconds(*deltas, default=ValueError):
     >>> deltas_to_seconds(default=0.0)
     0.0
     '''
+    default = kwargs.pop('default', ValueError)
+    assert not kwargs, 'Only the `default` keyword argument is supported'
+
     for delta in deltas:
         if delta is None:
             continue
