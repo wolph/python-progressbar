@@ -403,6 +403,7 @@ def eta_types_demonstration():
         ' ETA: ', progressbar.ETA(),
         ' Adaptive ETA: ', progressbar.AdaptiveETA(),
         ' Absolute ETA: ', progressbar.AbsoluteETA(),
+        ' Transfer Speed: ', progressbar.FileTransferSpeed(),
         ' Adaptive Transfer Speed: ', progressbar.AdaptiveTransferSpeed(),
         ' ', progressbar.Bar(),
     ]

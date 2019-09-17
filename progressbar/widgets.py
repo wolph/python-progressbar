@@ -478,8 +478,15 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
 
     def __call__(self, progress, data, value=None, total_seconds_elapsed=None):
         '''Updates the widget with the current SI prefixed speed.'''
-        value = data['value'] or value
-        elapsed = data['total_seconds_elapsed'] or total_seconds_elapsed
+        if value is None:
+            value = data['value']
+
+        if total_seconds_elapsed is None:
+            elapsed = data['total_seconds_elapsed']
+        elif isinstance(total_seconds_elapsed, datetime.timedelta):
+            elapsed = utils.timedelta_to_seconds(total_seconds_elapsed)
+        else:
+            elapsed = total_seconds_elapsed
 
         if value is not None and elapsed is not None \
                 and elapsed > 2e-6 and value > 2e-6:  # =~ 0
