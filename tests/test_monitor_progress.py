@@ -1,9 +1,13 @@
+import os
 import pprint
+import progressbar
 
 pytest_plugins = 'pytester'
 
 
 SCRIPT = '''
+import sys
+sys.path.append({progressbar_path!r})
 import time
 import timeit
 import freezegun
@@ -36,8 +40,14 @@ def _create_script(widgets=None, items=list(range(9)),
         widgets=widgets,
         kwargs=kwargs,
         loop_code=indent.join(loop_code),
+        progressbar_path=os.path.dirname(os.path.dirname(
+            progressbar.__file__)),
     )
+    print('# Script:')
+    print('#' * 78)
     print(script)
+    print('#' * 78)
+
     return script
 
 
