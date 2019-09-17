@@ -10,7 +10,7 @@ import time
 import timeit
 import logging
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 try:  # pragma: no cover
     from collections import abc
 except ImportError:  # pragma: no cover
@@ -324,15 +324,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         # timedelta with a float versus a float directly is negligible, this
         # comparison is run for _every_ update. With billions of updates
         # (downloading a 1GiB file for example) this adds up.
-        if poll_interval and isinstance(poll_interval, timedelta):
-            poll_interval = utils.timedelta_to_seconds(poll_interval)
-
-        if min_poll_interval and isinstance(min_poll_interval, timedelta):
-            min_poll_interval = utils.timedelta_to_seconds(min_poll_interval)
-
-        if isinstance(self._MINIMUM_UPDATE_INTERVAL, timedelta):
-            self._MINIMUM_UPDATE_INTERVAL = utils.timedelta_to_seconds(
-                self._MINIMUM_UPDATE_INTERVAL)
+        poll_interval = utils.deltas_to_seconds(poll_interval, default=None)
+        min_poll_interval = utils.deltas_to_seconds(min_poll_interval,
+                                                    default=None)
+        self._MINIMUM_UPDATE_INTERVAL = utils.deltas_to_seconds(
+            self._MINIMUM_UPDATE_INTERVAL)
 
         # Note that the _MINIMUM_UPDATE_INTERVAL sets the minimum in case of
         # low values.
@@ -459,7 +455,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         elapsed = self.last_update_time - self.start_time
         # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
         # want to support older versions as well
-        total_seconds_elapsed = utils.timedelta_to_seconds(elapsed)
+        total_seconds_elapsed = utils.deltas_to_seconds(elapsed)
         return dict(
             # The maximum value (can be None with iterators)
             max_value=self.max_value,
@@ -725,8 +721,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         for widget in self.widgets:
             interval = getattr(widget, 'INTERVAL', None)
             if interval is not None:
-                if interval and isinstance(interval, timedelta):
-                    interval = utils.timedelta_to_seconds(interval)
+                interval = utils.deltas_to_seconds(interval)
 
                 self.poll_interval = min(
                     self.poll_interval or interval,

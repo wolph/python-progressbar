@@ -481,12 +481,9 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
         if value is None:
             value = data['value']
 
-        if total_seconds_elapsed is None:
-            elapsed = data['total_seconds_elapsed']
-        elif isinstance(total_seconds_elapsed, datetime.timedelta):
-            elapsed = utils.timedelta_to_seconds(total_seconds_elapsed)
-        else:
-            elapsed = total_seconds_elapsed
+        elapsed = utils.deltas_to_seconds(
+            total_seconds_elapsed,
+            data['total_seconds_elapsed'])
 
         if value is not None and elapsed is not None \
                 and elapsed > 2e-6 and value > 2e-6:  # =~ 0

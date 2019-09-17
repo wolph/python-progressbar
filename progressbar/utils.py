@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import logging
+import datetime
 from python_utils.time import timedelta_to_seconds, epoch, format_time
 from python_utils.converters import scale_1024
 from python_utils.terminal import get_terminal_size
@@ -17,6 +18,47 @@ assert get_terminal_size
 assert format_time
 assert scale_1024
 assert epoch
+
+
+def deltas_to_seconds(*deltas, default=ValueError):
+    '''
+    Convert timedeltas and seconds as int to seconds as float while coalescing
+
+    >>> deltas_to_seconds(datetime.timedelta(seconds=1, milliseconds=234))
+    1.234
+    >>> deltas_to_seconds(123)
+    123.0
+    >>> deltas_to_seconds(1.234)
+    1.234
+    >>> deltas_to_seconds(None, 1.234)
+    1.234
+    >>> deltas_to_seconds(0, 1.234)
+    0.0
+    >>> deltas_to_seconds()
+    Traceback (most recent call last):
+    ...
+    ValueError: No valid deltas passed to `deltas_to_seconds`
+    >>> deltas_to_seconds(None)
+    Traceback (most recent call last):
+    ...
+    ValueError: No valid deltas passed to `deltas_to_seconds`
+    >>> deltas_to_seconds(default=0.0)
+    0.0
+    '''
+    for delta in deltas:
+        if delta is None:
+            continue
+        if isinstance(delta, datetime.timedelta):
+            return timedelta_to_seconds(delta)
+        elif not isinstance(delta, float):
+            return float(delta)
+        else:
+            return delta
+
+    if default is ValueError:
+        raise ValueError('No valid deltas passed to `deltas_to_seconds`')
+    else:
+        return default
 
 
 def no_color(value):
