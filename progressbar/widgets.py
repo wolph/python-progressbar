@@ -753,6 +753,53 @@ class VariableMixin(object):
             raise ValueError('Variable(): argument must be single word')
         self.name = name
 
+
+class MultiBar(Bar, VariableMixin):
+    '''
+    A bar with multiple sub-ranges, each represented by a different symbol
+
+    The various ranges are represented on a user-defined variable, formatted as
+    [
+        [ "Symbol1", amount1 ],
+        [ "Symbol2", amount2 ],
+        ...
+    ]
+    '''
+
+    def __init__(self, name, **kwargs):
+        VariableMixin.__init__(self, name)
+        Bar.__init__(self, **kwargs)
+
+    def __call__(self, progress, data, width):
+        '''Updates the progress bar and its subcomponents'''
+
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
+        width -= progress.custom_len(left) + progress.custom_len(right)
+        ranges = data['variables'][self.name] or []
+
+        items_total = sum([count for symbol, count in ranges])
+        if width and items_total:
+            middle = ''
+            items_accumulated = 0
+            width_accumulated = 0
+            for item_symbol, item_count in ranges:
+                item_marker = string_or_lambda(item_symbol)
+                item_marker = converters.to_unicode(item_marker(progress, data, width))
+                assert utils.len_color(item_marker) == 1
+
+                items_accumulated += item_count
+                item_width = int(items_accumulated / items_total * width) - width_accumulated
+                width_accumulated += item_width
+                middle += item_width * item_marker
+        else:
+            fill = converters.to_unicode(self.fill(progress, data, width))
+            assert utils.len_color(fill) == 1
+            middle = fill * width
+
+        return left + middle + right
+
+
 class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
     '''Displays a custom variable.'''
 

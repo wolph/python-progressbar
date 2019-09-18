@@ -83,6 +83,34 @@ def color_bar_example():
 
 
 @example
+def multi_bar_example():
+    widgets = [progressbar.MultiBar("stages")]
+    stages = [
+        ['\x1b[32m█\x1b[39m', 0],  # Done
+        ['\x1b[33m▄\x1b[39m', 0],  # Processing
+        ['\x1b[31m▂\x1b[39m', 0],  # Scheduling
+        [' ',                25],  # Not started
+    ]
+
+    with progressbar.ProgressBar(widgets=widgets, max_value=10).start() as bar:
+        while True:
+            incomplete_items = [
+                idx
+                for idx, (stage_symbol, stage_count) in enumerate(stages)
+                for i in range(stage_count)
+                if idx != 0
+            ]
+            if not incomplete_items:
+                break
+            which = random.choice(incomplete_items)
+            stages[which][1] -= 1
+            stages[which - 1][1] += 1
+
+            bar.update(stages=stages, force=True)
+            time.sleep(0.02)
+
+
+@example
 def file_transfer_example():
     widgets = [
         'Test: ', progressbar.Percentage(),
