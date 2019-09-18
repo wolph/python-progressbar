@@ -14,7 +14,6 @@ def test_examples(monkeypatch):
             pass
 
 
-@pytest.mark.no_freezegun
 @pytest.mark.parametrize('example', original_examples.examples)
 def test_original_examples(example, monkeypatch):
     monkeypatch.setattr(progressbar.ProgressBar,
