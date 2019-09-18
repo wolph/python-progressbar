@@ -342,7 +342,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         # A dictionary of names that can be used by Variable and FormatWidget
         self.variables = utils.AttributeDict(variables or {})
         for widget in (self.widgets or []):
-            if isinstance(widget, widgets_module.Variable):
+            if isinstance(widget, widgets_module.VariableMixin):
                 if widget.name not in self.variables:
                     self.variables[widget.name] = None
 

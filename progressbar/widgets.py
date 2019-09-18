@@ -743,7 +743,17 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
             self, progress, self.mapping, self.format)
 
 
-class Variable(FormatWidgetMixin, WidgetBase):
+class VariableMixin(object):
+    '''Mixin to display a custom user variable '''
+
+    def __init__(self, name, **kwargs):
+        if not isinstance(name, str):
+            raise TypeError('Variable(): argument must be a string')
+        if len(name.split()) > 1:
+            raise ValueError('Variable(): argument must be single word')
+        self.name = name
+
+class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
     '''Displays a custom variable.'''
 
     def __init__(self, name, format='{name}: {formatted_value}',
@@ -752,13 +762,8 @@ class Variable(FormatWidgetMixin, WidgetBase):
         self.format = format
         self.width = width
         self.precision = precision
-        if not isinstance(name, str):
-            raise TypeError('Variable(): argument must be a string')
-        if len(name.split()) > 1:
-            raise ValueError('Variable(): argument must be single word')
+        VariableMixin.__init__(self, name=name)
         WidgetBase.__init__(self, **kwargs)
-
-        self.name = name
 
     def __call__(self, progress, data):
         value = data['variables'][self.name]
