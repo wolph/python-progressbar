@@ -29,7 +29,8 @@ def small_interval(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def sleep_faster(monkeypatch):
-    with freezegun.freeze_time() as fake_time:
+    freeze_time = freezegun.freeze_time()
+    with freeze_time as fake_time:
         monkeypatch.setattr('time.sleep', fake_time.tick)
         monkeypatch.setattr('timeit.default_timer', time.time)
-        yield
+        yield freeze_time

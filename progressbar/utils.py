@@ -1,9 +1,11 @@
 from __future__ import absolute_import
+import distutils.util
 import io
 import os
 import re
 import sys
 import logging
+import datetime
 from python_utils.time import timedelta_to_seconds, epoch, format_time
 from python_utils.converters import scale_1024
 from python_utils.terminal import get_terminal_size
@@ -18,6 +20,73 @@ assert scale_1024
 assert epoch
 
 
+def deltas_to_seconds(*deltas, **kwargs):  # default=ValueError):
+    '''
+    Convert timedeltas and seconds as int to seconds as float while coalescing
+
+    >>> deltas_to_seconds(datetime.timedelta(seconds=1, milliseconds=234))
+    1.234
+    >>> deltas_to_seconds(123)
+    123.0
+    >>> deltas_to_seconds(1.234)
+    1.234
+    >>> deltas_to_seconds(None, 1.234)
+    1.234
+    >>> deltas_to_seconds(0, 1.234)
+    0.0
+    >>> deltas_to_seconds()
+    Traceback (most recent call last):
+    ...
+    ValueError: No valid deltas passed to `deltas_to_seconds`
+    >>> deltas_to_seconds(None)
+    Traceback (most recent call last):
+    ...
+    ValueError: No valid deltas passed to `deltas_to_seconds`
+    >>> deltas_to_seconds(default=0.0)
+    0.0
+    '''
+    default = kwargs.pop('default', ValueError)
+    assert not kwargs, 'Only the `default` keyword argument is supported'
+
+    for delta in deltas:
+        if delta is None:
+            continue
+        if isinstance(delta, datetime.timedelta):
+            return timedelta_to_seconds(delta)
+        elif not isinstance(delta, float):
+            return float(delta)
+        else:
+            return delta
+
+    if default is ValueError:
+        raise ValueError('No valid deltas passed to `deltas_to_seconds`')
+    else:
+        return default
+
+
+def no_color(value):
+    '''
+    Return the `value` without ANSI escape codes
+
+    >>> no_color(b'\u001b[1234]abc') == b'abc'
+    True
+    >>> str(no_color(u'\u001b[1234]abc'))
+    'abc'
+    >>> str(no_color('\u001b[1234]abc'))
+    'abc'
+    '''
+    if isinstance(value, bytes):
+        pattern = '\\\u001b\\[.*?[@-~]'
+        pattern = pattern.encode()
+        replace = b''
+        assert isinstance(pattern, bytes)
+    else:
+        pattern = u'\x1b\\[.*?[@-~]'
+        replace = ''
+
+    return re.sub(pattern, replace, value)
+
+
 def len_color(value):
     '''
     Return the length of `value` without ANSI escape codes
@@ -29,17 +98,21 @@ def len_color(value):
     >>> len_color('\u001b[1234]abc')
     3
     '''
-    if isinstance(value, bytes):
-        pattern = '\\\u001b\\[.*?[@-~]'
-        pattern = pattern.encode()
-        replace = b''
-        assert isinstance(pattern, bytes)
-    else:
-        pattern = u'\x1b\\[.*?[@-~]'
-        replace = ''
+    return len(no_color(value))
 
-    value = re.sub(pattern, replace, value)
-    return len(value)
+
+def env_flag(name, default=None):
+    '''
+    Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
+    on/off, and returns it as a boolean
+
+    If the environt variable is not defined, or has an unknown value, returns
+    `default`
+    '''
+    try:
+        return bool(distutils.util.strtobool(os.environ.get(name, '')))
+    except ValueError:
+        return default
 
 
 class WrappingIO:
@@ -84,10 +157,10 @@ class StreamWrapper(object):
         self.capturing = 0
         self.listeners = set()
 
-        if os.environ.get('WRAP_STDOUT'):  # pragma: no cover
+        if env_flag('WRAP_STDOUT', default=False):  # pragma: no cover
             self.wrap_stdout()
 
-        if os.environ.get('WRAP_STDERR'):  # pragma: no cover
+        if env_flag('WRAP_STDERR', default=False):  # pragma: no cover
             self.wrap_stderr()
 
     def start_capturing(self, bar=None):
