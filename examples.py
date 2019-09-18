@@ -83,12 +83,12 @@ def color_bar_example():
 
 
 @example
-def multi_bar_example():
-    widgets = [progressbar.MultiBar("stages")]
+def multi_range_bar_example():
+    widgets = [progressbar.MultiRangeBar("stages")]
     stages = [
         ['\x1b[32m█\x1b[39m', 0],  # Done
-        ['\x1b[33m▄\x1b[39m', 0],  # Processing
-        ['\x1b[31m▂\x1b[39m', 0],  # Scheduling
+        ['\x1b[33m#\x1b[39m', 0],  # Processing
+        ['\x1b[31m.\x1b[39m', 0],  # Scheduling
         [' ',                25],  # Not started
     ]
 
@@ -107,6 +107,34 @@ def multi_bar_example():
             stages[which - 1][1] += 1
 
             bar.update(stages=stages, force=True)
+            time.sleep(0.02)
+
+
+@example
+def multi_progress_bar_example():
+    jobs = [
+        [0, random.randint(1, 10)]  # Each job takes between 1 and 10 steps to complete
+        for i in range(25)  # 25 jobs total
+    ]
+
+    widgets = [
+      progressbar.Percentage(),
+      ' ', progressbar.MultiProgressBar("jobs")]
+
+    with progressbar.ProgressBar(widgets=widgets, max_value=sum([total for progress, total in jobs])).start() as bar:
+        while True:
+            incomplete_jobs = [
+                idx
+                for idx, (progress, total) in enumerate(jobs)
+                if progress < total
+            ]
+            if not incomplete_jobs:
+                break
+            which = random.choice(incomplete_jobs)
+            jobs[which][0] += 1
+            progress = sum([progress for progress, total in jobs])
+
+            bar.update(progress, jobs=jobs, force=True)
             time.sleep(0.02)
 
 

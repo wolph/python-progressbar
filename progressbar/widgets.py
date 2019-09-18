@@ -754,7 +754,7 @@ class VariableMixin(object):
         self.name = name
 
 
-class MultiBar(Bar, VariableMixin):
+class MultiRangeBar(Bar, VariableMixin):
     '''
     A bar with multiple sub-ranges, each represented by a different symbol
 
@@ -770,13 +770,16 @@ class MultiBar(Bar, VariableMixin):
         VariableMixin.__init__(self, name)
         Bar.__init__(self, **kwargs)
 
+    def get_ranges(self, progress, data):
+        return data['variables'][self.name] or []
+
     def __call__(self, progress, data, width):
         '''Updates the progress bar and its subcomponents'''
 
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
-        ranges = data['variables'][self.name] or []
+        ranges = self.get_ranges(progress, data)
 
         items_total = sum([count for symbol, count in ranges])
         if width and items_total:
@@ -798,6 +801,33 @@ class MultiBar(Bar, VariableMixin):
             middle = fill * width
 
         return left + middle + right
+
+
+class MultiProgressBar(MultiRangeBar):
+    def __init__(self, name, progress_symbols=" ▁▂▃▄▅▆▇█", **kwargs):
+        MultiRangeBar.__init__(self, name=name, **kwargs)
+        self.progress_symbols = progress_symbols
+
+    def get_ranges(self, progress, data):
+        ranges = [
+          [symbol, 0]
+          for symbol in self.progress_symbols
+        ]
+        for progress in data['variables'][self.name] or []:
+            if not isinstance(progress, (int, float)):
+                # Progress is (value, max)
+                progress_value, progress_max = progress
+                progress = float(progress_value) / float(progress_max)
+            if progress < 0 or progress > 1:
+                raise ValueError('Range value needs to be in the range [0..1], got %s' % progress)
+
+            range = int(progress * (len(ranges) - 1))
+            ranges[range][1] += 1
+
+        if self.fill_left:
+            ranges = list(reversed(ranges))
+        return ranges
+
 
 
 class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
