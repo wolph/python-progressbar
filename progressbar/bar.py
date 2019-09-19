@@ -412,7 +412,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def get_last_update_time(self):
         if self._last_update_time:
-            return datetime.utcfromtimestamp(self._last_update_time)
+            return datetime.fromtimestamp(self._last_update_time)
 
     def set_last_update_time(self, value):
         if value:

@@ -769,8 +769,11 @@ class Variable(FormatWidgetMixin, WidgetBase):
         context['precision'] = self.precision
 
         try:
-            context['formatted_value'] = '{value:{width}.{precision}}'.format(
-                **context)
+            # Make sure to try and cast the value first, otherwise the
+            # formatting will generate warnings/errors on newer Python releases
+            value = float(value)
+            fmt = '{value:{width}.{precision}}'
+            context['formatted_value'] = fmt.format(**context)
         except (TypeError, ValueError):
             if value:
                 context['formatted_value'] = '{value:{width}}'.format(
