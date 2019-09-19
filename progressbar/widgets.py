@@ -821,8 +821,12 @@ class MultiProgressBar(MultiRangeBar):
             if progress < 0 or progress > 1:
                 raise ValueError('Range value needs to be in the range [0..1], got %s' % progress)
 
-            range = int(progress * (len(ranges) - 1))
-            ranges[range] += 1
+            range = progress * (len(ranges) - 1)
+            pos = int(range)
+            frac = range % 1
+            ranges[pos] += (1-frac)
+            if (frac):
+                ranges[pos+1] += (frac)
 
         if self.fill_left:
             ranges = list(reversed(ranges))
