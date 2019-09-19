@@ -1,30 +1,33 @@
+import pytest
 from datetime import timedelta
 
 import progressbar
 
 
-def test_poll_interval():
+@pytest.mark.parametrize('poll_interval,expected', [
+    (1, 1),
+    (timedelta(seconds=1), 1),
+    (0.001, 0.001),
+    (timedelta(microseconds=1000), 0.001),
+])
+@pytest.mark.parametrize('parameter', [
+    'poll_interval',
+    'min_poll_interval',
+])
+def test_poll_interval(parameter, poll_interval, expected):
     # Test int, float and timedelta intervals
-    bar = progressbar.ProgressBar(poll_interval=1)
-    assert bar.poll_interval.seconds == 1
-    assert bar.poll_interval.microseconds == 0
-
-    bar = progressbar.ProgressBar(poll_interval=.001)
-    assert bar.poll_interval.seconds == 0
-    assert bar.poll_interval.microseconds < 1001
-
-    bar = progressbar.ProgressBar(poll_interval=timedelta(seconds=1))
-    assert bar.poll_interval.seconds == 1
-    assert bar.poll_interval.microseconds == 0
-
-    bar = progressbar.ProgressBar(poll_interval=timedelta(microseconds=1000))
-    assert bar.poll_interval.seconds == 0
-    assert bar.poll_interval.microseconds < 1001
+    bar = progressbar.ProgressBar(**{parameter: poll_interval})
+    assert getattr(bar, parameter) == expected
 
 
-def test_intervals():
+@pytest.mark.parametrize('interval', [
+    1,
+    timedelta(seconds=1),
+])
+def test_intervals(monkeypatch, interval):
+    monkeypatch.setattr(progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL',
+                        interval)
     bar = progressbar.ProgressBar(max_value=100)
-    bar._MINIMUM_UPDATE_INTERVAL = 1
 
     # Initially there should be no last_update_time
     assert bar.last_update_time is None

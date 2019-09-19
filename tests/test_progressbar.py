@@ -1,8 +1,8 @@
+import time
 import pytest
 
 import examples
 import progressbar
-
 import original_examples
 
 
@@ -14,19 +14,21 @@ def test_examples(monkeypatch):
             pass
 
 
-@pytest.mark.filterwarnings('ignore::DeprecationWarning')
-def test_original_examples(monkeypatch):
-    for example in original_examples.examples:
-        example()
+@pytest.mark.filterwarnings('ignore:.*maxval.*:DeprecationWarning')
+@pytest.mark.parametrize('example', original_examples.examples)
+def test_original_examples(example, monkeypatch):
+    monkeypatch.setattr(progressbar.ProgressBar,
+                        '_MINIMUM_UPDATE_INTERVAL', 1)
+    monkeypatch.setattr(time, 'sleep', lambda t: None)
+    example()
 
 
-def test_examples_nullbar(monkeypatch):
+@pytest.mark.parametrize('example', examples.examples)
+def test_examples_nullbar(monkeypatch, example):
     # Patch progressbar to use null bar instead of regular progress bar
     monkeypatch.setattr(progressbar, 'ProgressBar', progressbar.NullBar)
-
     assert progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL < 0.0001
-    for example in examples.examples:
-        example()
+    example()
 
 
 def test_reuse():

@@ -72,6 +72,17 @@ def basic_widget_example():
 
 
 @example
+def color_bar_example():
+    widgets = ['\x1b[33mColorful example\x1b[39m', progressbar.Percentage(), progressbar.Bar(marker='\x1b[32m#\x1b[39m')]
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
+    for i in range(10):
+        # do something
+        time.sleep(0.1)
+        bar.update(i + 1)
+    bar.finish()
+
+
+@example
 def file_transfer_example():
     widgets = [
         'Test: ', progressbar.Percentage(),
@@ -89,9 +100,9 @@ def file_transfer_example():
 @example
 def custom_file_transfer_example():
     class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
-
-        "It's bigger between 45 and 80 percent"
-
+        '''
+        It's bigger between 45 and 80 percent
+        '''
         def update(self, bar):
             if 45 < bar.percentage() < 80:
                 return 'Bigger Now ' + progressbar.FileTransferSpeed.update(
@@ -392,6 +403,7 @@ def eta_types_demonstration():
         ' ETA: ', progressbar.ETA(),
         ' Adaptive ETA: ', progressbar.AdaptiveETA(),
         ' Absolute ETA: ', progressbar.AbsoluteETA(),
+        ' Transfer Speed: ', progressbar.FileTransferSpeed(),
         ' Adaptive Transfer Speed: ', progressbar.AdaptiveTransferSpeed(),
         ' ', progressbar.Bar(),
     ]
@@ -448,49 +460,54 @@ def eta():
 
 
 @example
-def dynamic_message():
+def variables():
     # Use progressbar.Variable to keep track of some parameter(s) during
     # your calculations
     widgets = [
         progressbar.Percentage(),
         progressbar.Bar(),
         progressbar.Variable('loss'),
+        ', ',
         progressbar.Variable('username', width=12, precision=12),
     ]
     with progressbar.ProgressBar(max_value=100, widgets=widgets) as bar:
         min_so_far = 1
         for i in range(100):
+            time.sleep(0.01)
             val = random.random()
             if val < min_so_far:
                 min_so_far = val
-            bar.update(i, loss=min_so_far, username='Some user %02d' % i)
+            bar.update(i, loss=min_so_far, username='Some user')
 
 
 @example
 def user_variables():
     tasks = {
-        "Download": [
-            "SDK",
-            "IDE",
-            "Dependencies",
+        'Download': [
+            'SDK',
+            'IDE',
+            'Dependencies',
         ],
-        "Build": [
-            "Compile",
-            "Link",
+        'Build': [
+            'Compile',
+            'Link',
         ],
-        "Test": [
-            "Unit tests",
-            "Integration tests",
-            "Regression tests",
+        'Test': [
+            'Unit tests',
+            'Integration tests',
+            'Regression tests',
         ],
-        "Deploy": [
-            "Send to server",
-            "Restart server",
+        'Deploy': [
+            'Send to server',
+            'Restart server',
         ],
     }
     num_subtasks = sum(len(x) for x in tasks.values())
 
-    with progressbar.ProgressBar(prefix="{vars.task} >> {vars.subtask}", vars={"task": '--', "subtask": '--'}, max_value=10*num_subtasks) as bar:
+    with progressbar.ProgressBar(
+            prefix='{variables.task} >> {variables.subtask}',
+            variables={'task': '--', 'subtask': '--'},
+            max_value=10*num_subtasks) as bar:
         for tasks_name, subtasks in tasks.items():
             for subtask_name in subtasks:
                 for i in range(10):

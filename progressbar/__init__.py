@@ -66,6 +66,7 @@ __all__ = [
     'ProgressBar',
     'DataTransferBar',
     'RotatingMarker',
+    'Variable',
     'DynamicMessage',
     'FormatCustomText',
     'CurrentTime',

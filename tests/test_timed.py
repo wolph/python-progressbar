@@ -78,6 +78,58 @@ def test_adaptive_transfer_speed():
     p.finish()
 
 
+def test_etas(monkeypatch):
+    '''Compare file transfer speed to adaptive transfer speed'''
+    n = 10
+    interval = datetime.timedelta(seconds=1)
+    widgets = [
+        progressbar.FileTransferSpeed(),
+        progressbar.AdaptiveTransferSpeed(samples=n / 2),
+    ]
+
+    datas = []
+
+    # Capture the output sent towards the `_speed` method
+    def calculate_eta(self, value, elapsed):
+        '''Capture the widget output'''
+        data = dict(
+            value=value,
+            elapsed=elapsed,
+        )
+        datas.append(data)
+        return 0, 0
+
+    monkeypatch.setattr(progressbar.FileTransferSpeed, '_speed', calculate_eta)
+
+    for widget in widgets:
+        widget.INTERVAL = interval
+
+    p = progressbar.ProgressBar(
+        max_value=n,
+        widgets=widgets,
+        poll_interval=interval,
+    )
+
+    # Run the first few samples at a low speed and speed up later so we can
+    # compare the results from both widgets
+    for i in range(n):
+        p.update(i)
+        if i > n / 2:
+            time.sleep(1)
+        else:
+            time.sleep(10)
+    p.finish()
+
+    for i, (a, b) in enumerate(zip(datas[::2], datas[1::2])):
+        # Because the speed is identical initially, the results should be the
+        # same for adaptive and regular transfer speed. Only when the speed
+        # changes we should start see a lot of differences between the two
+        if i < (n / 2 - 1):
+            assert a['elapsed'] == b['elapsed']
+        else:
+            assert a['elapsed'] > b['elapsed']
+
+
 def test_non_changing_eta():
     '''Testing (Adaptive)ETA when the value doesn't actually change'''
     widgets = [

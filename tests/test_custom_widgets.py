@@ -34,7 +34,7 @@ def test_crazy_file_transfer_speed_widget():
     p.finish()
 
 
-def test_dynamic_message_widget():
+def test_variable_widget_widget():
     widgets = [
         ' [', progressbar.Timer(), '] ',
         progressbar.Bar(),
@@ -49,6 +49,7 @@ def test_dynamic_message_widget():
     p = progressbar.ProgressBar(widgets=widgets, max_value=1000,
                                 variables=dict(predefined='predefined'))
     p.start()
+    print('time', time, time.sleep)
     for i in range(0, 200, 5):
         time.sleep(0.1)
         p.update(i + 1, loss=.5, text='spam', error=1)
