@@ -84,29 +84,30 @@ def color_bar_example():
 
 @example
 def multi_range_bar_example():
-    widgets = [progressbar.MultiRangeBar("stages")]
-    stages = [
-        ['\x1b[32m█\x1b[39m', 0],  # Done
-        ['\x1b[33m#\x1b[39m', 0],  # Processing
-        ['\x1b[31m.\x1b[39m', 0],  # Scheduling
-        [' ',                25],  # Not started
+    markers = [
+        '\x1b[32m█\x1b[39m',  # Done
+        '\x1b[33m#\x1b[39m',  # Processing
+        '\x1b[31m.\x1b[39m',  # Scheduling
+        ' '                   # Not started
     ]
+    widgets = [progressbar.MultiRangeBar("amounts", markers=markers)]
+    amounts = [0] * (len(markers) - 1) + [25]
 
     with progressbar.ProgressBar(widgets=widgets, max_value=10).start() as bar:
         while True:
             incomplete_items = [
                 idx
-                for idx, (stage_symbol, stage_count) in enumerate(stages)
-                for i in range(stage_count)
+                for idx, amount in enumerate(amounts)
+                for i in range(amount)
                 if idx != 0
             ]
             if not incomplete_items:
                 break
             which = random.choice(incomplete_items)
-            stages[which][1] -= 1
-            stages[which - 1][1] += 1
+            amounts[which] -= 1
+            amounts[which - 1] += 1
 
-            bar.update(stages=stages, force=True)
+            bar.update(amounts=amounts, force=True)
             time.sleep(0.02)
 
 

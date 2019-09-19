@@ -766,11 +766,15 @@ class MultiRangeBar(Bar, VariableMixin):
     ]
     '''
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, markers, **kwargs):
         VariableMixin.__init__(self, name)
         Bar.__init__(self, **kwargs)
+        self.markers = [
+            string_or_lambda(marker)
+            for marker in markers
+        ]
 
-    def get_ranges(self, progress, data):
+    def get_values(self, progress, data):
         return data['variables'][self.name] or []
 
     def __call__(self, progress, data, width):
@@ -779,22 +783,22 @@ class MultiRangeBar(Bar, VariableMixin):
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
-        ranges = self.get_ranges(progress, data)
+        values = self.get_values(progress, data)
 
-        items_total = sum([count for symbol, count in ranges])
-        if width and items_total:
+        values_sum = sum(values)
+        if width and values_sum:
             middle = ''
-            items_accumulated = 0
+            values_accumulated = 0
             width_accumulated = 0
-            for item_symbol, item_count in ranges:
-                item_marker = string_or_lambda(item_symbol)
-                item_marker = converters.to_unicode(item_marker(progress, data, width))
-                assert utils.len_color(item_marker) == 1
+            for marker, value in zip(self.markers, values):
+                marker = converters.to_unicode(marker(progress, data, width))
+                assert utils.len_color(marker) == 1
 
-                items_accumulated += item_count
-                item_width = int(items_accumulated / items_total * width) - width_accumulated
+                values_accumulated += value
+                item_width = int(values_accumulated / values_sum * width) - width_accumulated
                 width_accumulated += item_width
-                middle += item_width * item_marker
+                #print(marker, value, values_accumulated, values_sum, item_width, width_accumulated)
+                middle += item_width * marker
         else:
             fill = converters.to_unicode(self.fill(progress, data, width))
             assert utils.len_color(fill) == 1
@@ -804,15 +808,11 @@ class MultiRangeBar(Bar, VariableMixin):
 
 
 class MultiProgressBar(MultiRangeBar):
-    def __init__(self, name, progress_symbols=" ▁▂▃▄▅▆▇█", **kwargs):
-        MultiRangeBar.__init__(self, name=name, **kwargs)
-        self.progress_symbols = progress_symbols
+    def __init__(self, name, markers=" ▁▂▃▄▅▆▇█", **kwargs):
+        MultiRangeBar.__init__(self, name=name, markers=list(reversed(markers)), **kwargs)
 
-    def get_ranges(self, progress, data):
-        ranges = [
-          [symbol, 0]
-          for symbol in self.progress_symbols
-        ]
+    def get_values(self, progress, data):
+        ranges = [0] * len(self.markers)
         for progress in data['variables'][self.name] or []:
             if not isinstance(progress, (int, float)):
                 # Progress is (value, max)
@@ -822,7 +822,7 @@ class MultiProgressBar(MultiRangeBar):
                 raise ValueError('Range value needs to be in the range [0..1], got %s' % progress)
 
             range = int(progress * (len(ranges) - 1))
-            ranges[range][1] += 1
+            ranges[range] += 1
 
         if self.fill_left:
             ranges = list(reversed(ranges))
