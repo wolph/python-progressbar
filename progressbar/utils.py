@@ -135,6 +135,9 @@ class WrappingIO:
     def flush(self):
         self.buffer.flush()
 
+    def _needs_flush(self):
+        return bool(self.buffer.getvalue())
+
     def _flush(self):
         value = self.buffer.getvalue()
         if value:
@@ -248,6 +251,15 @@ class StreamWrapper(object):
         else:
             sys.stderr = self.original_stderr
             self.wrapped_stderr = 0
+
+    def needs_flush(self):
+        if self.wrapped_stdout:
+            if self.stdout._needs_flush():
+                return True
+        if self.wrapped_stderr:
+            if self.stderr._needs_flush():
+              return True
+        return False
 
     def flush(self):
         if self.wrapped_stdout:  # pragma: no branch
