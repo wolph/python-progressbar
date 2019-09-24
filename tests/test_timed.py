@@ -124,7 +124,7 @@ def test_etas(monkeypatch):
         # Because the speed is identical initially, the results should be the
         # same for adaptive and regular transfer speed. Only when the speed
         # changes we should start see a lot of differences between the two
-        if i < (n / 2 - 1):
+        if i < (n / 2):
             assert a['elapsed'] == b['elapsed']
         else:
             assert a['elapsed'] > b['elapsed']
