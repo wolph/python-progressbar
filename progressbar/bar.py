@@ -228,15 +228,15 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             prefix (str): Prefix the progressbar with the given string
             suffix (str): Prefix the progressbar with the given string
         variables (dict): User-defined variables variables that can be used
-            from a label using `format="{variables.my_var}"`.  These values can
-            be updated using `bar.update(my_var="newValue")` This can also be
-            used to set initial values for `Variable`s widgets
+            from a label using `format='{variables.my_var}'`.  These values can
+            be updated using `bar.update(my_var='newValue')` This can also be
+            used to set initial values for variables' widgets
 
     A common way of using it is like:
 
     >>> progress = ProgressBar().start()
     >>> for i in range(100):
-    ...     progress.update(i+1)
+    ...     progress.update(i + 1)
     ...     # do something
     ...
     >>> progress.finish()

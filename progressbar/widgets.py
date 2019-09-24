@@ -759,11 +759,14 @@ class MultiRangeBar(Bar, VariableMixin):
     A bar with multiple sub-ranges, each represented by a different symbol
 
     The various ranges are represented on a user-defined variable, formatted as
-    [
-        [ "Symbol1", amount1 ],
-        [ "Symbol2", amount2 ],
-        ...
-    ]
+
+    .. code-block:: python
+
+        [
+            ['Symbol1', amount1],
+            ['Symbol2', amount2],
+            ...
+        ]
     '''
 
     def __init__(self, name, markers, **kwargs):
