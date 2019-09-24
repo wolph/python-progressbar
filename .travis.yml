@@ -9,8 +9,8 @@ python:
 - '3.7'
 - pypy
 install:
-- pip install .
-- pip install -r tests/requirements.txt
+- pip install -U .
+- pip install -U -r tests/requirements.txt
 before_script: flake8 progressbar tests examples
 script:
 - python setup.py test
