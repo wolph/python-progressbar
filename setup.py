@@ -71,13 +71,13 @@ if __name__ == '__main__':
                 'sphinx>=1.7.4',
             ],
             'tests': [
-                'flake8>=3.7.7',
-                'pytest>=4.3.1',
-                'pytest-cov>=2.6.1',
+                'flake8>=3.7.8',
+                'pytest>=5.1.3',
+                'pytest-cov>=2.7.1',
                 'pytest-flakes>=4.0.0',
                 'pytest-pep8>=1.0.6',
-                'freezegun>=0.3.11',
-                'sphinx>=1.8.5',
+                'freezegun>=0.3.12',
+                'sphinx>=2.2.0',
             ],
         },
         classifiers=[
