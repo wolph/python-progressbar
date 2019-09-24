@@ -77,7 +77,7 @@ if __name__ == '__main__':
                 'pytest-flakes>=4.0.0',
                 'pytest-pep8>=1.0.6',
                 'freezegun>=0.3.12',
-                'sphinx>=2.2.0',
+                'sphinx>=1.8.5',
             ],
         },
         classifiers=[
