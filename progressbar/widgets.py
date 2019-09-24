@@ -795,9 +795,9 @@ class MultiRangeBar(Bar, VariableMixin):
                 assert utils.len_color(marker) == 1
 
                 values_accumulated += value
-                item_width = int(values_accumulated / values_sum * width) - width_accumulated
+                item_width = int(values_accumulated / values_sum * width)
+                item_width -= width_accumulated
                 width_accumulated += item_width
-                #print(marker, value, values_accumulated, values_sum, item_width, width_accumulated)
                 middle += item_width * marker
         else:
             fill = converters.to_unicode(self.fill(progress, data, width))
@@ -809,7 +809,8 @@ class MultiRangeBar(Bar, VariableMixin):
 
 class MultiProgressBar(MultiRangeBar):
     def __init__(self, name, markers=" ▁▂▃▄▅▆▇█", **kwargs):
-        MultiRangeBar.__init__(self, name=name, markers=list(reversed(markers)), **kwargs)
+        MultiRangeBar.__init__(self, name=name,
+                               markers=list(reversed(markers)), **kwargs)
 
     def get_values(self, progress, data):
         ranges = [0] * len(self.markers)
@@ -818,20 +819,22 @@ class MultiProgressBar(MultiRangeBar):
                 # Progress is (value, max)
                 progress_value, progress_max = progress
                 progress = float(progress_value) / float(progress_max)
-            if progress < 0 or progress > 1:
-                raise ValueError('Range value needs to be in the range [0..1], got %s' % progress)
 
-            range = progress * (len(ranges) - 1)
-            pos = int(range)
-            frac = range % 1
-            ranges[pos] += (1-frac)
+            if progress < 0 or progress > 1:
+                raise ValueError(
+                    'Range value needs to be in the range [0..1], got %s' %
+                    progress)
+
+            range_ = progress * (len(ranges) - 1)
+            pos = int(range_)
+            frac = range_ % 1
+            ranges[pos] += (1 - frac)
             if (frac):
-                ranges[pos+1] += (frac)
+                ranges[pos + 1] += (frac)
 
         if self.fill_left:
             ranges = list(reversed(ranges))
         return ranges
-
 
 
 class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):

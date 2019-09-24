@@ -17,10 +17,10 @@ def example(fn):
     '''Wrap the examples so they generate readable output'''
 
     @functools.wraps(fn)
-    def wrapped():
+    def wrapped(*args, **kwargs):
         try:
             sys.stdout.write('Running: %s\n' % fn.__name__)
-            fn()
+            fn(*args, **kwargs)
             sys.stdout.write('\n')
         except KeyboardInterrupt:
             sys.stdout.write('\nSkipping example.\n\n')
@@ -73,7 +73,8 @@ def basic_widget_example():
 
 @example
 def color_bar_example():
-    widgets = ['\x1b[33mColorful example\x1b[39m', progressbar.Percentage(), progressbar.Bar(marker='\x1b[32m#\x1b[39m')]
+    widgets = ['\x1b[33mColorful example\x1b[39m', progressbar.Percentage(),
+               progressbar.Bar(marker='\x1b[32m#\x1b[39m')]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
     for i in range(10):
         # do something
@@ -112,17 +113,20 @@ def multi_range_bar_example():
 
 
 @example
-def multi_progress_bar_example():
+def multi_progress_bar_example(left=False):
     jobs = [
-        [0, random.randint(1, 10)]  # Each job takes between 1 and 10 steps to complete
+        # Each job takes between 1 and 10 steps to complete
+        [0, random.randint(1, 10)]
         for i in range(25)  # 25 jobs total
     ]
 
     widgets = [
-      progressbar.Percentage(),
-      ' ', progressbar.MultiProgressBar("jobs")]
+        progressbar.Percentage(),
+        ' ', progressbar.MultiProgressBar('jobs', fill_left=left),
+    ]
 
-    with progressbar.ProgressBar(widgets=widgets, max_value=sum([total for progress, total in jobs])).start() as bar:
+    max_value = sum([total for progress, total in jobs])
+    with progressbar.ProgressBar(widgets=widgets, max_value=max_value) as bar:
         while True:
             incomplete_jobs = [
                 idx
