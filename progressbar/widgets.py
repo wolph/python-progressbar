@@ -811,7 +811,7 @@ class MultiRangeBar(Bar, VariableMixin):
 
 
 class MultiProgressBar(MultiRangeBar):
-    def __init__(self, name, markers='         ', **kwargs):
+    def __init__(self, name, markers=" ▁▂▃▄▅▆▇█", **kwargs):
         MultiRangeBar.__init__(self, name=name,
                                markers=list(reversed(markers)), **kwargs)
 
