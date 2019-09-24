@@ -120,11 +120,14 @@ def test_etas(monkeypatch):
             time.sleep(10)
     p.finish()
 
+    import pprint
+    pprint.pprint(datas)
+
     for i, (a, b) in enumerate(zip(datas[::2], datas[1::2])):
         # Because the speed is identical initially, the results should be the
         # same for adaptive and regular transfer speed. Only when the speed
         # changes we should start see a lot of differences between the two
-        if i < (n / 2):
+        if i < (n / 2 - 1):
             assert a['elapsed'] == b['elapsed']
         else:
             assert a['elapsed'] > b['elapsed']
