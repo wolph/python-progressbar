@@ -17,4 +17,4 @@ def test_multi_progress_bar_out_of_range():
 
 def test_multi_progress_bar_fill_left():
     import examples
-    return examples.multi_progress_bar_example(True)
+    return examples.multi_progress_bar_example(False)

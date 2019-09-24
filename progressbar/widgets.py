@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -811,7 +812,12 @@ class MultiRangeBar(Bar, VariableMixin):
 
 
 class MultiProgressBar(MultiRangeBar):
-    def __init__(self, name, markers='         ', **kwargs):
+    def __init__(self,
+                 name,
+                 # NOTE: the markers are not whitespace even though some
+                 # terminals don't show the characters correctly!
+                 markers='         ',
+                 **kwargs):
         MultiRangeBar.__init__(self, name=name,
                                markers=list(reversed(markers)), **kwargs)
 

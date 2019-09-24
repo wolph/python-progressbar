@@ -113,7 +113,7 @@ def multi_range_bar_example():
 
 
 @example
-def multi_progress_bar_example(left=False):
+def multi_progress_bar_example(left=True):
     jobs = [
         # Each job takes between 1 and 10 steps to complete
         [0, random.randint(1, 10)]
