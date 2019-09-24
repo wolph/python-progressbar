@@ -1,28 +1,20 @@
 dist: xenial
 sudo: false
 language: python
-python: 3.6
-cache:
-- pip
-- directory:
-  - .tox/dist
-  - .tox/distshare
-env:
-- TOX_ENV=docs
-- TOX_ENV=flake8
-- TOX_ENV=py27
-- TOX_ENV=py34
-- TOX_ENV=py35
-- TOX_ENV=py36
-- TOX_ENV=py37
-- TOX_ENV=py38
-- TOX_ENV=pypy
+python:
+- '2.7'
+- '3.4'
+- '3.5'
+- '3.6'
+- '3.7'
+- pypy
 install:
-- pip install -r tests/requirements.txt
-- pip install coveralls flake8 tox
-- pip install -U -e .
+- pip install -U .
+- pip install -U -r tests/requirements.txt
+before_script: flake8 progressbar tests examples
 script:
-- tox -e $TOX_ENV
+- python setup.py test
+- python examples.py
 after_success:
 - coveralls
 - pip install codecov
