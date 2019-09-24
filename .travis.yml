@@ -20,13 +20,9 @@ env:
 install:
 - pip install -r tests/requirements.txt
 - pip install coveralls flake8 tox
-- pip install -e .
+- pip install -U -e .
 script:
 - tox -e $TOX_ENV
-after_success:
-- coveralls
-- pip install codecov
-- codecov
 after_success:
 - coveralls
 - pip install codecov
