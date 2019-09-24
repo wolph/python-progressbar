@@ -94,12 +94,14 @@ def test_etas(monkeypatch):
         '''Capture the widget output'''
         data = dict(
             value=value,
-            elapsed=elapsed,
+            elapsed=int(elapsed),
         )
         datas.append(data)
         return 0, 0
 
     monkeypatch.setattr(progressbar.FileTransferSpeed, '_speed', calculate_eta)
+    monkeypatch.setattr(progressbar.AdaptiveTransferSpeed, '_speed',
+                        calculate_eta)
 
     for widget in widgets:
         widget.INTERVAL = interval
