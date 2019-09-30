@@ -68,14 +68,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.fd = fd
 
         # Check if this is an interactive terminal
-        if is_terminal is None:
-            is_terminal = utils.env_flag('PROGRESSBAR_IS_TERMINAL', None)
-        if is_terminal is None:  # pragma: no cover
-            try:
-                is_terminal = fd.isatty()
-            except Exception:
-                is_terminal = False
-        self.is_terminal = is_terminal
+        self.is_terminal = is_terminal = utils.is_terminal(fd, is_terminal)
 
         # Check if it should overwrite the current line (suitable for
         # iteractive terminals) or write line breaks (suitable for log files)

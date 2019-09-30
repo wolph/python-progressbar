@@ -20,6 +20,22 @@ assert scale_1024
 assert epoch
 
 
+def is_terminal(fd, is_terminal=None):
+    if is_terminal is None:
+        if 'JPY_PARENT_PID' in os.environ:
+            is_terminal = True
+        else:
+            is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
+
+    if is_terminal is None:  # pragma: no cover
+        try:
+            is_terminal = fd.isatty()
+        except Exception:
+            is_terminal = False
+
+    return is_terminal
+
+
 def deltas_to_seconds(*deltas, **kwargs):  # default=ValueError):
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing
