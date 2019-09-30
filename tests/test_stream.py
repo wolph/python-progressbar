@@ -1,4 +1,5 @@
 import io
+import time
 import sys
 import pytest
 import progressbar
@@ -72,6 +73,21 @@ def test_fd_as_io_stream():
         for i in range(101):
             pb.update(i)
     stream.close()
+
+
+def test_no_newlines():
+    kwargs = dict(
+        redirect_stderr=True,
+        redirect_stdout=True,
+        line_breaks=False,
+        is_terminal=True,
+    )
+
+    with progressbar.ProgressBar(**kwargs) as pb:
+        for i in range(10):
+            print('%d\n\n\n' % i, file=progressbar.streams.stdout)
+            print('%d\n\n\n' % i, file=progressbar.streams.stderr)
+            pb.update(i)
 
 
 @pytest.mark.parametrize('stream', [sys.__stdout__, sys.__stderr__])

@@ -138,21 +138,21 @@ class WrappingIO:
         self.target = target
         self.capturing = capturing
         self.listeners = listeners
+        self.needs_clear = False
 
     def write(self, value):
         if self.capturing:
             self.buffer.write(value)
             if '\n' in value:
+                self.needs_clear = True
                 for listener in self.listeners:  # pragma: no branch
                     listener.update()
         else:
             self.target.write(value)
 
     def flush(self):
+        self.needs_clear = False
         self.buffer.flush()
-
-    def _needs_flush(self):
-        return bool(self.buffer.getvalue())
 
     def _flush(self):
         value = self.buffer.getvalue()
@@ -268,14 +268,10 @@ class StreamWrapper(object):
             sys.stderr = self.original_stderr
             self.wrapped_stderr = 0
 
-    def needs_flush(self):
-        if self.wrapped_stdout:
-            if self.stdout._needs_flush():
-                return True
-        if self.wrapped_stderr:
-            if self.stderr._needs_flush():
-              return True
-        return False
+    def needs_clear(self):  # pragma: no cover
+        stdout_needs_clear = getattr(self.stdout, 'needs_clear', False)
+        stderr_needs_clear = getattr(self.stderr, 'needs_clear', False)
+        return stderr_needs_clear or stdout_needs_clear
 
     def flush(self):
         if self.wrapped_stdout:  # pragma: no branch
