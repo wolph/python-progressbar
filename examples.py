@@ -17,10 +17,10 @@ def example(fn):
     '''Wrap the examples so they generate readable output'''
 
     @functools.wraps(fn)
-    def wrapped():
+    def wrapped(*args, **kwargs):
         try:
             sys.stdout.write('Running: %s\n' % fn.__name__)
-            fn()
+            fn(*args, **kwargs)
             sys.stdout.write('\n')
         except KeyboardInterrupt:
             sys.stdout.write('\nSkipping example.\n\n')
@@ -86,13 +86,74 @@ def basic_widget_example():
 
 @example
 def color_bar_example():
-    widgets = ['\x1b[33mColorful example\x1b[39m', progressbar.Percentage(), progressbar.Bar(marker='\x1b[32m#\x1b[39m')]
+    widgets = ['\x1b[33mColorful example\x1b[39m', progressbar.Percentage(),
+               progressbar.Bar(marker='\x1b[32m#\x1b[39m')]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
     for i in range(10):
         # do something
         time.sleep(0.1)
         bar.update(i + 1)
     bar.finish()
+
+
+@example
+def multi_range_bar_example():
+    markers = [
+        '\x1b[32m█\x1b[39m',  # Done
+        '\x1b[33m#\x1b[39m',  # Processing
+        '\x1b[31m.\x1b[39m',  # Scheduling
+        ' '                   # Not started
+    ]
+    widgets = [progressbar.MultiRangeBar("amounts", markers=markers)]
+    amounts = [0] * (len(markers) - 1) + [25]
+
+    with progressbar.ProgressBar(widgets=widgets, max_value=10).start() as bar:
+        while True:
+            incomplete_items = [
+                idx
+                for idx, amount in enumerate(amounts)
+                for i in range(amount)
+                if idx != 0
+            ]
+            if not incomplete_items:
+                break
+            which = random.choice(incomplete_items)
+            amounts[which] -= 1
+            amounts[which - 1] += 1
+
+            bar.update(amounts=amounts, force=True)
+            time.sleep(0.02)
+
+
+@example
+def multi_progress_bar_example(left=True):
+    jobs = [
+        # Each job takes between 1 and 10 steps to complete
+        [0, random.randint(1, 10)]
+        for i in range(25)  # 25 jobs total
+    ]
+
+    widgets = [
+        progressbar.Percentage(),
+        ' ', progressbar.MultiProgressBar('jobs', fill_left=left),
+    ]
+
+    max_value = sum([total for progress, total in jobs])
+    with progressbar.ProgressBar(widgets=widgets, max_value=max_value) as bar:
+        while True:
+            incomplete_jobs = [
+                idx
+                for idx, (progress, total) in enumerate(jobs)
+                if progress < total
+            ]
+            if not incomplete_jobs:
+                break
+            which = random.choice(incomplete_jobs)
+            jobs[which][0] += 1
+            progress = sum([progress for progress, total in jobs])
+
+            bar.update(progress, jobs=jobs, force=True)
+            time.sleep(0.02)
 
 
 @example
@@ -520,11 +581,12 @@ def user_variables():
     with progressbar.ProgressBar(
             prefix='{variables.task} >> {variables.subtask}',
             variables={'task': '--', 'subtask': '--'},
-            max_value=10*num_subtasks) as bar:
+            max_value=10 * num_subtasks) as bar:
         for tasks_name, subtasks in tasks.items():
             for subtask_name in subtasks:
                 for i in range(10):
-                    bar.update(bar.value+1, task=tasks_name, subtask=subtask_name)
+                    bar.update(bar.value + 1, task=tasks_name,
+                               subtask=subtask_name)
                     time.sleep(0.1)
 
 

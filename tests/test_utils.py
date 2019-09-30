@@ -1,3 +1,4 @@
+import io
 import pytest
 import progressbar
 
@@ -26,3 +27,30 @@ def test_env_flag(value, expected, monkeypatch):
         assert progressbar.utils.env_flag('TEST_ENV') == expected
 
     monkeypatch.undo()
+
+
+def test_is_terminal(monkeypatch):
+    fd = io.StringIO()
+
+    monkeypatch.delenv('PROGRESSBAR_IS_TERMINAL', raising=False)
+    monkeypatch.delenv('JPY_PARENT_PID', raising=False)
+
+    assert progressbar.utils.is_terminal(fd) is False
+    assert progressbar.utils.is_terminal(fd, True) is True
+    assert progressbar.utils.is_terminal(fd, False) is False
+
+    monkeypatch.setenv('JPY_PARENT_PID', '123')
+    assert progressbar.utils.is_terminal(fd) is True
+    monkeypatch.delenv('JPY_PARENT_PID')
+
+    # Sanity check
+    assert progressbar.utils.is_terminal(fd) is False
+
+    monkeypatch.setenv('PROGRESSBAR_IS_TERMINAL', 'true')
+    assert progressbar.utils.is_terminal(fd) is True
+    monkeypatch.setenv('PROGRESSBAR_IS_TERMINAL', 'false')
+    assert progressbar.utils.is_terminal(fd) is False
+    monkeypatch.delenv('PROGRESSBAR_IS_TERMINAL')
+
+    # Sanity check
+    assert progressbar.utils.is_terminal(fd) is False

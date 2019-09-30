@@ -68,14 +68,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.fd = fd
 
         # Check if this is an interactive terminal
-        if is_terminal is None:
-            is_terminal = utils.env_flag('PROGRESSBAR_IS_TERMINAL', None)
-        if is_terminal is None:  # pragma: no cover
-            try:
-                is_terminal = fd.isatty()
-            except Exception:
-                is_terminal = False
-        self.is_terminal = is_terminal
+        self.is_terminal = is_terminal = utils.is_terminal(fd, is_terminal)
 
         # Check if it should overwrite the current line (suitable for
         # iteractive terminals) or write line breaks (suitable for log files)
@@ -229,15 +222,15 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             prefix (str): Prefix the progressbar with the given string
             suffix (str): Prefix the progressbar with the given string
         variables (dict): User-defined variables variables that can be used
-            from a label using `format="{variables.my_var}"`.  These values can
-            be updated using `bar.update(my_var="newValue")` This can also be
-            used to set initial values for `Variable`s widgets
+            from a label using `format='{variables.my_var}'`.  These values can
+            be updated using `bar.update(my_var='newValue')` This can also be
+            used to set initial values for variables' widgets
 
     A common way of using it is like:
 
     >>> progress = ProgressBar().start()
     >>> for i in range(100):
-    ...     progress.update(i+1)
+    ...     progress.update(i + 1)
     ...     # do something
     ...
     >>> progress.finish()
@@ -343,7 +336,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         # A dictionary of names that can be used by Variable and FormatWidget
         self.variables = utils.AttributeDict(variables or {})
         for widget in (self.widgets or []):
-            if isinstance(widget, widgets_module.Variable):
+            if isinstance(widget, widgets_module.VariableMixin):
                 if widget.name not in self.variables:
                     self.variables[widget.name] = None
 
@@ -413,7 +406,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def get_last_update_time(self):
         if self._last_update_time:
-            return datetime.utcfromtimestamp(self._last_update_time)
+            return datetime.fromtimestamp(self._last_update_time)
 
     def set_last_update_time(self, value):
         if value:
