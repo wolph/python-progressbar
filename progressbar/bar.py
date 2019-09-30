@@ -173,8 +173,9 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value=None):
-        if not self.line_breaks:
+        if not self.line_breaks and utils.streams.needs_clear():
             self.fd.write('\r' + ' ' * self.term_width + '\r')
+
         utils.streams.flush()
         DefaultFdMixin.update(self, value=value)
 

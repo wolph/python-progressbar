@@ -447,9 +447,9 @@ def increment_bar_with_output_redirection():
         ' ', progressbar.ETA(),
         ' ', progressbar.FileTransferSpeed(),
     ]
-    bar = progressbar.ProgressBar(widgets=widgets, max_value=1000,
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=100,
                                   redirect_stdout=True).start()
-    for i in range(100):
+    for i in range(10):
         # do something
         time.sleep(0.01)
         bar += 10
