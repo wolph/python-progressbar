@@ -1,5 +1,6 @@
+from __future__ import print_function
+
 import io
-import time
 import sys
 import pytest
 import progressbar
@@ -81,14 +82,19 @@ def test_no_newlines():
         redirect_stdout=True,
         line_breaks=False,
         is_terminal=True,
-        max_value=None,
     )
 
-    with progressbar.ProgressBar(**kwargs) as pb:
-        for i in range(10):
-            print('%d\n\n\n' % i, file=progressbar.streams.stdout)
-            print('%d\n\n\n' % i, file=progressbar.streams.stderr)
-            pb.update(i)
+    with progressbar.ProgressBar(**kwargs) as bar:
+        for i in range(5):
+            bar.update(i)
+
+        for i in range(5, 10):
+            try:
+                print('\n\n', file=progressbar.streams.stdout)
+                print('\n\n', file=progressbar.streams.stderr)
+            except ValueError:
+                pass
+            bar.update(i)
 
 
 @pytest.mark.parametrize('stream', [sys.__stdout__, sys.__stderr__])

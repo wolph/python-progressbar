@@ -728,7 +728,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.next_update = 0
 
         if self.max_value is not base.UnknownLength and self.max_value < 0:
-            raise ValueError('Value out of range')
+            raise ValueError('max_value out of range, got %r' % self.max_value)
 
         self.start_time = self.last_update_time = datetime.now()
         self._last_update_timer = timeit.default_timer()
