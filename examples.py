@@ -32,6 +32,19 @@ def example(fn):
 
 
 @example
+def fast_example():
+    ''' Updates bar really quickly to cause flickering '''
+    with progressbar.ProgressBar(max_value=1, widgets=[progressbar.Bar()]) as bar:
+        start = time.time()
+        while True:
+            elapsed = time.time() - start
+            if elapsed > 1:
+                break
+            else:
+                bar.update(elapsed, force=True)
+
+
+@example
 def shortcut_example():
     for i in progressbar.progressbar(range(10)):
         time.sleep(0.1)
