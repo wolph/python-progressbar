@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import io
 import sys
 import pytest
@@ -72,6 +74,27 @@ def test_fd_as_io_stream():
         for i in range(101):
             pb.update(i)
     stream.close()
+
+
+def test_no_newlines():
+    kwargs = dict(
+        redirect_stderr=True,
+        redirect_stdout=True,
+        line_breaks=False,
+        is_terminal=True,
+    )
+
+    with progressbar.ProgressBar(**kwargs) as bar:
+        for i in range(5):
+            bar.update(i)
+
+        for i in range(5, 10):
+            try:
+                print('\n\n', file=progressbar.streams.stdout)
+                print('\n\n', file=progressbar.streams.stderr)
+            except ValueError:
+                pass
+            bar.update(i)
 
 
 @pytest.mark.parametrize('stream', [sys.__stdout__, sys.__stderr__])
