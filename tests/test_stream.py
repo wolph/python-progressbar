@@ -81,6 +81,7 @@ def test_no_newlines():
         redirect_stdout=True,
         line_breaks=False,
         is_terminal=True,
+        max_value=None,
     )
 
     with progressbar.ProgressBar(**kwargs) as pb:
