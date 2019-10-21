@@ -132,7 +132,6 @@ def test_etas(monkeypatch):
     #     if i < (n / 2 - 1):
     #         assert a['elapsed'] == b['elapsed']
 
-    #     
     #     if i > (n / 2 + 1):
     #         assert a['elapsed'] > b['elapsed']
 
