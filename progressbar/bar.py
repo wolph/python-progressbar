@@ -33,6 +33,7 @@ class ProgressBarMixinBase(object):
 
     def __init__(self, **kwargs):
         self._finished = False
+        self.offset = None
 
     def start(self, **kwargs):
         pass
@@ -86,6 +87,17 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         ProgressBarMixinBase.__init__(self, **kwargs)
 
+    def add_rewrite_or_offset(self, line):
+        if self.line_breaks:
+            line = line.rstrip() + '\n'
+        elif self.offset:
+            # line = utils.add_ansi_offset(line, *self.offset)
+            line = utils.add_ansi_offset(line + '\n', *self.offset)
+        else:
+            line = '\r' + line
+
+        return line
+
     def update(self, *args, **kwargs):
         ProgressBarMixinBase.update(self, *args, **kwargs)
 
@@ -93,12 +105,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         if not self.enable_colors:
             line = utils.no_color(line)
 
-        if self.line_breaks:
-            line = line.rstrip() + '\n'
-        else:
-            line = '\r' + line
-
-        self.fd.write(line)
+        self.fd.write(self.add_rewrite_or_offset(line))
 
     def finish(self, *args, **kwargs):  # pragma: no cover
         if self._finished:
@@ -107,7 +114,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         end = kwargs.pop('end', '\n')
         ProgressBarMixinBase.finish(self, *args, **kwargs)
 
-        if end and not self.line_breaks:
+        if end and not self.line_breaks and not self.offset:
             self.fd.write(end)
 
         self.fd.flush()

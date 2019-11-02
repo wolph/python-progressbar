@@ -6,6 +6,7 @@ import re
 import sys
 import logging
 import datetime
+import functools
 from python_utils.time import timedelta_to_seconds, epoch, format_time
 from python_utils.converters import scale_1024
 from python_utils.terminal import get_terminal_size
@@ -24,6 +25,8 @@ def is_terminal(fd, is_terminal=None):
     if is_terminal is None:
         if 'JPY_PARENT_PID' in os.environ:
             is_terminal = True
+        elif 'VIM' in os.environ:
+            is_terminal = True
         else:
             is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
 
@@ -34,6 +37,69 @@ def is_terminal(fd, is_terminal=None):
             is_terminal = False
 
     return is_terminal
+
+
+def ansi_esc(value, command):
+    return u'\u001B[{}{}'.format(value, command)
+
+
+class ANSI:
+
+    # For more options:
+    # https://en.wikipedia.org/wiki/ANSI_escape_code#Terminal_output_sequences
+
+    def esc(command, default_value=None):
+        def _esc(value=default_value):
+            return u'\u001B[{}{}'.format(value, command)
+            return u'\u001B[{}{}{}{}'.format(value, command, value, command)
+
+        return _esc
+
+    def y(line, y0, y1=None):
+        a, b = ANSI.up, ANSI.down
+        if y0 < 0:
+            a, b = b, a
+
+        if y1 is None:
+            y1 = y0
+
+        return a(y0) + line + b(y1)
+
+    def x(line, x0, x1=None):
+        a, b = ANSI.left, ANSI.right
+        if x0 < 0:
+            a, b = b, a
+
+        if x1 is None:
+            x1 = x0
+
+        return a(x0) + line + b(x1)
+
+    up = esc('A')
+    up = esc('F')
+    down = esc('B')
+    down = esc('E')
+    right = esc('C')
+    left = esc('D')
+    begin_of_line = esc('G', 1)
+    clear = esc('K', 2)
+    # clear = esc('J', 1)
+
+
+def add_ansi_offset(line, x0=0, y0=0, x1=None, y1=None):
+
+    line = '({x0},{y0})({x1},{y1}) {line}'.format(
+        x0=x0, y0=y0, x1=x1, y1=y0, line=line)
+
+    # line = ANSI.clear() + line
+
+    if x0 or x1:
+        line = ANSI.x(line, x0, x1)
+
+    if y0 or y1:
+        line = ANSI.y(line, y0, y1)
+
+    return line
 
 
 def deltas_to_seconds(*deltas, **kwargs):  # default=ValueError):
@@ -133,20 +199,55 @@ def env_flag(name, default=None):
 
 class WrappingIO:
 
-    def __init__(self, target, capturing=False, listeners=set()):
+    def __init__(self, target, capturing=False, listeners=None):
         self.buffer = six.StringIO()
         self.target = target
         self.capturing = capturing
-        self.listeners = listeners
+        self.listeners = list(listeners or [])
         self.needs_clear = False
+        self.update_offset()
+
+    def update_offset(self):
+        x = y = None
+        for listener in self.listeners:
+            if listener.offset:
+                x_new, y_new = listener.offset
+                x = max(x, x_new)
+                y = max(y, y_new)
+
+        if x is None and y is None:
+            offset = None
+        else:
+            offset = x or 0, y or 0
+
+        self.offset = offset
 
     def write(self, value):
+        # value = ANSI.up(4) + value + ANSI.down(4)
+
+        if self.offset:
+            ...
+            # value = ANSI.up(4) + value + ANSI.down(1)
+            # value = add_ansi_offset(value, *self.offset)
+            # print('writing %r\n\n\n\n\n' % value, file=sys.__stderr__)
+
         if self.capturing:
-            self.buffer.write(value)
+            # value = ANSI.y(value + '\n', 4, 1)
+            # if '\n' in value:
+            #     value = value + 2 * '\n' + ANSI.up(2)
+
+            self.buffer.write(ANSI.up(4))
+            self.buffer.write(value + '\n' * 3)
             if '\n' in value:
+                # self.buffer.write('\n')
+                # self.buffer.write(ANSI.up(3))
+                # self.buffer.write('\n' + ANSI.up(1))
+                self.needs_clear = not self.offset
                 self.needs_clear = True
                 for listener in self.listeners:  # pragma: no branch
                     listener.update()
+
+            self.buffer.write(ANSI.down(4))
         else:
             self.target.write(value)
 
@@ -174,7 +275,7 @@ class StreamWrapper(object):
         self.wrapped_stderr = 0
         self.wrapped_excepthook = 0
         self.capturing = 0
-        self.listeners = set()
+        self.listeners = []
 
         if env_flag('WRAP_STDOUT', default=False):  # pragma: no cover
             self.wrap_stdout()
@@ -184,7 +285,7 @@ class StreamWrapper(object):
 
     def start_capturing(self, bar=None):
         if bar:  # pragma: no branch
-            self.listeners.add(bar)
+            self.listeners.append(bar)
 
         self.capturing += 1
         self.update_capturing()
