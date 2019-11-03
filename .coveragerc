@@ -6,6 +6,7 @@ source =
 omit =
     */mock/*
     */nose/*
+    .tox/*
 [paths]
 source =
     progressbar

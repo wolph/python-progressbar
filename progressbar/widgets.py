@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -743,7 +744,109 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
             self, progress, self.mapping, self.format)
 
 
-class Variable(FormatWidgetMixin, WidgetBase):
+class VariableMixin(object):
+    '''Mixin to display a custom user variable '''
+
+    def __init__(self, name, **kwargs):
+        if not isinstance(name, str):
+            raise TypeError('Variable(): argument must be a string')
+        if len(name.split()) > 1:
+            raise ValueError('Variable(): argument must be single word')
+        self.name = name
+
+
+class MultiRangeBar(Bar, VariableMixin):
+    '''
+    A bar with multiple sub-ranges, each represented by a different symbol
+
+    The various ranges are represented on a user-defined variable, formatted as
+
+    .. code-block:: python
+
+        [
+            ['Symbol1', amount1],
+            ['Symbol2', amount2],
+            ...
+        ]
+    '''
+
+    def __init__(self, name, markers, **kwargs):
+        VariableMixin.__init__(self, name)
+        Bar.__init__(self, **kwargs)
+        self.markers = [
+            string_or_lambda(marker)
+            for marker in markers
+        ]
+
+    def get_values(self, progress, data):
+        return data['variables'][self.name] or []
+
+    def __call__(self, progress, data, width):
+        '''Updates the progress bar and its subcomponents'''
+
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
+        width -= progress.custom_len(left) + progress.custom_len(right)
+        values = self.get_values(progress, data)
+
+        values_sum = sum(values)
+        if width and values_sum:
+            middle = ''
+            values_accumulated = 0
+            width_accumulated = 0
+            for marker, value in zip(self.markers, values):
+                marker = converters.to_unicode(marker(progress, data, width))
+                assert utils.len_color(marker) == 1
+
+                values_accumulated += value
+                item_width = int(values_accumulated / values_sum * width)
+                item_width -= width_accumulated
+                width_accumulated += item_width
+                middle += item_width * marker
+        else:
+            fill = converters.to_unicode(self.fill(progress, data, width))
+            assert utils.len_color(fill) == 1
+            middle = fill * width
+
+        return left + middle + right
+
+
+class MultiProgressBar(MultiRangeBar):
+    def __init__(self,
+                 name,
+                 # NOTE: the markers are not whitespace even though some
+                 # terminals don't show the characters correctly!
+                 markers=' ▁▂▃▄▅▆▇█',
+                 **kwargs):
+        MultiRangeBar.__init__(self, name=name,
+                               markers=list(reversed(markers)), **kwargs)
+
+    def get_values(self, progress, data):
+        ranges = [0] * len(self.markers)
+        for progress in data['variables'][self.name] or []:
+            if not isinstance(progress, (int, float)):
+                # Progress is (value, max)
+                progress_value, progress_max = progress
+                progress = float(progress_value) / float(progress_max)
+
+            if progress < 0 or progress > 1:
+                raise ValueError(
+                    'Range value needs to be in the range [0..1], got %s' %
+                    progress)
+
+            range_ = progress * (len(ranges) - 1)
+            pos = int(range_)
+            frac = range_ % 1
+            ranges[pos] += (1 - frac)
+            if (frac):
+                ranges[pos + 1] += (frac)
+
+        if self.fill_left:
+            ranges = list(reversed(ranges))
+        return ranges
+
+
+class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
     '''Displays a custom variable.'''
 
     def __init__(self, name, format='{name}: {formatted_value}',
@@ -752,13 +855,8 @@ class Variable(FormatWidgetMixin, WidgetBase):
         self.format = format
         self.width = width
         self.precision = precision
-        if not isinstance(name, str):
-            raise TypeError('Variable(): argument must be a string')
-        if len(name.split()) > 1:
-            raise ValueError('Variable(): argument must be single word')
+        VariableMixin.__init__(self, name=name)
         WidgetBase.__init__(self, **kwargs)
-
-        self.name = name
 
     def __call__(self, progress, data):
         value = data['variables'][self.name]

@@ -172,32 +172,18 @@ def test_no_line_breaks(testdir):
         line_breaks=False,
         items=list(range(5)),
     )))
-    pprint.pprint(result.stderr.str(), width=70)
-    assert result.stderr.str() == u'\n'.join((
-        u'',
-        u'                                                            ',
+    pprint.pprint(result.stderr.lines, width=70)
+    assert result.stderr.lines == [
         u'',
         u'N/A%|                                                      |',
-        u'                                                            ',
-        u'',
         u' 20%|##########                                            |',
-        u'                                                            ',
-        u'',
         u' 40%|#####################                                 |',
-        u'                                                            ',
-        u'',
         u' 60%|################################                      |',
-        u'                                                            ',
-        u'',
         u' 80%|###########################################           |',
-        u'                                                            ',
-        u'',
         u'100%|######################################################|',
         u'',
-        u'                                                            ',
-        u'',
         u'100%|######################################################|'
-    ))
+    ]
 
 
 def test_colors(testdir):
