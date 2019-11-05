@@ -532,7 +532,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             return value
         except StopIteration:
             self.finish()
-            raise
+        except GeneratorExit:
+            self.finish(dirty=True)
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.finish(dirty=bool(exc_type))
