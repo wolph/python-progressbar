@@ -1,6 +1,7 @@
 import time
 import pytest
 import progressbar
+import sys
 
 
 def test_missing_format_values():
@@ -115,3 +116,12 @@ def test_variable_not_str():
 def test_variable_too_many_strs():
     with pytest.raises(ValueError):
         progressbar.Variable('too long')
+
+
+def test_stdout_unwrap():
+    original_stdout = sys.stdout
+    with pytest.raises(KeyboardInterrupt):
+        for i in progressbar.ProgressBar(redirect_stdout=True)(range(10)):
+            if i == 5:
+                raise KeyboardInterrupt
+    assert sys.stdout == original_stdout

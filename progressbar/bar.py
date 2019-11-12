@@ -51,7 +51,7 @@ class ProgressBarMixinBase(object):
                 pass
 
 
-class ProgressBarBase(abc.Iterable, ProgressBarMixinBase):
+class ProgressBarBase(abc.Generator, ProgressBarMixinBase):
     pass
 
 
@@ -307,7 +307,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.widget_kwargs = widget_kwargs or {}
         self.left_justify = left_justify
         self.value = initial_value
-        self._iterable = None
+        self._iterator = None
         self.custom_len = custom_len
         self.init()
 
@@ -510,21 +510,26 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Use a ProgressBar to iterate through an iterable'
         if max_value is not None:
             self.max_value = max_value
-        elif self.max_value is None:
+        else:
             try:
                 self.max_value = len(iterable)
             except TypeError:  # pragma: no cover
                 self.max_value = base.UnknownLength
 
-        self._iterable = iter(iterable)
+        self._iterator = iter(iterable)
         return self
 
     def __iter__(self):
+        if self._iterator is None:
+            raise ValueError("ProgressBar can't be iterated over "
+                             "without a provided iterable. "
+                             "Try ProgressBar()(iterable)")
         return self
 
-    def __next__(self):
+    # GENERATOR METHODS
+    def send(self, _):
         try:
-            value = next(self._iterable)
+            value = next(self._iterator)
             if self.start_time is None:
                 self.start()
             else:
@@ -532,9 +537,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             return value
         except StopIteration:
             self.finish()
-        except GeneratorExit:
-            self.finish(dirty=True)
 
+    def throw(self, typ, val=None, tb=None):
+        self.finish(dirty=True)
+        if isinstance(self._iterator, abc.Generator):
+            self._iterator.throw(typ, val, tb)
+        else:
+            raise StopIteration
+
+    def __del__(self):
+        self.close()
+
+    # CONTEXT MANAGER METHODS
     def __exit__(self, exc_type, exc_value, traceback):
         self.finish(dirty=bool(exc_type))
 
@@ -543,7 +557,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     # Create an alias so that Python 2.x won't complain about not being
     # an iterator.
-    next = __next__
+    next = abc.Generator.__next__
 
     def __iadd__(self, value):
         'Updates the ProgressBar by adding a new value.'
@@ -673,7 +687,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         Args:
             max_value (int): The maximum value of the progressbar
-            reinit (bool): Initialize the progressbar, this is useful if you
+            init (bool): Initialize the progressbar, this is useful if you
                 wish to reuse the same progressbar but can be disabled if
                 data needs to be passed along to the next run
 
