@@ -48,7 +48,7 @@ else:
 
 if __name__ == '__main__':
     setup(
-        name=about['__package_name__'],
+        name='progressbar2',
         version=about['__version__'],
         author=about['__author__'],
         author_email=about['__email__'],
