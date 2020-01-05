@@ -510,7 +510,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Use a ProgressBar to iterate through an iterable'
         if max_value is not None:
             self.max_value = max_value
-        else:
+        elif self.max_value is None:
             try:
                 self.max_value = len(iterable)
             except TypeError:  # pragma: no cover
@@ -537,6 +537,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             return value
         except StopIteration:
             self.finish()
+            raise
 
     def throw(self, typ, val=None, tb=None):
         self.finish(dirty=True)
