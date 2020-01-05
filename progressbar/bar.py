@@ -533,7 +533,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         except StopIteration:
             self.finish()
             raise
-        except GeneratorExit:
+        except GeneratorExit:  # pragma: no cover
             self.finish(dirty=True)
             raise
 
