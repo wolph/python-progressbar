@@ -594,7 +594,7 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
                 marker))
         else:
             fill = ''
-        
+
         # Python 3 returns an int when indexing bytes
         if isinstance(marker, int):  # pragma: no cover
             marker = bytes(marker)
