@@ -302,8 +302,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.min_value = min_value
         self.max_value = max_value
         self.max_error = max_error
-        self.widgets = widgets
-        self.prefix = deepcopy(prefix)
+        self.widgets = deepcopy(widgets)
+        self.prefix = prefix
         self.suffix = suffix
         self.widget_kwargs = widget_kwargs or {}
         self.left_justify = left_justify
