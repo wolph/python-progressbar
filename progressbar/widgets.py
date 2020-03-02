@@ -801,7 +801,7 @@ class VariableMixin(object):
     '''Mixin to display a custom user variable '''
 
     def __init__(self, name, **kwargs):
-        if not isinstance(name, str):
+        if not isinstance(name, six.string_types):
             raise TypeError('Variable(): argument must be a string')
         if len(name.split()) > 1:
             raise ValueError('Variable(): argument must be single word')
