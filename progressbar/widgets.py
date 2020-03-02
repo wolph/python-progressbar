@@ -38,11 +38,11 @@ def create_wrapper(wrapper):
 
     >>> create_wrapper('')
 
-    >>> create_wrapper('a{}b')
-    u'a{}b'
+    >>> create_wrapper('a{}b') == 'a{}b'
+    True
 
-    >>> create_wrapper(('a', 'b'))
-    u'a{}b'
+    >>> create_wrapper(('a', 'b')) == 'a{}b'
+    True
     '''
     if isinstance(wrapper, tuple) and len(wrapper) == 2:
         a, b = wrapper
