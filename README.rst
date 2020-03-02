@@ -19,11 +19,11 @@ Install
 The package can be installed through `pip` (this is the recommended method):
 
     pip install progressbar2
-    
+
 Or if `pip` is not available, `easy_install` should work as well:
 
     easy_install progressbar2
-    
+
 Or download the latest release from Pypi (https://pypi.python.org/pypi/progressbar2) or Github.
 
 Note that the releases on Pypi are signed with my GPG key (https://pgp.mit.edu/pks/lookup?op=vindex&search=0xE81444E9CE1F695D) and can be checked using GPG:
@@ -83,7 +83,7 @@ Links
     - https://progressbar-2.readthedocs.org/en/latest/
 * Source
     - https://github.com/WoLpH/python-progressbar
-* Bug reports 
+* Bug reports
     - https://github.com/WoLpH/python-progressbar/issues
 * Package homepage
     - https://pypi.python.org/pypi/progressbar2
@@ -103,7 +103,7 @@ Wrapping an iterable
 
     import time
     import progressbar
- 
+
     for i in progressbar.progressbar(range(100)):
         time.sleep(0.02)
 
@@ -119,7 +119,7 @@ One option to force early initialization is by using the `WRAP_STDERR`
 environment variable, on Linux/Unix systems this can be done through:
 
 .. code:: sh
-   
+
     # WRAP_STDERR=true python your_script.py
 
 If you need to flush manually while wrapping, you can do so using:

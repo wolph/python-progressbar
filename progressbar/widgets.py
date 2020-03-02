@@ -39,10 +39,10 @@ def create_wrapper(wrapper):
     >>> create_wrapper('')
 
     >>> create_wrapper('a{}b')
-    'a{}b'
+    u'a{}b'
 
     >>> create_wrapper(('a', 'b'))
-    'a{}b'
+    u'a{}b'
     '''
     if isinstance(wrapper, tuple) and len(wrapper) == 2:
         a, b = wrapper
