@@ -13,7 +13,7 @@ install:
 - pip install -U -r tests/requirements.txt
 before_script: flake8 progressbar tests examples
 script:
-- python setup.py test
+- py.test
 - python examples.py
 after_success:
 - coveralls
