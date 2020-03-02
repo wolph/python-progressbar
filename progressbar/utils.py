@@ -20,12 +20,48 @@ assert scale_1024
 assert epoch
 
 
-def is_terminal(fd, is_terminal=None):
+ANSI_TERMS = (
+    '([xe]|bv)term',
+    '(sco)?ansi',
+    'cygwin',
+    'konsole',
+    'linux',
+    'rxvt',
+    'screen',
+    'tmux',
+    'vt(10[02]|220|320)',
+)
+ANSI_TERM_RE = re.compile('^({})'.format('|'.join(ANSI_TERMS)), re.IGNORECASE)
+
+
+def is_ansi_terminal(fd, is_terminal=None):  # pragma: no cover
     if is_terminal is None:
         if 'JPY_PARENT_PID' in os.environ:
             is_terminal = True
-        else:
-            is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
+        elif os.environ.get('PYCHARM_HOSTED') == '1':
+            is_terminal = True
+
+    if is_terminal is None:
+        try:
+            is_tty = fd.isatty()
+            if is_tty and ANSI_TERM_RE.match(os.environ.get('TERM', '')):
+                is_terminal = True
+            elif 'ANSICON' in os.environ:
+                is_terminal = True
+            else:
+                is_terminal = False
+        except Exception:
+            is_terminal = False
+
+    return is_terminal
+
+
+def is_terminal(fd, is_terminal=None):
+    if is_terminal is None:
+        is_terminal = is_ansi_terminal(True) or None
+
+    if is_terminal is None:
+        is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
 
     if is_terminal is None:  # pragma: no cover
         try:

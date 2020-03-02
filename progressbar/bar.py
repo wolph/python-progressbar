@@ -67,22 +67,25 @@ class DefaultFdMixin(ProgressBarMixinBase):
             fd = utils.streams.original_stderr
 
         self.fd = fd
+        self.is_ansi_terminal = utils.is_ansi_terminal(fd)
 
         # Check if this is an interactive terminal
-        self.is_terminal = is_terminal = utils.is_terminal(fd, is_terminal)
+        self.is_terminal = utils.is_terminal(
+            fd, is_terminal or self.is_ansi_terminal)
 
         # Check if it should overwrite the current line (suitable for
         # iteractive terminals) or write line breaks (suitable for log files)
         if line_breaks is None:
             line_breaks = utils.env_flag('PROGRESSBAR_LINE_BREAKS', not
-                                         is_terminal)
+                                         self.is_terminal)
         self.line_breaks = line_breaks
 
         # Check if ANSI escape characters are enabled (suitable for iteractive
         # terminals), or should be stripped off (suitable for log files)
         if enable_colors is None:
             enable_colors = utils.env_flag('PROGRESSBAR_ENABLE_COLORS',
-                                           is_terminal)
+                                           self.is_ansi_terminal)
+
         self.enable_colors = enable_colors
 
         ProgressBarMixinBase.__init__(self, **kwargs)
