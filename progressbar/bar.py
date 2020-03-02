@@ -99,9 +99,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
         else:
             line = '\r' + line
 
-        try:
+        try:  # pragma: no cover
             self.fd.write(line)
-        except UnicodeEncodeError:
+        except UnicodeEncodeError:  # pragma: no cover
             self.fd.write(line.encode('ascii', 'replace'))
 
     def finish(self, *args, **kwargs):  # pragma: no cover
