@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import with_statement
 
 import functools
 import random
@@ -81,8 +85,30 @@ def basic_widget_example():
 
 @example
 def color_bar_example():
-    widgets = ['\x1b[33mColorful example\x1b[39m', progressbar.Percentage(),
-               progressbar.Bar(marker='\x1b[32m#\x1b[39m')]
+    widgets = [
+        '\x1b[33mColorful example\x1b[39m',
+        progressbar.Percentage(),
+        progressbar.Bar(marker='\x1b[32m#\x1b[39m'),
+    ]
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
+    for i in range(10):
+        # do something
+        time.sleep(0.1)
+        bar.update(i + 1)
+    bar.finish()
+
+
+@example
+def color_bar_animated_marker_example():
+    widgets = [
+        # Colored animated marker with colored fill:
+        progressbar.Bar(marker=progressbar.AnimatedMarker(
+            fill='x',
+            # fill='█',
+            fill_wrap='\x1b[32m{}\x1b[39m',
+            marker_wrap='\x1b[31m{}\x1b[39m',
+        )),
+    ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
     for i in range(10):
         # do something

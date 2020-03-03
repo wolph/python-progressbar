@@ -6,6 +6,14 @@ import progressbar
 max_values = [None, 10, progressbar.UnknownLength]
 
 
+def test_create_wrapper():
+    with pytest.raises(AssertionError):
+        progressbar.widgets.create_wrapper('ab')
+
+    with pytest.raises(RuntimeError):
+        progressbar.widgets.create_wrapper(123)
+
+
 def test_widgets_small_values():
     widgets = [
         'Test: ',

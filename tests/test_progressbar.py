@@ -1,9 +1,16 @@
 import time
 import pytest
-
-import examples
 import progressbar
 import original_examples
+
+# Import hack to allow for parallel Tox
+try:
+    import examples
+except ImportError:
+    import sys
+    sys.path.append('..')
+    import examples
+    sys.path.remove('..')
 
 
 def test_examples(monkeypatch):

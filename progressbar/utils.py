@@ -20,14 +20,64 @@ assert scale_1024
 assert epoch
 
 
-def is_terminal(fd, is_terminal=None):
+ANSI_TERMS = (
+    '([xe]|bv)term',
+    '(sco)?ansi',
+    'cygwin',
+    'konsole',
+    'linux',
+    'rxvt',
+    'screen',
+    'tmux',
+    'vt(10[02]|220|320)',
+)
+ANSI_TERM_RE = re.compile('^({})'.format('|'.join(ANSI_TERMS)), re.IGNORECASE)
+
+
+def is_ansi_terminal(fd, is_terminal=None):  # pragma: no cover
     if is_terminal is None:
+        # Jupyter Notebooks define this variable and support progress bars
         if 'JPY_PARENT_PID' in os.environ:
             is_terminal = True
-        else:
-            is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
+        # This works for newer versions of pycharm only. older versions there
+        # is no way to check.
+        elif os.environ.get('PYCHARM_HOSTED') == '1':
+            is_terminal = True
+
+    if is_terminal is None:
+        # check if we are writing to a terminal or not. typically a file object
+        # is going to return False if the instance has been overridden and
+        # isatty has not been defined we have no way of knowing so we will not
+        # use ansi.  ansi terminals will typically define one of the 2
+        # environment variables.
+        try:
+            is_tty = fd.isatty()
+            # Try and match any of the huge amount of Linux/Unix ANSI consoles
+            if is_tty and ANSI_TERM_RE.match(os.environ.get('TERM', '')):
+                is_terminal = True
+            # ANSICON is a Windows ANSI compatible console
+            elif 'ANSICON' in os.environ:
+                is_terminal = True
+            else:
+                is_terminal = False
+        except Exception:
+            is_terminal = False
+
+    return is_terminal
+
+
+def is_terminal(fd, is_terminal=None):
+    if is_terminal is None:
+        # Full ansi support encompasses what we expect from a terminal
+        is_terminal = is_ansi_terminal(True) or None
+
+    if is_terminal is None:
+        # Allow a environment variable override
+        is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
 
     if is_terminal is None:  # pragma: no cover
+        # Bare except because a lot can go wrong on different systems. If we do
+        # get a TTY we know this is a valid terminal
         try:
             is_terminal = fd.isatty()
         except Exception:

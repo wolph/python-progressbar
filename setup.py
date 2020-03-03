@@ -4,6 +4,7 @@
 import os
 import sys
 
+from setuptools.command.test import test as TestCommand
 
 try:
     from setuptools import setup, find_packages
@@ -24,13 +25,34 @@ with open("progressbar/__about__.py") as fp:
     exec(fp.read(), about)
 
 
+class PyTest(TestCommand):
+    user_options = [('pytest-args=', 'a', 'Arguments to pass to pytest')]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = ''
+
+    def run_tests(self):
+        import shlex
+        # import here, cause outside the eggs aren't loaded
+        import pytest
+        errno = pytest.main(shlex.split(self.pytest_args))
+        sys.exit(errno)
+
+
 install_reqs = []
-needs_pytest = set(['ptr', 'pytest', 'test']).intersection(sys.argv)
-pytest_runner = ['pytest-runner>=2.8'] if needs_pytest else []
-tests_reqs = []
+tests_require = [
+    'flake8>=3.7.7',
+    'pytest>=4.3.1',
+    'pytest-cov>=2.6.1',
+    'pytest-flakes>=4.0.0',
+    'pytest-pep8>=1.0.6',
+    'freezegun>=0.3.11',
+    'sphinx>=1.8.5',
+]
 
 if sys.version_info < (2, 7):
-    tests_reqs += ['unittest2']
+    tests_require += ['unittest2']
 
 
 if sys.argv[-1] == 'info':
@@ -48,7 +70,7 @@ else:
 
 if __name__ == '__main__':
     setup(
-        name=about['__package_name__'],
+        name='progressbar2',
         version=about['__version__'],
         author=about['__author__'],
         author_email=about['__email__'],
@@ -63,22 +85,15 @@ if __name__ == '__main__':
             'python-utils>=2.3.0',
             'six',
         ],
-        tests_require=tests_reqs,
-        setup_requires=['setuptools'] + pytest_runner,
+        tests_require=tests_require,
+        setup_requires=['setuptools'],
         zip_safe=False,
+        cmdclass={'test': PyTest},
         extras_require={
             'docs': [
                 'sphinx>=1.7.4',
             ],
-            'tests': [
-                'flake8>=3.7.7',
-                'pytest>=4.3.1',
-                'pytest-cov>=2.6.1',
-                'pytest-flakes>=4.0.0',
-                'pytest-pep8>=1.0.6',
-                'freezegun>=0.3.11',
-                'sphinx>=1.8.5',
-            ],
+            'tests': tests_require,
         },
         classifiers=[
             'Development Status :: 6 - Mature',
