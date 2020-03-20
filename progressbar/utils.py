@@ -59,7 +59,7 @@ def is_ansi_terminal(fd, is_terminal=None):  # pragma: no cover
             elif 'ANSICON' in os.environ:
                 is_terminal = True
             else:
-                is_terminal = False
+                is_terminal = None
         except Exception:
             is_terminal = False
 
