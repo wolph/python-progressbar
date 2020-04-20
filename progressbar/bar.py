@@ -405,11 +405,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         elif self.max_value:
             todo = self.value - self.min_value
             total = self.max_value - self.min_value
-            percentage = todo / total
+            percentage = 100.0 * todo / total
         else:
-            percentage = 1
+            percentage = 100.0
 
-        return percentage * 100
+        return percentage
 
     def get_last_update_time(self):
         if self._last_update_time:
