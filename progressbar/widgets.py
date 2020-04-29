@@ -189,7 +189,11 @@ class WidgetBase(WidthWidgetMixin):
      - max_width: Only display the widget if at most `max_width` is left
      - weight: Widgets with a higher `weigth` will be calculated before widgets
        with a lower one
+    - copy: Copy this widget when initializing the progress bar so the
+      progressbar can be reused. Some widgets such as the FormatCustomText
+      require the shared state so this needs to be optional
     '''
+    copy = True
 
     @abc.abstractmethod
     def __call__(self, progress, data):
@@ -782,6 +786,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
 class FormatCustomText(FormatWidgetMixin, WidgetBase):
     mapping = {}
+    copy = False
 
     def __init__(self, format, mapping=mapping, **kwargs):
         self.format = format
