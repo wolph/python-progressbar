@@ -311,11 +311,14 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
         # Only copy the widget if it's safe to copy. Most widgets are so we
         # assume this to be true
-        self.widgets = []
-        for widget in widgets:
-            if getattr(widget, 'copy', True):
-                widget = deepcopy(widget)
-            self.widgets.append(widget)
+        if widgets is None:
+            self.widgets = widgets
+        else:
+            self.widgets = []
+            for widget in widgets:
+                if getattr(widget, 'copy', True):
+                    widget = deepcopy(widget)
+                self.widgets.append(widget)
 
         self.widgets = widgets
         self.prefix = prefix
