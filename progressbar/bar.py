@@ -308,7 +308,19 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.min_value = min_value
         self.max_value = max_value
         self.max_error = max_error
-        self.widgets = deepcopy(widgets)
+
+        # Only copy the widget if it's safe to copy. Most widgets are so we
+        # assume this to be true
+        if widgets is None:
+            self.widgets = widgets
+        else:
+            self.widgets = []
+            for widget in widgets:
+                if getattr(widget, 'copy', True):
+                    widget = deepcopy(widget)
+                self.widgets.append(widget)
+
+        self.widgets = widgets
         self.prefix = prefix
         self.suffix = suffix
         self.widget_kwargs = widget_kwargs or {}
