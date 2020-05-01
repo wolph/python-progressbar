@@ -729,10 +729,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if self.prefix:
             self.widgets.insert(0, widgets.FormatLabel(
                 self.prefix, new_style=True))
+            # Unset the prefix variable after applying so an extra start()
+            # won't keep copying it
+            self.prefix = None
 
         if self.suffix:
             self.widgets.append(widgets.FormatLabel(
                 self.suffix, new_style=True))
+            # Unset the suffix variable after applying so an extra start()
+            # won't keep copying it
+            self.suffix = None
 
         for widget in self.widgets:
             interval = getattr(widget, 'INTERVAL', None)
