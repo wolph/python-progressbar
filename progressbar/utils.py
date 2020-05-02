@@ -201,7 +201,6 @@ class WrappingIO:
             self.target.write(value)
 
     def flush(self):
-        self.needs_clear = False
         self.buffer.flush()
 
     def _flush(self):
@@ -211,6 +210,7 @@ class WrappingIO:
             self.target.write(value)
             self.buffer.seek(0)
             self.buffer.truncate(0)
+            self.needs_clear = False
 
 
 class StreamWrapper(object):
