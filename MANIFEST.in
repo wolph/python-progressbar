@@ -8,3 +8,5 @@ include requirements.txt
 include Makefile
 include pytest.ini
 recursive-include tests *
+recursive-exclude *.pyc
+recursive-exclude *.pyo
