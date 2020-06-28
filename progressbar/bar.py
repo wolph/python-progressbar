@@ -328,6 +328,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.value = initial_value
         self._iterable = None
         self.custom_len = custom_len
+        self.initial_start_time = kwargs.get('start_time')
         self.init()
 
         # Convert a given timedelta to a floating point number as internal
@@ -758,7 +759,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if self.max_value is not base.UnknownLength and self.max_value < 0:
             raise ValueError('max_value out of range, got %r' % self.max_value)
 
-        self.start_time = self.last_update_time = datetime.now()
+        now = datetime.now()
+        self.start_time = self.initial_start_time or now
+        self.last_update_time = now
         self._last_update_timer = timeit.default_timer()
         self.update(self.min_value, force=True)
 
