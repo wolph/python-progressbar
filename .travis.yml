@@ -11,7 +11,7 @@ python:
 install:
 - pip install -U .
 - pip install -U -r tests/requirements.txt
-before_script: flake8 progressbar tests examples
+before_script: flake8 progressbar tests examples.py
 script:
 - py.test
 - python examples.py
