@@ -43,7 +43,7 @@ class PyTest(TestCommand):
 install_reqs = []
 tests_require = [
     'flake8>=3.7.7',
-    'pytest>=4.3.1',
+    'pytest>=4.6.9',
     'pytest-cov>=2.6.1',
     'pytest-flakes>=4.0.0',
     'pytest-pep8>=1.0.6',
