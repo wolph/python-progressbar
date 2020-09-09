@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import distutils.util
+import atexit
 import io
 import os
 import re
@@ -193,12 +194,14 @@ class WrappingIO:
     def write(self, value):
         if self.capturing:
             self.buffer.write(value)
-            if '\n' in value:
+            if '\n' in value:  # pragma: no branch
                 self.needs_clear = True
                 for listener in self.listeners:  # pragma: no branch
                     listener.update()
         else:
             self.target.write(value)
+            if '\n' in value:
+                self.flush_target()
 
     def flush(self):
         self.buffer.flush()
@@ -211,6 +214,13 @@ class WrappingIO:
             self.buffer.seek(0)
             self.buffer.truncate(0)
             self.needs_clear = False
+
+        # when explicitly flushing, always flush the target as well
+        self.flush_target()
+
+    def flush_target(self):  # pragma: no cover
+        if not self.target.closed and getattr(self.target, 'flush'):
+            self.target.flush()
 
 
 class StreamWrapper(object):
@@ -406,3 +416,4 @@ class AttributeDict(dict):
 
 logger = logging.getLogger(__name__)
 streams = StreamWrapper()
+atexit.register(streams.flush)
