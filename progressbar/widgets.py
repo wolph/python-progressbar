@@ -9,6 +9,7 @@ import abc
 import sys
 import pprint
 import datetime
+import functools
 
 from python_utils import converters
 
@@ -32,7 +33,49 @@ def string_or_lambda(input_):
         return input_
 
 
-def create_marker(marker):
+def create_wrapper(wrapper):
+    '''Convert a wrapper tuple or format string to a format string
+
+    >>> create_wrapper('')
+
+    >>> print(create_wrapper('a{}b'))
+    a{}b
+
+    >>> print(create_wrapper(('a', 'b')))
+    a{}b
+    '''
+    if isinstance(wrapper, tuple) and len(wrapper) == 2:
+        a, b = wrapper
+        wrapper = (a or '') + '{}' + (b or '')
+    elif not wrapper:
+        return
+
+    if isinstance(wrapper, six.string_types):
+        assert '{}' in wrapper, 'Expected string with {} for formatting'
+    else:
+        raise RuntimeError('Pass either a begin/end string as a tuple or a'
+                           ' template string with {}')
+
+    return wrapper
+
+
+def wrapper(function, wrapper):
+    '''Wrap the output of a function in a template string or a tuple with
+    begin/end strings
+
+    '''
+    wrapper = create_wrapper(wrapper)
+    if not wrapper:
+        return function
+
+    @functools.wraps(function)
+    def wrap(*args, **kwargs):
+        return wrapper.format(function(*args, **kwargs))
+
+    return wrap
+
+
+def create_marker(marker, wrap=None):
     def _marker(progress, data, width):
         if progress.max_value is not base.UnknownLength \
                 and progress.max_value > 0:
@@ -45,9 +88,9 @@ def create_marker(marker):
         marker = converters.to_unicode(marker)
         assert utils.len_color(marker) == 1, \
             'Markers are required to be 1 char'
-        return _marker
+        return wrapper(_marker, wrap)
     else:
-        return marker
+        return wrapper(marker, wrap)
 
 
 class FormatWidgetMixin(object):
@@ -146,7 +189,11 @@ class WidgetBase(WidthWidgetMixin):
      - max_width: Only display the widget if at most `max_width` is left
      - weight: Widgets with a higher `weigth` will be calculated before widgets
        with a lower one
+    - copy: Copy this widget when initializing the progress bar so the
+      progressbar can be reused. Some widgets such as the FormatCustomText
+      require the shared state so this needs to be optional
     '''
+    copy = True
 
     @abc.abstractmethod
     def __call__(self, progress, data):
@@ -525,10 +572,13 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
     it were rotating.
     '''
 
-    def __init__(self, markers='|/-\\', default=None, fill='', **kwargs):
+    def __init__(self, markers='|/-\\', default=None, fill='',
+                 marker_wrap=None, fill_wrap=None, **kwargs):
         self.markers = markers
+        self.marker_wrap = create_wrapper(marker_wrap)
         self.default = default or markers[0]
-        self.fill = create_marker(fill) if fill else None
+        self.fill_wrap = create_wrapper(fill_wrap)
+        self.fill = create_marker(fill, self.fill_wrap) if fill else None
         WidgetBase.__init__(self, **kwargs)
 
     def __call__(self, progress, data, width=None):
@@ -538,13 +588,16 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         if progress.end_time:
             return self.default
 
+        marker = self.markers[data['updates'] % len(self.markers)]
+        if self.marker_wrap:
+            marker = self.marker_wrap.format(marker)
+
         if self.fill:
             # Cut the last character so we can replace it with our marker
-            fill = self.fill(progress, data, width)[:-1]
+            fill = self.fill(progress, data, width - progress.custom_len(
+                marker))
         else:
             fill = ''
-
-        marker = self.markers[data['updates'] % len(self.markers)]
 
         # Python 3 returns an int when indexing bytes
         if isinstance(marker, int):  # pragma: no cover
@@ -642,7 +695,7 @@ class Bar(AutoWidthWidgetBase):
     '''A progress bar which stretches to fill the line.'''
 
     def __init__(self, marker='#', left='|', right='|', fill=' ',
-                 fill_left=True, **kwargs):
+                 fill_left=True, marker_wrap=None, **kwargs):
         '''Creates a customizable progress bar.
 
         The callable takes the same parameters as the `__call__` method
@@ -654,7 +707,7 @@ class Bar(AutoWidthWidgetBase):
         fill_left - whether to fill from the left or the right
         '''
 
-        self.marker = create_marker(marker)
+        self.marker = create_marker(marker, marker_wrap)
         self.left = string_or_lambda(left)
         self.right = string_or_lambda(right)
         self.fill = string_or_lambda(fill)
@@ -670,6 +723,10 @@ class Bar(AutoWidthWidgetBase):
         width -= progress.custom_len(left) + progress.custom_len(right)
         marker = converters.to_unicode(self.marker(progress, data, width))
         fill = converters.to_unicode(self.fill(progress, data, width))
+
+        # Make sure we ignore invisible characters when filling
+        width += len(marker) - progress.custom_len(marker)
+
         if self.fill_left:
             marker = marker.ljust(width, fill)
         else:
@@ -729,6 +786,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
 class FormatCustomText(FormatWidgetMixin, WidgetBase):
     mapping = {}
+    copy = False
 
     def __init__(self, format, mapping=mapping, **kwargs):
         self.format = format
@@ -748,7 +806,7 @@ class VariableMixin(object):
     '''Mixin to display a custom user variable '''
 
     def __init__(self, name, **kwargs):
-        if not isinstance(name, str):
+        if not isinstance(name, six.string_types):
             raise TypeError('Variable(): argument must be a string')
         if len(name.split()) > 1:
             raise ValueError('Variable(): argument must be single word')
@@ -796,7 +854,7 @@ class MultiRangeBar(Bar, VariableMixin):
             width_accumulated = 0
             for marker, value in zip(self.markers, values):
                 marker = converters.to_unicode(marker(progress, data, width))
-                assert utils.len_color(marker) == 1
+                assert progress.custom_len(marker) == 1
 
                 values_accumulated += value
                 item_width = int(values_accumulated / values_sum * width)
@@ -805,7 +863,7 @@ class MultiRangeBar(Bar, VariableMixin):
                 middle += item_width * marker
         else:
             fill = converters.to_unicode(self.fill(progress, data, width))
-            assert utils.len_color(fill) == 1
+            assert progress.custom_len(fill) == 1
             middle = fill * width
 
         return left + middle + right

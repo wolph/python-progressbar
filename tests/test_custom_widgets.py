@@ -61,3 +61,22 @@ def test_variable_widget_widget():
     i += 1
     p.update(i, text=True, error='a')
     p.finish()
+
+
+def test_format_custom_text_widget():
+    widget = progressbar.FormatCustomText(
+        'Spam: %(spam).1f kg, eggs: %(eggs)d',
+        dict(
+            spam=0.25,
+            eggs=3,
+        ),
+    )
+
+    bar = progressbar.ProgressBar(widgets=[
+        widget,
+    ])
+
+    for i in bar(range(5)):
+        widget.update_mapping(eggs=i * 2)
+        assert widget.mapping['eggs'] == bar.widgets[0].mapping['eggs']
+

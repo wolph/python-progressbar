@@ -7,13 +7,14 @@ python:
 - '3.5'
 - '3.6'
 - '3.7'
+- '3.8'
 - pypy
 install:
 - pip install -U .
 - pip install -U -r tests/requirements.txt
-before_script: flake8 progressbar tests examples
+before_script: flake8 progressbar tests examples.py
 script:
-- python setup.py test
+- py.test
 - python examples.py
 after_success:
 - coveralls

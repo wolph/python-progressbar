@@ -11,6 +11,7 @@ import timeit
 import logging
 import warnings
 from datetime import datetime
+from copy import deepcopy
 try:  # pragma: no cover
     from collections import abc
 except ImportError:  # pragma: no cover
@@ -66,22 +67,25 @@ class DefaultFdMixin(ProgressBarMixinBase):
             fd = utils.streams.original_stderr
 
         self.fd = fd
+        self.is_ansi_terminal = utils.is_ansi_terminal(fd)
 
         # Check if this is an interactive terminal
-        self.is_terminal = is_terminal = utils.is_terminal(fd, is_terminal)
+        self.is_terminal = utils.is_terminal(
+            fd, is_terminal or self.is_ansi_terminal)
 
         # Check if it should overwrite the current line (suitable for
         # iteractive terminals) or write line breaks (suitable for log files)
         if line_breaks is None:
             line_breaks = utils.env_flag('PROGRESSBAR_LINE_BREAKS', not
-                                         is_terminal)
+                                         self.is_terminal)
         self.line_breaks = line_breaks
 
         # Check if ANSI escape characters are enabled (suitable for iteractive
         # terminals), or should be stripped off (suitable for log files)
         if enable_colors is None:
             enable_colors = utils.env_flag('PROGRESSBAR_ENABLE_COLORS',
-                                           is_terminal)
+                                           self.is_ansi_terminal)
+
         self.enable_colors = enable_colors
 
         ProgressBarMixinBase.__init__(self, **kwargs)
@@ -98,7 +102,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
         else:
             line = '\r' + line
 
-        self.fd.write(line)
+        try:  # pragma: no cover
+            self.fd.write(line)
+        except UnicodeEncodeError:  # pragma: no cover
+            self.fd.write(line.encode('ascii', 'replace'))
 
     def finish(self, *args, **kwargs):  # pragma: no cover
         if self._finished:
@@ -301,6 +308,18 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.min_value = min_value
         self.max_value = max_value
         self.max_error = max_error
+
+        # Only copy the widget if it's safe to copy. Most widgets are so we
+        # assume this to be true
+        if widgets is None:
+            self.widgets = widgets
+        else:
+            self.widgets = []
+            for widget in widgets:
+                if getattr(widget, 'copy', True):
+                    widget = deepcopy(widget)
+                self.widgets.append(widget)
+
         self.widgets = widgets
         self.prefix = prefix
         self.suffix = suffix
@@ -309,6 +328,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         self.value = initial_value
         self._iterable = None
         self.custom_len = custom_len
+        self.initial_start_time = kwargs.get('start_time')
         self.init()
 
         # Convert a given timedelta to a floating point number as internal
@@ -398,11 +418,11 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         elif self.max_value:
             todo = self.value - self.min_value
             total = self.max_value - self.min_value
-            percentage = todo / total
+            percentage = 100.0 * todo / total
         else:
-            percentage = 1
+            percentage = 100.0
 
-        return percentage * 100
+        return percentage
 
     def get_last_update_time(self):
         if self._last_update_time:
@@ -710,10 +730,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if self.prefix:
             self.widgets.insert(0, widgets.FormatLabel(
                 self.prefix, new_style=True))
+            # Unset the prefix variable after applying so an extra start()
+            # won't keep copying it
+            self.prefix = None
 
         if self.suffix:
             self.widgets.append(widgets.FormatLabel(
                 self.suffix, new_style=True))
+            # Unset the suffix variable after applying so an extra start()
+            # won't keep copying it
+            self.suffix = None
 
         for widget in self.widgets:
             interval = getattr(widget, 'INTERVAL', None)
@@ -733,7 +759,9 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         if self.max_value is not base.UnknownLength and self.max_value < 0:
             raise ValueError('max_value out of range, got %r' % self.max_value)
 
-        self.start_time = self.last_update_time = datetime.now()
+        now = datetime.now()
+        self.start_time = self.initial_start_time or now
+        self.last_update_time = now
         self._last_update_timer = timeit.default_timer()
         self.update(self.min_value, force=True)
 
