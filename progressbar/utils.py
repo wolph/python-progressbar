@@ -200,7 +200,7 @@ class WrappingIO:
                     listener.update()
         else:
             self.target.write(value)
-            if '\n' in value:
+            if '\n' in value:  # pragma: no branch
                 self.flush_target()
 
     def flush(self):
