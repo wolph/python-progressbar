@@ -37,6 +37,8 @@ Introduction
 A text progress bar is typically used to display the progress of a long
 running operation, providing a visual cue that processing is underway.
 
+The progressbar is based on the old Python progressbar package that was published on the now defunct Google Code. Since that project was completely abandoned by its developer and the developer did not respond to email, I decided to fork the package. This package is still backwards compatible with the original progressbar package so you can safely use it as a drop-in replacement for existing project.
+
 The ProgressBar class manages the current progress, and the format of the line
 is given by a number of widgets. A widget is an object that may display
 differently depending on the state of the progress bar. There are many types
