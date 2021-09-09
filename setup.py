@@ -45,8 +45,6 @@ tests_require = [
     'flake8>=3.7.7',
     'pytest>=4.6.9',
     'pytest-cov>=2.6.1',
-    'pytest-flakes>=4.0.0',
-    'pytest-pep8>=1.0.6',
     'freezegun>=0.3.11',
     'sphinx>=1.8.5',
 ]
