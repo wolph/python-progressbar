@@ -191,6 +191,9 @@ class WrappingIO:
         self.listeners = listeners
         self.needs_clear = False
 
+    def isatty(self):
+        return self.target.isatty()
+
     def write(self, value):
         if self.capturing:
             self.buffer.write(value)
