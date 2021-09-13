@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-import distutils.util
 import atexit
 import io
 import os
@@ -173,13 +172,15 @@ def env_flag(name, default=None):
     Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
     on/off, and returns it as a boolean
 
-    If the environt variable is not defined, or has an unknown value, returns
-    `default`
+    If the environment variable is not defined, or has an unknown value,
+    returns `default`
     '''
-    try:
-        return bool(distutils.util.strtobool(os.environ.get(name, '')))
-    except ValueError:
-        return default
+    v = os.getenv(name)
+    if v and v.lower() in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    if v and v.lower() in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    return default
 
 
 class WrappingIO:
