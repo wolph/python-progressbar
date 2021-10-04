@@ -634,14 +634,16 @@ class Percentage(FormatWidgetMixin, WidgetBase):
         WidgetBase.__init__(self, format=format, **kwargs)
 
     def __call__(self, progress, data, format=None):
-        return FormatWidgetMixin.__call__(self, progress, data, self.get_format(progress, data))
+        return FormatWidgetMixin.__call__(self, progress, data,
+                                          self.get_format(progress, data))
 
-    def get_format(self, progress, data):
+    def get_format(self, progress, data, format=None):
         # If percentage is not available, display N/A%
-        if 'percentage' in data and not data['percentage']:
+        if ('percentage' in data and not data['percentage'] and
+                data['percentage'] != 0):
             return self.na
 
-        return self.format
+        return format or self.format
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
