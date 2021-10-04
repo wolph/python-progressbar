@@ -65,7 +65,7 @@ def test_list_example(testdir):
                            if l.strip()]
     pprint.pprint(result.stderr.lines, width=70)
     result.stderr.fnmatch_lines([
-        'N/A% (0 of 9) |            | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        '  0% (0 of 9) |            | Elapsed Time: ?:00:00 ETA:  --:--:--',
         ' 11% (1 of 9) |#           | Elapsed Time: ?:00:01 ETA:   ?:00:08',
         ' 22% (2 of 9) |##          | Elapsed Time: ?:00:02 ETA:   ?:00:07',
         ' 33% (3 of 9) |####        | Elapsed Time: ?:00:03 ETA:   ?:00:06',
@@ -117,7 +117,7 @@ def test_rapid_updates(testdir):
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
     pprint.pprint(result.stderr.lines, width=70)
     result.stderr.fnmatch_lines([
-        'N/A% (0 of 10) |      | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        '  0% (0 of 10) |      | Elapsed Time: ?:00:00 ETA:  --:--:--',
         ' 10% (1 of 10) |      | Elapsed Time: ?:00:01 ETA:   ?:00:09',
         ' 20% (2 of 10) |#     | Elapsed Time: ?:00:02 ETA:   ?:00:08',
         ' 30% (3 of 10) |#     | Elapsed Time: ?:00:03 ETA:   ?:00:07',
@@ -139,7 +139,7 @@ def test_non_timed(testdir):
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
     pprint.pprint(result.stderr.lines, width=70)
     result.stderr.fnmatch_lines([
-        'N/A%|                                                      |',
+        '  0%|                                                      |',
         ' 20%|##########                                            |',
         ' 40%|#####################                                 |',
         ' 60%|################################                      |',
@@ -156,7 +156,7 @@ def test_line_breaks(testdir):
     )))
     pprint.pprint(result.stderr.str(), width=70)
     assert result.stderr.str() == u'\n'.join((
-        u'N/A%|                                                      |',
+        u'  0%|                                                      |',
         u' 20%|##########                                            |',
         u' 40%|#####################                                 |',
         u' 60%|################################                      |',
@@ -175,7 +175,7 @@ def test_no_line_breaks(testdir):
     pprint.pprint(result.stderr.lines, width=70)
     assert result.stderr.lines == [
         u'',
-        u'N/A%|                                                      |',
+        u'  0%|                                                      |',
         u' 20%|##########                                            |',
         u' 40%|#####################                                 |',
         u' 60%|################################                      |',
