@@ -186,6 +186,26 @@ def test_no_line_breaks(testdir):
     ]
 
 
+def test_percentage_label_bar(testdir):
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        widgets='[progressbar.PercentageLabelBar()]',
+        line_breaks=False,
+        items=list(range(5)),
+    )))
+    pprint.pprint(result.stderr.lines, width=70)
+    assert result.stderr.lines == [
+        u'',
+        u'|                            0%                            |',
+        u'|###########                20%                            |',
+        u'|#######################    40%                            |',
+        u'|###########################60%####                        |',
+        u'|###########################80%################            |',
+        u'|###########################100%###########################|',
+        u'',
+        u'|###########################100%###########################|'
+    ]
+
+
 def test_colors(testdir):
     kwargs = dict(
         items=range(1),
