@@ -628,17 +628,20 @@ class Counter(FormatWidgetMixin, WidgetBase):
 class Percentage(FormatWidgetMixin, WidgetBase):
     '''Displays the current percentage as a number with a percent sign.'''
 
-    def __init__(self, format='%(percentage)3d%%', **kwargs):
+    def __init__(self, format='%(percentage)3d%%', na='N/A%%', **kwargs):
+        self.na = na
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
     def __call__(self, progress, data, format=None):
+        return FormatWidgetMixin.__call__(self, progress, data, self.get_format(progress, data))
+
+    def get_format(self, progress, data):
         # If percentage is not available, display N/A%
         if 'percentage' in data and not data['percentage']:
-            return FormatWidgetMixin.__call__(self, progress, data,
-                                              format='N/A%%')
+            return self.na
 
-        return FormatWidgetMixin.__call__(self, progress, data)
+        return self.format
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
