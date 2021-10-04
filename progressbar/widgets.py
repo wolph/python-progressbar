@@ -909,6 +909,37 @@ class MultiProgressBar(MultiRangeBar):
         return ranges
 
 
+class FormatLabelBar(FormatLabel, Bar):
+    '''A bar which has a formatted label in the center.'''
+    def __init__(self, format, **kwargs):
+        FormatLabel.__init__(self, format, **kwargs)
+        Bar.__init__(self, **kwargs)
+
+    def __call__(self, progress, data, width, format=None):
+        center = FormatLabel.__call__(self, progress, data, format=format)
+        bar = Bar.__call__(self, progress, data, width)
+
+        # Aligns the center of the label to the center of the bar
+        center_len = progress.custom_len(center)
+        center_left = int((width - center_len) / 2)
+        center_right = center_left + center_len
+        return bar[:center_left] + center + bar[center_right:]
+
+
+class PercentageLabelBar(Percentage, FormatLabelBar):
+    '''A bar which displays the current percentage in the center.'''
+    # %3d adds an extra space that makes it look off-center
+    # %2d keeps the label somewhat consistently in-place
+    def __init__(self, format='%(percentage)2d%%', na='N/A%%', **kwargs):
+        Percentage.__init__(self, format, na=na, **kwargs)
+        FormatLabelBar.__init__(self, format, **kwargs)
+
+    def __call__(self, progress, data, width, format=None):
+        return FormatLabelBar.__call__(
+            self, progress, data, width,
+            format=Percentage.get_format(self, progress, data, format=None))
+
+
 class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
     '''Displays a custom variable.'''
 
