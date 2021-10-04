@@ -178,6 +178,17 @@ def multi_progress_bar_example(left=True):
 
 
 @example
+def percentage_label_bar_example():
+    widgets = [progressbar.PercentageLabelBar()]
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
+    for i in range(10):
+        # do something
+        time.sleep(0.1)
+        bar.update(i + 1)
+    bar.finish()
+
+
+@example
 def file_transfer_example():
     widgets = [
         'Test: ', progressbar.Percentage(),

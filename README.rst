@@ -58,7 +58,9 @@ of widgets:
  - `FileTransferSpeed <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FileTransferSpeed>`_
  - `FormatCustomText <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatCustomText>`_
  - `FormatLabel <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatLabel>`_
+ - `FormatLabelBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatLabel>`_
  - `Percentage <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Percentage>`_
+ - `PercentageLabelBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#PercentageLabelBar>`_
  - `ReverseBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#ReverseBar>`_
  - `RotatingMarker <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#RotatingMarker>`_
  - `SimpleProgress <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#SimpleProgress>`_
