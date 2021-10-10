@@ -114,15 +114,19 @@ class FormatWidgetMixin(object):
         self.new_style = new_style
         self.format = format
 
+    def get_format(self, progress, data, format=None):
+        return format or self.format
+
     def __call__(self, progress, data, format=None):
         '''Formats the widget into a string'''
+        format = self.get_format(progress, data, format)
         try:
             if self.new_style:
-                return (format or self.format).format(**data)
+                return format.format(**data)
             else:
-                return (format or self.format) % data
+                return format % data
         except (TypeError, KeyError):
-            print('Error while formatting %r' % self.format, file=sys.stderr)
+            print('Error while formatting %r' % format, file=sys.stderr)
             pprint.pprint(data, stream=sys.stderr)
             raise
 
@@ -633,17 +637,13 @@ class Percentage(FormatWidgetMixin, WidgetBase):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
-    def __call__(self, progress, data, format=None):
-        return FormatWidgetMixin.__call__(self, progress, data,
-                                          self.get_format(progress, data))
-
     def get_format(self, progress, data, format=None):
         # If percentage is not available, display N/A%
-        if ('percentage' in data and not data['percentage'] and
-                data['percentage'] != 0):
+        percentage = data.get('percentage', base.Undefined)
+        if not percentage and percentage != 0:
             return self.na
 
-        return format or self.format
+        return FormatWidgetMixin.get_format(self, progress, data, format)
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
@@ -933,11 +933,6 @@ class PercentageLabelBar(Percentage, FormatLabelBar):
     def __init__(self, format='%(percentage)2d%%', na='N/A%%', **kwargs):
         Percentage.__init__(self, format, na=na, **kwargs)
         FormatLabelBar.__init__(self, format, **kwargs)
-
-    def __call__(self, progress, data, width, format=None):
-        return FormatLabelBar.__call__(
-            self, progress, data, width,
-            format=Percentage.get_format(self, progress, data, format=None))
 
 
 class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
