@@ -15,3 +15,7 @@ class FalseMeta(type):
 
 class UnknownLength(six.with_metaclass(FalseMeta, object)):
     pass
+
+
+class Undefined(six.with_metaclass(FalseMeta, object)):
+    pass
