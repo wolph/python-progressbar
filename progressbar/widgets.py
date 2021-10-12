@@ -114,15 +114,19 @@ class FormatWidgetMixin(object):
         self.new_style = new_style
         self.format = format
 
+    def get_format(self, progress, data, format=None):
+        return format or self.format
+
     def __call__(self, progress, data, format=None):
         '''Formats the widget into a string'''
+        format = self.get_format(progress, data, format)
         try:
             if self.new_style:
-                return (format or self.format).format(**data)
+                return format.format(**data)
             else:
-                return (format or self.format) % data
+                return format % data
         except (TypeError, KeyError):
-            print('Error while formatting %r' % self.format, file=sys.stderr)
+            print('Error while formatting %r' % format, file=sys.stderr)
             pprint.pprint(data, stream=sys.stderr)
             raise
 
@@ -628,17 +632,18 @@ class Counter(FormatWidgetMixin, WidgetBase):
 class Percentage(FormatWidgetMixin, WidgetBase):
     '''Displays the current percentage as a number with a percent sign.'''
 
-    def __init__(self, format='%(percentage)3d%%', **kwargs):
+    def __init__(self, format='%(percentage)3d%%', na='N/A%%', **kwargs):
+        self.na = na
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
-    def __call__(self, progress, data, format=None):
+    def get_format(self, progress, data, format=None):
         # If percentage is not available, display N/A%
-        if 'percentage' in data and not data['percentage']:
-            return FormatWidgetMixin.__call__(self, progress, data,
-                                              format='N/A%%')
+        percentage = data.get('percentage', base.Undefined)
+        if not percentage and percentage != 0:
+            return self.na
 
-        return FormatWidgetMixin.__call__(self, progress, data)
+        return FormatWidgetMixin.get_format(self, progress, data, format)
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
@@ -902,6 +907,32 @@ class MultiProgressBar(MultiRangeBar):
         if self.fill_left:
             ranges = list(reversed(ranges))
         return ranges
+
+
+class FormatLabelBar(FormatLabel, Bar):
+    '''A bar which has a formatted label in the center.'''
+    def __init__(self, format, **kwargs):
+        FormatLabel.__init__(self, format, **kwargs)
+        Bar.__init__(self, **kwargs)
+
+    def __call__(self, progress, data, width, format=None):
+        center = FormatLabel.__call__(self, progress, data, format=format)
+        bar = Bar.__call__(self, progress, data, width)
+
+        # Aligns the center of the label to the center of the bar
+        center_len = progress.custom_len(center)
+        center_left = int((width - center_len) / 2)
+        center_right = center_left + center_len
+        return bar[:center_left] + center + bar[center_right:]
+
+
+class PercentageLabelBar(Percentage, FormatLabelBar):
+    '''A bar which displays the current percentage in the center.'''
+    # %3d adds an extra space that makes it look off-center
+    # %2d keeps the label somewhat consistently in-place
+    def __init__(self, format='%(percentage)2d%%', na='N/A%%', **kwargs):
+        Percentage.__init__(self, format, na=na, **kwargs)
+        FormatLabelBar.__init__(self, format, **kwargs)
 
 
 class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):

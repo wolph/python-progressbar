@@ -2,10 +2,11 @@
 Text progress bar library for Python.
 ##############################################################################
 
-Travis status:
+Build status:
 
-.. image:: https://travis-ci.org/WoLpH/python-progressbar.svg?branch=master
-  :target: https://travis-ci.org/WoLpH/python-progressbar
+.. image:: https://github.com/WoLpH/python-progressbar/actions/workflows/main.yml/badge.svg
+    :alt: python-progressbar test status 
+    :target: https://github.com/WoLpH/python-progressbar/actions
 
 Coverage:
 
@@ -58,7 +59,9 @@ of widgets:
  - `FileTransferSpeed <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FileTransferSpeed>`_
  - `FormatCustomText <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatCustomText>`_
  - `FormatLabel <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatLabel>`_
+ - `FormatLabelBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatLabel>`_
  - `Percentage <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Percentage>`_
+ - `PercentageLabelBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#PercentageLabelBar>`_
  - `ReverseBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#ReverseBar>`_
  - `RotatingMarker <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#RotatingMarker>`_
  - `SimpleProgress <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#SimpleProgress>`_
