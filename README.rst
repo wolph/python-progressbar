@@ -2,10 +2,11 @@
 Text progress bar library for Python.
 ##############################################################################
 
-Travis status:
+Build status:
 
-.. image:: https://travis-ci.org/WoLpH/python-progressbar.svg?branch=master
-  :target: https://travis-ci.org/WoLpH/python-progressbar
+.. image:: https://github.com/WoLpH/python-progressbar/actions/workflows/main.yml/badge.svg
+    :alt: python-progressbar test status 
+    :target: https://github.com/WoLpH/python-progressbar/actions
 
 Coverage:
 
