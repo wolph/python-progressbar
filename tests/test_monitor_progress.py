@@ -206,6 +206,25 @@ def test_percentage_label_bar(testdir):
     ]
 
 
+def test_granular_bar(testdir):
+    result = testdir.runpython(testdir.makepyfile(_create_script(
+        widgets='[progressbar.GranularBar(markers=" .oO")]',
+        line_breaks=False,
+        items=list(range(5)),
+    )))
+    pprint.pprint(result.stderr.lines, width=70)
+    assert result.stderr.lines == [u'',
+        u'|                                                          |',
+        u'|OOOOOOOOOOO.                                              |',
+        u'|OOOOOOOOOOOOOOOOOOOOOOO                                   |',
+        u'|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOo                       |',
+        u'|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO.           |',
+        u'|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|',
+        u'',
+        u'|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|'
+    ]
+
+
 def test_colors(testdir):
     kwargs = dict(
         items=range(1),

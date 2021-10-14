@@ -176,6 +176,19 @@ def multi_progress_bar_example(left=True):
             bar.update(progress, jobs=jobs, force=True)
             time.sleep(0.02)
 
+@example
+def granular_progress_example():
+    widgets=[
+        progressbar.GranularBar(markers=" ▏▎▍▌▋▊▉█", left='', right='|'),
+        progressbar.GranularBar(markers=" ▁▂▃▄▅▆▇█", left='', right='|'),
+        progressbar.GranularBar(markers=" ▖▌▛█", left='', right='|'),
+        progressbar.GranularBar(markers=" ░▒▓█", left='', right='|'),
+        progressbar.GranularBar(markers=" ⡀⡄⡆⡇⣇⣧⣷⣿", left='', right='|'),
+        progressbar.GranularBar(markers=" .oO", left='', right=''),
+    ]
+    for i in progressbar.progressbar(range(100), widgets=widgets):
+        time.sleep(0.03)
+
 
 @example
 def percentage_label_bar_example():
