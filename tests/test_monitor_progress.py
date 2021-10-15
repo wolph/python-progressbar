@@ -213,7 +213,8 @@ def test_granular_bar(testdir):
         items=list(range(5)),
     )))
     pprint.pprint(result.stderr.lines, width=70)
-    assert result.stderr.lines == [u'',
+    assert result.stderr.lines == [
+        u'',
         u'|                                                          |',
         u'|OOOOOOOOOOO.                                              |',
         u'|OOOOOOOOOOOOOOOOOOOOOOO                                   |',

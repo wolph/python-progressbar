@@ -909,6 +909,15 @@ class MultiProgressBar(MultiRangeBar):
         return ranges
 
 
+class GranularMarkers:
+    smooth = ' ▏▎▍▌▋▊▉█'
+    bar = ' ▁▂▃▄▅▆▇█'
+    snake = ' ▖▌▛█'
+    fade_in = ' ░▒▓█'
+    dots = ' ⡀⡄⡆⡇⣇⣧⣷⣿'
+    growing_circles = ' .oO'
+
+
 class GranularBar(AutoWidthWidgetBase):
     '''A progressbar that can display progress at a sub-character granularity
     by using multiple marker characters.
@@ -920,14 +929,18 @@ class GranularBar(AutoWidthWidgetBase):
      - Fade in: ` ░▒▓█`
      - Dots: ` ⡀⡄⡆⡇⣇⣧⣷⣿`
      - Growing circles: ` .oO`
+
+    The markers can be accessed through GranularMarkers. GranularMarkers.dots
+    for example
     '''
 
-    def __init__(self, markers=' ▏▎▍▌▋▊▉█', left='|', right='|', **kwargs):
+    def __init__(self, markers=GranularMarkers.smooth, left='|', right='|',
+                 **kwargs):
         '''Creates a customizable progress bar.
 
         markers - string of characters to use as granular progress markers. The
                   first character should represent 0% and the last 100%.
-                  Ex: ` .oO`
+                  Ex: ` .oO`.
         left - string or callable object to use as a left border
         right - string or callable object to use as a right border
         '''
