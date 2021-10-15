@@ -909,6 +909,75 @@ class MultiProgressBar(MultiRangeBar):
         return ranges
 
 
+class GranularMarkers:
+    smooth = ' ▏▎▍▌▋▊▉█'
+    bar = ' ▁▂▃▄▅▆▇█'
+    snake = ' ▖▌▛█'
+    fade_in = ' ░▒▓█'
+    dots = ' ⡀⡄⡆⡇⣇⣧⣷⣿'
+    growing_circles = ' .oO'
+
+
+class GranularBar(AutoWidthWidgetBase):
+    '''A progressbar that can display progress at a sub-character granularity
+    by using multiple marker characters.
+
+    Examples of markers:
+     - Smooth: ` ▏▎▍▌▋▊▉█` (default)
+     - Bar: ` ▁▂▃▄▅▆▇█`
+     - Snake: ` ▖▌▛█`
+     - Fade in: ` ░▒▓█`
+     - Dots: ` ⡀⡄⡆⡇⣇⣧⣷⣿`
+     - Growing circles: ` .oO`
+
+    The markers can be accessed through GranularMarkers. GranularMarkers.dots
+    for example
+    '''
+
+    def __init__(self, markers=GranularMarkers.smooth, left='|', right='|',
+                 **kwargs):
+        '''Creates a customizable progress bar.
+
+        markers - string of characters to use as granular progress markers. The
+                  first character should represent 0% and the last 100%.
+                  Ex: ` .oO`.
+        left - string or callable object to use as a left border
+        right - string or callable object to use as a right border
+        '''
+        self.markers = markers
+        self.left = string_or_lambda(left)
+        self.right = string_or_lambda(right)
+
+        AutoWidthWidgetBase.__init__(self, **kwargs)
+
+    def __call__(self, progress, data, width):
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
+        width -= progress.custom_len(left) + progress.custom_len(right)
+
+        if progress.max_value is not base.UnknownLength \
+                and progress.max_value > 0:
+            percent = progress.value / progress.max_value
+        else:
+            percent = 0
+
+        num_chars = percent * width
+
+        marker = self.markers[-1] * int(num_chars)
+
+        marker_idx = int((num_chars % 1) * (len(self.markers) - 1))
+        if marker_idx:
+            marker += self.markers[marker_idx]
+
+        marker = converters.to_unicode(marker)
+
+        # Make sure we ignore invisible characters when filling
+        width += len(marker) - progress.custom_len(marker)
+        marker = marker.ljust(width, self.markers[0])
+
+        return left + marker + right
+
+
 class FormatLabelBar(FormatLabel, Bar):
     '''A bar which has a formatted label in the center.'''
     def __init__(self, format, **kwargs):

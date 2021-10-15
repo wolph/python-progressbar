@@ -60,6 +60,7 @@ of widgets:
  - `FormatCustomText <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatCustomText>`_
  - `FormatLabel <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatLabel>`_
  - `FormatLabelBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#FormatLabel>`_
+ - `GranularBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#GranularBar>`_
  - `Percentage <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Percentage>`_
  - `PercentageLabelBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#PercentageLabelBar>`_
  - `ReverseBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#ReverseBar>`_

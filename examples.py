@@ -178,6 +178,20 @@ def multi_progress_bar_example(left=True):
 
 
 @example
+def granular_progress_example():
+    widgets = [
+        progressbar.GranularBar(markers=" ▏▎▍▌▋▊▉█", left='', right='|'),
+        progressbar.GranularBar(markers=" ▁▂▃▄▅▆▇█", left='', right='|'),
+        progressbar.GranularBar(markers=" ▖▌▛█", left='', right='|'),
+        progressbar.GranularBar(markers=" ░▒▓█", left='', right='|'),
+        progressbar.GranularBar(markers=" ⡀⡄⡆⡇⣇⣧⣷⣿", left='', right='|'),
+        progressbar.GranularBar(markers=" .oO", left='', right=''),
+    ]
+    for i in progressbar.progressbar(range(100), widgets=widgets):
+        time.sleep(0.03)
+
+
+@example
 def percentage_label_bar_example():
     widgets = [progressbar.PercentageLabelBar()]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
