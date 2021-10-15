@@ -176,9 +176,10 @@ def multi_progress_bar_example(left=True):
             bar.update(progress, jobs=jobs, force=True)
             time.sleep(0.02)
 
+
 @example
 def granular_progress_example():
-    widgets=[
+    widgets = [
         progressbar.GranularBar(markers=" ▏▎▍▌▋▊▉█", left='', right='|'),
         progressbar.GranularBar(markers=" ▁▂▃▄▅▆▇█", left='', right='|'),
         progressbar.GranularBar(markers=" ▖▌▛█", left='', right='|'),
