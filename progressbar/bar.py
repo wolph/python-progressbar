@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import math
 import os
@@ -153,8 +155,8 @@ class ResizableMixin(ProgressBarMixinBase):
 
 class StdRedirectMixin(DefaultFdMixin):
 
-    def __init__(self, redirect_stderr: bool=False, redirect_stdout:
-    bool=False, **kwargs):
+    def __init__(self, redirect_stderr: bool = False, redirect_stdout:
+    bool = False, **kwargs):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
@@ -177,7 +179,7 @@ class StdRedirectMixin(DefaultFdMixin):
         utils.streams.start_capturing(self)
         DefaultFdMixin.start(self, *args, **kwargs)
 
-    def update(self, value: float=None):
+    def update(self, value: float = None):
         if not self.line_breaks and utils.streams.needs_clear():
             self.fd.write('\r' + ' ' * self.term_width + '\r')
 
