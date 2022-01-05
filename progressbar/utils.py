@@ -7,9 +7,7 @@ import logging
 import os
 import re
 import sys
-from typing import Optional
 from typing import Set
-from typing import Union
 
 from python_utils import types
 from python_utils.converters import scale_1024
@@ -91,8 +89,8 @@ def is_terminal(fd: types.IO, is_terminal: bool | None = None) -> bool:
     return is_terminal
 
 
-def deltas_to_seconds(*deltas, **kwargs) -> Optional[
-    Union[float, int]]:  # default=ValueError):
+def deltas_to_seconds(*deltas,
+                      **kwargs) -> int | float | None:  # default=ValueError):
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing
 
@@ -136,7 +134,7 @@ def deltas_to_seconds(*deltas, **kwargs) -> Optional[
         return default
 
 
-def no_color(value: Union[str, bytes]) -> Union[str, bytes]:
+def no_color(value: types.StringTypes) -> types.StringTypes:
     '''
     Return the `value` without ANSI escape codes
 
@@ -159,7 +157,7 @@ def no_color(value: Union[str, bytes]) -> Union[str, bytes]:
     return re.sub(pattern, replace, value)
 
 
-def len_color(value: Union[str, bytes]) -> int:
+def len_color(value: types.StringTypes) -> int:
     '''
     Return the length of `value` without ANSI escape codes
 
@@ -173,7 +171,7 @@ def len_color(value: Union[str, bytes]) -> int:
     return len(no_color(value))
 
 
-def env_flag(name: str, default: Optional[bool] = None) -> Optional[bool]:
+def env_flag(name: str, default: bool | None = None) -> bool | None:
     '''
     Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
     on/off, and returns it as a boolean
@@ -264,9 +262,9 @@ class StreamWrapper:
         self.capturing += 1
         self.update_capturing()
 
-    def stop_capturing(self, bar: Optional[
-        Union[
-            'progressbar.ProgressBar', 'progressbar.DataTransferBar']] = None) -> None:
+    def stop_capturing(
+            self, bar: 'progressbar.ProgressBar'
+                       | 'progressbar.DataTransferBar' | None = None) -> None:
         if bar:  # pragma: no branch
             try:
                 self.listeners.remove(bar)
