@@ -378,12 +378,14 @@ class AttributeDict(dict):
     >>> attrs = AttributeDict(spam=123)
 
     # Reading
+
     >>> attrs['spam']
     123
     >>> attrs.spam
     123
 
     # Read after update using attribute
+
     >>> attrs.spam = 456
     >>> attrs['spam']
     456
@@ -391,6 +393,7 @@ class AttributeDict(dict):
     456
 
     # Read after update using dict access
+
     >>> attrs['spam'] = 123
     >>> attrs['spam']
     123
@@ -398,6 +401,7 @@ class AttributeDict(dict):
     123
 
     # Read after update using dict access
+
     >>> del attrs.spam
     >>> attrs['spam']
     Traceback (most recent call last):
