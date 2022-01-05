@@ -7,7 +7,6 @@ import logging
 import os
 import re
 import sys
-from typing import Set
 
 from python_utils import types
 from python_utils.converters import scale_1024
@@ -190,7 +189,7 @@ def env_flag(name: str, default: bool | None = None) -> bool | None:
 class WrappingIO:
 
     def __init__(self, target: types.IO, capturing: bool = False, listeners:
-    Set['progressbar.ProgressBar'] = set()) -> None:
+    types.Set['progressbar.ProgressBar'] = set()) -> None:
         self.buffer = io.StringIO()
         self.target = target
         self.capturing = capturing
@@ -253,8 +252,8 @@ class StreamWrapper:
 
     def start_capturing(
             self,
-            bar: types.U['progressbar.ProgressBar',
-                         'progressbar.DataTransferBar', None] = None,
+            bar: 'progressbar.ProgressBar' | 'progressbar.DataTransferBar'
+                 | None = None,
     ) -> None:
         if bar:  # pragma: no branch
             self.listeners.add(bar)
