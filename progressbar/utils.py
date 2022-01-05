@@ -15,6 +15,9 @@ from python_utils.time import epoch
 from python_utils.time import format_time
 from python_utils.time import timedelta_to_seconds
 
+if types.TYPE_CHECKING:
+    from .bar import ProgressBar
+
 assert timedelta_to_seconds
 assert get_terminal_size
 assert format_time
@@ -188,12 +191,12 @@ def env_flag(name: str, default: bool | None = None) -> bool | None:
 
 class WrappingIO:
 
-    def __init__(self, target: types.IO, capturing: bool = False, listeners:
-    types.Set['progressbar.ProgressBar'] = set()) -> None:
+    def __init__(self, target: types.IO, capturing: bool = False,
+                 listeners: types.Set[ProgressBar] = None) -> None:
         self.buffer = io.StringIO()
         self.target = target
         self.capturing = capturing
-        self.listeners = listeners
+        self.listeners = listeners or set()
         self.needs_clear = False
 
     def isatty(self):  # pragma: no cover
@@ -250,20 +253,14 @@ class StreamWrapper:
         if env_flag('WRAP_STDERR', default=False):  # pragma: no cover
             self.wrap_stderr()
 
-    def start_capturing(
-            self,
-            bar: 'progressbar.ProgressBar' | 'progressbar.DataTransferBar'
-                 | None = None,
-    ) -> None:
+    def start_capturing(self, bar: ProgressBar | None = None) -> None:
         if bar:  # pragma: no branch
             self.listeners.add(bar)
 
         self.capturing += 1
         self.update_capturing()
 
-    def stop_capturing(
-            self, bar: 'progressbar.ProgressBar'
-                       | 'progressbar.DataTransferBar' | None = None) -> None:
+    def stop_capturing(self, bar: ProgressBar | None = None) -> None:
         if bar:  # pragma: no branch
             try:
                 self.listeners.remove(bar)

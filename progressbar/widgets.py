@@ -6,9 +6,13 @@ import pprint
 import sys
 
 from python_utils import converters
+from python_utils import types
 
 from . import base
 from . import utils
+
+if types.TYPE_CHECKING:
+    from .bar import ProgressBar
 
 MAX_DATE = datetime.date.max
 MAX_TIME = datetime.time.max
@@ -152,7 +156,7 @@ class WidthWidgetMixin(object):
         self.min_width = min_width
         self.max_width = max_width
 
-    def check_size(self, progress: 'progressbar.ProgressBar'):
+    def check_size(self, progress: 'ProgressBar'):
         if self.min_width and self.min_width > progress.term_width:
             return False
         elif self.max_width and self.max_width < progress.term_width:
