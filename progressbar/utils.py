@@ -1,24 +1,28 @@
-from __future__ import absolute_import
+from __future__ import annotations
+
 import atexit
+import datetime
 import io
+import logging
 import os
 import re
 import sys
-import logging
-import datetime
-from python_utils.time import timedelta_to_seconds, epoch, format_time
+
+from python_utils import types
 from python_utils.converters import scale_1024
 from python_utils.terminal import get_terminal_size
+from python_utils.time import epoch
+from python_utils.time import format_time
+from python_utils.time import timedelta_to_seconds
 
-import six
-
+if types.TYPE_CHECKING:
+    from .bar import ProgressBar
 
 assert timedelta_to_seconds
 assert get_terminal_size
 assert format_time
 assert scale_1024
 assert epoch
-
 
 ANSI_TERMS = (
     '([xe]|bv)term',
@@ -34,7 +38,8 @@ ANSI_TERMS = (
 ANSI_TERM_RE = re.compile('^({})'.format('|'.join(ANSI_TERMS)), re.IGNORECASE)
 
 
-def is_ansi_terminal(fd, is_terminal=None):  # pragma: no cover
+def is_ansi_terminal(fd: types.IO, is_terminal: bool | None = None) \
+        -> bool:  # pragma: no cover
     if is_terminal is None:
         # Jupyter Notebooks define this variable and support progress bars
         if 'JPY_PARENT_PID' in os.environ:
@@ -66,7 +71,7 @@ def is_ansi_terminal(fd, is_terminal=None):  # pragma: no cover
     return is_terminal
 
 
-def is_terminal(fd, is_terminal=None):
+def is_terminal(fd: types.IO, is_terminal: bool | None = None) -> bool:
     if is_terminal is None:
         # Full ansi support encompasses what we expect from a terminal
         is_terminal = is_ansi_terminal(True) or None
@@ -86,7 +91,8 @@ def is_terminal(fd, is_terminal=None):
     return is_terminal
 
 
-def deltas_to_seconds(*deltas, **kwargs):  # default=ValueError):
+def deltas_to_seconds(*deltas,
+                      **kwargs) -> int | float | None:  # default=ValueError):
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing
 
@@ -130,7 +136,7 @@ def deltas_to_seconds(*deltas, **kwargs):  # default=ValueError):
         return default
 
 
-def no_color(value):
+def no_color(value: types.StringTypes) -> types.StringTypes:
     '''
     Return the `value` without ANSI escape codes
 
@@ -153,7 +159,7 @@ def no_color(value):
     return re.sub(pattern, replace, value)
 
 
-def len_color(value):
+def len_color(value: types.StringTypes) -> int:
     '''
     Return the length of `value` without ANSI escape codes
 
@@ -167,7 +173,7 @@ def len_color(value):
     return len(no_color(value))
 
 
-def env_flag(name, default=None):
+def env_flag(name: str, default: bool | None = None) -> bool | None:
     '''
     Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
     on/off, and returns it as a boolean
@@ -185,17 +191,18 @@ def env_flag(name, default=None):
 
 class WrappingIO:
 
-    def __init__(self, target, capturing=False, listeners=set()):
-        self.buffer = six.StringIO()
+    def __init__(self, target: types.IO, capturing: bool = False,
+                 listeners: types.Set[ProgressBar] = None) -> None:
+        self.buffer = io.StringIO()
         self.target = target
         self.capturing = capturing
-        self.listeners = listeners
+        self.listeners = listeners or set()
         self.needs_clear = False
 
     def isatty(self):  # pragma: no cover
         return self.target.isatty()
 
-    def write(self, value):
+    def write(self, value: str) -> None:
         if self.capturing:
             self.buffer.write(value)
             if '\n' in value:  # pragma: no branch
@@ -207,10 +214,10 @@ class WrappingIO:
             if '\n' in value:  # pragma: no branch
                 self.flush_target()
 
-    def flush(self):
+    def flush(self) -> None:
         self.buffer.flush()
 
-    def _flush(self):
+    def _flush(self) -> None:
         value = self.buffer.getvalue()
         if value:
             self.flush()
@@ -222,12 +229,12 @@ class WrappingIO:
         # when explicitly flushing, always flush the target as well
         self.flush_target()
 
-    def flush_target(self):  # pragma: no cover
+    def flush_target(self) -> None:  # pragma: no cover
         if not self.target.closed and getattr(self.target, 'flush'):
             self.target.flush()
 
 
-class StreamWrapper(object):
+class StreamWrapper:
     '''Wrap stdout and stderr globally'''
 
     def __init__(self):
@@ -246,14 +253,14 @@ class StreamWrapper(object):
         if env_flag('WRAP_STDERR', default=False):  # pragma: no cover
             self.wrap_stderr()
 
-    def start_capturing(self, bar=None):
+    def start_capturing(self, bar: ProgressBar | None = None) -> None:
         if bar:  # pragma: no branch
             self.listeners.add(bar)
 
         self.capturing += 1
         self.update_capturing()
 
-    def stop_capturing(self, bar=None):
+    def stop_capturing(self, bar: ProgressBar | None = None) -> None:
         if bar:  # pragma: no branch
             try:
                 self.listeners.remove(bar)
@@ -263,7 +270,7 @@ class StreamWrapper(object):
         self.capturing -= 1
         self.update_capturing()
 
-    def update_capturing(self):  # pragma: no cover
+    def update_capturing(self) -> None:  # pragma: no cover
         if isinstance(self.stdout, WrappingIO):
             self.stdout.capturing = self.capturing > 0
 
@@ -273,14 +280,14 @@ class StreamWrapper(object):
         if self.capturing <= 0:
             self.flush()
 
-    def wrap(self, stdout=False, stderr=False):
+    def wrap(self, stdout: bool = False, stderr: bool = False) -> None:
         if stdout:
             self.wrap_stdout()
 
         if stderr:
             self.wrap_stderr()
 
-    def wrap_stdout(self):
+    def wrap_stdout(self) -> types.IO:
         self.wrap_excepthook()
 
         if not self.wrapped_stdout:
@@ -290,7 +297,7 @@ class StreamWrapper(object):
 
         return sys.stdout
 
-    def wrap_stderr(self):
+    def wrap_stderr(self) -> types.IO:
         self.wrap_excepthook()
 
         if not self.wrapped_stderr:
@@ -300,44 +307,44 @@ class StreamWrapper(object):
 
         return sys.stderr
 
-    def unwrap_excepthook(self):
+    def unwrap_excepthook(self) -> None:
         if self.wrapped_excepthook:
             self.wrapped_excepthook -= 1
             sys.excepthook = self.original_excepthook
 
-    def wrap_excepthook(self):
+    def wrap_excepthook(self) -> None:
         if not self.wrapped_excepthook:
             logger.debug('wrapping excepthook')
             self.wrapped_excepthook += 1
             sys.excepthook = self.excepthook
 
-    def unwrap(self, stdout=False, stderr=False):
+    def unwrap(self, stdout: bool = False, stderr: bool = False) -> None:
         if stdout:
             self.unwrap_stdout()
 
         if stderr:
             self.unwrap_stderr()
 
-    def unwrap_stdout(self):
+    def unwrap_stdout(self) -> None:
         if self.wrapped_stdout > 1:
             self.wrapped_stdout -= 1
         else:
             sys.stdout = self.original_stdout
             self.wrapped_stdout = 0
 
-    def unwrap_stderr(self):
+    def unwrap_stderr(self) -> None:
         if self.wrapped_stderr > 1:
             self.wrapped_stderr -= 1
         else:
             sys.stderr = self.original_stderr
             self.wrapped_stderr = 0
 
-    def needs_clear(self):  # pragma: no cover
+    def needs_clear(self) -> bool:  # pragma: no cover
         stdout_needs_clear = getattr(self.stdout, 'needs_clear', False)
         stderr_needs_clear = getattr(self.stderr, 'needs_clear', False)
         return stderr_needs_clear or stdout_needs_clear
 
-    def flush(self):
+    def flush(self) -> None:
         if self.wrapped_stdout:  # pragma: no branch
             try:
                 self.stdout._flush()
@@ -368,12 +375,14 @@ class AttributeDict(dict):
     >>> attrs = AttributeDict(spam=123)
 
     # Reading
+
     >>> attrs['spam']
     123
     >>> attrs.spam
     123
 
     # Read after update using attribute
+
     >>> attrs.spam = 456
     >>> attrs['spam']
     456
@@ -381,6 +390,7 @@ class AttributeDict(dict):
     456
 
     # Read after update using dict access
+
     >>> attrs['spam'] = 123
     >>> attrs['spam']
     123
@@ -388,6 +398,7 @@ class AttributeDict(dict):
     123
 
     # Read after update using dict access
+
     >>> del attrs.spam
     >>> attrs['spam']
     Traceback (most recent call last):
@@ -402,16 +413,17 @@ class AttributeDict(dict):
     ...
     AttributeError: No such attribute: spam
     '''
-    def __getattr__(self, name):
+
+    def __getattr__(self, name: str) -> int:
         if name in self:
             return self[name]
         else:
             raise AttributeError("No such attribute: " + name)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: int) -> None:
         self[name] = value
 
-    def __delattr__(self, name):
+    def __delattr__(self, name: str) -> None:
         if name in self:
             del self[name]
         else:

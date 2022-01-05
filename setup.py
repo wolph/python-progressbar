@@ -4,55 +4,16 @@
 import os
 import sys
 
-from setuptools.command.test import test as TestCommand
-
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from distutils.core import setup, find_packages
-
-
-# Not all systems use utf8 encoding by default, this works around that issue
-if sys.version_info > (3,):
-    from functools import partial
-    open = partial(open, encoding='utf8')
-
+from setuptools import setup, find_packages
 
 # To prevent importing about and thereby breaking the coverage info we use this
 # exec hack
 about = {}
-with open("progressbar/__about__.py") as fp:
+with open('progressbar/__about__.py', encoding='utf8') as fp:
     exec(fp.read(), about)
 
 
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', 'Arguments to pass to pytest')]
-
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = ''
-
-    def run_tests(self):
-        import shlex
-        # import here, cause outside the eggs aren't loaded
-        import pytest
-        errno = pytest.main(shlex.split(self.pytest_args))
-        sys.exit(errno)
-
-
 install_reqs = []
-tests_require = [
-    'flake8>=3.7.7',
-    'pytest>=4.6.9',
-    'pytest-cov>=2.6.1',
-    'freezegun>=0.3.11',
-    'sphinx>=1.8.5',
-]
-
-if sys.version_info < (2, 7):
-    tests_require += ['unittest2']
-
-
 if sys.argv[-1] == 'info':
     for k, v in about.items():
         print('%s: %s' % (k, v))
@@ -64,7 +25,6 @@ if os.path.isfile('README.rst'):
 else:
     readme = \
         'See http://pypi.python.org/pypi/%(__package_name__)s/' % about
-
 
 if __name__ == '__main__':
     setup(
@@ -80,32 +40,33 @@ if __name__ == '__main__':
         long_description=readme,
         include_package_data=True,
         install_requires=[
-            'python-utils>=2.3.0',
-            'six',
+            'python-utils>=3.0.0',
         ],
-        tests_require=tests_require,
         setup_requires=['setuptools'],
         zip_safe=False,
-        cmdclass={'test': PyTest},
         extras_require={
             'docs': [
-                'sphinx>=1.7.4',
+                'sphinx>=1.8.5',
             ],
-            'tests': tests_require,
+            'tests': [
+                'flake8>=3.7.7',
+                'pytest>=4.6.9',
+                'pytest-cov>=2.6.1',
+                'pytest-mypy',
+                'freezegun>=0.3.11',
+                'sphinx>=1.8.5',
+            ],
         },
+        python_requires='>=3.7.0',
         classifiers=[
             'Development Status :: 6 - Mature',
             'Intended Audience :: Developers',
             'License :: OSI Approved :: BSD License',
             'Natural Language :: English',
-            "Programming Language :: Python :: 2",
-            'Programming Language :: Python :: 2.7',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.4',
-            'Programming Language :: Python :: 3.5',
-            'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: 3.8',
+            'Programming Language :: Python :: 3.9',
+            'Programming Language :: Python :: 3.10',
             'Programming Language :: Python :: Implementation :: PyPy',
         ],
     )

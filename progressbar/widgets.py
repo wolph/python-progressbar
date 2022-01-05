@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import with_statement
-
 import abc
-import sys
-import pprint
 import datetime
 import functools
+import pprint
+import sys
 
 from python_utils import converters
-
-import six
+from python_utils import types
 
 from . import base
 from . import utils
+
+if types.TYPE_CHECKING:
+    from .bar import ProgressBar
 
 MAX_DATE = datetime.date.max
 MAX_TIME = datetime.time.max
@@ -24,7 +20,7 @@ MAX_DATETIME = datetime.datetime.max
 
 
 def string_or_lambda(input_):
-    if isinstance(input_, six.string_types):
+    if isinstance(input_, str):
         def render_input(progress, data, width):
             return input_ % data
 
@@ -50,7 +46,7 @@ def create_wrapper(wrapper):
     elif not wrapper:
         return
 
-    if isinstance(wrapper, six.string_types):
+    if isinstance(wrapper, str):
         assert '{}' in wrapper, 'Expected string with {} for formatting'
     else:
         raise RuntimeError('Pass either a begin/end string as a tuple or a'
@@ -84,7 +80,7 @@ def create_marker(marker, wrap=None):
         else:
             return marker
 
-    if isinstance(marker, six.string_types):
+    if isinstance(marker, str):
         marker = converters.to_unicode(marker)
         assert utils.len_color(marker) == 1, \
             'Markers are required to be 1 char'
@@ -160,7 +156,7 @@ class WidthWidgetMixin(object):
         self.min_width = min_width
         self.max_width = max_width
 
-    def check_size(self, progress):
+    def check_size(self, progress: 'ProgressBar'):
         if self.min_width and self.min_width > progress.term_width:
             return False
         elif self.max_width and self.max_width < progress.term_width:
@@ -255,7 +251,7 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
         'value': ('value', None),
     }
 
-    def __init__(self, format, **kwargs):
+    def __init__(self, format: str, **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, **kwargs)
 
@@ -811,7 +807,7 @@ class VariableMixin(object):
     '''Mixin to display a custom user variable '''
 
     def __init__(self, name, **kwargs):
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise TypeError('Variable(): argument must be a string')
         if len(name.split()) > 1:
             raise ValueError('Variable(): argument must be single word')
@@ -980,6 +976,7 @@ class GranularBar(AutoWidthWidgetBase):
 
 class FormatLabelBar(FormatLabel, Bar):
     '''A bar which has a formatted label in the center.'''
+
     def __init__(self, format, **kwargs):
         FormatLabel.__init__(self, format, **kwargs)
         Bar.__init__(self, **kwargs)
@@ -997,6 +994,7 @@ class FormatLabelBar(FormatLabel, Bar):
 
 class PercentageLabelBar(Percentage, FormatLabelBar):
     '''A bar which displays the current percentage in the center.'''
+
     # %3d adds an extra space that makes it look off-center
     # %2d keeps the label somewhat consistently in-place
     def __init__(self, format='%(percentage)2d%%', na='N/A%%', **kwargs):
@@ -1070,4 +1068,3 @@ class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):
 
     def current_time(self):
         return self.current_datetime().time()
-
