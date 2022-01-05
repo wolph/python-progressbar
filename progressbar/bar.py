@@ -1,17 +1,13 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import with_statement
-
-import sys
+import logging
 import math
 import os
+import sys
 import time
 import timeit
-import logging
 import warnings
-from datetime import datetime
 from copy import deepcopy
+from datetime import datetime
+
 try:  # pragma: no cover
     from collections import abc
 except ImportError:  # pragma: no cover
@@ -19,13 +15,10 @@ except ImportError:  # pragma: no cover
 
 from python_utils import converters
 
-import six
-
 from . import widgets
 from . import widgets as widgets_module  # Avoid name collision
 from . import base
 from . import utils
-
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +70,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         # iteractive terminals) or write line breaks (suitable for log files)
         if line_breaks is None:
             line_breaks = utils.env_flag('PROGRESSBAR_LINE_BREAKS', not
-                                         self.is_terminal)
+            self.is_terminal)
         self.line_breaks = line_breaks
 
         # Check if ANSI escape characters are enabled (suitable for iteractive
@@ -197,7 +190,6 @@ class StdRedirectMixin(DefaultFdMixin):
 
 
 class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
-
     '''The ProgressBar class which updates and prints the bar.
 
     Args:
@@ -489,7 +481,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             total_seconds_elapsed=total_seconds_elapsed,
             # The seconds since the bar started modulo 60
             seconds_elapsed=(elapsed.seconds % 60) +
-            (elapsed.microseconds / 1000000.),
+                            (elapsed.microseconds / 1000000.),
             # The minutes since the bar started modulo 60
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24
@@ -585,7 +577,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             elif isinstance(widget, widgets.AutoWidthWidgetBase):
                 result.append(widget)
                 expanding.insert(0, index)
-            elif isinstance(widget, six.string_types):
+            elif isinstance(widget, str):
                 result.append(widget)
                 width -= self.custom_len(widget)
             else:
@@ -795,6 +787,7 @@ class DataTransferBar(ProgressBar):
 
     This assumes that the values its given are numbers of bytes.
     '''
+
     def default_widgets(self):
         if self.max_value:
             return [
@@ -813,7 +806,6 @@ class DataTransferBar(ProgressBar):
 
 
 class NullBar(ProgressBar):
-
     '''
     Progress bar that does absolutely nothing. Useful for single verbosity
     flags

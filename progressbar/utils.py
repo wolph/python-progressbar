@@ -1,24 +1,22 @@
-from __future__ import absolute_import
 import atexit
+import datetime
 import io
+import logging
 import os
 import re
 import sys
-import logging
-import datetime
-from python_utils.time import timedelta_to_seconds, epoch, format_time
+
 from python_utils.converters import scale_1024
 from python_utils.terminal import get_terminal_size
-
-import six
-
+from python_utils.time import epoch
+from python_utils.time import format_time
+from python_utils.time import timedelta_to_seconds
 
 assert timedelta_to_seconds
 assert get_terminal_size
 assert format_time
 assert scale_1024
 assert epoch
-
 
 ANSI_TERMS = (
     '([xe]|bv)term',
@@ -186,7 +184,7 @@ def env_flag(name, default=None):
 class WrappingIO:
 
     def __init__(self, target, capturing=False, listeners=set()):
-        self.buffer = six.StringIO()
+        self.buffer = io.StringIO()
         self.target = target
         self.capturing = capturing
         self.listeners = listeners
@@ -402,6 +400,7 @@ class AttributeDict(dict):
     ...
     AttributeError: No such attribute: spam
     '''
+
     def __getattr__(self, name):
         if name in self:
             return self[name]

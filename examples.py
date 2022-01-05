@@ -1,12 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import with_statement
-
 import functools
 import random
 import sys
@@ -187,7 +181,10 @@ def granular_progress_example():
         progressbar.GranularBar(markers=" ⡀⡄⡆⡇⣇⣧⣷⣿", left='', right='|'),
         progressbar.GranularBar(markers=" .oO", left='', right=''),
     ]
-    for i in progressbar.progressbar(range(100), widgets=widgets):
+    for i in progressbar.progressbar(list(range(100)), widgets=widgets):
+        time.sleep(0.03)
+
+    for i in progressbar.progressbar(iter(range(100)), widgets=widgets):
         time.sleep(0.03)
 
 
