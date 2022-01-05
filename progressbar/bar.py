@@ -75,8 +75,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
         # Check if it should overwrite the current line (suitable for
         # iteractive terminals) or write line breaks (suitable for log files)
         if line_breaks is None:
-            line_breaks = utils.env_flag('PROGRESSBAR_LINE_BREAKS', not
-            self.is_terminal)
+            line_breaks = utils.env_flag('PROGRESSBAR_LINE_BREAKS',
+                                         not self.is_terminal)
         self.line_breaks = line_breaks
 
         # Check if ANSI escape characters are enabled (suitable for iteractive
@@ -155,8 +155,8 @@ class ResizableMixin(ProgressBarMixinBase):
 
 class StdRedirectMixin(DefaultFdMixin):
 
-    def __init__(self, redirect_stderr: bool = False, redirect_stdout:
-    bool = False, **kwargs):
+    def __init__(self, redirect_stderr: bool = False,
+                 redirect_stdout: bool = False, **kwargs):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
@@ -487,8 +487,8 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
             # The seconds since the bar started
             total_seconds_elapsed=total_seconds_elapsed,
             # The seconds since the bar started modulo 60
-            seconds_elapsed=(elapsed.seconds % 60) +
-                            (elapsed.microseconds / 1000000.),
+            seconds_elapsed=(elapsed.seconds % 60)
+                            + (elapsed.microseconds / 1000000.),
             # The minutes since the bar started modulo 60
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24
