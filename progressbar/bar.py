@@ -8,6 +8,8 @@ import warnings
 from copy import deepcopy
 from datetime import datetime
 
+from python_utils import types
+
 try:  # pragma: no cover
     from collections import abc
 except ImportError:  # pragma: no cover
@@ -51,8 +53,10 @@ class ProgressBarBase(abc.Iterable, ProgressBarMixinBase):
 
 class DefaultFdMixin(ProgressBarMixinBase):
 
-    def __init__(self, fd=sys.stderr, is_terminal=None, line_breaks=None,
-                 enable_colors=None, **kwargs):
+    def __init__(self, fd: types.IO = sys.stderr,
+                 is_terminal: bool | None = None,
+                 line_breaks: bool | None = None,
+                 enable_colors: bool | None = None, **kwargs):
         if fd is sys.stdout:
             fd = utils.streams.original_stdout
 
@@ -115,7 +119,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
 class ResizableMixin(ProgressBarMixinBase):
 
-    def __init__(self, term_width=None, **kwargs):
+    def __init__(self, term_width: int | None = None, **kwargs):
         ProgressBarMixinBase.__init__(self, **kwargs)
 
         self.signal_set = False
@@ -149,7 +153,8 @@ class ResizableMixin(ProgressBarMixinBase):
 
 class StdRedirectMixin(DefaultFdMixin):
 
-    def __init__(self, redirect_stderr=False, redirect_stdout=False, **kwargs):
+    def __init__(self, redirect_stderr: bool=False, redirect_stdout:
+    bool=False, **kwargs):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
@@ -172,7 +177,7 @@ class StdRedirectMixin(DefaultFdMixin):
         utils.streams.start_capturing(self)
         DefaultFdMixin.start(self, *args, **kwargs)
 
-    def update(self, value=None):
+    def update(self, value: float=None):
         if not self.line_breaks and utils.streams.needs_clear():
             self.fd.write('\r' + ' ' * self.term_width + '\r')
 
