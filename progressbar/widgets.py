@@ -152,7 +152,7 @@ class WidthWidgetMixin(object):
         self.min_width = min_width
         self.max_width = max_width
 
-    def check_size(self, progress):
+    def check_size(self, progress: 'progressbar.ProgressBar'):
         if self.min_width and self.min_width > progress.term_width:
             return False
         elif self.max_width and self.max_width < progress.term_width:
@@ -247,7 +247,7 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
         'value': ('value', None),
     }
 
-    def __init__(self, format, **kwargs):
+    def __init__(self, format: str, **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, **kwargs)
 
