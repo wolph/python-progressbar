@@ -199,8 +199,8 @@ class WrappingIO:
         self.listeners = listeners or set()
         self.needs_clear = False
 
-    def isatty(self):  # pragma: no cover
-        return self.target.isatty()
+    def __getattr__(self, name):  # pragma: no cover
+        return getattr(self.target, name)
 
     def write(self, value: str) -> None:
         if self.capturing:
