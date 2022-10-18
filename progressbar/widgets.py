@@ -272,6 +272,9 @@ class Timer(FormatLabel, TimeSensitiveWidgetBase):
     '''WidgetBase which displays the elapsed seconds.'''
 
     def __init__(self, format='Elapsed Time: %(elapsed)s', **kwargs):
+        if '%s' in format and '%(elapsed)s' not in format:
+            format = format.replace('%s', '%(elapsed)s')
+
         FormatLabel.__init__(self, format=format, **kwargs)
         TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
@@ -372,6 +375,9 @@ class ETA(Timer):
             format_zero='ETA:  00:00:00',
             format_NA='ETA:      N/A',
             **kwargs):
+
+        if '%s' in format and '%(eta)s' not in format:
+            format = format.replace('%s', '%(eta)s')
 
         Timer.__init__(self, **kwargs)
         self.format_not_started = format_not_started
