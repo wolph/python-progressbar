@@ -237,3 +237,68 @@ Bar with wide Chinese (or other multibyte) characters
     )
     for i in bar(range(10)):
         time.sleep(0.1)
+
+Showing multiple (threaded) independent progress bars in parallel
+==============================================================================
+
+While this method works fine and will continue to work fine, a smarter and
+fully automatic version of this is currently being made:
+https://github.com/WoLpH/python-progressbar/issues/176
+
+.. code:: python
+
+    import random
+    import sys
+    import threading
+    import time
+
+    import progressbar
+
+    output_lock = threading.Lock()
+
+
+    class LineOffsetStreamWrapper:
+        UP = '\033[F'
+        DOWN = '\033[B'
+
+        def __init__(self, lines=0, stream=sys.stderr):
+            self.stream = stream
+            self.lines = lines
+
+        def write(self, data):
+            with output_lock:
+                self.stream.write(self.UP * self.lines)
+                self.stream.write(data)
+                self.stream.write(self.DOWN * self.lines)
+                self.stream.flush()
+
+        def __getattr__(self, name):
+            return getattr(self.stream, name)
+
+
+    bars = []
+    for i in range(5):
+        bars.append(
+            progressbar.ProgressBar(
+                fd=LineOffsetStreamWrapper(i),
+                max_value=1000,
+            )
+        )
+
+        if i:
+            print('Reserve a line for the progressbar')
+
+
+    class Worker(threading.Thread):
+        def __init__(self, bar):
+            super().__init__()
+            self.bar = bar
+
+        def run(self):
+            for i in range(1000):
+                time.sleep(random.random() / 100)
+                self.bar.update(i)
+
+
+    for bar in bars:
+        Worker(bar).start()
