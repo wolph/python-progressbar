@@ -576,7 +576,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __iadd__(self, value):
         'Updates the ProgressBar by adding a new value.'
-        self.update(self.value + value)
+        return self.increment(value)
+
+    def increment(self, value, *args, **kwargs):
+        self.update(self.value + value, *args, **kwargs)
         return self
 
     def _format_widgets(self):
