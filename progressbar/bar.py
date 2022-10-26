@@ -27,6 +27,9 @@ from . import utils
 logger = logging.getLogger(__name__)
 
 
+T = types.TypeVar('T')
+
+
 class ProgressBarMixinBase(object):
 
     def __init__(self, **kwargs):
@@ -265,15 +268,20 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
     the current progress bar. As a result, you have access to the
     ProgressBar's methods and attributes. Although there is nothing preventing
     you from changing the ProgressBar you should treat it as read only.
-
-    Useful methods and attributes include (Public API):
-     - value: current progress (min_value <= value <= max_value)
-     - max_value: maximum (and final) value
-     - end_time: not None if the bar has finished (reached 100%)
-     - start_time: the time when start() method of ProgressBar was called
-     - seconds_elapsed: seconds elapsed since start_time and last call to
-                        update
     '''
+
+    #: Current progress (min_value <= value <= max_value)
+    value: T
+    #: Maximum (and final) value. Beyond this value an error will be raised
+    #: unless the `max_error` parameter is `False`.
+    max_value: T
+    #: The time the progressbar reached `max_value` or when `finish()` was
+    #: called.
+    end_time: datetime
+    #: The time `start()` was called or iteration started.
+    start_time: datetime
+    #: Seconds between `start_time` and last call to `update()`
+    seconds_elapsed: float
 
     _DEFAULT_MAXVAL = base.UnknownLength
     # update every 50 milliseconds (up to a 20 times per second)
@@ -568,7 +576,10 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
 
     def __iadd__(self, value):
         'Updates the ProgressBar by adding a new value.'
-        self.update(self.value + value)
+        return self.increment(value)
+
+    def increment(self, value=1, *args, **kwargs):
+        self.update(self.value + value, *args, **kwargs)
         return self
 
     def _format_widgets(self):
@@ -787,6 +798,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         StdRedirectMixin.finish(self, end=end)
         ResizableMixin.finish(self)
         ProgressBarBase.finish(self)
+
+    @property
+    def currval(self):
+        '''
+        Legacy method to make progressbar-2 compatible with the original
+        progressbar package
+        '''
+        warnings.warn('The usage of `currval` is deprecated, please use '
+                      '`value` instead', DeprecationWarning)
+        return self.value
 
 
 class DataTransferBar(ProgressBar):

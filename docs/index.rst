@@ -5,6 +5,7 @@ Welcome to Progress Bar's documentation!
 .. toctree::
    :maxdepth: 4
 
+   usage
    examples
    contributing
    installation
@@ -13,6 +14,7 @@ Welcome to Progress Bar's documentation!
    progressbar.base
    progressbar.utils
    progressbar.widgets
+   history
 
 .. include:: ../README.rst
 

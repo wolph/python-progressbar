@@ -51,7 +51,8 @@ def test_adding_value():
     p = progressbar.ProgressBar(max_value=10)
     p.start()
     p.update(5)
-    p += 5
+    p += 2
+    p.increment(2)
     with pytest.raises(ValueError):
         p += 5
 
