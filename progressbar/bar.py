@@ -796,6 +796,16 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         ResizableMixin.finish(self)
         ProgressBarBase.finish(self)
 
+    @property
+    def currval(self):
+        '''
+        Legacy method to make progressbar-2 compatible with the original
+        progressbar package
+        '''
+        warnings.warn('The usage of `currval` is deprecated, please use '
+                      '`value` instead', DeprecationWarning)
+        return self.value
+
 
 class DataTransferBar(ProgressBar):
     '''A progress bar with sensible defaults for downloads etc.

@@ -99,6 +99,13 @@ def test_deprecated_poll():
         progressbar.ProgressBar(poll=5)
 
 
+def test_deprecated_currval():
+    with pytest.warns(DeprecationWarning):
+        bar = progressbar.ProgressBar(max_value=5)
+        bar.update(2)
+        assert bar.currval == 2
+
+
 def test_unexpected_update_keyword_arg():
     p = progressbar.ProgressBar(max_value=10)
     with pytest.raises(TypeError):
