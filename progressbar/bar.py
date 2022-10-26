@@ -578,7 +578,7 @@ class ProgressBar(StdRedirectMixin, ResizableMixin, ProgressBarBase):
         'Updates the ProgressBar by adding a new value.'
         return self.increment(value)
 
-    def increment(self, value, *args, **kwargs):
+    def increment(self, value=1, *args, **kwargs):
         self.update(self.value + value, *args, **kwargs)
         return self
 
