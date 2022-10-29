@@ -7,13 +7,13 @@ import logging
 import os
 import re
 import sys
+from types import TracebackType
+from typing import Iterable, Iterator, Type
 
 from python_utils import types
 from python_utils.converters import scale_1024
 from python_utils.terminal import get_terminal_size
-from python_utils.time import epoch
-from python_utils.time import format_time
-from python_utils.time import timedelta_to_seconds
+from python_utils.time import epoch, format_time, timedelta_to_seconds
 
 if types.TYPE_CHECKING:
     from .bar import ProgressBar
@@ -39,7 +39,7 @@ ANSI_TERM_RE = re.compile('^({})'.format('|'.join(ANSI_TERMS)), re.IGNORECASE)
 
 
 def is_ansi_terminal(fd: types.IO, is_terminal: bool | None = None) \
-        -> bool:  # pragma: no cover
+    -> bool:  # pragma: no cover
     if is_terminal is None:
         # Jupyter Notebooks define this variable and support progress bars
         if 'JPY_PARENT_PID' in os.environ:
@@ -68,13 +68,13 @@ def is_ansi_terminal(fd: types.IO, is_terminal: bool | None = None) \
         except Exception:
             is_terminal = False
 
-    return is_terminal
+    return bool(is_terminal)
 
 
 def is_terminal(fd: types.IO, is_terminal: bool | None = None) -> bool:
     if is_terminal is None:
         # Full ansi support encompasses what we expect from a terminal
-        is_terminal = is_ansi_terminal(True) or None
+        is_terminal = is_ansi_terminal(fd) or None
 
     if is_terminal is None:
         # Allow a environment variable override
@@ -88,11 +88,13 @@ def is_terminal(fd: types.IO, is_terminal: bool | None = None) -> bool:
         except Exception:
             is_terminal = False
 
-    return is_terminal
+    return bool(is_terminal)
 
 
-def deltas_to_seconds(*deltas,
-                      **kwargs) -> int | float | None:  # default=ValueError):
+def deltas_to_seconds(
+    *deltas,
+    **kwargs
+) -> int | float | None:  # default=ValueError):
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing
 
@@ -148,15 +150,9 @@ def no_color(value: types.StringTypes) -> types.StringTypes:
     'abc'
     '''
     if isinstance(value, bytes):
-        pattern = '\\\u001b\\[.*?[@-~]'
-        pattern = pattern.encode()
-        replace = b''
-        assert isinstance(pattern, bytes)
+        return re.sub('\\\u001b\\[.*?[@-~]'.encode(), b'', value)
     else:
-        pattern = u'\x1b\\[.*?[@-~]'
-        replace = ''
-
-    return re.sub(pattern, replace, value)
+        return re.sub(u'\x1b\\[.*?[@-~]', '', value)
 
 
 def len_color(value: types.StringTypes) -> int:
@@ -190,29 +186,36 @@ def env_flag(name: str, default: bool | None = None) -> bool | None:
 
 
 class WrappingIO:
+    buffer: io.StringIO
+    target: types.IO
+    capturing: bool
+    listeners: set
+    needs_clear: bool = False
 
-    def __init__(self, target: types.IO, capturing: bool = False,
-                 listeners: types.Set[ProgressBar] = None) -> None:
+    def __init__(
+        self, target: types.IO, capturing: bool = False,
+        listeners: types.Set[ProgressBar] = None
+    ) -> None:
         self.buffer = io.StringIO()
         self.target = target
         self.capturing = capturing
         self.listeners = listeners or set()
         self.needs_clear = False
 
-    def __getattr__(self, name):  # pragma: no cover
-        return getattr(self.target, name)
-
-    def write(self, value: str) -> None:
+    def write(self, value: str) -> int:
+        ret = 0
         if self.capturing:
-            self.buffer.write(value)
+            ret += self.buffer.write(value)
             if '\n' in value:  # pragma: no branch
                 self.needs_clear = True
                 for listener in self.listeners:  # pragma: no branch
                     listener.update()
         else:
-            self.target.write(value)
+            ret += self.target.write(value)
             if '\n' in value:  # pragma: no branch
                 self.flush_target()
+
+        return ret
 
     def flush(self) -> None:
         self.buffer.flush()
@@ -233,9 +236,80 @@ class WrappingIO:
         if not self.target.closed and getattr(self.target, 'flush'):
             self.target.flush()
 
+    def __enter__(self) -> WrappingIO:
+        return self
+
+    def fileno(self) -> int:
+        return self.target.fileno()
+
+    def isatty(self) -> bool:
+        return self.target.isatty()
+
+    def read(self, n: int = -1) -> str:
+        return self.target.read(n)
+
+    def readable(self) -> bool:
+        return self.target.readable()
+
+    def readline(self, limit: int = -1) -> str:
+        return self.target.readline(limit)
+
+    def readlines(self, hint: int = -1) -> list[str]:
+        return self.target.readlines(hint)
+
+    def seek(self, offset: int, whence: int = os.SEEK_SET) -> int:
+        return self.target.seek(offset, whence)
+
+    def seekable(self) -> bool:
+        return self.target.seekable()
+
+    def tell(self) -> int:
+        return self.target.tell()
+
+    def truncate(self, size: types.Optional[int] = None) -> int:
+        return self.target.truncate(size)
+
+    def writable(self) -> bool:
+        return self.target.writable()
+
+    def writelines(self, lines: Iterable[str]) -> None:
+        return self.target.writelines(lines)
+
+    def close(self) -> None:
+        self.flush()
+        self.target.close()
+
+    def __next__(self) -> str:
+        return self.target.__next__()
+
+    def __iter__(self) -> Iterator[str]:
+        return self.target.__iter__()
+
+    def __exit__(
+        self,
+        __t: Type[BaseException] | None,
+        __value: BaseException | None,
+        __traceback: TracebackType | None
+    ) -> None:
+        self.close()
+
 
 class StreamWrapper:
     '''Wrap stdout and stderr globally'''
+    stdout: types.Union[types.TextIO, WrappingIO]
+    stderr: types.Union[types.TextIO, WrappingIO]
+    original_excepthook: types.Callable[
+        [
+            types.Optional[
+                types.Type[BaseException]],
+            types.Optional[BaseException],
+            types.Optional[TracebackType],
+        ], None]
+    wrapped_stdout: int = 0
+    wrapped_stderr: int = 0
+    wrapped_excepthook: int = 0
+    capturing: int = 0
+    listeners: set
 
     def __init__(self):
         self.stdout = self.original_stdout = sys.stdout
@@ -291,8 +365,10 @@ class StreamWrapper:
         self.wrap_excepthook()
 
         if not self.wrapped_stdout:
-            self.stdout = sys.stdout = WrappingIO(self.original_stdout,
-                                                  listeners=self.listeners)
+            self.stdout = sys.stdout = WrappingIO(  # type: ignore
+                self.original_stdout,
+                listeners=self.listeners
+            )
         self.wrapped_stdout += 1
 
         return sys.stdout
@@ -301,8 +377,10 @@ class StreamWrapper:
         self.wrap_excepthook()
 
         if not self.wrapped_stderr:
-            self.stderr = sys.stderr = WrappingIO(self.original_stderr,
-                                                  listeners=self.listeners)
+            self.stderr = sys.stderr = WrappingIO(  # type: ignore
+                self.original_stderr,
+                listeners=self.listeners
+            )
         self.wrapped_stderr += 1
 
         return sys.stderr
@@ -346,22 +424,26 @@ class StreamWrapper:
 
     def flush(self) -> None:
         if self.wrapped_stdout:  # pragma: no branch
-            try:
-                self.stdout._flush()
-            except (io.UnsupportedOperation,
-                    AttributeError):  # pragma: no cover
-                self.wrapped_stdout = False
-                logger.warn('Disabling stdout redirection, %r is not seekable',
-                            sys.stdout)
+            if isinstance(self.stdout, WrappingIO):  # pragma: no branch
+                try:
+                    self.stdout._flush()
+                except io.UnsupportedOperation:  # pragma: no cover
+                    self.wrapped_stdout = False
+                    logger.warning(
+                        'Disabling stdout redirection, %r is not seekable',
+                        sys.stdout
+                    )
 
         if self.wrapped_stderr:  # pragma: no branch
-            try:
-                self.stderr._flush()
-            except (io.UnsupportedOperation,
-                    AttributeError):  # pragma: no cover
-                self.wrapped_stderr = False
-                logger.warn('Disabling stderr redirection, %r is not seekable',
-                            sys.stderr)
+            if isinstance(self.stderr, WrappingIO):  # pragma: no branch
+                try:
+                    self.stderr._flush()
+                except io.UnsupportedOperation:  # pragma: no cover
+                    self.wrapped_stderr = False
+                    logger.warning(
+                        'Disabling stderr redirection, %r is not seekable',
+                        sys.stderr
+                    )
 
     def excepthook(self, exc_type, exc_value, exc_traceback):
         self.original_excepthook(exc_type, exc_value, exc_traceback)
