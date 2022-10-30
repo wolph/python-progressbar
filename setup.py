@@ -40,7 +40,7 @@ if __name__ == '__main__':
         long_description=readme,
         include_package_data=True,
         install_requires=[
-            'python-utils>=3.0.0',
+            'python-utils>=3.4.5',
         ],
         setup_requires=['setuptools'],
         zip_safe=False,
@@ -55,6 +55,7 @@ if __name__ == '__main__':
                 'pytest-mypy',
                 'freezegun>=0.3.11',
                 'sphinx>=1.8.5',
+                'dill>=0.3.6',
             ],
         },
         python_requires='>=3.7.0',
