@@ -47,7 +47,9 @@ def is_ansi_terminal(
             is_terminal = True
         # This works for newer versions of pycharm only. older versions there
         # is no way to check.
-        elif os.environ.get('PYCHARM_HOSTED') == '1':
+        elif os.environ.get('PYCHARM_HOSTED') == '1' and not os.environ.get(
+            'PYTEST_CURRENT_TEST'
+        ):
             is_terminal = True
 
     if is_terminal is None:
