@@ -1,5 +1,6 @@
 # -*- mode: python; coding: utf-8 -*-
 
+
 class FalseMeta(type):
     def __bool__(self):  # pragma: no cover
         return False

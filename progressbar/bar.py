@@ -50,7 +50,7 @@ class ProgressBarMixinBase(object):
                 # Never raise during cleanup. We're too late now
                 logging.debug(
                     'Exception raised during ProgressBar cleanup',
-                    exc_info=True
+                    exc_info=True,
                 )
 
     def __getstate__(self):
@@ -68,10 +68,12 @@ class DefaultFdMixin(ProgressBarMixinBase):
     enable_colors: bool = False
 
     def __init__(
-        self, fd: types.IO = sys.stderr,
+        self,
+        fd: types.IO = sys.stderr,
         is_terminal: bool | None = None,
         line_breaks: bool | None = None,
-        enable_colors: bool | None = None, **kwargs
+        enable_colors: bool | None = None,
+        **kwargs,
     ):
         if fd is sys.stdout:
             fd = utils.streams.original_stdout
@@ -91,8 +93,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         # iteractive terminals) or write line breaks (suitable for log files)
         if line_breaks is None:
             line_breaks = utils.env_flag(
-                'PROGRESSBAR_LINE_BREAKS',
-                not self.is_terminal
+                'PROGRESSBAR_LINE_BREAKS', not self.is_terminal
             )
         self.line_breaks = bool(line_breaks)
 
@@ -100,8 +101,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         # terminals), or should be stripped off (suitable for log files)
         if enable_colors is None:
             enable_colors = utils.env_flag(
-                'PROGRESSBAR_ENABLE_COLORS',
-                self.is_ansi_terminal
+                'PROGRESSBAR_ENABLE_COLORS', self.is_ansi_terminal
             )
 
         self.enable_colors = bool(enable_colors)
@@ -149,7 +149,6 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
 
 class ResizableMixin(ProgressBarMixinBase):
-
     def __init__(self, term_width: int | None = None, **kwargs):
         ProgressBarMixinBase.__init__(self, **kwargs)
 
@@ -160,6 +159,7 @@ class ResizableMixin(ProgressBarMixinBase):
             try:
                 self._handle_resize()
                 import signal
+
                 self._prev_handle = signal.getsignal(signal.SIGWINCH)
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
@@ -177,6 +177,7 @@ class ResizableMixin(ProgressBarMixinBase):
         if self.signal_set:
             try:
                 import signal
+
                 signal.signal(signal.SIGWINCH, self._prev_handle)
             except Exception:  # pragma no cover
                 pass
@@ -191,8 +192,10 @@ class StdRedirectMixin(DefaultFdMixin):
     _stderr: types.IO
 
     def __init__(
-        self, redirect_stderr: bool = False,
-        redirect_stdout: bool = False, **kwargs
+        self,
+        redirect_stderr: bool = False,
+        redirect_stdout: bool = False,
+        **kwargs,
     ):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
@@ -327,11 +330,21 @@ class ProgressBar(
     _MINIMUM_UPDATE_INTERVAL = 0.050
 
     def __init__(
-        self, min_value=0, max_value=None, widgets=None,
-        left_justify=True, initial_value=0, poll_interval=None,
-        widget_kwargs=None, custom_len=utils.len_color,
-        max_error=True, prefix=None, suffix=None, variables=None,
-        min_poll_interval=None, **kwargs
+        self,
+        min_value=0,
+        max_value=None,
+        widgets=None,
+        left_justify=True,
+        initial_value=0,
+        poll_interval=None,
+        widget_kwargs=None,
+        custom_len=utils.len_color,
+        max_error=True,
+        prefix=None,
+        suffix=None,
+        variables=None,
+        min_poll_interval=None,
+        **kwargs,
     ):
         '''
         Initializes a progress bar with sane defaults
@@ -342,22 +355,23 @@ class ProgressBar(
         if not max_value and kwargs.get('maxval') is not None:
             warnings.warn(
                 'The usage of `maxval` is deprecated, please use '
-                '`max_value` instead', DeprecationWarning
+                '`max_value` instead',
+                DeprecationWarning,
             )
             max_value = kwargs.get('maxval')
 
         if not poll_interval and kwargs.get('poll'):
             warnings.warn(
                 'The usage of `poll` is deprecated, please use '
-                '`poll_interval` instead', DeprecationWarning
+                '`poll_interval` instead',
+                DeprecationWarning,
             )
             poll_interval = kwargs.get('poll')
 
         if max_value:
             if min_value > max_value:
                 raise ValueError(
-                    'Max value needs to be bigger than the min '
-                    'value'
+                    'Max value needs to be bigger than the min ' 'value'
                 )
         self.min_value = min_value
         self.max_value = max_value
@@ -394,8 +408,7 @@ class ProgressBar(
         # (downloading a 1GiB file for example) this adds up.
         poll_interval = utils.deltas_to_seconds(poll_interval, default=None)
         min_poll_interval = utils.deltas_to_seconds(
-            min_poll_interval,
-            default=None
+            min_poll_interval, default=None
         )
         self._MINIMUM_UPDATE_INTERVAL = utils.deltas_to_seconds(
             self._MINIMUM_UPDATE_INTERVAL
@@ -412,7 +425,7 @@ class ProgressBar(
 
         # A dictionary of names that can be used by Variable and FormatWidget
         self.variables = utils.AttributeDict(variables or {})
-        for widget in (self.widgets or []):
+        for widget in self.widgets or []:
             if isinstance(widget, widgets_module.VariableMixin):
                 if widget.name not in self.variables:
                     self.variables[widget.name] = None
@@ -546,7 +559,7 @@ class ProgressBar(
             total_seconds_elapsed=total_seconds_elapsed,
             # The seconds since the bar started modulo 60
             seconds_elapsed=(elapsed.seconds % 60)
-                            + (elapsed.microseconds / 1000000.),
+            + (elapsed.microseconds / 1000000.0),
             # The minutes since the bar started modulo 60
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24
@@ -568,20 +581,27 @@ class ProgressBar(
         if self.max_value:
             return [
                 widgets.Percentage(**self.widget_kwargs),
-                ' ', widgets.SimpleProgress(
+                ' ',
+                widgets.SimpleProgress(
                     format='(%s)' % widgets.SimpleProgress.DEFAULT_FORMAT,
-                    **self.widget_kwargs
+                    **self.widget_kwargs,
                 ),
-                ' ', widgets.Bar(**self.widget_kwargs),
-                ' ', widgets.Timer(**self.widget_kwargs),
-                ' ', widgets.AdaptiveETA(**self.widget_kwargs),
+                ' ',
+                widgets.Bar(**self.widget_kwargs),
+                ' ',
+                widgets.Timer(**self.widget_kwargs),
+                ' ',
+                widgets.AdaptiveETA(**self.widget_kwargs),
             ]
         else:
             return [
                 widgets.AnimatedMarker(**self.widget_kwargs),
-                ' ', widgets.BouncingBar(**self.widget_kwargs),
-                ' ', widgets.Counter(**self.widget_kwargs),
-                ' ', widgets.Timer(**self.widget_kwargs),
+                ' ',
+                widgets.BouncingBar(**self.widget_kwargs),
+                ' ',
+                widgets.Counter(**self.widget_kwargs),
+                ' ',
+                widgets.Timer(**self.widget_kwargs),
             ]
 
     def __call__(self, iterable, max_value=None):
@@ -640,8 +660,9 @@ class ProgressBar(
         data = self.data()
 
         for index, widget in enumerate(self.widgets):
-            if isinstance(widget, widgets.WidgetBase) \
-                and not widget.check_size(self):
+            if isinstance(
+                widget, widgets.WidgetBase
+            ) and not widget.check_size(self):
                 continue
             elif isinstance(widget, widgets.AutoWidthWidgetBase):
                 result.append(widget)
@@ -656,7 +677,7 @@ class ProgressBar(
 
         count = len(expanding)
         while expanding:
-            portion = max(int(math.ceil(width * 1. / count)), 0)
+            portion = max(int(math.ceil(width * 1.0 / count)), 0)
             index = expanding.pop()
             widget = result[index]
             count -= 1
@@ -725,8 +746,8 @@ class ProgressBar(
         for key in kwargs:
             if key not in self.variables:
                 raise TypeError(
-                    'update() got an unexpected keyword ' +
-                    'argument {0!r}'.format(key)
+                    'update() got an unexpected keyword '
+                    + 'argument {0!r}'.format(key)
                 )
             elif self.variables[key] != kwargs[key]:
                 self.variables[key] = kwargs[key]
@@ -782,9 +803,7 @@ class ProgressBar(
 
         if self.prefix:
             self.widgets.insert(
-                0, widgets.FormatLabel(
-                    self.prefix, new_style=True
-                )
+                0, widgets.FormatLabel(self.prefix, new_style=True)
             )
             # Unset the prefix variable after applying so an extra start()
             # won't keep copying it
@@ -792,9 +811,7 @@ class ProgressBar(
 
         if self.suffix:
             self.widgets.append(
-                widgets.FormatLabel(
-                    self.suffix, new_style=True
-                )
+                widgets.FormatLabel(self.suffix, new_style=True)
             )
             # Unset the suffix variable after applying so an extra start()
             # won't keep copying it
@@ -856,7 +873,8 @@ class ProgressBar(
         '''
         warnings.warn(
             'The usage of `currval` is deprecated, please use '
-            '`value` instead', DeprecationWarning
+            '`value` instead',
+            DeprecationWarning,
         )
         return self.value
 
@@ -871,16 +889,22 @@ class DataTransferBar(ProgressBar):
         if self.max_value:
             return [
                 widgets.Percentage(),
-                ' of ', widgets.DataSize('max_value'),
-                ' ', widgets.Bar(),
-                ' ', widgets.Timer(),
-                ' ', widgets.AdaptiveETA(),
+                ' of ',
+                widgets.DataSize('max_value'),
+                ' ',
+                widgets.Bar(),
+                ' ',
+                widgets.Timer(),
+                ' ',
+                widgets.AdaptiveETA(),
             ]
         else:
             return [
                 widgets.AnimatedMarker(),
-                ' ', widgets.DataSize(),
-                ' ', widgets.Timer(),
+                ' ',
+                widgets.DataSize(),
+                ' ',
+                widgets.Timer(),
             ]
 
 
