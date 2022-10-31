@@ -38,8 +38,9 @@ ANSI_TERMS = (
 ANSI_TERM_RE = re.compile('^({})'.format('|'.join(ANSI_TERMS)), re.IGNORECASE)
 
 
-def is_ansi_terminal(fd: types.IO, is_terminal: bool | None = None) \
-    -> bool:  # pragma: no cover
+def is_ansi_terminal(
+    fd: types.IO, is_terminal: bool | None = None
+) -> bool:  # pragma: no cover
     if is_terminal is None:
         # Jupyter Notebooks define this variable and support progress bars
         if 'JPY_PARENT_PID' in os.environ:
@@ -92,8 +93,7 @@ def is_terminal(fd: types.IO, is_terminal: bool | None = None) -> bool:
 
 
 def deltas_to_seconds(
-    *deltas,
-    **kwargs
+    *deltas, **kwargs
 ) -> int | float | None:  # default=ValueError):
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing
@@ -193,8 +193,10 @@ class WrappingIO:
     needs_clear: bool = False
 
     def __init__(
-        self, target: types.IO, capturing: bool = False,
-        listeners: types.Set[ProgressBar] = None
+        self,
+        target: types.IO,
+        capturing: bool = False,
+        listeners: types.Set[ProgressBar] = None,
     ) -> None:
         self.buffer = io.StringIO()
         self.target = target
@@ -289,22 +291,24 @@ class WrappingIO:
         self,
         __t: Type[BaseException] | None,
         __value: BaseException | None,
-        __traceback: TracebackType | None
+        __traceback: TracebackType | None,
     ) -> None:
         self.close()
 
 
 class StreamWrapper:
     '''Wrap stdout and stderr globally'''
+
     stdout: types.Union[types.TextIO, WrappingIO]
     stderr: types.Union[types.TextIO, WrappingIO]
     original_excepthook: types.Callable[
         [
-            types.Optional[
-                types.Type[BaseException]],
+            types.Optional[types.Type[BaseException]],
             types.Optional[BaseException],
             types.Optional[TracebackType],
-        ], None]
+        ],
+        None,
+    ]
     wrapped_stdout: int = 0
     wrapped_stderr: int = 0
     wrapped_excepthook: int = 0
@@ -366,8 +370,7 @@ class StreamWrapper:
 
         if not self.wrapped_stdout:
             self.stdout = sys.stdout = WrappingIO(  # type: ignore
-                self.original_stdout,
-                listeners=self.listeners
+                self.original_stdout, listeners=self.listeners
             )
         self.wrapped_stdout += 1
 
@@ -378,8 +381,7 @@ class StreamWrapper:
 
         if not self.wrapped_stderr:
             self.stderr = sys.stderr = WrappingIO(  # type: ignore
-                self.original_stderr,
-                listeners=self.listeners
+                self.original_stderr, listeners=self.listeners
             )
         self.wrapped_stderr += 1
 
@@ -431,7 +433,7 @@ class StreamWrapper:
                     self.wrapped_stdout = False
                     logger.warning(
                         'Disabling stdout redirection, %r is not seekable',
-                        sys.stdout
+                        sys.stdout,
                     )
 
         if self.wrapped_stderr:  # pragma: no branch
@@ -442,7 +444,7 @@ class StreamWrapper:
                     self.wrapped_stderr = False
                     logger.warning(
                         'Disabling stderr redirection, %r is not seekable',
-                        sys.stderr
+                        sys.stderr,
                     )
 
     def excepthook(self, exc_type, exc_value, exc_traceback):
