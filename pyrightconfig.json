@@ -1,0 +1,11 @@
+{
+  "include": [
+    "progressbar"
+  ],
+  "exclude": [
+    "examples"
+  ],
+  "ignore": [
+    "docs"
+  ],
+}
