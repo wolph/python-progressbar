@@ -16,7 +16,7 @@ from python_utils.terminal import get_terminal_size
 from python_utils.time import epoch, format_time, timedelta_to_seconds
 
 if types.TYPE_CHECKING:
-    from .bar import ProgressBar
+    from .bar import ProgressBar, ProgressBarMixinBase
 
 assert timedelta_to_seconds
 assert get_terminal_size
@@ -95,8 +95,9 @@ def is_terminal(fd: types.IO, is_terminal: bool | None = None) -> bool:
 
 
 def deltas_to_seconds(
-    *deltas, **kwargs
-) -> int | float | None:  # default=ValueError):
+    *deltas,
+    default: types.Optional[types.Type[ValueError]] = ValueError,
+) -> int | float | None:
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing
 
@@ -121,9 +122,6 @@ def deltas_to_seconds(
     >>> deltas_to_seconds(default=0.0)
     0.0
     '''
-    default = kwargs.pop('default', ValueError)
-    assert not kwargs, 'Only the `default` keyword argument is supported'
-
     for delta in deltas:
         if delta is None:
             continue
@@ -137,7 +135,8 @@ def deltas_to_seconds(
     if default is ValueError:
         raise ValueError('No valid deltas passed to `deltas_to_seconds`')
     else:
-        return default
+        # mypy doesn't understand the `default is ValueError` check
+        return default  # type: ignore
 
 
 def no_color(value: types.StringTypes) -> types.StringTypes:
@@ -301,8 +300,8 @@ class WrappingIO:
 class StreamWrapper:
     '''Wrap stdout and stderr globally'''
 
-    stdout: types.Union[types.TextIO, WrappingIO]
-    stderr: types.Union[types.TextIO, WrappingIO]
+    stdout: types.TextIO | WrappingIO
+    stderr: types.TextIO | WrappingIO
     original_excepthook: types.Callable[
         [
             types.Optional[types.Type[BaseException]],
@@ -333,14 +332,14 @@ class StreamWrapper:
         if env_flag('WRAP_STDERR', default=False):  # pragma: no cover
             self.wrap_stderr()
 
-    def start_capturing(self, bar: ProgressBar | None = None) -> None:
+    def start_capturing(self, bar: ProgressBarMixinBase | None = None) -> None:
         if bar:  # pragma: no branch
             self.listeners.add(bar)
 
         self.capturing += 1
         self.update_capturing()
 
-    def stop_capturing(self, bar: ProgressBar | None = None) -> None:
+    def stop_capturing(self, bar: ProgressBarMixinBase | None = None) -> None:
         if bar:  # pragma: no branch
             try:
                 self.listeners.remove(bar)
