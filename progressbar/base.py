@@ -1,4 +1,5 @@
 # -*- mode: python; coding: utf-8 -*-
+from python_utils import types
 
 
 class FalseMeta(type):
@@ -17,3 +18,10 @@ class UnknownLength(metaclass=FalseMeta):
 
 class Undefined(metaclass=FalseMeta):
     pass
+
+
+try:
+    IO = types.IO  # type: ignore
+    TextIO = types.TextIO  # type: ignore
+except AttributeError:
+    from typing.io import IO  # type: ignore

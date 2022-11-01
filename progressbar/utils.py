@@ -15,6 +15,8 @@ from python_utils.converters import scale_1024
 from python_utils.terminal import get_terminal_size
 from python_utils.time import epoch, format_time, timedelta_to_seconds
 
+from progressbar import base
+
 if types.TYPE_CHECKING:
     from .bar import ProgressBar, ProgressBarMixinBase
 
@@ -39,7 +41,7 @@ ANSI_TERM_RE = re.compile('^({})'.format('|'.join(ANSI_TERMS)), re.IGNORECASE)
 
 
 def is_ansi_terminal(
-    fd: types.IO, is_terminal: bool | None = None
+    fd: base.IO, is_terminal: bool | None = None
 ) -> bool:  # pragma: no cover
     if is_terminal is None:
         # Jupyter Notebooks define this variable and support progress bars
@@ -74,7 +76,7 @@ def is_ansi_terminal(
     return bool(is_terminal)
 
 
-def is_terminal(fd: types.IO, is_terminal: bool | None = None) -> bool:
+def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool:
     if is_terminal is None:
         # Full ansi support encompasses what we expect from a terminal
         is_terminal = is_ansi_terminal(fd) or None
@@ -188,14 +190,14 @@ def env_flag(name: str, default: bool | None = None) -> bool | None:
 
 class WrappingIO:
     buffer: io.StringIO
-    target: types.IO
+    target: base.IO
     capturing: bool
     listeners: set
     needs_clear: bool = False
 
     def __init__(
         self,
-        target: types.IO,
+        target: base.IO,
         capturing: bool = False,
         listeners: types.Set[ProgressBar] = None,
     ) -> None:
@@ -300,8 +302,8 @@ class WrappingIO:
 class StreamWrapper:
     '''Wrap stdout and stderr globally'''
 
-    stdout: types.TextIO | WrappingIO
-    stderr: types.TextIO | WrappingIO
+    stdout: base.TextIO | WrappingIO
+    stderr: base.TextIO | WrappingIO
     original_excepthook: types.Callable[
         [
             types.Optional[types.Type[BaseException]],
@@ -366,7 +368,7 @@ class StreamWrapper:
         if stderr:
             self.wrap_stderr()
 
-    def wrap_stdout(self) -> types.IO:
+    def wrap_stdout(self) -> base.IO:
         self.wrap_excepthook()
 
         if not self.wrapped_stdout:
@@ -377,7 +379,7 @@ class StreamWrapper:
 
         return sys.stdout
 
-    def wrap_stderr(self) -> types.IO:
+    def wrap_stderr(self) -> base.IO:
         self.wrap_excepthook()
 
         if not self.wrapped_stderr:
