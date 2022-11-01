@@ -24,4 +24,7 @@ try:
     IO = types.IO  # type: ignore
     TextIO = types.TextIO  # type: ignore
 except AttributeError:
-    from typing.io import IO  # type: ignore
+    from typing.io import IO, TextIO  # type: ignore
+
+assert IO
+assert TextIO
