@@ -111,14 +111,7 @@ class ProgressBarMixinBase(abc.ABC):
 
     def __del__(self):
         if not self._finished and self._started:  # pragma: no cover
-            try:
-                self.finish()
-            except Exception:
-                # Never raise during cleanup. We're too late now
-                logging.debug(
-                    'Exception raised during ProgressBar cleanup',
-                    exc_info=True,
-                )
+            self.finish()
 
     def __getstate__(self):
         return self.__dict__
@@ -656,7 +649,7 @@ class ProgressBar(
             total_seconds_elapsed=total_seconds_elapsed,
             # The seconds since the bar started modulo 60
             seconds_elapsed=(elapsed.seconds % 60)
-            + (elapsed.microseconds / 1000000.0),
+                            + (elapsed.microseconds / 1000000.0),
             # The minutes since the bar started modulo 60
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24
@@ -787,20 +780,23 @@ class ProgressBar(
             self.start()
             return self.update(value, force=force, **kwargs)
 
-        if value is not None and value is not base.UnknownLength:
+        if value is not None and value is not base.UnknownLength and isinstance(value, int):
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
                 pass
-            elif self.min_value <= value <= self.max_value:  # pragma: no cover
-                # Correct value, let's accept
-                pass
-            elif self.max_error:
+            elif self.min_value > value:
                 raise ValueError(
-                    'Value %s is out of range, should be between %s and %s'
+                    'Value %s is too small. Should be between %s and %s'
                     % (value, self.min_value, self.max_value)
                 )
-            else:
-                self.max_value = value
+            elif self.max_value < value:
+                if self.max_error:
+                    raise ValueError(
+                        'Value %s is too large. Should be between %s and %s'
+                        % (value, self.min_value, self.max_value)
+                    )
+                else:
+                    value = self.max_value
 
             self.previous_value = self.value
             self.value = value
@@ -810,8 +806,8 @@ class ProgressBar(
         for key in kwargs:
             if key not in self.variables:
                 raise TypeError(
-                    'update() got an unexpected keyword '
-                    + 'argument {0!r}'.format(key)
+                    'update() got an unexpected variable name as argument '
+                    '{0!r}'.format(key)
                 )
             elif self.variables[key] != kwargs[key]:
                 self.variables[key] = kwargs[key]

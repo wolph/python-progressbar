@@ -122,3 +122,15 @@ def test_variable_not_str():
 def test_variable_too_many_strs():
     with pytest.raises(ValueError):
         progressbar.Variable('too long')
+
+
+def test_negative_value():
+    bar = progressbar.ProgressBar(max_value=10)
+    with pytest.raises(ValueError):
+        bar.update(value=-1)
+
+
+def test_increment():
+    bar = progressbar.ProgressBar(max_value=10)
+    bar.increment()
+    del bar

@@ -1,4 +1,7 @@
 import time
+
+import pytest
+
 import progressbar
 
 
@@ -60,6 +63,8 @@ def test_variable_widget_widget():
     p.update(i, text=False)
     i += 1
     p.update(i, text=True, error='a')
+    with pytest.raises(TypeError):
+        p.update(i, non_existing_variable='error!')
     p.finish()
 
 
