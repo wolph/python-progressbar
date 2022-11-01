@@ -51,10 +51,10 @@ class ProgressBarMixinBase(abc.ABC):
     #: are configured
     widget_kwargs: types.Dict[str, types.Any]
     #: Custom length function for multibyte characters such as CJK
-    # custom_len: types.Callable[[str], int]
-    custom_len: types.ClassVar[
-        types.Callable[['ProgressBarMixinBase', str], int]
-    ]
+    # mypy and pyright can't agree on what the correct one is... so we'll
+    # need to use a helper function :(
+    # custom_len: types.Callable[['ProgressBarMixinBase', str], int]
+    custom_len: types.Callable[[str], int]
     #: The time the progress bar was started
     initial_start_time: types.Optional[datetime]
     #: The interval to poll for updates in seconds if there are updates
@@ -188,7 +188,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
     def update(self, *args, **kwargs):
         ProgressBarMixinBase.update(self, *args, **kwargs)
 
-        line = converters.to_unicode(self._format_line())
+        line: str = converters.to_unicode(self._format_line())
         if not self.enable_colors:
             line = utils.no_color(line)
 
@@ -240,11 +240,11 @@ class DefaultFdMixin(ProgressBarMixinBase):
                 expanding.insert(0, index)
             elif isinstance(widget, str):
                 result.append(widget)
-                width -= self.custom_len(widget)
+                width -= self.custom_len(widget)  # type: ignore
             else:
                 widget_output = converters.to_unicode(widget(self, data))
                 result.append(widget_output)
-                width -= self.custom_len(widget_output)
+                width -= self.custom_len(widget_output)  # type: ignore
 
         count = len(expanding)
         while expanding:
@@ -254,7 +254,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
             count -= 1
 
             widget_output = widget(self, data, portion)
-            width -= self.custom_len(widget_output)
+            width -= self.custom_len(widget_output)  # type: ignore
             result[index] = widget_output
 
         return result
@@ -303,8 +303,8 @@ class ResizableMixin(ProgressBarMixinBase):
 class StdRedirectMixin(DefaultFdMixin):
     redirect_stderr: bool = False
     redirect_stdout: bool = False
-    stdout: base.IO
-    stderr: base.IO
+    stdout: utils.WrappingIO | base.IO
+    stderr: utils.WrappingIO | base.IO
     _stdout: base.IO
     _stderr: base.IO
 
@@ -428,7 +428,7 @@ class ProgressBar(
     you from changing the ProgressBar you should treat it as read only.
     '''
 
-    _iterable: types.Optional[types.Iterable]
+    _iterable: types.Optional[types.Iterator]
 
     _DEFAULT_MAXVAL: Type[base.UnknownLength] = base.UnknownLength
     # update every 50 milliseconds (up to a 20 times per second)
@@ -439,11 +439,11 @@ class ProgressBar(
         self,
         min_value: T = 0,
         max_value: T | types.Type[base.UnknownLength] | None = None,
-        widgets: types.List[widgets_module.WidgetBase] = None,
+        widgets: types.Optional[types.List[widgets_module.WidgetBase]] = None,
         left_justify: bool = True,
         initial_value: T = 0,
         poll_interval: types.Optional[float] = None,
-        widget_kwargs: types.Dict[str, types.Any] = None,
+        widget_kwargs: types.Optional[types.Dict[str, types.Any]] = None,
         custom_len: types.Callable[[str], int] = utils.len_color,
         max_error=True,
         prefix=None,
@@ -594,7 +594,7 @@ class ProgressBar(
             return None
         elif self.max_value:
             todo = self.value - self.min_value
-            total = self.max_value - self.min_value
+            total = self.max_value - self.min_value  # type: ignore
             percentage = 100.0 * todo / total
         else:
             percentage = 100.0
@@ -631,7 +631,7 @@ class ProgressBar(
         '''
         self._last_update_time = time.time()
         self._last_update_timer = timeit.default_timer()
-        elapsed = self.last_update_time - self.start_time
+        elapsed = self.last_update_time - self.start_time  # type: ignore
         # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
         # want to support older versions as well
         total_seconds_elapsed = utils.deltas_to_seconds(elapsed)
@@ -717,11 +717,16 @@ class ProgressBar(
 
     def __next__(self):
         try:
-            value = next(self._iterable)
+            if self._iterable is None:  # pragma: no cover
+                value = self.value
+            else:
+                value = next(self._iterable)
+
             if self.start_time is None:
                 self.start()
             else:
                 self.update(self.value + 1)
+
             return value
         except StopIteration:
             self.finish()

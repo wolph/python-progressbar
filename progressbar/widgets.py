@@ -132,7 +132,7 @@ class FormatWidgetMixin(abc.ABC):
         progress: ProgressBarMixinBase,
         data: Data,
         format: types.Optional[str] = None,
-    ):
+    ) -> str:
         '''Formats the widget into a string'''
         format = self.get_format(progress, data, format)
         try:
@@ -216,7 +216,7 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
     copy = True
 
     @abc.abstractmethod
-    def __call__(self, progress: ProgressBarMixinBase, data: Data):
+    def __call__(self, progress: ProgressBarMixinBase, data: Data) -> str:
         '''Updates the widget.
 
         progress - a reference to the calling ProgressBar
@@ -237,7 +237,7 @@ class AutoWidthWidgetBase(WidgetBase, metaclass=abc.ABCMeta):
         progress: ProgressBarMixinBase,
         data: Data,
         width: int = 0,
-    ):
+    ) -> str:
         '''Updates the widget providing the total width the widget must fill.
 
         progress - a reference to the calling ProgressBar
@@ -702,7 +702,9 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         if self.fill:
             # Cut the last character so we can replace it with our marker
             fill = self.fill(
-                progress, data, width - progress.custom_len(marker)
+                progress,
+                data,
+                width - progress.custom_len(marker),  # type: ignore
             )
         else:
             fill = ''
@@ -767,7 +769,8 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
     def __init__(self, format=DEFAULT_FORMAT, **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
-        self.max_width_cache = dict(default=self.max_width)
+        self.max_width_cache = dict()
+        self.max_width_cache['default'] = self.max_width or 0
 
     def __call__(
         self, progress: ProgressBarMixinBase, data: Data, format=None
@@ -950,7 +953,7 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
     def __init__(
         self,
         format: str,
-        mapping: types.Dict[str, types.Any] = None,
+        mapping: types.Optional[types.Dict[str, types.Any]] = None,
         **kwargs,
     ):
         self.format = format
