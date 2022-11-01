@@ -1,4 +1,6 @@
 # -*- mode: python; coding: utf-8 -*-
+from python_utils import types
+
 
 class FalseMeta(type):
     def __bool__(self):  # pragma: no cover
@@ -16,3 +18,13 @@ class UnknownLength(metaclass=FalseMeta):
 
 class Undefined(metaclass=FalseMeta):
     pass
+
+
+try:  # pragma: no cover
+    IO = types.IO  # type: ignore
+    TextIO = types.TextIO  # type: ignore
+except AttributeError:
+    from typing.io import IO, TextIO  # type: ignore
+
+assert IO
+assert TextIO

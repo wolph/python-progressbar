@@ -14,12 +14,14 @@ automatically enable features like auto-resizing when the system supports it.
 __title__ = 'Python Progressbar'
 __package_name__ = 'progressbar2'
 __author__ = 'Rick van Hattem (Wolph)'
-__description__ = ' '.join('''
+__description__ = ' '.join(
+    '''
 A Python Progressbar library to provide visual (yet text based) progress to
 long running operations.
-'''.strip().split())
+'''.strip().split()
+)
 __email__ = 'wolph@wol.ph'
-__version__ = '4.2.0'
+__version__ = '4.3b.0'
 __license__ = 'BSD'
 __copyright__ = 'Copyright 2015 Rick van Hattem (Wolph)'
 __url__ = 'https://github.com/WoLpH/python-progressbar'
