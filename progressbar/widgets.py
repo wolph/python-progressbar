@@ -647,7 +647,9 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
 
 
 class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
-    '''WidgetBase for showing the transfer speed, based on the last X samples'''
+    '''
+    WidgetBase for showing the transfer speed, based on the last X samples
+    '''
 
     def __init__(self, **kwargs):
         FileTransferSpeed.__init__(self, **kwargs)
