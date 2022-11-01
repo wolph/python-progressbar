@@ -37,7 +37,7 @@ class ProgressBarMixinBase(abc.ABC):
     #: fall back to 80 if auto detection is not possible.
     term_width: int = 80
     #: The widgets to render, defaults to the result of `default_widget()`
-    widgets: types.List[widgets_module.WidgetBase]
+    widgets: types.List[widgets_module.WidgetBase | str]
     #: When going beyond the max_value, raise an error if True or silently
     #: ignore otherwise
     max_error: bool
@@ -439,7 +439,9 @@ class ProgressBar(
         self,
         min_value: T = 0,
         max_value: T | types.Type[base.UnknownLength] | None = None,
-        widgets: types.Optional[types.List[widgets_module.WidgetBase]] = None,
+        widgets: types.Optional[
+            types.List[widgets_module.WidgetBase | str]
+        ] = None,
         left_justify: bool = True,
         initial_value: T = 0,
         poll_interval: types.Optional[float] = None,
