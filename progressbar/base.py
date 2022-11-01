@@ -20,7 +20,7 @@ class Undefined(metaclass=FalseMeta):
     pass
 
 
-try:
+try:  # pragma: no cover
     IO = types.IO  # type: ignore
     TextIO = types.TextIO  # type: ignore
 except AttributeError:

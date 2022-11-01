@@ -26,6 +26,8 @@ assert format_time
 assert scale_1024
 assert epoch
 
+StringT = types.TypeVar('StringT', bound=types.StringTypes)
+
 ANSI_TERMS = (
     '([xe]|bv)term',
     '(sco)?ansi',
@@ -141,7 +143,7 @@ def deltas_to_seconds(
         return default  # type: ignore
 
 
-def no_color(value: types.StringTypes) -> types.StringTypes:
+def no_color(value: StringT) -> StringT:
     '''
     Return the `value` without ANSI escape codes
 
@@ -153,9 +155,10 @@ def no_color(value: types.StringTypes) -> types.StringTypes:
     'abc'
     '''
     if isinstance(value, bytes):
-        return re.sub('\\\u001b\\[.*?[@-~]'.encode(), b'', value)
+        pattern: bytes = '\\\u001b\\[.*?[@-~]'.encode()
+        return re.sub(pattern, b'', value)  # type: ignore
     else:
-        return re.sub(u'\x1b\\[.*?[@-~]', '', value)
+        return re.sub(u'\x1b\\[.*?[@-~]', '', value)  # type: ignore
 
 
 def len_color(value: types.StringTypes) -> int:
@@ -199,7 +202,7 @@ class WrappingIO:
         self,
         target: base.IO,
         capturing: bool = False,
-        listeners: types.Set[ProgressBar] = None,
+        listeners: types.Optional[types.Set[ProgressBar]] = None,
     ) -> None:
         self.buffer = io.StringIO()
         self.target = target
@@ -306,12 +309,17 @@ class StreamWrapper:
     stderr: base.TextIO | WrappingIO
     original_excepthook: types.Callable[
         [
-            types.Optional[types.Type[BaseException]],
-            types.Optional[BaseException],
-            types.Optional[TracebackType],
+            types.Type[BaseException],
+            BaseException,
+            TracebackType | None,
         ],
         None,
     ]
+    # original_excepthook: types.Callable[
+    #                          [
+    #                              types.Type[BaseException],
+    #                              BaseException, TracebackType | None,
+    #                          ], None] | None
     wrapped_stdout: int = 0
     wrapped_stderr: int = 0
     wrapped_excepthook: int = 0
@@ -368,7 +376,7 @@ class StreamWrapper:
         if stderr:
             self.wrap_stderr()
 
-    def wrap_stdout(self) -> base.IO:
+    def wrap_stdout(self) -> WrappingIO:
         self.wrap_excepthook()
 
         if not self.wrapped_stdout:
@@ -377,9 +385,9 @@ class StreamWrapper:
             )
         self.wrapped_stdout += 1
 
-        return sys.stdout
+        return sys.stdout  # type: ignore
 
-    def wrap_stderr(self) -> base.IO:
+    def wrap_stderr(self) -> WrappingIO:
         self.wrap_excepthook()
 
         if not self.wrapped_stderr:
@@ -388,7 +396,7 @@ class StreamWrapper:
             )
         self.wrapped_stderr += 1
 
-        return sys.stderr
+        return sys.stderr  # type: ignore
 
     def unwrap_excepthook(self) -> None:
         if self.wrapped_excepthook:
