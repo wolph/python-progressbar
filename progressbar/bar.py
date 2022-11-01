@@ -133,7 +133,7 @@ class ProgressBarBase(types.Iterable, ProgressBarMixinBase):
 
 class DefaultFdMixin(ProgressBarMixinBase):
     # The file descriptor to write to. Defaults to `sys.stderr`
-    fd: types.IO = sys.stderr
+    fd: base.IO = sys.stderr
     #: Set the terminal to be ANSI compatible. If a terminal is ANSI
     #: compatible we will automatically enable `colors` and disable
     #: `line_breaks`.
@@ -146,7 +146,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
     def __init__(
         self,
-        fd: types.IO = sys.stderr,
+        fd: base.IO = sys.stderr,
         is_terminal: bool | None = None,
         line_breaks: bool | None = None,
         enable_colors: bool | None = None,
@@ -303,10 +303,10 @@ class ResizableMixin(ProgressBarMixinBase):
 class StdRedirectMixin(DefaultFdMixin):
     redirect_stderr: bool = False
     redirect_stdout: bool = False
-    stdout: types.IO
-    stderr: types.IO
-    _stdout: types.IO
-    _stderr: types.IO
+    stdout: base.IO
+    stderr: base.IO
+    _stdout: base.IO
+    _stderr: base.IO
 
     def __init__(
         self,

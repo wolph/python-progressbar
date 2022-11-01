@@ -207,9 +207,10 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
      - max_width: Only display the widget if at most `max_width` is left
      - weight: Widgets with a higher `weigth` will be calculated before widgets
        with a lower one
-    - copy: Copy this widget when initializing the progress bar so the
-      progressbar can be reused. Some widgets such as the FormatCustomText
-      require the shared state so this needs to be optional
+     - copy: Copy this widget when initializing the progress bar so the
+       progressbar can be reused. Some widgets such as the FormatCustomText
+       require the shared state so this needs to be optional
+
     '''
 
     copy = True
