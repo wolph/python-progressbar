@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import logging
+import math
 import os
 import sys
 import time
@@ -11,7 +12,6 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Type
 
-import math
 from python_utils import converters, types
 
 from . import (
@@ -37,7 +37,7 @@ class ProgressBarMixinBase(abc.ABC):
     #: fall back to 80 if auto detection is not possible.
     term_width: int = 80
     #: The widgets to render, defaults to the result of `default_widget()`
-    widgets: types.List[widgets_module.WidgetBase | str]
+    widgets: types.MutableSequence[widgets_module.WidgetBase | str]
     #: When going beyond the max_value, raise an error if True or silently
     #: ignore otherwise
     max_error: bool
@@ -433,8 +433,7 @@ class ProgressBar(
         min_value: T = 0,
         max_value: T | types.Type[base.UnknownLength] | None = None,
         widgets: types.Optional[
-            types.List[widgets_module.WidgetBase | str]
-        ] = None,
+            types.Sequence[widgets_module.WidgetBase | str]] = None,
         left_justify: bool = True,
         initial_value: T = 0,
         poll_interval: types.Optional[float] = None,
@@ -780,16 +779,19 @@ class ProgressBar(
             self.start()
             return self.update(value, force=force, **kwargs)
 
-        if value is not None and value is not base.UnknownLength and isinstance(value, int):
+        if value is not None and value is not base.UnknownLength and isinstance(
+            value,
+            int
+        ):
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
                 pass
-            elif self.min_value > value:
+            elif self.min_value > value:  # type: ignore
                 raise ValueError(
                     'Value %s is too small. Should be between %s and %s'
                     % (value, self.min_value, self.max_value)
                 )
-            elif self.max_value < value:
+            elif self.max_value < value:  # type: ignore
                 if self.max_error:
                     raise ValueError(
                         'Value %s is too large. Should be between %s and %s'
@@ -799,7 +801,7 @@ class ProgressBar(
                     value = self.max_value
 
             self.previous_value = self.value
-            self.value = value
+            self.value = value  # type: ignore
 
         # Save the updated values for dynamic messages
         variables_changed = False
@@ -817,7 +819,7 @@ class ProgressBar(
             self.updates += 1
             ResizableMixin.update(self, value=value)
             ProgressBarBase.update(self, value=value)
-            StdRedirectMixin.update(self, value=value)
+            StdRedirectMixin.update(self, value=value)  # type: ignore
 
             # Only flush if something was actually written
             self.fd.flush()
