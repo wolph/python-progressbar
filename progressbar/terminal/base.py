@@ -9,8 +9,7 @@ from collections import defaultdict
 
 from python_utils import types
 
-# from .os_functions import getch
-# from .. import utils
+from .os_specific import getch
 
 ESC = '\x1B'
 CSI = ESC + '['

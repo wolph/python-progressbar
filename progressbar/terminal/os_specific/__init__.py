@@ -8,7 +8,7 @@ if sys.platform.startswith('win'):
     )
 
 else:
-    from .nix import getch as _getch
+    from .posix import getch as _getch
 
     def _reset_console_mode():
         pass
