@@ -16,6 +16,7 @@ from python_utils import converters, types
 
 from . import (
     base,
+    multi,
     utils,
     widgets,
     widgets as widgets_module,  # Avoid name collision
@@ -143,6 +144,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         is_terminal: bool | None = None,
         line_breaks: bool | None = None,
         enable_colors: bool | None = None,
+        line_offset: int = 0,
         **kwargs,
     ):
         if fd is sys.stdout:
@@ -150,6 +152,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         elif fd is sys.stderr:
             fd = utils.streams.original_stderr
+
+        if line_offset:
+            fd = multi.LineOffsetStreamWrapper(line_offset, fd)
 
         self.fd = fd
         self.is_ansi_terminal = utils.is_ansi_terminal(fd)
@@ -385,6 +390,9 @@ class ProgressBar(
             from a label using `format='{variables.my_var}'`.  These values can
             be updated using `bar.update(my_var='newValue')` This can also be
             used to set initial values for variables' widgets
+        line_offset (int): The number of lines to offset the progressbar from
+            your current line. This is useful if you have other output or
+            multiple progressbars
 
     A common way of using it is like:
 
