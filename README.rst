@@ -152,6 +152,38 @@ In most cases the following will work as well, as long as you initialize the
         logging.error('Got %d', i)
         time.sleep(0.2)
 
+Multiple (threaded) progressbars
+==============================================================================
+
+.. code:: python
+
+    import random
+    import threading
+    import time
+
+    import progressbar
+
+    BARS = 5
+    N = 50
+
+
+    def do_something(bar):
+        for i in bar(range(N)):
+            # Sleep up to 0.1 seconds
+            time.sleep(random.random() * 0.1)
+
+            # print messages at random intervals to show how extra output works
+            if random.random() > 0.9:
+                bar.print('random message for bar', bar, i)
+
+
+    with progressbar.MultiBar() as multibar:
+        for i in range(BARS):
+            # Get a progressbar
+            bar = multibar[f'Thread label here {i}']
+            # Create a thread and pass the progressbar
+            threading.Thread(target=do_something, args=(bar,)).start()
+
 Context wrapper
 ==============================================================================
 .. code:: python
