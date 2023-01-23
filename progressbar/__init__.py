@@ -35,7 +35,8 @@ from .widgets import SimpleProgress
 from .widgets import Timer
 from .widgets import Variable
 from .widgets import VariableMixin
-from .multi import LineOffsetStreamWrapper
+from .multi import MultiBar
+from .terminal.stream import LineOffsetStreamWrapper
 
 __date__ = str(date.today())
 __all__ = [
@@ -74,5 +75,5 @@ __all__ = [
     'NullBar',
     '__author__',
     '__version__',
-    'LineOffsetStreamWrapper',
+    'MultiBar',
 ]

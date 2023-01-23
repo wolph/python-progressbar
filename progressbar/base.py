@@ -26,5 +26,5 @@ try:  # pragma: no cover
 except AttributeError:
     from typing.io import IO, TextIO  # type: ignore
 
-assert IO
-assert TextIO
+assert IO is not None
+assert TextIO is not None

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import itertools
 import logging
 import math
 import os
@@ -14,9 +15,9 @@ from typing import Type
 
 from python_utils import converters, types
 
+import progressbar.terminal.stream
 from . import (
     base,
-    multi,
     utils,
     widgets,
     widgets as widgets_module,  # Avoid name collision
@@ -120,9 +121,25 @@ class ProgressBarMixinBase(abc.ABC):
     def data(self) -> types.Dict[str, types.Any]:
         raise NotImplementedError()
 
+    def started(self) -> bool:
+        return self._started or self._finished
+
+    def finished(self) -> bool:
+        return self._finished
+
 
 class ProgressBarBase(types.Iterable, ProgressBarMixinBase):
-    pass
+    _index_counter = itertools.count()
+    index: int = -1
+    label: str = ''
+
+    def __init__(self, **kwargs):
+        self.index = next(self._index_counter)
+        super().__init__(**kwargs)
+
+    def __repr__(self):
+        label = f': {self.label}' if self.label else ''
+        return f'<{self.__class__.__name__}#{self.index}{label}>'
 
 
 class DefaultFdMixin(ProgressBarMixinBase):
@@ -154,7 +171,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
             fd = utils.streams.original_stderr
 
         if line_offset:
-            fd = multi.LineOffsetStreamWrapper(line_offset, fd)
+            fd = progressbar.terminal.stream.LineOffsetStreamWrapper(
+                line_offset,
+                fd
+            )
 
         self.fd = fd
         self.is_ansi_terminal = utils.is_ansi_terminal(fd)
@@ -182,6 +202,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.enable_colors = bool(enable_colors)
 
         ProgressBarMixinBase.__init__(self, **kwargs)
+
+    def print(self, *args, **kwargs):
+        print(*args, file=self.fd, **kwargs)
 
     def update(self, *args, **kwargs):
         ProgressBarMixinBase.update(self, *args, **kwargs)
@@ -435,6 +458,7 @@ class ProgressBar(
     # update every 50 milliseconds (up to a 20 times per second)
     _MINIMUM_UPDATE_INTERVAL: float = 0.050
     _last_update_time: types.Optional[float] = None
+    paused: bool = False
 
     def __init__(
         self,
@@ -757,6 +781,8 @@ class ProgressBar(
 
     def _needs_update(self):
         'Returns whether the ProgressBar should redraw the line.'
+        if self.paused:
+            return False
         delta = timeit.default_timer() - self._last_update_timer
         if delta < self.min_poll_interval:
             # Prevent updating too often
