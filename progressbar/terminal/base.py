@@ -12,9 +12,126 @@ from python_utils import types
 from .os_specific import getch
 
 ESC = '\x1B'
-CSI = ESC + '['
 
-CUP = CSI + '{row};{column}H'  # Cursor Position [row;column] (default = [1,1])
+
+class CSI:
+    _code: str
+    _template = ESC + '[{args}{code}'
+
+    def __init__(self, code, *default_args):
+        self._code = code
+        self._default_args = default_args
+
+    def __call__(self, *args):
+        return self._template.format(
+            args=';'.join(map(str, args or self._default_args)),
+            code=self._code
+        )
+
+    def __str__(self):
+        return self()
+
+
+class CSINoArg(CSI):
+
+    def __call__(self):
+        return super().__call__()
+
+
+#: Cursor Position [row;column] (default = [1,1])
+CUP = CSI('H', 1, 1)
+
+#: Cursor Up Ps Times (default = 1) (CUU)
+UP = CSI('A', 1)
+
+#: Cursor Down Ps Times (default = 1) (CUD)
+DOWN = CSI('B', 1)
+
+#: Cursor Forward Ps Times (default = 1) (CUF)
+RIGHT = CSI('C', 1)
+
+#: Cursor Backward Ps Times (default = 1) (CUB)
+LEFT = CSI('D', 1)
+
+#: Cursor Next Line Ps Times (default = 1) (CNL)
+#: Same as Cursor Down Ps Times
+NEXT_LINE = CSI('E', 1)
+
+#: Cursor Preceding Line Ps Times (default = 1) (CPL)
+#: Same as Cursor Up Ps Times
+PREVIOUS_LINE = CSI('F', 1)
+
+#: Cursor Character Absolute  [column] (default = [row,1]) (CHA)
+COLUMN = CSI('G', 1)
+
+#: Erase in Display (ED)
+CLEAR_SCREEN = CSI('J', 0)
+
+#: Erase till end of screen
+CLEAR_SCREEN_TILL_END = CSINoArg('0J')
+
+#: Erase till start of screen
+CLEAR_SCREEN_TILL_START = CSINoArg('1J')
+
+#: Erase whole screen
+CLEAR_SCREEN_ALL = CSINoArg('2J')
+
+#: Erase whole screen and history
+CLEAR_SCREEN_ALL_AND_HISTORY = CSINoArg('3J')
+
+#: Erase in Line (EL)
+CLEAR_LINE_ALL = CSI('K')
+
+#: Erase in Line from Cursor to End of Line (default)
+CLEAR_LINE_RIGHT = CSINoArg('0K')
+
+#: Erase in Line from Cursor to Beginning of Line
+CLEAR_LINE_LEFT = CSINoArg('1K')
+
+#: Erase Line containing Cursor
+CLEAR_LINE = CSINoArg('2K')
+
+#: Scroll up Ps lines (default = 1) (SU)
+#: Scroll down Ps lines (default = 1) (SD)
+SCROLL_UP = CSI('S')
+SCROLL_DOWN = CSI('T')
+
+#: Save Cursor Position (SCP)
+SAVE_CURSOR = CSINoArg('s')
+
+#: Restore Cursor Position (RCP)
+RESTORE_CURSOR = CSINoArg('u')
+
+#: Cursor Visibility (DECTCEM)
+HIDE_CURSOR = CSINoArg('?25l')
+SHOW_CURSOR = CSINoArg('?25h')
+
+
+#
+# UP = CSI + '{n}A'  # Cursor Up
+# DOWN = CSI + '{n}B'  # Cursor Down
+# RIGHT = CSI + '{n}C'  # Cursor Forward
+# LEFT = CSI + '{n}D'  # Cursor Backward
+# NEXT = CSI + '{n}E'  # Cursor Next Line
+# PREV = CSI + '{n}F'  # Cursor Previous Line
+# MOVE_COLUMN = CSI + '{n}G'  # Cursor Horizontal Absolute
+# MOVE = CSI + '{row};{column}H'  # Cursor Position [row;column] (default = [
+# 1,1])
+#
+# CLEAR = CSI + '{n}J'  # Clear (part of) the screen
+# CLEAR_BOTTOM = CLEAR.format(n=0)  # Clear from cursor to end of screen
+# CLEAR_TOP = CLEAR.format(n=1)  # Clear from cursor to beginning of screen
+# CLEAR_SCREEN = CLEAR.format(n=2)  # Clear Screen
+# CLEAR_WIPE = CLEAR.format(n=3)  # Clear Screen and scrollback buffer
+#
+# CLEAR_LINE = CSI + '{n}K'  # Erase in Line
+# CLEAR_LINE_RIGHT = CLEAR_LINE.format(n=0)  # Clear from cursor to end of line
+# CLEAR_LINE_LEFT = CLEAR_LINE.format(n=1)  # Clear from cursor to beginning
+# of line
+# CLEAR_LINE_ALL = CLEAR_LINE.format(n=2)  # Clear Line
+
+def clear_line(n):
+    return UP(n) + CLEAR_LINE_ALL() + DOWN(n)
 
 
 class ColorSupport(enum.Enum):
@@ -73,96 +190,6 @@ class _CPR(str):
     def column(self, stream):
         _, column = self(stream)
         return column
-
-
-DSR = CSI + '{n}n'  # Device Status Report (DSR)
-CPR = _CPR(DSR.format(n=6))
-
-IL = CSI + '{n}L'  # Insert n Line(s) (default = 1)
-
-DECRST = CSI + '?{n}l'  # DEC Private Mode Reset
-DECRTCEM = DECRST.format(n=25)  # Hide Cursor
-
-DECSET = CSI + '?{n}h'  # DEC Private Mode Set
-DECTCEM = DECSET.format(n=25)  # Show Cursor
-
-
-# possible values:
-# 0 = Normal (default)
-# 1 = Bold
-# 2 = Faint
-# 3 = Italic
-# 4 = Underlined
-# 5 = Slow blink (appears as Bold)
-# 6 = Rapid Blink
-# 7 = Inverse
-# 8 = Invisible, i.e., hidden (VT300)
-# 9 = Strike through
-# 10 = Primary (default) font
-# 20 = Gothic Font
-# 21 = Double underline
-# 22 = Normal intensity (neither bold nor faint)
-# 23 = Not italic
-# 24 = Not underlined
-# 25 = Steady (not blinking)
-# 26 = Proportional spacing
-# 27 = Not inverse
-# 28 = Visible, i.e., not hidden (VT300)
-# 29 = No strike through
-# 30 = Set foreground color to Black
-# 31 = Set foreground color to Red
-# 32 = Set foreground color to Green
-# 33 = Set foreground color to Yellow
-# 34 = Set foreground color to Blue
-# 35 = Set foreground color to Magenta
-# 36 = Set foreground color to Cyan
-# 37 = Set foreground color to White
-# 39 = Set foreground color to default (original)
-# 40 = Set background color to Black
-# 41 = Set background color to Red
-# 42 = Set background color to Green
-# 43 = Set background color to Yellow
-# 44 = Set background color to Blue
-# 45 = Set background color to Magenta
-# 46 = Set background color to Cyan
-# 47 = Set background color to White
-# 49 = Set background color to default (original).
-# 50 = Disable proportional spacing
-# 51 = Framed
-# 52 = Encircled
-# 53 = Overlined
-# 54 = Neither framed nor encircled
-# 55 = Not overlined
-# 58 = Set underine color (2;r;g;b)
-# 59 = Default underline color
-# If 16-color support is compiled, the following apply.
-# Assume that xterm’s resources are set so that the ISO color codes are the
-# first 8 of a set of 16. Then the aixterm colors are the bright versions of
-# the ISO colors:
-# 90 = Set foreground color to Black
-# 91 = Set foreground color to Red
-# 92 = Set foreground color to Green
-# 93 = Set foreground color to Yellow
-# 94 = Set foreground color to Blue
-# 95 = Set foreground color to Magenta
-# 96 = Set foreground color to Cyan
-# 97 = Set foreground color to White
-# 100 = Set background color to Black
-# 101 = Set background color to Red
-# 102 = Set background color to Green
-# 103 = Set background color to Yellow
-# 104 = Set background color to Blue
-# 105 = Set background color to Magenta
-# 106 = Set background color to Cyan
-# 107 = Set background color to White
-#
-# If xterm is compiled with the 16-color support disabled, it supports the
-# following, from rxvt:
-# 100 = Set foreground and background color to default
-
-# If 88- or 256-color support is compiled, the following apply.
-# 38;5;x = Set foreground color to x
-# 48;5;x = Set background color to x
 
 
 class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
@@ -299,10 +326,10 @@ class Colors:
         return color
 
 
-class SGR:
+class SGR(CSI):
     _start_code: int
     _end_code: int
-    _template = CSI + '{n}m'
+    _code = 'm'
     __slots__ = '_start_code', '_end_code'
 
     def __init__(self, start_code: int, end_code: int):
@@ -311,11 +338,11 @@ class SGR:
 
     @property
     def _start_template(self):
-        return self._template.format(n=self._start_code)
+        return super().__call__(self._start_code)
 
     @property
     def _end_template(self):
-        return self._template.format(n=self._end_code)
+        return super().__call__(self._end_code)
 
     def __call__(self, text):
         return self._start_template + text + self._end_template
@@ -323,7 +350,6 @@ class SGR:
 
 class SGRColor(SGR):
     __slots__ = '_color', '_start_code', '_end_code'
-    _color_template = CSI + '{n};{color}m'
 
     def __init__(self, color: Color, start_code: int, end_code: int):
         self._color = color
@@ -331,10 +357,7 @@ class SGRColor(SGR):
 
     @property
     def _start_template(self):
-        return self._color_template.format(
-            n=self._start_code,
-            color=self._color.ansi
-        )
+        return CSI.__call__(self, self._start_code, self._color.ansi)
 
 
 encircled = SGR(52, 54)
