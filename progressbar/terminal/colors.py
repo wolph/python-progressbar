@@ -1,6 +1,7 @@
 # Based on: https://www.ditig.com/256-colors-cheat-sheet
-from progressbar.terminal import base
-from progressbar.terminal.base import Colors, HLS, RGB
+import os
+
+from progressbar.terminal.base import ColorGradient, Colors, HLS, RGB
 
 black = Colors.register(RGB(0, 0, 0), HLS(0, 0, 0), 'Black', 0)
 maroon = Colors.register(RGB(128, 0, 0), HLS(100, 0, 25), 'Maroon', 1)
@@ -939,9 +940,44 @@ grey85 = Colors.register(RGB(218, 218, 218), HLS(0, 0, 85), 'Grey85', 253)
 grey89 = Colors.register(RGB(228, 228, 228), HLS(0, 0, 89), 'Grey89', 254)
 grey93 = Colors.register(RGB(238, 238, 238), HLS(0, 0, 93), 'Grey93', 255)
 
+dark_gradient = ColorGradient(
+    red1,
+    orangeRed1,
+    darkOrange,
+    orange1,
+    yellow1,
+    yellow2,
+    greenYellow,
+    green1,
+)
+light_gradient = ColorGradient(
+    red1,
+    orangeRed1,
+    darkOrange,
+    orange1,
+    gold3,
+    darkOliveGreen3,
+    yellow4,
+    green3,
+)
+bg_gradient = ColorGradient(black)
+
+# Check if the background is light or dark. This is by no means a foolproof
+# method, but there is no reliable way to detect this.
+if os.environ.get('COLORFGBG', '15;0').split(';')[-1] == str(white.xterm):
+    print('light background')
+    # Light background
+    gradient = light_gradient
+else:
+    print('dark background')
+    # Default, expect a dark background
+    gradient = dark_gradient
+
 if __name__ == '__main__':
     red = Colors.register(RGB(255, 128, 128))
     # red = Colors.register(RGB(255, 100, 100))
+    from progressbar.terminal import base
+
     for i in base.ColorSupport:
         base.color_support = i
         print(i, red.fg('RED!'), red.bg('RED!'), red.underline('RED!'))

@@ -18,7 +18,7 @@ from python_utils import converters, types
 import progressbar.terminal.stream
 from . import (
     base,
-    utils,
+    terminal, utils,
     widgets,
     widgets as widgets_module,  # Avoid name collision
 )
@@ -152,15 +152,23 @@ class DefaultFdMixin(ProgressBarMixinBase):
     #: Whether to print line breaks. This is useful for logging the
     #: progressbar. When disabled the current line is overwritten.
     line_breaks: bool = True
-    #: Enable or disable colors. Defaults to auto detection
-    enable_colors: bool = False
+    # : Specify the type and number of colors to support. Defaults to auto
+    # detection based on the file descriptor type (i.e. interactive terminal)
+    # environment variables such as `COLORTERM` and `TERM`. Color output can
+    # be forced in non-interactive terminals using the
+    # `PROGRESSBAR_ENABLE_COLORS` environment variable which can also be used
+    # to force a specific number of colors by specifying `24bit`, `256` or `16`.
+    # For true (24 bit/16M) color support you can use `COLORTERM=truecolor`.
+    # For 256 color support you can use `TERM=xterm-256color`.
+    # For 16 colorsupport you can use `TERM=xterm`.
+    enable_colors: terminal.ColorSupport | bool | None = terminal.color_support
 
     def __init__(
         self,
         fd: base.IO = sys.stderr,
         is_terminal: bool | None = None,
         line_breaks: bool | None = None,
-        enable_colors: bool | None = None,
+        enable_colors: terminal.ColorSupport | None = None,
         line_offset: int = 0,
         **kwargs,
     ):
@@ -195,11 +203,28 @@ class DefaultFdMixin(ProgressBarMixinBase):
         # Check if ANSI escape characters are enabled (suitable for iteractive
         # terminals), or should be stripped off (suitable for log files)
         if enable_colors is None:
-            enable_colors = utils.env_flag(
-                'PROGRESSBAR_ENABLE_COLORS', self.is_ansi_terminal
+            colors = (
+                utils.env_flag('PROGRESSBAR_ENABLE_COLORS'),
+                utils.env_flag('FORCE_COLOR'),
+                self.is_ansi_terminal,
             )
 
-        self.enable_colors = bool(enable_colors)
+            for color_enabled in colors:
+                if color_enabled is not None:
+                    if color_enabled:
+                        enable_colors = terminal.color_support
+                    else:
+                        enable_colors = terminal.ColorSupport.NONE
+                    break
+
+        elif enable_colors is True:
+            enable_colors = terminal.color_support
+        elif enable_colors is False:
+            enable_colors = terminal.ColorSupport.NONE
+        elif enable_colors not in terminal.ColorSupport:
+            raise ValueError(f'Invalid color support value: {enable_colors}')
+
+        self.enable_colors = enable_colors
 
         ProgressBarMixinBase.__init__(self, **kwargs)
 
