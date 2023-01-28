@@ -10,7 +10,8 @@ import typing
 
 from python_utils import converters, types
 
-from . import base, utils
+from . import base, terminal, utils
+from .terminal import colors
 
 if types.TYPE_CHECKING:
     from .bar import ProgressBarMixinBase
@@ -353,8 +354,9 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
     ):
         self.samples = samples
         self.key_prefix = (
-            key_prefix if key_prefix else self.__class__.__name__
-        ) + '_'
+                              key_prefix if key_prefix else
+                              self.__class__.__name__
+                          ) + '_'
         TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     def get_sample_times(self, progress: ProgressBarMixinBase, data: Data):
@@ -671,7 +673,6 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
     '''An animated marker for the progress bar which defaults to appear as if
     it were rotating.
     '''
-
     def __init__(
         self,
         markers='|/-\\',
@@ -739,6 +740,10 @@ class Counter(FormatWidgetMixin, WidgetBase):
 
 class Percentage(FormatWidgetMixin, WidgetBase):
     '''Displays the current percentage as a number with a percent sign.'''
+    fg_na: terminal.Color | None = colors.yellow
+    fg_value: terminal.OptionalColor | None = colors.gradient
+    bg_na: terminal.Color | None = colors.black
+    bg_value: terminal.OptionalColor | None = None
 
     def __init__(self, format='%(percentage)3d%%', na='N/A%%', **kwargs):
         self.na = na
@@ -751,13 +756,28 @@ class Percentage(FormatWidgetMixin, WidgetBase):
         # If percentage is not available, display N/A%
         percentage = data.get('percentage', base.Undefined)
         if not percentage and percentage != 0:
-            return self.na
+            output = self.na
+            value = None
+        else:
+            value = percentage / 100
+            output = FormatWidgetMixin.get_format(self, progress, data, format)
 
-        return FormatWidgetMixin.get_format(self, progress, data, format)
+        return terminal.apply_colors(
+            output,
+            value,
+            fg=self.fg_value,
+            bg=self.bg_value,
+            fg_none=self.fg_na,
+            bg_none=self.bg_na,
+        )
 
 
 class SimpleProgress(FormatWidgetMixin, WidgetBase):
     '''Returns progress as a count of the total (e.g.: "5 of 47")'''
+    fg_na: terminal.Color | None = colors.yellow
+    fg_value: terminal.OptionalColor | None = colors.gradient
+    bg_na: terminal.Color | None = colors.black
+    bg_value: terminal.OptionalColor | None = None
 
     max_width_cache: dict[
         types.Union[str, tuple[float, float | types.Type[base.UnknownLength]]],
@@ -777,9 +797,11 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
     ):
         # If max_value is not available, display N/A
         if data.get('max_value'):
-            data['max_value_s'] = data.get('max_value')
+            data['max_value_s'] = data['max_value']
+            value = data.get('value', 0) / data['max_value']
         else:
             data['max_value_s'] = 'N/A'
+            value = None
 
         # if value is not available it's the zeroth iteration
         if data.get('value'):
@@ -817,11 +839,20 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
         if max_width:  # pragma: no branch
             formatted = formatted.rjust(max_width)
 
-        return formatted
+        return terminal.apply_colors(
+            formatted,
+            value,
+            fg=self.fg_value,
+            bg=self.bg_value,
+            fg_none=self.fg_na,
+            bg_none=self.bg_na,
+        )
 
 
 class Bar(AutoWidthWidgetBase):
     '''A progress bar which stretches to fill the line.'''
+    fg_value: terminal.OptionalColor | None = colors.gradient
+    bg_value: terminal.OptionalColor | None = None
 
     def __init__(
         self,
@@ -869,11 +900,22 @@ class Bar(AutoWidthWidgetBase):
         # Make sure we ignore invisible characters when filling
         width += len(marker) - progress.custom_len(marker)
 
+        if marker and width > 0:
+            value = len(marker) / width
+        else:
+            value = 0
+
         if self.fill_left:
             marker = marker.ljust(width, fill)
         else:
             marker = marker.rjust(width, fill)
 
+        marker = terminal.apply_colors(
+            marker,
+            value,
+            fg=self.fg_value,
+            bg=self.bg_value,
+        )
         return left + marker + right
 
 

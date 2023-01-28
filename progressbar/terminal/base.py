@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abc
 import collections
 import colorsys
 import enum
@@ -7,7 +8,7 @@ import os
 import threading
 from collections import defaultdict
 
-from python_utils import types
+from python_utils import converters, types
 
 from .os_specific import getch
 
@@ -134,24 +135,54 @@ def clear_line(n):
     return UP(n) + CLEAR_LINE_ALL() + DOWN(n)
 
 
-class ColorSupport(enum.Enum):
+class ColorSupport(enum.IntEnum):
     '''Color support for the terminal.'''
     NONE = 0
-    XTERM = 1
-    XTERM_256 = 2
-    XTERM_TRUECOLOR = 3
+    XTERM = 16
+    XTERM_256 = 256
+    XTERM_TRUECOLOR = 16777216
 
     @classmethod
     def from_env(cls):
-        '''Get the color support from the environment.'''
-        if os.getenv('COLORTERM') == 'truecolor':
+        '''Get the color support from the environment.
+
+        If any of the environment variables contain `24bit` or `truecolor`,
+        we will enable true color/24 bit support. If they contain `256`, we
+        will enable 256 color/8 bit support. If they contain `xterm`, we will
+        enable 16 color support. Otherwise, we will assume no color support.
+
+        If `JUPYTER_COLUMNS` or `JUPYTER_LINES` is set, we will assume true
+        color support.
+
+        Note that the highest available value will be used! Having
+        `COLORTERM=truecolor` will override `TERM=xterm-256color`.
+        '''
+        variables = (
+            'FORCE_COLOR',
+            'PROGRESSBAR_ENABLE_COLORS',
+            'COLORTERM',
+            'TERM',
+        )
+
+        if os.environ.get('JUPYTER_COLUMNS') or os.environ.get('JUPYTER_LINES'):
+            # Jupyter notebook always supports true color.
             return cls.XTERM_TRUECOLOR
-        elif os.getenv('TERM') == 'xterm-256color':
-            return cls.XTERM_256
-        elif os.getenv('TERM') == 'xterm':
-            return cls.XTERM
-        else:
-            return cls.NONE
+
+        support = cls.NONE
+        for variable in variables:
+            value = os.environ.get(variable)
+            if value is None:
+                continue
+            elif value in {'truecolor', '24bit'}:
+                # Truecolor support, we don't need to check anything else.
+                support = cls.XTERM_TRUECOLOR
+                break
+            elif '256' in value:
+                support = max(cls.XTERM_256, support)
+            elif value == 'xterm':
+                support = max(cls.XTERM, support)
+
+        return support
 
 
 color_support = ColorSupport.from_env()
@@ -196,6 +227,10 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
     __slots__ = ()
 
     def __str__(self):
+        return self.rgb
+
+    @property
+    def rgb(self):
         return f'rgb({self.red}, {self.green}, {self.blue})'
 
     @property
@@ -217,6 +252,13 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
         blue = round(self.blue / 255 * 5)
         return 16 + 36 * red + 6 * green + blue
 
+    def interpolate(self, end: RGB, step: float) -> RGB:
+        return RGB(
+            int(self.red + (end.red - self.red) * step),
+            int(self.green + (end.green - self.green) * step),
+            int(self.blue + (end.blue - self.blue) * step),
+        )
+
 
 class HLS(collections.namedtuple('HLS', ['hue', 'lightness', 'saturation'])):
     __slots__ = ()
@@ -227,6 +269,18 @@ class HLS(collections.namedtuple('HLS', ['hue', 'lightness', 'saturation'])):
             *colorsys.rgb_to_hls(rgb.red / 255, rgb.green / 255, rgb.blue / 255)
         )
 
+    def interpolate(self, end: HLS, step: float) -> HLS:
+        return HLS(
+            self.hue + (end.hue - self.hue) * step,
+            self.lightness + (end.lightness - self.lightness) * step,
+            self.saturation + (end.saturation - self.saturation) * step,
+        )
+
+
+class ColorBase(abc.ABC):
+
+    def get_color(self, value: float) -> Color:
+        raise NotImplementedError()
 
 class Color(
     collections.namedtuple(
@@ -236,7 +290,8 @@ class Color(
             'name',
             'xterm',
         ]
-    )
+    ),
+    ColorBase,
 ):
     '''
     Color base class
@@ -250,6 +305,9 @@ class Color(
     but you can be more explicity if you wish.
     '''
     __slots__ = ()
+
+    def __call__(self, value: str) -> str:
+        return self.fg(value)
 
     @property
     def fg(self):
@@ -278,6 +336,14 @@ class Color(
             return None
 
         return f'5;{color}'
+
+    def interpolate(self, end: Color, step: float) -> Color:
+        return Color(
+            self.rgb.interpolate(end.rgb, step),
+            self.hls.interpolate(end.hls, step),
+            self.name if step < 0.5 else end.name,
+            self.xterm if step < 0.5 else end.xterm,
+        )
 
     def __str__(self):
         return self.name
@@ -324,6 +390,92 @@ class Colors:
             cls.by_xterm[xterm] = color
 
         return color
+
+    @classmethod
+    def interpolate(cls, color_a: Color, color_b: Color, step: float) -> Color:
+        return color_a.interpolate(color_b, step)
+
+
+class ColorGradient(ColorBase):
+    def __init__(
+        self,
+        *colors: Color,
+        interpolate=Colors.interpolate
+    ):
+        assert colors
+        self.colors = colors
+        self.interpolate = interpolate
+
+    def __call__(self, value: float):
+        return self.get_color(value)
+
+    def get_color(self, value: float) -> Color:
+        'Map a value from 0 to 1 to a color'
+        if value <= 0:
+            return self.colors[0]
+        elif value >= 1:
+            return self.colors[-1]
+
+        max_color_idx = len(self.colors) - 1
+        if max_color_idx == 0:
+            return self.colors[0]
+        elif self.interpolate:
+            index = round(converters.remap(value, 0, 1, 0, max_color_idx - 1))
+            step = converters.remap(
+                value,
+                index / (max_color_idx),
+                (index + 1) / (max_color_idx),
+                0,
+                1,
+            )
+            color = self.interpolate(
+                self.colors[index],
+                self.colors[index + 1],
+                float(step),
+            )
+        else:
+            index = round(converters.remap(value, 0, 1, 0, max_color_idx))
+            color = self.colors[index]
+
+        return color
+
+
+OptionalColor = Color | ColorGradient | None
+
+
+def get_color(value: float, color: OptionalColor) -> Color | None:
+    if isinstance(color, ColorGradient):
+        color = color(value)
+    return color
+
+
+def apply_colors(
+    text: str,
+    value: float | None = None,
+    *,
+    fg: OptionalColor = None,
+    bg: OptionalColor = None,
+    fg_none: Color | None = None,
+    bg_none: Color | None = None,
+) -> str:
+    if fg is None and bg is None:
+        return text
+
+    if value is None:
+        if fg_none is not None:
+            text = fg_none.fg(text)
+        if bg_none is not None:
+            text = bg_none.bg(text)
+    else:
+        fg = get_color(value, fg)
+        bg = get_color(value, bg)
+
+        if fg is not None:
+            text = fg.fg(text)
+        if bg is not None:
+            text = bg.bg(text)
+
+    return text
 
 
 class SGR(CSI):
