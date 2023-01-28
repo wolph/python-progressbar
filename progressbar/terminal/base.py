@@ -11,6 +11,7 @@ from collections import defaultdict
 from python_utils import converters, types
 
 from .os_specific import getch
+from .. import base
 
 ESC = '\x1B'
 
@@ -411,7 +412,7 @@ class ColorGradient(ColorBase):
 
     def get_color(self, value: float) -> Color:
         'Map a value from 0 to 1 to a color'
-        if value <= 0:
+        if value is base.Undefined or value is base.UnknownLength or value <= 0:
             return self.colors[0]
         elif value >= 1:
             return self.colors[-1]
@@ -451,7 +452,7 @@ def get_color(value: float, color: OptionalColor) -> Color | None:
 
 def apply_colors(
     text: str,
-    value: float | None = None,
+    percentage: float | None = None,
     *,
     fg: OptionalColor = None,
     bg: OptionalColor = None,
@@ -461,14 +462,14 @@ def apply_colors(
     if fg is None and bg is None:
         return text
 
-    if value is None:
+    if percentage is None:
         if fg_none is not None:
             text = fg_none.fg(text)
         if bg_none is not None:
             text = bg_none.bg(text)
     else:
-        fg = get_color(value, fg)
-        bg = get_color(value, bg)
+        fg = get_color(percentage * 0.01, fg)
+        bg = get_color(percentage * 0.01, bg)
 
         if fg is not None:
             text = fg.fg(text)
