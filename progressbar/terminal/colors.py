@@ -965,13 +965,13 @@ bg_gradient = ColorGradient(black)
 # Check if the background is light or dark. This is by no means a foolproof
 # method, but there is no reliable way to detect this.
 if os.environ.get('COLORFGBG', '15;0').split(';')[-1] == str(white.xterm):
-    print('light background')
     # Light background
     gradient = light_gradient
+    primary = black
 else:
-    print('dark background')
     # Default, expect a dark background
     gradient = dark_gradient
+    primary = white
 
 if __name__ == '__main__':
     red = Colors.register(RGB(255, 128, 128))

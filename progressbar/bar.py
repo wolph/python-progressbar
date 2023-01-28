@@ -610,7 +610,7 @@ class ProgressBar(
         self._last_update_timer = timeit.default_timer()
 
     @property
-    def percentage(self):
+    def percentage(self) -> float | None:
         '''Return current percentage, returns None if no max_value is given
 
         >>> progress = ProgressBar()
