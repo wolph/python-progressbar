@@ -7,6 +7,7 @@ import functools
 import pprint
 import sys
 import typing
+from typing import Callable
 
 from python_utils import converters, types
 
@@ -46,7 +47,7 @@ def create_wrapper(wrapper):
     >>> print(create_wrapper(('a', 'b')))
     a{}b
     '''
-    if isinstance(wrapper, tuple) and utils.len_color(wrapper) == 2:
+    if isinstance(wrapper, tuple) and len(wrapper) == 2:
         a, b = wrapper
         wrapper = (a or '') + '{}' + (b or '')
     elif not wrapper:
@@ -223,6 +224,51 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
         progress - a reference to the calling ProgressBar
         '''
 
+    _fixed_colors: dict[str, terminal.Color | None] = dict()
+    _gradient_colors: dict[str, terminal.OptionalColor | None] = dict()
+    _len: Callable[[str | bytes], int] = len
+
+    @functools.cached_property
+    def uses_colors(self):
+        for key, value in self._gradient_colors.items():
+            if value is not None:
+                return True
+
+        for key, value in self._fixed_colors.items():
+            if value is not None:
+                return True
+
+        return False
+
+    def _apply_colors(self, text: str, data: Data) -> str:
+        if self.uses_colors:
+            return terminal.apply_colors(
+                text,
+                data.get('percentage'),
+                **self._gradient_colors,
+                **self._fixed_colors,
+            )
+        else:
+            return text
+
+    def __init__(
+        self,
+        *args,
+        fixed_colors=None,
+        gradient_colors=None,
+        **kwargs
+    ):
+        if fixed_colors is not None:
+            self._fixed_colors.update(fixed_colors)
+
+        if gradient_colors is not None:
+            self._gradient_colors.update(gradient_colors)
+
+        if self.uses_colors:
+            self._len = utils.len_color
+
+        super().__init__(*args, **kwargs)
+
 
 class AutoWidthWidgetBase(WidgetBase, metaclass=abc.ABCMeta):
     '''The base class for all variable width widgets.
@@ -392,7 +438,7 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
                     sample_times.pop(0)
                     sample_values.pop(0)
             else:
-                if progress.custom_len(sample_times) > self.samples:
+                if len(sample_times) > self.samples:
                     sample_times.pop(0)
                     sample_values.pop(0)
 
@@ -697,7 +743,7 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         if progress.end_time:
             return self.default
 
-        marker = self.markers[data['updates'] % utils.len_color(self.markers)]
+        marker = self.markers[data['updates'] % len(self.markers)]
         if self.marker_wrap:
             marker = self.marker_wrap.format(marker)
 
@@ -739,15 +785,19 @@ class Counter(FormatWidgetMixin, WidgetBase):
         return FormatWidgetMixin.__call__(self, progress, data, format)
 
 
-class Percentage(FormatWidgetMixin, WidgetBase):
-    '''Displays the current percentage as a number with a percent sign.'''
-    fg_na: terminal.Color | None = colors.yellow
-    fg_value: terminal.OptionalColor | None = colors.gradient
-    bg_na: terminal.Color | None = colors.black
-    bg_value: terminal.OptionalColor | None = None
+class ColoredMixin:
+    _fixed_colors: dict[str, terminal.Color | None] = dict(
+        fg_none=colors.yellow,
+        bg_none=None,
+    )
+    _gradient_colors: dict[str, terminal.OptionalColor | None] = dict(
+        fg=colors.gradient,
+        bg=None,
+    )
 
-    def _uses_colors(self):
-        return self.fg_na or self.fg_value or self.bg_na or self.bg_value
+
+class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
+    '''Displays the current percentage as a number with a percent sign.'''
 
     def __init__(self, format='%(percentage)3d%%', na='N/A%%', **kwargs):
         self.na = na
@@ -764,23 +814,11 @@ class Percentage(FormatWidgetMixin, WidgetBase):
         else:
             output = FormatWidgetMixin.get_format(self, progress, data, format)
 
-        return terminal.apply_colors(
-            output,
-            data.get('percentage'),
-            fg=self.fg_value,
-            bg=self.bg_value,
-            fg_none=self.fg_na,
-            bg_none=self.bg_na,
-        )
+        return self._apply_colors(output, data)
 
 
-class SimpleProgress(FormatWidgetMixin, WidgetBase):
+class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
     '''Returns progress as a count of the total (e.g.: "5 of 47")'''
-    fg_na: terminal.Color | None = colors.yellow
-    fg_value: terminal.OptionalColor | None = colors.gradient
-    bg_na: terminal.Color | None = colors.black
-    bg_value: terminal.OptionalColor | None = None
-
     max_width_cache: dict[
         types.Union[str, tuple[float, float | types.Type[base.UnknownLength]]],
         types.Optional[int],
@@ -839,20 +877,13 @@ class SimpleProgress(FormatWidgetMixin, WidgetBase):
         if max_width:  # pragma: no branch
             formatted = formatted.rjust(max_width)
 
-        return terminal.apply_colors(
-            formatted,
-            data.get('percentage'),
-            fg=self.fg_value,
-            bg=self.bg_value,
-            fg_none=self.fg_na,
-            bg_none=self.bg_na,
-        )
+        return self._apply_colors(formatted, data)
 
 
 class Bar(AutoWidthWidgetBase):
     '''A progress bar which stretches to fill the line.'''
-    fg_value: terminal.OptionalColor | None = colors.gradient
-    bg_value: terminal.OptionalColor | None = None
+    fg: terminal.OptionalColor | None = colors.gradient
+    bg: terminal.OptionalColor | None = None
 
     def __init__(
         self,
@@ -888,6 +919,7 @@ class Bar(AutoWidthWidgetBase):
         progress: ProgressBarMixinBase,
         data: Data,
         width: int = 0,
+        color=True,
     ):
         '''Updates the progress bar and its subcomponents'''
 
@@ -898,28 +930,17 @@ class Bar(AutoWidthWidgetBase):
         fill = converters.to_unicode(self.fill(progress, data, width))
 
         # Make sure we ignore invisible characters when filling
-        width += utils.len_color(marker) - progress.custom_len(marker)
+        width += len(marker) - progress.custom_len(marker)
 
         if self.fill_left:
             marker = marker.ljust(width, fill)
         else:
             marker = marker.rjust(width, fill)
 
-        marker = self.apply_colors(progress, data, marker)
-        return left + marker + right
+        if color:
+            marker = self._apply_colors(marker, data)
 
-    def apply_colors(
-        self,
-        progress: ProgressBarMixinBase,
-        data: Data, output: str
-    ):
-        output = terminal.apply_colors(
-            output,
-            percentage=data.get('percentage'),
-            fg=self.fg_value,
-            bg=self.bg_value,
-        )
-        return output
+        return left + marker + right
 
 
 class ReverseBar(Bar):
@@ -1026,7 +1047,7 @@ class VariableMixin:
     def __init__(self, name, **kwargs):
         if not isinstance(name, str):
             raise TypeError('Variable(): argument must be a string')
-        if utils.len_color(name.split()) > 1:
+        if len(name.split()) > 1:
             raise ValueError('Variable(): argument must be single word')
         self.name = name
 
@@ -1106,7 +1127,7 @@ class MultiProgressBar(MultiRangeBar):
         )
 
     def get_values(self, progress: ProgressBarMixinBase, data: Data):
-        ranges = [0.0] * progress.custom_len(self.markers)
+        ranges = [0.0] * len(self.markers)
         for value in data['variables'][self.name] or []:
             if not isinstance(value, (int, float)):
                 # Progress is (value, max)
@@ -1119,7 +1140,7 @@ class MultiProgressBar(MultiRangeBar):
                     % value
                 )
 
-            range_ = value * (progress.custom_len(ranges) - 1)
+            range_ = value * (len(ranges) - 1)
             pos = int(range_)
             frac = range_ % 1
             ranges[pos] += 1 - frac
@@ -1203,16 +1224,14 @@ class GranularBar(AutoWidthWidgetBase):
 
         marker = self.markers[-1] * int(num_chars)
 
-        marker_idx = int(
-            (num_chars % 1) * (progress.custom_len(self.markers) - 1)
-        )
+        marker_idx = int((num_chars % 1) * (len(self.markers) - 1))
         if marker_idx:
             marker += self.markers[marker_idx]
 
         marker = converters.to_unicode(marker)
 
         # Make sure we ignore invisible characters when filling
-        width += progress.custom_len(marker) - progress.custom_len(marker)
+        width += len(marker) - progress.custom_len(marker)
         marker = marker.ljust(width, self.markers[0])
 
         return left + marker + right
@@ -1233,17 +1252,19 @@ class FormatLabelBar(FormatLabel, Bar):
         format: FormatString = None,
     ):
         center = FormatLabel.__call__(self, progress, data, format=format)
-        bar = Bar.__call__(self, progress, data, width)
+        bar = Bar.__call__(self, progress, data, width, color=False)
 
         # Aligns the center of the label to the center of the bar
         center_len = progress.custom_len(center)
         center_left = int((width - center_len) / 2)
         center_right = center_left + center_len
 
-        return bar[:center_left] + center + self.apply_colors(
-            progress,
-            data,
-            bar[center_right:]
+        return self._apply_colors(
+            bar[:center_left], data,
+        ) + self._apply_colors(
+            center, data,
+        ) + self._apply_colors(
+            bar[center_right:], data,
         )
 
 

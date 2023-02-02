@@ -118,11 +118,11 @@ class ProgressBarMixinBase(abc.ABC):
     def __getstate__(self):
         return self.__dict__
 
-    def data(self) -> types.Dict[str, types.Any]:
+    def data(self) -> types.Dict[str, types.Any]:  # pragma: no cover
         raise NotImplementedError()
 
     def started(self) -> bool:
-        return self._started or self._finished
+        return self._finished or self._started
 
     def finished(self) -> bool:
         return self._finished
@@ -209,7 +209,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
                 self.is_ansi_terminal,
             )
 
-            for color_enabled in colors:
+            for color_enabled in colors:  # pragma: no branch
                 if color_enabled is not None:
                     if color_enabled:
                         enable_colors = terminal.color_support
@@ -218,10 +218,13 @@ class DefaultFdMixin(ProgressBarMixinBase):
                     break
 
         elif enable_colors is True:
-            enable_colors = terminal.color_support
+            enable_colors = terminal.ColorSupport.XTERM_256
         elif enable_colors is False:
             enable_colors = terminal.ColorSupport.NONE
-        elif enable_colors not in terminal.ColorSupport:
+        elif isinstance(enable_colors, terminal.ColorSupport):
+            # `enable_colors` is already a valid value
+            pass
+        else:
             raise ValueError(f'Invalid color support value: {enable_colors}')
 
         self.enable_colors = enable_colors

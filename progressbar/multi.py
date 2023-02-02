@@ -124,7 +124,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
     def __setitem__(self, key: str, value: bar.ProgressBar):
         '''Add a progressbar to the multibar'''
-        if value.label != key:
+        if value.label != key:  # pragma: no branch
             value.label = key
             value.fd = stream.LastLineStream(self.fd)
             value.paused = True
@@ -153,16 +153,16 @@ class MultiBar(dict[str, bar.ProgressBar]):
             return progress
 
     def _label_bar(self, bar: bar.ProgressBar):
-        if bar in self._labeled:
+        if bar in self._labeled:  # pragma: no branch
             return
 
         assert bar.widgets, 'Cannot prepend label to empty progressbar'
         self._labeled.add(bar)
 
-        if self.prepend_label:
+        if self.prepend_label:  # pragma: no branch
             bar.widgets.insert(0, self.label_format.format(label=bar.label))
 
-        if self.append_label and bar not in self._labeled:
+        if self.append_label and bar not in self._labeled:  # pragma: no branch
             bar.widgets.append(self.label_format.format(label=bar.label))
 
     def render(self, flush: bool = True, force: bool = False):
@@ -300,7 +300,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
             time.sleep(self.update_interval)
 
             if join or self._thread_closed.is_set():
-                # If the thread is closed, we need to check if force progressbars
+                # If the thread is closed, we need to check if force
+                # progressbars
                 # have finished. If they have, we can exit the loop
                 for bar_ in self.values():
                     if not bar_.finished():
