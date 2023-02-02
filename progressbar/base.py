@@ -23,7 +23,7 @@ class Undefined(metaclass=FalseMeta):
 try:  # pragma: no cover
     IO = types.IO  # type: ignore
     TextIO = types.TextIO  # type: ignore
-except AttributeError:
+except AttributeError:  # pragma: no cover
     from typing.io import IO, TextIO  # type: ignore
 
 assert IO is not None

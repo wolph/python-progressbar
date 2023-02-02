@@ -63,6 +63,9 @@ def test_dirty():
 
     bar = progressbar.ProgressBar()
     bar.start()
+    assert bar.started()
     for i in range(10):
         bar.update(i)
     bar.finish(dirty=True)
+    assert bar.finished()
+    assert bar.started()

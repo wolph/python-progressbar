@@ -458,6 +458,7 @@ def apply_colors(
     bg: OptionalColor = None,
     fg_none: Color | None = None,
     bg_none: Color | None = None,
+    **kwargs: types.Any,
 ) -> str:
     if fg is None and bg is None:
         return text
