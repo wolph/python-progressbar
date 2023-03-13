@@ -72,6 +72,14 @@ The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
 
 ******************************************************************************
+Security contact information
+******************************************************************************
+
+To report a security vulnerability, please use the
+`Tidelift security contact <https://tidelift.com/security>`_.
+Tidelift will coordinate the fix and disclosure.
+
+******************************************************************************
 Known issues
 ******************************************************************************
 
