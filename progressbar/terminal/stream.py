@@ -8,7 +8,6 @@ from progressbar import base
 
 
 class TextIOOutputWrapper(base.TextIO):
-
     def __init__(self, stream: base.TextIO):
         self.stream = stream
 
@@ -64,7 +63,7 @@ class TextIOOutputWrapper(base.TextIO):
         self,
         __t: Type[BaseException] | None,
         __value: BaseException | None,
-        __traceback: TracebackType | None
+        __traceback: TracebackType | None,
     ) -> None:
         return self.stream.__exit__(__t, __value, __traceback)
 
@@ -94,7 +93,6 @@ class LineOffsetStreamWrapper(TextIOOutputWrapper):
 
 
 class LastLineStream(TextIOOutputWrapper):
-
     line: str = ''
 
     def seekable(self) -> bool:

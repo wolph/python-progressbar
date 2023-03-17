@@ -25,6 +25,7 @@ def test_color_environment_variables(monkeypatch, variable):
     bar = progressbar.ProgressBar()
     assert not bar.enable_colors
 
+
 def test_enable_colors_flags():
     bar = progressbar.ProgressBar(enable_colors=True)
     assert bar.enable_colors
@@ -32,7 +33,9 @@ def test_enable_colors_flags():
     bar = progressbar.ProgressBar(enable_colors=False)
     assert not bar.enable_colors
 
-    bar = progressbar.ProgressBar(enable_colors=terminal.ColorSupport.XTERM_TRUECOLOR)
+    bar = progressbar.ProgressBar(
+        enable_colors=terminal.ColorSupport.XTERM_TRUECOLOR
+    )
     assert bar.enable_colors
 
     with pytest.raises(ValueError):

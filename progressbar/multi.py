@@ -31,6 +31,7 @@ class SortKey(str, enum.Enum):
     `value` might result in more rendering which can have a small performance
     impact.
     '''
+
     CREATED = 'index'
     LABEL = 'label'
     VALUE = 'value'
@@ -170,60 +171,62 @@ class MultiBar(dict[str, bar.ProgressBar]):
         now = timeit.default_timer()
         expired = now - self.remove_finished if self.remove_finished else None
         output = []
-        for bar in self.get_sorted_bars():
-            if not bar.started() and not self.show_initial:
+        for bar_ in self.get_sorted_bars():
+            if not bar_.started() and not self.show_initial:
                 continue
 
             def update(force=True, write=True):
-                self._label_bar(bar)
-                bar.update(force=force)
+                self._label_bar(bar_)
+                bar_.update(force=force)
                 if write:
-                    output.append(bar.fd.line)
+                    output.append(bar_.fd.line)
 
-            if bar.finished():
-                if bar not in self._finished_at:
-                    self._finished_at[bar] = now
+            if bar_.finished():
+                if bar_ not in self._finished_at:
+                    self._finished_at[bar_] = now
                     # Force update to get the finished format
                     update(write=False)
 
                 if self.remove_finished:
-                    if expired >= self._finished_at[bar]:
-                        del self[bar.label]
+                    if expired >= self._finished_at[bar_]:
+                        del self[bar_.label]
                         continue
 
                 if not self.show_finished:
                     continue
 
-            if bar.finished():
+            if bar_.finished():
                 if self.finished_format is None:
                     update(force=False)
                 else:
-                    output.append(self.finished_format.format(label=bar.label))
-            elif bar.started():
+                    output.append(
+                        self.finished_format.format(
+                            label=bar_.label
+                        )
+                    )
+            elif bar_.started():
                 update()
             else:
                 if self.initial_format is None:
-                    bar.start()
+                    bar_.start()
                     update()
                 else:
-                    output.append(self.initial_format.format(label=bar.label))
+                    output.append(self.initial_format.format(label=bar_.label))
 
         with self._print_lock:
             # Clear the previous output if progressbars have been removed
             for i in range(len(output), len(self._previous_output)):
                 self._buffer.write(terminal.clear_line(i + 1))
 
-            # Add empty lines to the end of the output if progressbars have been
-            # added
+            # Add empty lines to the end of the output if progressbars have
+            # been added
             for i in range(len(self._previous_output), len(output)):
                 # Adding a new line so we don't overwrite previous output
                 self._buffer.write('\n')
 
             for i, (previous, current) in enumerate(
                 itertools.zip_longest(
-                    self._previous_output,
-                    output,
-                    fillvalue=''
+                    self._previous_output, output, fillvalue=''
                 )
             ):
                 if previous != current or force:
@@ -241,13 +244,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
                 self.flush()
 
     def print(
-        self,
-        *args,
-        end='\n',
-        offset=None,
-        flush=True,
-        clear=True,
-        **kwargs
+        self, *args, end='\n', offset=None, flush=True, clear=True, **kwargs
     ):
         '''
         Print to the progressbar stream without overwriting the progressbars

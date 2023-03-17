@@ -252,11 +252,7 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
             return text
 
     def __init__(
-        self,
-        *args,
-        fixed_colors=None,
-        gradient_colors=None,
-        **kwargs
+        self, *args, fixed_colors=None, gradient_colors=None, **kwargs
     ):
         if fixed_colors is not None:
             self._fixed_colors.update(fixed_colors)
@@ -400,9 +396,8 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
     ):
         self.samples = samples
         self.key_prefix = (
-                              key_prefix if key_prefix else
-                              self.__class__.__name__
-                          ) + '_'
+            key_prefix if key_prefix else self.__class__.__name__
+        ) + '_'
         TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     def get_sample_times(self, progress: ProgressBarMixinBase, data: Data):
@@ -465,7 +460,6 @@ class ETA(Timer):
         format_NA='ETA:      N/A',
         **kwargs,
     ):
-
         if '%s' in format and '%(eta)s' not in format:
             format = format.replace('%s', '%(eta)s')
 
@@ -819,6 +813,7 @@ class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
 
 class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
     '''Returns progress as a count of the total (e.g.: "5 of 47")'''
+
     max_width_cache: dict[
         types.Union[str, tuple[float, float | types.Type[base.UnknownLength]]],
         types.Optional[int],
@@ -882,6 +877,7 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
 
 class Bar(AutoWidthWidgetBase):
     '''A progress bar which stretches to fill the line.'''
+
     fg: terminal.OptionalColor | None = colors.gradient
     bg: terminal.OptionalColor | None = None
 
@@ -1259,12 +1255,19 @@ class FormatLabelBar(FormatLabel, Bar):
         center_left = int((width - center_len) / 2)
         center_right = center_left + center_len
 
-        return self._apply_colors(
-            bar[:center_left], data,
-        ) + self._apply_colors(
-            center, data,
-        ) + self._apply_colors(
-            bar[center_right:], data,
+        return (
+            self._apply_colors(
+                bar[:center_left],
+                data,
+            )
+            + self._apply_colors(
+                center,
+                data,
+            )
+            + self._apply_colors(
+                bar[center_right:],
+                data,
+            )
         )
 
 

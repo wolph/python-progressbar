@@ -27,7 +27,7 @@ class CSI:
     def __call__(self, *args):
         return self._template.format(
             args=';'.join(map(str, args or self._default_args)),
-            code=self._code
+            code=self._code,
         )
 
     def __str__(self):
@@ -35,7 +35,6 @@ class CSI:
 
 
 class CSINoArg(CSI):
-
     def __call__(self):
         return super().__call__()
 
@@ -132,12 +131,14 @@ SHOW_CURSOR = CSINoArg('?25h')
 # of line
 # CLEAR_LINE_ALL = CLEAR_LINE.format(n=2)  # Clear Line
 
+
 def clear_line(n):
     return UP(n) + CLEAR_LINE_ALL() + DOWN(n)
 
 
 class ColorSupport(enum.IntEnum):
     '''Color support for the terminal.'''
+
     NONE = 0
     XTERM = 16
     XTERM_256 = 256
@@ -165,7 +166,9 @@ class ColorSupport(enum.IntEnum):
             'TERM',
         )
 
-        if os.environ.get('JUPYTER_COLUMNS') or os.environ.get('JUPYTER_LINES'):
+        if os.environ.get('JUPYTER_COLUMNS') or os.environ.get(
+            'JUPYTER_LINES'
+        ):
             # Jupyter notebook always supports true color.
             return cls.XTERM_TRUECOLOR
 
@@ -267,7 +270,9 @@ class HLS(collections.namedtuple('HLS', ['hue', 'lightness', 'saturation'])):
     @classmethod
     def from_rgb(cls, rgb: RGB) -> HLS:
         return cls(
-            *colorsys.rgb_to_hls(rgb.red / 255, rgb.green / 255, rgb.blue / 255)
+            *colorsys.rgb_to_hls(
+                rgb.red / 255, rgb.green / 255, rgb.blue / 255
+            )
         )
 
     def interpolate(self, end: HLS, step: float) -> HLS:
@@ -279,18 +284,19 @@ class HLS(collections.namedtuple('HLS', ['hue', 'lightness', 'saturation'])):
 
 
 class ColorBase(abc.ABC):
-
     def get_color(self, value: float) -> Color:
         raise NotImplementedError()
 
+
 class Color(
     collections.namedtuple(
-        'Color', [
+        'Color',
+        [
             'rgb',
             'hls',
             'name',
             'xterm',
-        ]
+        ],
     ),
     ColorBase,
 ):
@@ -305,6 +311,7 @@ class Color(
     The other values will be automatically interpolated from that if needed,
     but you can be more explicity if you wish.
     '''
+
     __slots__ = ()
 
     def __call__(self, value: str) -> str:
@@ -357,10 +364,12 @@ class Color(
 
 
 class Colors:
-    by_name: defaultdict[str, types.List[Color]] = collections.defaultdict(list)
-    by_lowername: defaultdict[str, types.List[Color]] = collections.defaultdict(
+    by_name: defaultdict[str, types.List[Color]] = collections.defaultdict(
         list
     )
+    by_lowername: defaultdict[
+        str, types.List[Color]
+    ] = collections.defaultdict(list)
     by_hex: defaultdict[str, types.List[Color]] = collections.defaultdict(list)
     by_rgb: defaultdict[RGB, types.List[Color]] = collections.defaultdict(list)
     by_hls: defaultdict[HLS, types.List[Color]] = collections.defaultdict(list)
@@ -398,11 +407,7 @@ class Colors:
 
 
 class ColorGradient(ColorBase):
-    def __init__(
-        self,
-        *colors: Color,
-        interpolate=Colors.interpolate
-    ):
+    def __init__(self, *colors: Color, interpolate=Colors.interpolate):
         assert colors
         self.colors = colors
         self.interpolate = interpolate
@@ -412,7 +417,11 @@ class ColorGradient(ColorBase):
 
     def get_color(self, value: float) -> Color:
         'Map a value from 0 to 1 to a color'
-        if value is base.Undefined or value is base.UnknownLength or value <= 0:
+        if (
+            value is base.Undefined
+            or value is base.UnknownLength
+            or value <= 0
+        ):
             return self.colors[0]
         elif value >= 1:
             return self.colors[-1]

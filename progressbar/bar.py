@@ -18,7 +18,8 @@ from python_utils import converters, types
 import progressbar.terminal.stream
 from . import (
     base,
-    terminal, utils,
+    terminal,
+    utils,
     widgets,
     widgets as widgets_module,  # Avoid name collision
 )
@@ -152,15 +153,16 @@ class DefaultFdMixin(ProgressBarMixinBase):
     #: Whether to print line breaks. This is useful for logging the
     #: progressbar. When disabled the current line is overwritten.
     line_breaks: bool = True
-    # : Specify the type and number of colors to support. Defaults to auto
-    # detection based on the file descriptor type (i.e. interactive terminal)
-    # environment variables such as `COLORTERM` and `TERM`. Color output can
-    # be forced in non-interactive terminals using the
-    # `PROGRESSBAR_ENABLE_COLORS` environment variable which can also be used
-    # to force a specific number of colors by specifying `24bit`, `256` or `16`.
-    # For true (24 bit/16M) color support you can use `COLORTERM=truecolor`.
-    # For 256 color support you can use `TERM=xterm-256color`.
-    # For 16 colorsupport you can use `TERM=xterm`.
+    #: Specify the type and number of colors to support. Defaults to auto
+    #: detection based on the file descriptor type (i.e. interactive terminal)
+    #: environment variables such as `COLORTERM` and `TERM`. Color output can
+    #: be forced in non-interactive terminals using the
+    #: `PROGRESSBAR_ENABLE_COLORS` environment variable which can also be used
+    #: to force a specific number of colors by specifying `24bit`, `256` or
+    #: `16`.
+    #: For true (24 bit/16M) color support you can use `COLORTERM=truecolor`.
+    #: For 256 color support you can use `TERM=xterm-256color`.
+    #: For 16 colorsupport you can use `TERM=xterm`.
     enable_colors: terminal.ColorSupport | bool | None = terminal.color_support
 
     def __init__(
@@ -180,8 +182,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         if line_offset:
             fd = progressbar.terminal.stream.LineOffsetStreamWrapper(
-                line_offset,
-                fd
+                line_offset, fd
             )
 
         self.fd = fd
@@ -493,7 +494,8 @@ class ProgressBar(
         min_value: T = 0,
         max_value: T | types.Type[base.UnknownLength] | None = None,
         widgets: types.Optional[
-            types.Sequence[widgets_module.WidgetBase | str]] = None,
+            types.Sequence[widgets_module.WidgetBase | str]
+        ] = None,
         left_justify: bool = True,
         initial_value: T = 0,
         poll_interval: types.Optional[float] = None,
@@ -708,7 +710,7 @@ class ProgressBar(
             total_seconds_elapsed=total_seconds_elapsed,
             # The seconds since the bar started modulo 60
             seconds_elapsed=(elapsed.seconds % 60)
-                            + (elapsed.microseconds / 1000000.0),
+            + (elapsed.microseconds / 1000000.0),
             # The minutes since the bar started modulo 60
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24
@@ -841,9 +843,10 @@ class ProgressBar(
             self.start()
             return self.update(value, force=force, **kwargs)
 
-        if value is not None and value is not base.UnknownLength and isinstance(
-            value,
-            int
+        if (
+            value is not None
+            and value is not base.UnknownLength
+            and isinstance(value, int)
         ):
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
