@@ -75,6 +75,7 @@ __all__ = [
     'NullBar',
     '__author__',
     '__version__',
+    'LineOffsetStreamWrapper',
     'MultiBar',
     'SortKey',
 ]

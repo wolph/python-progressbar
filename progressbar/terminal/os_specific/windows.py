@@ -7,7 +7,7 @@ from ctypes.wintypes import (
     UINT as _UINT,
     WCHAR as _WCHAR,
     CHAR as _CHAR,
-    SHORT as _SHORT
+    SHORT as _SHORT,
 )
 
 _kernel32 = ctypes.windll.Kernel32
@@ -43,24 +43,16 @@ _GetConsoleMode(_HANDLE(_hConsoleOutput), ctypes.byref(_output_mode))
 
 
 class _COORD(ctypes.Structure):
-    _fields_ = [
-        ('X', _SHORT),
-        ('Y', _SHORT)
-    ]
+    _fields_ = [('X', _SHORT), ('Y', _SHORT)]
 
 
 class _FOCUS_EVENT_RECORD(ctypes.Structure):
-    _fields_ = [
-        ('bSetFocus', _BOOL)
-    ]
+    _fields_ = [('bSetFocus', _BOOL)]
 
 
 class _KEY_EVENT_RECORD(ctypes.Structure):
     class _uchar(ctypes.Union):
-        _fields_ = [
-            ('UnicodeChar', _WCHAR),
-            ('AsciiChar', _CHAR)
-        ]
+        _fields_ = [('UnicodeChar', _WCHAR), ('AsciiChar', _CHAR)]
 
     _fields_ = [
         ('bKeyDown', _BOOL),
@@ -68,14 +60,12 @@ class _KEY_EVENT_RECORD(ctypes.Structure):
         ('wVirtualKeyCode', _WORD),
         ('wVirtualScanCode', _WORD),
         ('uChar', _uchar),
-        ('dwControlKeyState', _DWORD)
+        ('dwControlKeyState', _DWORD),
     ]
 
 
 class _MENU_EVENT_RECORD(ctypes.Structure):
-    _fields_ = [
-        ('dwCommandId', _UINT)
-    ]
+    _fields_ = [('dwCommandId', _UINT)]
 
 
 class _MOUSE_EVENT_RECORD(ctypes.Structure):
@@ -83,14 +73,12 @@ class _MOUSE_EVENT_RECORD(ctypes.Structure):
         ('dwMousePosition', _COORD),
         ('dwButtonState', _DWORD),
         ('dwControlKeyState', _DWORD),
-        ('dwEventFlags', _DWORD)
+        ('dwEventFlags', _DWORD),
     ]
 
 
 class _WINDOW_BUFFER_SIZE_RECORD(ctypes.Structure):
-    _fields_ = [
-        ('dwSize', _COORD)
-    ]
+    _fields_ = [('dwSize', _COORD)]
 
 
 class _INPUT_RECORD(ctypes.Structure):
@@ -100,13 +88,10 @@ class _INPUT_RECORD(ctypes.Structure):
             ('MouseEvent', _MOUSE_EVENT_RECORD),
             ('WindowBufferSizeEvent', _WINDOW_BUFFER_SIZE_RECORD),
             ('MenuEvent', _MENU_EVENT_RECORD),
-            ('FocusEvent', _FOCUS_EVENT_RECORD)
+            ('FocusEvent', _FOCUS_EVENT_RECORD),
         ]
 
-    _fields_ = [
-        ('EventType', _WORD),
-        ('Event', _Event)
-    ]
+    _fields_ = [('EventType', _WORD), ('Event', _Event)]
 
 
 def reset_console_mode():
@@ -119,9 +104,9 @@ def set_console_mode():
     _SetConsoleMode(_HANDLE(_hConsoleInput), _DWORD(mode))
 
     mode = (
-        _output_mode.value |
-        _ENABLE_PROCESSED_OUTPUT |
-        _ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        _output_mode.value
+        | _ENABLE_PROCESSED_OUTPUT
+        | _ENABLE_VIRTUAL_TERMINAL_PROCESSING
     )
     _SetConsoleMode(_HANDLE(_hConsoleOutput), _DWORD(mode))
 
@@ -133,8 +118,9 @@ def getch():
 
     _ReadConsoleInput(
         _HANDLE(_hConsoleInput),
-        lpBuffer, nLength,
-        ctypes.byref(lpNumberOfEventsRead)
+        lpBuffer,
+        nLength,
+        ctypes.byref(lpNumberOfEventsRead),
     )
 
     char = lpBuffer[1].Event.KeyEvent.uChar.AsciiChar.decode('ascii')
