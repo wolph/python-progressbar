@@ -38,7 +38,7 @@ class SortKey(str, enum.Enum):
     PERCENTAGE = 'percentage'
 
 
-class MultiBar(dict[str, bar.ProgressBar]):
+class MultiBar(typing.Dict[str, bar.ProgressBar]):
     fd: typing.TextIO
     _buffer: io.StringIO
 
