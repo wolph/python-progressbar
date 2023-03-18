@@ -450,7 +450,7 @@ class ColorGradient(ColorBase):
         return color
 
 
-OptionalColor = Color | ColorGradient | None
+OptionalColor = types.Union[Color, ColorGradient, None]
 
 
 def get_color(value: float, color: OptionalColor) -> Color | None:
