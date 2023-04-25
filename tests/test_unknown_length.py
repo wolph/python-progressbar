@@ -25,4 +25,4 @@ def test_unknown_length_at_start():
     pb2 = progressbar.ProgressBar().start(max_value=progressbar.UnknownLength)
     for w in pb2.widgets:
         print(type(w), repr(w))
-    assert any([isinstance(w, progressbar.Bar) for w in pb2.widgets])
+    assert any(isinstance(w, progressbar.Bar) for w in pb2.widgets)

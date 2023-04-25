@@ -93,10 +93,7 @@ class ProgressBarMixinBase(abc.ABC):
             return None
 
     def set_last_update_time(self, value: types.Optional[datetime]):
-        if value:
-            self._last_update_time = time.mktime(value.timetuple())
-        else:
-            self._last_update_time = None
+        self._last_update_time = time.mktime(value.timetuple()) if value else None
 
     last_update_time = property(get_last_update_time, set_last_update_time)
 
@@ -222,10 +219,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
             enable_colors = terminal.ColorSupport.XTERM_256
         elif enable_colors is False:
             enable_colors = terminal.ColorSupport.NONE
-        elif isinstance(enable_colors, terminal.ColorSupport):
-            # `enable_colors` is already a valid value
-            pass
-        else:
+        elif not isinstance(enable_colors, terminal.ColorSupport):
             raise ValueError(f'Invalid color support value: {enable_colors}')
 
         self.enable_colors = enable_colors
@@ -242,11 +236,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         if not self.enable_colors:
             line = utils.no_color(line)
 
-        if self.line_breaks:
-            line = line.rstrip() + '\n'
-        else:
-            line = '\r' + line
-
+        line = line.rstrip() + '\n' if self.line_breaks else '\r' + line
         try:  # pragma: no cover
             self.fd.write(line)
         except UnicodeEncodeError:  # pragma: no cover
@@ -530,13 +520,10 @@ class ProgressBar(
             )
             poll_interval = kwargs.get('poll')
 
-        if max_value:
-            # mypy doesn't understand that a boolean check excludes
-            # `UnknownLength`
-            if min_value > max_value:  # type: ignore
-                raise ValueError(
-                    'Max value needs to be bigger than the min ' 'value'
-                )
+        if max_value and min_value > max_value:
+            raise ValueError(
+                'Max value needs to be bigger than the min ' 'value'
+            )
         self.min_value = min_value
         # Legacy issue, `max_value` can be `None` before execution. After
         # that it either has a value or is `UnknownLength`
@@ -589,9 +576,11 @@ class ProgressBar(
         # A dictionary of names that can be used by Variable and FormatWidget
         self.variables = utils.AttributeDict(variables or {})
         for widget in self.widgets:
-            if isinstance(widget, widgets_module.VariableMixin):
-                if widget.name not in self.variables:
-                    self.variables[widget.name] = None
+            if (
+                isinstance(widget, widgets_module.VariableMixin)
+                and widget.name not in self.variables
+            ):
+                self.variables[widget.name] = None
 
     @property
     def dynamic_messages(self):  # pragma: no cover
@@ -611,7 +600,7 @@ class ProgressBar(
         self.start_time = None
         self.updates = 0
         self.end_time = None
-        self.extra = dict()
+        self.extra = {}
         self._last_update_timer = timeit.default_timer()
 
     @property
@@ -734,7 +723,7 @@ class ProgressBar(
                 widgets.Percentage(**self.widget_kwargs),
                 ' ',
                 widgets.SimpleProgress(
-                    format='(%s)' % widgets.SimpleProgress.DEFAULT_FORMAT,
+                    format=f'({widgets.SimpleProgress.DEFAULT_FORMAT})',
                     **self.widget_kwargs,
                 ),
                 ' ',
@@ -773,11 +762,7 @@ class ProgressBar(
 
     def __next__(self):
         try:
-            if self._iterable is None:  # pragma: no cover
-                value = self.value
-            else:
-                value = next(self._iterable)
-
+            value = self.value if self._iterable is None else next(self._iterable)
             if self.start_time is None:
                 self.start()
             else:
@@ -853,14 +838,12 @@ class ProgressBar(
                 pass
             elif self.min_value > value:  # type: ignore
                 raise ValueError(
-                    'Value %s is too small. Should be between %s and %s'
-                    % (value, self.min_value, self.max_value)
+                    f'Value {value} is too small. Should be between {self.min_value} and {self.max_value}'
                 )
             elif self.max_value < value:  # type: ignore
                 if self.max_error:
                     raise ValueError(
-                        'Value %s is too large. Should be between %s and %s'
-                        % (value, self.min_value, self.max_value)
+                        f'Value {value} is too large. Should be between {self.min_value} and {self.max_value}'
                     )
                 else:
                     value = self.max_value

@@ -111,11 +111,7 @@ class LastLineStream(TextIOOutputWrapper):
         self.line = data
 
     def truncate(self, __size: int | None = None) -> int:
-        if __size is None:
-            self.line = ''
-        else:
-            self.line = self.line[:__size]
-
+        self.line = '' if __size is None else self.line[:__size]
         return len(self.line)
 
     def writelines(self, __lines: Iterable[str]) -> None:

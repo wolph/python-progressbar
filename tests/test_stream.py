@@ -6,7 +6,7 @@ import progressbar
 
 def test_nowrap():
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _ in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
     stdout = sys.stdout
@@ -23,13 +23,13 @@ def test_nowrap():
     assert stderr == sys.stderr
 
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _ in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
 def test_wrap():
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _ in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
     stdout = sys.stdout
@@ -50,7 +50,7 @@ def test_wrap():
     assert stderr == sys.stderr
 
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _ in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 

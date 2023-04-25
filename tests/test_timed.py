@@ -57,7 +57,7 @@ def test_adaptive_eta():
     )
 
     p.start()
-    for i in range(20):
+    for _ in range(20):
         p.update(1)
         time.sleep(0.001)
     p.finish()
@@ -160,8 +160,7 @@ def test_eta_not_available():
      ETAs should not raise exceptions.
     """
     def gen():
-        for x in range(200):
-            yield x
+        yield from range(200)
 
     widgets = [progressbar.AdaptiveETA(), progressbar.ETA()]
 

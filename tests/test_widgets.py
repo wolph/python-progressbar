@@ -57,12 +57,12 @@ def test_widgets_large_values(max_value):
 
 
 def test_format_widget():
-    widgets = []
-    for mapping in progressbar.FormatLabel.mapping:
-        widgets.append(progressbar.FormatLabel('%%(%s)r' % mapping))
-
+    widgets = [
+        progressbar.FormatLabel('%%(%s)r' % mapping)
+        for mapping in progressbar.FormatLabel.mapping
+    ]
     p = progressbar.ProgressBar(widgets=widgets)
-    for i in p(range(10)):
+    for _ in p(range(10)):
         time.sleep(1)
 
 

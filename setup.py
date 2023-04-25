@@ -16,7 +16,7 @@ with open('progressbar/__about__.py', encoding='utf8') as fp:
 install_reqs = []
 if sys.argv[-1] == 'info':
     for k, v in about.items():
-        print('%s: %s' % (k, v))
+        print(f'{k}: {v}')
     sys.exit()
 
 if os.path.isfile('README.rst'):

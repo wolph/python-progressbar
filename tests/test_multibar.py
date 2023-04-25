@@ -86,11 +86,11 @@ def test_multibar_sorting(sort_key):
 
     with progressbar.MultiBar() as multibar:
         for i in range(bars):
-            label = 'bar {}'.format(i)
+            label = f'bar {i}'
             multibar[label] = progressbar.ProgressBar(max_value=N)
 
         for bar in multibar.values():
-            for j in bar(range(N)):
+            for _ in bar(range(N)):
                 assert bar.started()
                 time.sleep(0.002)
 

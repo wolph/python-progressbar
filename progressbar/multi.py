@@ -187,10 +187,9 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                     # Force update to get the finished format
                     update(write=False)
 
-                if self.remove_finished:
-                    if expired >= self._finished_at[bar_]:
-                        del self[bar_.label]
-                        continue
+                if self.remove_finished and expired >= self._finished_at[bar_]:
+                    del self[bar_.label]
+                    continue
 
                 if not self.show_finished:
                     continue

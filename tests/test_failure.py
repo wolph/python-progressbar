@@ -64,7 +64,7 @@ def test_one_max_value():
 def test_changing_max_value():
     '''Changing max_value? No problem'''
     p = progressbar.ProgressBar(max_value=10)(range(20), max_value=20)
-    for i in p:
+    for _ in p:
         time.sleep(1)
 
 

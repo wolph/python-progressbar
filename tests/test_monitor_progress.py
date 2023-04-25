@@ -90,12 +90,10 @@ def test_generator_example(testdir):
     result.stderr.lines = [l for l in result.stderr.lines if l.strip()]
     pprint.pprint(result.stderr.lines, width=70)
 
-    lines = []
-    for i in range(9):
-        lines.append(
-            r'[/\\|\-]\s+\|\s*#\s*\| %(i)d Elapsed Time: \d:00:%(i)02d' %
-            dict(i=i))
-
+    lines = [
+        r'[/\\|\-]\s+\|\s*#\s*\| %(i)d Elapsed Time: \d:00:%(i)02d' % dict(i=i)
+        for i in range(9)
+    ]
     result.stderr.re_match_lines(lines)
 
 

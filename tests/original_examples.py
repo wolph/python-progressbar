@@ -45,13 +45,17 @@ def example1():
 
 @example
 def example2():
+
+
+
     class CrazyFileTransferSpeed(FileTransferSpeed):
         """It's bigger between 45 and 80 percent."""
         def update(self, pbar):
             if 45 < pbar.percentage() < 80:
-                return 'Bigger Now ' + FileTransferSpeed.update(self,pbar)
+                return f'Bigger Now {FileTransferSpeed.update(self, pbar)}'
             else:
                 return FileTransferSpeed.update(self,pbar)
+
 
     widgets = [CrazyFileTransferSpeed(),' <<<', Bar(), '>>> ',
                Percentage(),' ', ETA()]
@@ -103,40 +107,40 @@ def example6():
 @example
 def example7():
     pbar = ProgressBar()  # Progressbar can guess maxval automatically.
-    for i in pbar(range(80)):
+    for _ in pbar(range(80)):
         time.sleep(0.01)
 
 @example
 def example8():
     pbar = ProgressBar(maxval=80)  # Progressbar can't guess maxval.
-    for i in pbar((i for i in range(80))):
+    for _ in pbar(iter(range(80))):
         time.sleep(0.01)
 
 @example
 def example9():
     pbar = ProgressBar(widgets=['Working: ', AnimatedMarker()])
-    for i in pbar((i for i in range(50))):
+    for _ in pbar(iter(range(50))):
         time.sleep(.08)
 
 @example
 def example10():
     widgets = ['Processed: ', Counter(), ' lines (', Timer(), ')']
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(150))):
+    for _ in pbar(iter(range(150))):
         time.sleep(0.1)
 
 @example
 def example11():
     widgets = [FormatLabel('Processed: %(value)d lines (in: %(elapsed)s)')]
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(150))):
+    for _ in pbar(iter(range(150))):
         time.sleep(0.1)
 
 @example
 def example12():
     widgets = ['Balloon: ', AnimatedMarker(markers='.oO@* ')]
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(24))):
+    for _ in pbar(iter(range(24))):
         time.sleep(0.3)
 
 @example
@@ -145,7 +149,7 @@ def example13():
     try:
         widgets = ['Arrows: ', AnimatedMarker(markers='←↖↑↗→↘↓↙')]
         pbar = ProgressBar(widgets=widgets)
-        for i in pbar((i for i in range(24))):
+        for _ in pbar(iter(range(24))):
             time.sleep(0.3)
     except UnicodeError: sys.stdout.write('Unicode error: skipping example')
 
@@ -155,7 +159,7 @@ def example14():
     try:
         widgets = ['Arrows: ', AnimatedMarker(markers='◢◣◤◥')]
         pbar = ProgressBar(widgets=widgets)
-        for i in pbar((i for i in range(24))):
+        for _ in pbar(iter(range(24))):
             time.sleep(0.3)
     except UnicodeError: sys.stdout.write('Unicode error: skipping example')
 
@@ -165,7 +169,7 @@ def example15():
     try:
         widgets = ['Wheels: ', AnimatedMarker(markers='◐◓◑◒')]
         pbar = ProgressBar(widgets=widgets)
-        for i in pbar((i for i in range(24))):
+        for _ in pbar(iter(range(24))):
             time.sleep(0.3)
     except UnicodeError: sys.stdout.write('Unicode error: skipping example')
 
@@ -173,7 +177,7 @@ def example15():
 def example16():
     widgets = [FormatLabel('Bouncer: value %(value)d - '), BouncingBar()]
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(180))):
+    for _ in pbar(iter(range(180))):
         time.sleep(0.05)
 
 @example
@@ -182,7 +186,7 @@ def example17():
                BouncingBar(marker=RotatingMarker())]
 
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(180))):
+    for _ in pbar(iter(range(180))):
         time.sleep(0.05)
 
 @example
@@ -200,10 +204,10 @@ def example18():
 
 @example
 def example19():
-  pbar = ProgressBar()
-  for i in pbar([]):
-    pass
-  pbar.finish()
+    pbar = ProgressBar()
+    for _ in pbar([]):
+        pass
+    pbar.finish()
 
 @example
 def example20():

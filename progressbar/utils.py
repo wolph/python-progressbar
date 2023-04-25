@@ -39,7 +39,7 @@ ANSI_TERMS = (
     'tmux',
     'vt(10[02]|220|320)',
 )
-ANSI_TERM_RE = re.compile('^({})'.format('|'.join(ANSI_TERMS)), re.IGNORECASE)
+ANSI_TERM_RE = re.compile(f"^({'|'.join(ANSI_TERMS)})", re.IGNORECASE)
 
 
 def is_ansi_terminal(
@@ -231,8 +231,7 @@ class WrappingIO:
         self.buffer.flush()
 
     def _flush(self) -> None:
-        value = self.buffer.getvalue()
-        if value:
+        if value := self.buffer.getvalue():
             self.flush()
             self.target.write(value)
             self.buffer.seek(0)
@@ -438,27 +437,25 @@ class StreamWrapper:
         return stderr_needs_clear or stdout_needs_clear
 
     def flush(self) -> None:
-        if self.wrapped_stdout:  # pragma: no branch
-            if isinstance(self.stdout, WrappingIO):  # pragma: no branch
-                try:
-                    self.stdout._flush()
-                except io.UnsupportedOperation:  # pragma: no cover
-                    self.wrapped_stdout = False
-                    logger.warning(
-                        'Disabling stdout redirection, %r is not seekable',
-                        sys.stdout,
-                    )
+        if self.wrapped_stdout and isinstance(self.stdout, WrappingIO):
+            try:
+                self.stdout._flush()
+            except io.UnsupportedOperation:  # pragma: no cover
+                self.wrapped_stdout = False
+                logger.warning(
+                    'Disabling stdout redirection, %r is not seekable',
+                    sys.stdout,
+                )
 
-        if self.wrapped_stderr:  # pragma: no branch
-            if isinstance(self.stderr, WrappingIO):  # pragma: no branch
-                try:
-                    self.stderr._flush()
-                except io.UnsupportedOperation:  # pragma: no cover
-                    self.wrapped_stderr = False
-                    logger.warning(
-                        'Disabling stderr redirection, %r is not seekable',
-                        sys.stderr,
-                    )
+        if self.wrapped_stderr and isinstance(self.stderr, WrappingIO):
+            try:
+                self.stderr._flush()
+            except io.UnsupportedOperation:  # pragma: no cover
+                self.wrapped_stderr = False
+                logger.warning(
+                    'Disabling stderr redirection, %r is not seekable',
+                    sys.stderr,
+                )
 
     def excepthook(self, exc_type, exc_value, exc_traceback):
         self.original_excepthook(exc_type, exc_value, exc_traceback)
@@ -515,7 +512,7 @@ class AttributeDict(dict):
         if name in self:
             return self[name]
         else:
-            raise AttributeError("No such attribute: " + name)
+            raise AttributeError(f"No such attribute: {name}")
 
     def __setattr__(self, name: str, value: int) -> None:
         self[name] = value
@@ -524,7 +521,7 @@ class AttributeDict(dict):
         if name in self:
             del self[name]
         else:
-            raise AttributeError("No such attribute: " + name)
+            raise AttributeError(f"No such attribute: {name}")
 
 
 logger = logging.getLogger(__name__)

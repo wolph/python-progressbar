@@ -213,10 +213,7 @@ class _CPR(str):
 
             res = tuple(int(item) if item.isdigit() else item for item in res)
 
-            if len(res) == 1:
-                return res[0]
-
-            return res
+            return res[0] if len(res) == 1 else res
 
     def row(self, stream):
         row, _ = self(stream)

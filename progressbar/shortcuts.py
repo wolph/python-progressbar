@@ -19,5 +19,4 @@ def progressbar(
         **kwargs
     )
 
-    for result in progressbar(iterator):
-        yield result
+    yield from progressbar(iterator)

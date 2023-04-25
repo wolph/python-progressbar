@@ -124,7 +124,4 @@ def getch():
     )
 
     char = lpBuffer[1].Event.KeyEvent.uChar.AsciiChar.decode('ascii')
-    if char == '\x00':
-        return None
-
-    return char
+    return None if char == '\x00' else char

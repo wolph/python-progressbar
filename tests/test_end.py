@@ -37,7 +37,7 @@ def test_end_100(monkeypatch):
         max_value=103,
     )
 
-    for x in range(0, 102):
+    for x in range(102):
         p.update(x)
 
     data = p.data()
