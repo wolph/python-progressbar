@@ -197,7 +197,7 @@ Context wrapper
    import time
    import progressbar
 
-   with progressbar.ProgressBar(max_value=10) as bar:
+   with progressbar.ProgressBar(maxval=10) as bar:
        for i in range(10):
            time.sleep(0.1)
            bar.update(i)
@@ -220,7 +220,7 @@ Progressbar with unknown length
     import time
     import progressbar
 
-    bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+    bar = progressbar.ProgressBar(maxval=progressbar.UnknownLength)
     for i in range(20):
         time.sleep(0.1)
         bar.update(i)
@@ -296,7 +296,7 @@ Showing multiple independent progress bars in parallel
     for i in range(BARS):
         bars.append(
             progressbar.ProgressBar(
-                max_value=N,
+                maxval=N,
                 # We add 1 to the line offset to account for the `print_fd`
                 line_offset=i + 1,
                 max_error=False,
@@ -341,7 +341,7 @@ Naturally we can do this from separate threads as well:
     # Create the bars with the given line offset
     bars = []
     for line_offset in range(BARS):
-        bars.append(progressbar.ProgressBar(line_offset=line_offset, max_value=N))
+        bars.append(progressbar.ProgressBar(line_offset=line_offset, maxval=N))
 
 
     class Worker(threading.Thread):
