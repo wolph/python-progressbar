@@ -309,7 +309,7 @@ class Color(
 
     To make a custom color the only required arguments are the RGB values.
     The other values will be automatically interpolated from that if needed,
-    but you can be more explicity if you wish.
+    but you can be more explicitly if you wish.
     '''
 
     __slots__ = ()
