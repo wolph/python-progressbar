@@ -207,7 +207,7 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
     Variables available:
      - min_width: Only display the widget if at least `min_width` is left
      - max_width: Only display the widget if at most `max_width` is left
-     - weight: Widgets with a higher `weigth` will be calculated before widgets
+     - weight: Widgets with a higher `weight` will be calculated before widgets
        with a lower one
      - copy: Copy this widget when initializing the progress bar so the
        progressbar can be reused. Some widgets such as the FormatCustomText

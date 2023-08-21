@@ -31,7 +31,7 @@ def small_interval(monkeypatch):
 @pytest.fixture(autouse=True)
 def sleep_faster(monkeypatch):
     # The timezone offset in seconds, add 10 seconds to make sure we don't
-    # accidently get the wrong hour
+    # accidentally get the wrong hour
     offset_seconds = (datetime.now() - datetime.utcnow()).seconds + 10
     offset_hours = int(offset_seconds / 3600)
 
