@@ -14,4 +14,3 @@ def test_flush():
         if i > 5:
             time.sleep(0.1)
         print('post-updates', p.updates)
-

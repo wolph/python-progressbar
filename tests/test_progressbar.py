@@ -8,8 +8,10 @@ try:
     import examples
 except ImportError:
     import sys
+
     sys.path.append('..')
     import examples
+
     sys.path.remove('..')
 
 
@@ -24,8 +26,7 @@ def test_examples(monkeypatch):
 @pytest.mark.filterwarnings('ignore:.*maxval.*:DeprecationWarning')
 @pytest.mark.parametrize('example', original_examples.examples)
 def test_original_examples(example, monkeypatch):
-    monkeypatch.setattr(progressbar.ProgressBar,
-                        '_MINIMUM_UPDATE_INTERVAL', 1)
+    monkeypatch.setattr(progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1)
     monkeypatch.setattr(time, 'sleep', lambda t: None)
     example()
 

@@ -158,12 +158,13 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             return
 
         assert bar.widgets, 'Cannot prepend label to empty progressbar'
-        self._labeled.add(bar)
 
         if self.prepend_label:  # pragma: no branch
+            self._labeled.add(bar)
             bar.widgets.insert(0, self.label_format.format(label=bar.label))
 
         if self.append_label and bar not in self._labeled:  # pragma: no branch
+            self._labeled.add(bar)
             bar.widgets.append(self.label_format.format(label=bar.label))
 
     def render(self, flush: bool = True, force: bool = False):
@@ -187,7 +188,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                     # Force update to get the finished format
                     update(write=False)
 
-                if self.remove_finished:
+                if self.remove_finished and expired is not None:
                     if expired >= self._finished_at[bar_]:
                         del self[bar_.label]
                         continue
@@ -200,9 +201,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                     update(force=False)
                 else:
                     output.append(
-                        self.finished_format.format(
-                            label=bar_.label
-                        )
+                        self.finished_format.format(label=bar_.label)
                     )
             elif bar_.started():
                 update()

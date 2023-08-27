@@ -35,7 +35,7 @@ def test_widgets_small_values():
     p.finish()
 
 
-@pytest.mark.parametrize('max_value', [10 ** 6, 10 ** 8])
+@pytest.mark.parametrize('max_value', [10**6, 10**8])
 def test_widgets_large_values(max_value):
     widgets = [
         'Test: ',
@@ -50,7 +50,7 @@ def test_widgets_large_values(max_value):
         progressbar.FileTransferSpeed(),
     ]
     p = progressbar.ProgressBar(widgets=widgets, max_value=max_value).start()
-    for i in range(0, 10 ** 6, 10 ** 4):
+    for i in range(0, 10**6, 10**4):
         time.sleep(1)
         p.update(i + 1)
     p.finish()
@@ -95,7 +95,7 @@ def test_all_widgets_small_values(max_value):
     p.finish()
 
 
-@pytest.mark.parametrize('max_value', [10 ** 6, 10 ** 7])
+@pytest.mark.parametrize('max_value', [10**6, 10**7])
 def test_all_widgets_large_values(max_value):
     widgets = [
         progressbar.Timer(),
@@ -120,7 +120,7 @@ def test_all_widgets_large_values(max_value):
     time.sleep(1)
     p.update()
 
-    for i in range(0, 10 ** 6, 10 ** 4):
+    for i in range(0, 10**6, 10**4):
         time.sleep(1)
         p.update(i)
 
@@ -144,8 +144,9 @@ def test_all_widgets_min_width(min_width, term_width):
         progressbar.Bar(min_width=min_width),
         progressbar.ReverseBar(min_width=min_width),
         progressbar.BouncingBar(min_width=min_width),
-        progressbar.FormatCustomText('Custom %(text)s', dict(text='text'),
-                                     min_width=min_width),
+        progressbar.FormatCustomText(
+            'Custom %(text)s', dict(text='text'), min_width=min_width
+        ),
         progressbar.DynamicMessage('custom', min_width=min_width),
         progressbar.CurrentTime(min_width=min_width),
     ]
@@ -178,8 +179,9 @@ def test_all_widgets_max_width(max_width, term_width):
         progressbar.Bar(max_width=max_width),
         progressbar.ReverseBar(max_width=max_width),
         progressbar.BouncingBar(max_width=max_width),
-        progressbar.FormatCustomText('Custom %(text)s', dict(text='text'),
-                                     max_width=max_width),
+        progressbar.FormatCustomText(
+            'Custom %(text)s', dict(text='text'), max_width=max_width
+        ),
         progressbar.DynamicMessage('custom', max_width=max_width),
         progressbar.CurrentTime(max_width=max_width),
     ]

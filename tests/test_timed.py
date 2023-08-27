@@ -8,8 +8,9 @@ def test_timer():
     widgets = [
         progressbar.Timer(),
     ]
-    p = progressbar.ProgressBar(max_value=2, widgets=widgets,
-                                poll_interval=0.0001)
+    p = progressbar.ProgressBar(
+        max_value=2, widgets=widgets, poll_interval=0.0001
+    )
 
     p.start()
     p.update()
@@ -25,8 +26,9 @@ def test_eta():
     widgets = [
         progressbar.ETA(),
     ]
-    p = progressbar.ProgressBar(min_value=0, max_value=2, widgets=widgets,
-                                poll_interval=0.0001)
+    p = progressbar.ProgressBar(
+        min_value=0, max_value=2, widgets=widgets, poll_interval=0.0001
+    )
 
     p.start()
     time.sleep(0.001)
@@ -68,8 +70,9 @@ def test_adaptive_transfer_speed():
     widgets = [
         progressbar.AdaptiveTransferSpeed(),
     ]
-    p = progressbar.ProgressBar(max_value=2, widgets=widgets,
-                                poll_interval=0.0001)
+    p = progressbar.ProgressBar(
+        max_value=2, widgets=widgets, poll_interval=0.0001
+    )
 
     p.start()
     p.update(1)
@@ -100,8 +103,9 @@ def test_etas(monkeypatch):
         return 0, 0
 
     monkeypatch.setattr(progressbar.FileTransferSpeed, '_speed', calculate_eta)
-    monkeypatch.setattr(progressbar.AdaptiveTransferSpeed, '_speed',
-                        calculate_eta)
+    monkeypatch.setattr(
+        progressbar.AdaptiveTransferSpeed, '_speed', calculate_eta
+    )
 
     for widget in widgets:
         widget.INTERVAL = interval
@@ -144,8 +148,9 @@ def test_non_changing_eta():
         progressbar.ETA(),
         progressbar.AdaptiveTransferSpeed(),
     ]
-    p = progressbar.ProgressBar(max_value=2, widgets=widgets,
-                                poll_interval=0.0001)
+    p = progressbar.ProgressBar(
+        max_value=2, widgets=widgets, poll_interval=0.0001
+    )
 
     p.start()
     p.update(1)
@@ -156,9 +161,10 @@ def test_non_changing_eta():
 
 def test_eta_not_available():
     """
-     When ETA is not available (data coming from a generator),
-     ETAs should not raise exceptions.
+    When ETA is not available (data coming from a generator),
+    ETAs should not raise exceptions.
     """
+
     def gen():
         for x in range(200):
             yield x

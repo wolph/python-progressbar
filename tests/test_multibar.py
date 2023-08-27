@@ -5,6 +5,10 @@ import pytest
 
 import progressbar
 
+N = 10
+BARS = 3
+SLEEP = 0.002
+
 
 def test_multi_progress_bar_out_of_range():
     widgets = [
@@ -21,14 +25,21 @@ def test_multi_progress_bar_out_of_range():
 
 def test_multi_progress_bar_fill_left():
     import examples
+
     return examples.multi_progress_bar_example(False)
 
 
 def test_multibar():
-    bars = 3
-    N = 10
-    multibar = progressbar.MultiBar(sort_keyfunc=lambda bar: bar.label)
+    multibar = progressbar.MultiBar(
+        sort_keyfunc=lambda bar: bar.label,
+        remove_finished=0.005,
+    )
+    multibar.show_initial = False
+    multibar.render(force=True)
+    multibar.show_initial = True
+    multibar.render(force=True)
     multibar.start()
+
     multibar.append_label = False
     multibar.prepend_label = True
 
@@ -44,31 +55,45 @@ def test_multibar():
     bar.finish()
     del multibar['x']
 
+    multibar.prepend_label = False
     multibar.append_label = True
+
+    append_bar = progressbar.ProgressBar(max_value=N)
+    append_bar.start()
+    multibar._label_bar(append_bar)
+    multibar['append'] = append_bar
+    multibar.render(force=True)
 
     def do_something(bar):
         for j in bar(range(N)):
             time.sleep(0.01)
             bar.update(j)
 
-    for i in range(bars):
+    for i in range(BARS):
         thread = threading.Thread(
-            target=do_something,
-            args=(multibar['bar {}'.format(i)],)
+            target=do_something, args=(multibar['bar {}'.format(i)],)
         )
         thread.start()
 
-    for bar in multibar.values():
+    for bar in list(multibar.values()):
         for j in range(N):
             bar.update(j)
-            time.sleep(0.002)
+            time.sleep(SLEEP)
+
+        multibar.render(force=True)
+
+    multibar.remove_finished = False
+    multibar.show_finished = False
+    append_bar.finish()
+    multibar.render(force=True)
 
     multibar.join(0.1)
     multibar.stop(0.1)
 
 
 @pytest.mark.parametrize(
-    'sort_key', [
+    'sort_key',
+    [
         None,
         'index',
         'label',
@@ -78,21 +103,18 @@ def test_multibar():
         progressbar.SortKey.LABEL,
         progressbar.SortKey.VALUE,
         progressbar.SortKey.PERCENTAGE,
-    ]
+    ],
 )
 def test_multibar_sorting(sort_key):
-    bars = 3
-    N = 10
-
     with progressbar.MultiBar() as multibar:
-        for i in range(bars):
+        for i in range(BARS):
             label = 'bar {}'.format(i)
             multibar[label] = progressbar.ProgressBar(max_value=N)
 
         for bar in multibar.values():
             for j in bar(range(N)):
                 assert bar.started()
-                time.sleep(0.002)
+                time.sleep(SLEEP)
 
         for bar in multibar.values():
             assert bar.finished()
@@ -100,5 +122,29 @@ def test_multibar_sorting(sort_key):
 
 def test_offset_bar():
     with progressbar.ProgressBar(line_offset=2) as bar:
-        for i in range(100):
+        for i in range(N):
             bar.update(i)
+
+
+def test_multibar_show_finished():
+    multibar = progressbar.MultiBar(show_finished=True)
+    multibar['bar'] = progressbar.ProgressBar(max_value=N)
+    multibar.render(force=True)
+    with progressbar.MultiBar(show_finished=False) as multibar:
+        multibar.finished_format = 'finished: {label}'
+
+        for i in range(3):
+            multibar['bar {}'.format(i)] = progressbar.ProgressBar(max_value=N)
+
+        for bar in multibar.values():
+            for i in range(N):
+                bar.update(i)
+                time.sleep(SLEEP)
+
+        multibar.render(force=True)
+
+
+def test_multibar_show_initial():
+    multibar = progressbar.MultiBar(show_initial=False)
+    multibar['bar'] = progressbar.ProgressBar(max_value=N)
+    multibar.render(force=True)

@@ -23,8 +23,7 @@ if os.path.isfile('README.rst'):
     with open('README.rst') as fh:
         readme = fh.read()
 else:
-    readme = \
-        'See http://pypi.python.org/pypi/%(__package_name__)s/' % about
+    readme = 'See http://pypi.python.org/pypi/%(__package_name__)s/' % about
 
 if __name__ == '__main__':
     setup(

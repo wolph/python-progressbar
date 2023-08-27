@@ -17,4 +17,3 @@ def test_with_extra_start():
     with progressbar.ProgressBar(max_value=10) as p:
         p.start()
         p.start()
-

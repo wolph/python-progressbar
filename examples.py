@@ -31,7 +31,7 @@ def example(fn):
 
 @example
 def fast_example():
-    ''' Updates bar really quickly to cause flickering '''
+    '''Updates bar really quickly to cause flickering'''
     with progressbar.ProgressBar(widgets=[progressbar.Bar()]) as bar:
         for i in range(100):
             bar.update(int(i / 10), force=True)
@@ -96,12 +96,14 @@ def color_bar_example():
 def color_bar_animated_marker_example():
     widgets = [
         # Colored animated marker with colored fill:
-        progressbar.Bar(marker=progressbar.AnimatedMarker(
-            fill='x',
-            # fill='█',
-            fill_wrap='\x1b[32m{}\x1b[39m',
-            marker_wrap='\x1b[31m{}\x1b[39m',
-        )),
+        progressbar.Bar(
+            marker=progressbar.AnimatedMarker(
+                fill='x',
+                # fill='█',
+                fill_wrap='\x1b[32m{}\x1b[39m',
+                marker_wrap='\x1b[31m{}\x1b[39m',
+            )
+        ),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=10).start()
     for i in range(10):
@@ -117,7 +119,7 @@ def multi_range_bar_example():
         '\x1b[32m█\x1b[39m',  # Done
         '\x1b[33m#\x1b[39m',  # Processing
         '\x1b[31m.\x1b[39m',  # Scheduling
-        ' '                   # Not started
+        ' ',  # Not started
     ]
     widgets = [progressbar.MultiRangeBar("amounts", markers=markers)]
     amounts = [0] * (len(markers) - 1) + [25]
@@ -150,7 +152,8 @@ def multi_progress_bar_example(left=True):
 
     widgets = [
         progressbar.Percentage(),
-        ' ', progressbar.MultiProgressBar('jobs', fill_left=left),
+        ' ',
+        progressbar.MultiProgressBar('jobs', fill_left=left),
     ]
 
     max_value = sum([total for progress, total in jobs])
@@ -202,10 +205,14 @@ def percentage_label_bar_example():
 @example
 def file_transfer_example():
     widgets = [
-        'Test: ', progressbar.Percentage(),
-        ' ', progressbar.Bar(marker=progressbar.RotatingMarker()),
-        ' ', progressbar.ETA(),
-        ' ', progressbar.FileTransferSpeed(),
+        'Test: ',
+        progressbar.Percentage(),
+        ' ',
+        progressbar.Bar(marker=progressbar.RotatingMarker()),
+        ' ',
+        progressbar.ETA(),
+        ' ',
+        progressbar.FileTransferSpeed(),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=1000).start()
     for i in range(100):
@@ -220,16 +227,20 @@ def custom_file_transfer_example():
         '''
         It's bigger between 45 and 80 percent
         '''
+
         def update(self, bar):
             if 45 < bar.percentage() < 80:
                 return 'Bigger Now ' + progressbar.FileTransferSpeed.update(
-                    self, bar)
+                    self, bar
+                )
             else:
                 return progressbar.FileTransferSpeed.update(self, bar)
 
     widgets = [
         CrazyFileTransferSpeed(),
-        ' <<<', progressbar.Bar(), '>>> ',
+        ' <<<',
+        progressbar.Bar(),
+        '>>> ',
         progressbar.Percentage(),
         ' ',
         progressbar.ETA(),
@@ -246,8 +257,10 @@ def custom_file_transfer_example():
 @example
 def double_bar_example():
     widgets = [
-        progressbar.Bar('>'), ' ',
-        progressbar.ETA(), ' ',
+        progressbar.Bar('>'),
+        ' ',
+        progressbar.ETA(),
+        ' ',
         progressbar.ReverseBar('<'),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=1000).start()
@@ -261,10 +274,14 @@ def double_bar_example():
 @example
 def basic_file_transfer():
     widgets = [
-        'Test: ', progressbar.Percentage(),
-        ' ', progressbar.Bar(marker='0', left='[', right=']'),
-        ' ', progressbar.ETA(),
-        ' ', progressbar.FileTransferSpeed(),
+        'Test: ',
+        progressbar.Percentage(),
+        ' ',
+        progressbar.Bar(marker='0', left='[', right=']'),
+        ' ',
+        progressbar.ETA(),
+        ' ',
+        progressbar.FileTransferSpeed(),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=500)
     bar.start()
@@ -315,26 +332,34 @@ def progress_with_unavailable_max():
 @example
 def animated_marker():
     bar = progressbar.ProgressBar(
-        widgets=['Working: ', progressbar.AnimatedMarker()])
+        widgets=['Working: ', progressbar.AnimatedMarker()]
+    )
     for i in bar((i for i in range(5))):
         time.sleep(0.1)
 
 
 @example
 def filling_bar_animated_marker():
-    bar = progressbar.ProgressBar(widgets=[
-        progressbar.Bar(
-            marker=progressbar.AnimatedMarker(fill='#'),
-        ),
-    ])
+    bar = progressbar.ProgressBar(
+        widgets=[
+            progressbar.Bar(
+                marker=progressbar.AnimatedMarker(fill='#'),
+            ),
+        ]
+    )
     for i in bar(range(15)):
         time.sleep(0.1)
 
 
 @example
 def counter_and_timer():
-    widgets = ['Processed: ', progressbar.Counter('Counter: %(value)05d'),
-               ' lines (', progressbar.Timer(), ')']
+    widgets = [
+        'Processed: ',
+        progressbar.Counter('Counter: %(value)05d'),
+        ' lines (',
+        progressbar.Timer(),
+        ')',
+    ]
     bar = progressbar.ProgressBar(widgets=widgets)
     for i in bar((i for i in range(15))):
         time.sleep(0.1)
@@ -342,8 +367,9 @@ def counter_and_timer():
 
 @example
 def format_label():
-    widgets = [progressbar.FormatLabel(
-        'Processed: %(value)d lines (in: %(elapsed)s)')]
+    widgets = [
+        progressbar.FormatLabel('Processed: %(value)d lines (in: %(elapsed)s)')
+    ]
     bar = progressbar.ProgressBar(widgets=widgets)
     for i in bar((i for i in range(15))):
         time.sleep(0.1)
@@ -406,8 +432,10 @@ def format_label_bouncer():
 
 @example
 def format_label_rotating_bouncer():
-    widgets = [progressbar.FormatLabel('Animated Bouncer: value %(value)d - '),
-               progressbar.BouncingBar(marker=progressbar.RotatingMarker())]
+    widgets = [
+        progressbar.FormatLabel('Animated Bouncer: value %(value)d - '),
+        progressbar.BouncingBar(marker=progressbar.RotatingMarker()),
+    ]
 
     bar = progressbar.ProgressBar(widgets=widgets)
     for i in bar((i for i in range(18))):
@@ -416,8 +444,9 @@ def format_label_rotating_bouncer():
 
 @example
 def with_right_justify():
-    with progressbar.ProgressBar(max_value=10, term_width=20,
-                                 left_justify=False) as progress:
+    with progressbar.ProgressBar(
+        max_value=10, term_width=20, left_justify=False
+    ) as progress:
         assert progress.term_width is not None
         for i in range(10):
             progress.update(i)
@@ -467,16 +496,21 @@ def negative_maximum():
 @example
 def rotating_bouncing_marker():
     widgets = [progressbar.BouncingBar(marker=progressbar.RotatingMarker())]
-    with progressbar.ProgressBar(widgets=widgets, max_value=20,
-                                 term_width=10) as progress:
+    with progressbar.ProgressBar(
+        widgets=widgets, max_value=20, term_width=10
+    ) as progress:
         for i in range(20):
             time.sleep(0.1)
             progress.update(i)
 
-    widgets = [progressbar.BouncingBar(marker=progressbar.RotatingMarker(),
-                                       fill_left=False)]
-    with progressbar.ProgressBar(widgets=widgets, max_value=20,
-                                 term_width=10) as progress:
+    widgets = [
+        progressbar.BouncingBar(
+            marker=progressbar.RotatingMarker(), fill_left=False
+        )
+    ]
+    with progressbar.ProgressBar(
+        widgets=widgets, max_value=20, term_width=10
+    ) as progress:
         for i in range(20):
             time.sleep(0.1)
             progress.update(i)
@@ -484,10 +518,13 @@ def rotating_bouncing_marker():
 
 @example
 def incrementing_bar():
-    bar = progressbar.ProgressBar(widgets=[
-        progressbar.Percentage(),
-        progressbar.Bar(),
-    ], max_value=10).start()
+    bar = progressbar.ProgressBar(
+        widgets=[
+            progressbar.Percentage(),
+            progressbar.Bar(),
+        ],
+        max_value=10,
+    ).start()
     for i in range(10):
         # do something
         time.sleep(0.1)
@@ -498,13 +535,18 @@ def incrementing_bar():
 @example
 def increment_bar_with_output_redirection():
     widgets = [
-        'Test: ', progressbar.Percentage(),
-        ' ', progressbar.Bar(marker=progressbar.RotatingMarker()),
-        ' ', progressbar.ETA(),
-        ' ', progressbar.FileTransferSpeed(),
+        'Test: ',
+        progressbar.Percentage(),
+        ' ',
+        progressbar.Bar(marker=progressbar.RotatingMarker()),
+        ' ',
+        progressbar.ETA(),
+        ' ',
+        progressbar.FileTransferSpeed(),
     ]
-    bar = progressbar.ProgressBar(widgets=widgets, max_value=100,
-                                  redirect_stdout=True).start()
+    bar = progressbar.ProgressBar(
+        widgets=widgets, max_value=100, redirect_stdout=True
+    ).start()
     for i in range(10):
         # do something
         time.sleep(0.01)
@@ -517,12 +559,18 @@ def increment_bar_with_output_redirection():
 def eta_types_demonstration():
     widgets = [
         progressbar.Percentage(),
-        ' ETA: ', progressbar.ETA(),
-        ' Adaptive ETA: ', progressbar.AdaptiveETA(),
-        ' Absolute ETA: ', progressbar.AbsoluteETA(),
-        ' Transfer Speed: ', progressbar.FileTransferSpeed(),
-        ' Adaptive Transfer Speed: ', progressbar.AdaptiveTransferSpeed(),
-        ' ', progressbar.Bar(),
+        ' ETA: ',
+        progressbar.ETA(),
+        ' Adaptive ETA: ',
+        progressbar.AdaptiveETA(),
+        ' Absolute ETA: ',
+        progressbar.AbsoluteETA(),
+        ' Transfer Speed: ',
+        progressbar.FileTransferSpeed(),
+        ' Adaptive Transfer Speed: ',
+        progressbar.AdaptiveTransferSpeed(),
+        ' ',
+        progressbar.Bar(),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=500)
     bar.start()
@@ -540,10 +588,14 @@ def eta_types_demonstration():
 @example
 def adaptive_eta_without_value_change():
     # Testing progressbar.AdaptiveETA when the value doesn't actually change
-    bar = progressbar.ProgressBar(widgets=[
-        progressbar.AdaptiveETA(),
-        progressbar.AdaptiveTransferSpeed(),
-    ], max_value=2, poll_interval=0.0001)
+    bar = progressbar.ProgressBar(
+        widgets=[
+            progressbar.AdaptiveETA(),
+            progressbar.AdaptiveTransferSpeed(),
+        ],
+        max_value=2,
+        poll_interval=0.0001,
+    )
     bar.start()
     for i in range(100):
         bar.update(1)
@@ -564,10 +616,14 @@ def iterator_with_max_value():
 @example
 def eta():
     widgets = [
-        'Test: ', progressbar.Percentage(),
-        ' | ETA: ', progressbar.ETA(),
-        ' | AbsoluteETA: ', progressbar.AbsoluteETA(),
-        ' | AdaptiveETA: ', progressbar.AdaptiveETA(),
+        'Test: ',
+        progressbar.Percentage(),
+        ' | ETA: ',
+        progressbar.ETA(),
+        ' | AbsoluteETA: ',
+        progressbar.AbsoluteETA(),
+        ' | AdaptiveETA: ',
+        progressbar.AdaptiveETA(),
     ]
     bar = progressbar.ProgressBar(widgets=widgets, max_value=50).start()
     for i in range(50):
@@ -622,14 +678,16 @@ def user_variables():
     num_subtasks = sum(len(x) for x in tasks.values())
 
     with progressbar.ProgressBar(
-            prefix='{variables.task} >> {variables.subtask}',
-            variables={'task': '--', 'subtask': '--'},
-            max_value=10 * num_subtasks) as bar:
+        prefix='{variables.task} >> {variables.subtask}',
+        variables={'task': '--', 'subtask': '--'},
+        max_value=10 * num_subtasks,
+    ) as bar:
         for tasks_name, subtasks in tasks.items():
             for subtask_name in subtasks:
                 for i in range(10):
-                    bar.update(bar.value + 1, task=tasks_name,
-                               subtask=subtask_name)
+                    bar.update(
+                        bar.value + 1, task=tasks_name, subtask=subtask_name
+                    )
                     time.sleep(0.1)
 
 
@@ -643,11 +701,13 @@ def format_custom_text():
         ),
     )
 
-    bar = progressbar.ProgressBar(widgets=[
-        format_custom_text,
-        ' :: ',
-        progressbar.Percentage(),
-    ])
+    bar = progressbar.ProgressBar(
+        widgets=[
+            format_custom_text,
+            ' :: ',
+            progressbar.Percentage(),
+        ]
+    )
     for i in bar(range(25)):
         format_custom_text.update_mapping(eggs=i * 2)
         time.sleep(0.1)
@@ -666,9 +726,13 @@ def ETA_on_generators():
         for x in range(200):
             yield None
 
-    widgets = [progressbar.AdaptiveETA(), ' ',
-               progressbar.ETA(), ' ',
-               progressbar.Timer()]
+    widgets = [
+        progressbar.AdaptiveETA(),
+        ' ',
+        progressbar.ETA(),
+        ' ',
+        progressbar.Timer(),
+    ]
 
     bar = progressbar.ProgressBar(widgets=widgets)
     for i in bar(gen()):
@@ -681,9 +745,14 @@ def percentage_on_generators():
         for x in range(200):
             yield None
 
-    widgets = [progressbar.Counter(), ' ',
-               progressbar.Percentage(), ' ',
-               progressbar.SimpleProgress(), ' ']
+    widgets = [
+        progressbar.Counter(),
+        ' ',
+        progressbar.Percentage(),
+        ' ',
+        progressbar.SimpleProgress(),
+        ' ',
+    ]
 
     bar = progressbar.ProgressBar(widgets=widgets)
     for i in bar(gen()):
@@ -693,7 +762,6 @@ def percentage_on_generators():
 def test(*tests):
     if tests:
         for example in examples:
-
             for test in tests:
                 if test in example.__name__:
                     example()

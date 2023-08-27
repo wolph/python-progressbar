@@ -17,14 +17,16 @@ LOG_LEVELS = {
 
 def pytest_configure(config):
     logging.basicConfig(
-        level=LOG_LEVELS.get(config.option.verbose, logging.DEBUG))
+        level=LOG_LEVELS.get(config.option.verbose, logging.DEBUG)
+    )
 
 
 @pytest.fixture(autouse=True)
 def small_interval(monkeypatch):
     # Remove the update limit for tests by default
     monkeypatch.setattr(
-        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1e-6)
+        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1e-6
+    )
     monkeypatch.setattr(timeit, 'default_timer', time.time)
 
 

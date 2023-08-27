@@ -29,12 +29,14 @@ def test_iterator_without_max_value_error():
 
 def test_iterator_without_max_value():
     '''Progressbar can't guess max_value.'''
-    p = progressbar.ProgressBar(widgets=[
-        progressbar.AnimatedMarker(),
-        progressbar.FormatLabel('%(value)d'),
-        progressbar.BouncingBar(),
-        progressbar.BouncingBar(marker=progressbar.RotatingMarker()),
-    ])
+    p = progressbar.ProgressBar(
+        widgets=[
+            progressbar.AnimatedMarker(),
+            progressbar.FormatLabel('%(value)d'),
+            progressbar.BouncingBar(),
+            progressbar.BouncingBar(marker=progressbar.RotatingMarker()),
+        ]
+    )
     for i in p((i for i in range(10))):
         time.sleep(0.001)
 
@@ -55,4 +57,3 @@ def test_adding_value():
     p.increment(2)
     with pytest.raises(ValueError):
         p += 5
-

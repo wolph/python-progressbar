@@ -35,6 +35,7 @@ from .widgets import SimpleProgress
 from .widgets import Timer
 from .widgets import Variable
 from .widgets import VariableMixin
+from .widgets import SliceableDeque
 from .terminal.stream import LineOffsetStreamWrapper
 from .multi import SortKey, MultiBar
 
@@ -78,4 +79,5 @@ __all__ = [
     'LineOffsetStreamWrapper',
     'MultiBar',
     'SortKey',
+    'SliceableDeque',
 ]

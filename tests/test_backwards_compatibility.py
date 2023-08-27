@@ -6,7 +6,7 @@ def test_progressbar_1_widgets():
     widgets = [
         progressbar.AdaptiveETA(format="Time left: %s"),
         progressbar.Timer(format="Time passed: %s"),
-        progressbar.Bar()
+        progressbar.Bar(),
     ]
 
     bar = progressbar.ProgressBar(widgets=widgets, max_value=100).start()

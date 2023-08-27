@@ -153,6 +153,10 @@ def no_color(value: StringT) -> StringT:
     'abc'
     >>> str(no_color('\u001b[1234]abc'))
     'abc'
+    >>> no_color(123)
+    Traceback (most recent call last):
+    ...
+    TypeError: `value` must be a string or bytes, got 123
     '''
     if isinstance(value, bytes):
         pattern: bytes = '\\\u001b\\[.*?[@-~]'.encode()
