@@ -3,7 +3,7 @@ name: Close stale issues and pull requests
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *' # Run every day at midnight
+    - cron: "0 0 * * *" # Run every day at midnight
 
 jobs:
   stale:
