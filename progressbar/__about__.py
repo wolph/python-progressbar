@@ -18,7 +18,7 @@ __description__ = ' '.join(
     '''
 A Python Progressbar library to provide visual (yet text based) progress to
 long running operations.
-'''.strip().split()
+'''.strip().split(),
 )
 __email__ = 'wolph@wol.ph'
 __version__ = '4.3b.0'

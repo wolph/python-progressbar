@@ -1,6 +1,6 @@
 import sys
-import tty
 import termios
+import tty
 
 
 def getch():

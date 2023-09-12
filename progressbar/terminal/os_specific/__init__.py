@@ -3,8 +3,8 @@ import sys
 if sys.platform.startswith('win'):
     from .windows import (
         getch as _getch,
-        set_console_mode as _set_console_mode,
         reset_console_mode as _reset_console_mode,
+        set_console_mode as _set_console_mode,
     )
 
 else:

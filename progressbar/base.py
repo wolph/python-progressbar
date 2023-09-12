@@ -1,12 +1,13 @@
-# -*- mode: python; coding: utf-8 -*-
 from python_utils import types
 
 
 class FalseMeta(type):
-    def __bool__(self):  # pragma: no cover
+    @classmethod
+    def __bool__(cls):  # pragma: no cover
         return False
 
-    def __cmp__(self, other):  # pragma: no cover
+    @classmethod
+    def __cmp__(cls, other):  # pragma: no cover
         return -1
 
     __nonzero__ = __bool__

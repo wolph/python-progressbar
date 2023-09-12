@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from types import TracebackType
-from typing import Iterable, Iterator, Type
+from typing import Iterable, Iterator
 
 from progressbar import base
 
@@ -61,7 +61,7 @@ class TextIOOutputWrapper(base.TextIO):
 
     def __exit__(
         self,
-        __t: Type[BaseException] | None,
+        __t: type[BaseException] | None,
         __value: BaseException | None,
         __traceback: TracebackType | None,
     ) -> None:
@@ -121,7 +121,7 @@ class LastLineStream(TextIOOutputWrapper):
     def writelines(self, __lines: Iterable[str]) -> None:
         line = ''
         # Walk through the lines and take the last one
-        for line in __lines:
+        for _ in __lines:
             pass
 
         self.line = line

@@ -1,13 +1,16 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import abc
+import contextlib
 import datetime
 import functools
-import pprint
-import sys
+import logging
 import typing
 from collections import deque
+
+# Ruff is being stupid and doesn't understand `ClassVar` if it comes from the
+# `types` module
+from typing import ClassVar
 
 from python_utils import converters, types
 
@@ -16,6 +19,8 @@ from .terminal import colors
 
 if types.TYPE_CHECKING:
     from .bar import ProgressBarMixinBase
+
+logger = logging.getLogger(__name__)
 
 MAX_DATE = datetime.date.max
 MAX_TIME = datetime.time.max
@@ -30,8 +35,8 @@ T = typing.TypeVar('T')
 class SliceableDeque(typing.Generic[T], deque):
     def __getitem__(
             self,
-            index: typing.Union[int, slice],
-    ) -> typing.Union[T, deque[T]]:
+            index: int | slice,
+    ) -> T | deque[T]:
         if isinstance(index, slice):
             start, stop, step = index.indices(len(self))
             return self.__class__(self[i] for i in range(start, stop, step))
@@ -43,11 +48,11 @@ class SliceableDeque(typing.Generic[T], deque):
         # the first or last item.
         if index == 0:
             return super().popleft()
-        elif index == -1 or index == len(self) - 1:
+        elif index in {-1, len(self) - 1}:
             return super().pop()
         else:
             raise IndexError(
-                'Only index 0 and the last index (`N-1` or `-1`) are supported'
+                'Only index 0 and the last index (`N-1` or `-1`) are supported',
             )
 
     def __eq__(self, other):
@@ -72,7 +77,7 @@ def string_or_lambda(input_):
 
 
 def create_wrapper(wrapper):
-    '''Convert a wrapper tuple or format string to a format string
+    '''Convert a wrapper tuple or format string to a format string.
 
     >>> create_wrapper('')
 
@@ -86,14 +91,14 @@ def create_wrapper(wrapper):
         a, b = wrapper
         wrapper = (a or '') + '{}' + (b or '')
     elif not wrapper:
-        return
+        return None
 
     if isinstance(wrapper, str):
         assert '{}' in wrapper, 'Expected string with {} for formatting'
     else:
-        raise RuntimeError(
-            'Pass either a begin/end string as a tuple or a'
-            ' template string with {}'
+        raise RuntimeError(  # noqa: TRY004
+            'Pass either a begin/end string as a tuple or a template string '
+            'with `{}`',
         )
 
     return wrapper
@@ -101,7 +106,7 @@ def create_wrapper(wrapper):
 
 def wrapper(function, wrapper_):
     '''Wrap the output of a function in a template string or a tuple with
-    begin/end strings
+    begin/end strings.
 
     '''
     wrapper_ = create_wrapper(wrapper_)
@@ -137,7 +142,7 @@ def create_marker(marker, wrap=None):
 
 
 class FormatWidgetMixin(abc.ABC):
-    '''Mixin to format widgets using a formatstring
+    '''Mixin to format widgets using a formatstring.
 
     Variables available:
      - max_value: The maximum value (can be None with iterators)
@@ -170,16 +175,16 @@ class FormatWidgetMixin(abc.ABC):
             data: Data,
             format: types.Optional[str] = None,
     ) -> str:
-        '''Formats the widget into a string'''
-        format = self.get_format(progress, data, format)
+        '''Formats the widget into a string.'''
+        format_ = self.get_format(progress, data, format)
         try:
             if self.new_style:
-                return format.format(**data)
+                return format_.format(**data)
             else:
-                return format % data
+                return format_ % data
         except (TypeError, KeyError):
-            print('Error while formatting %r' % format, file=sys.stderr)
-            pprint.pprint(data, stream=sys.stderr)
+            logger.exception('Error while formatting %r with data: %r',
+                         format_, data)
             raise
 
 
@@ -213,16 +218,18 @@ class WidthWidgetMixin(abc.ABC):
         self.max_width = max_width
 
     def check_size(self, progress: ProgressBarMixinBase):
-        if self.min_width and self.min_width > progress.term_width:
+        max_width = self.max_width
+        min_width = self.min_width
+        if min_width and min_width > progress.term_width:
             return False
-        elif self.max_width and self.max_width < progress.term_width:
+        elif max_width and max_width < progress.term_width:  # noqa: SIM103
             return False
         else:
             return True
 
 
 class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
-    '''The base class for all widgets
+    '''The base class for all widgets.
 
     The ProgressBar will call the widget's update value when the widget should
     be updated. The widget's size may change between calls, but the widget may
@@ -259,21 +266,18 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
         progress - a reference to the calling ProgressBar
         '''
 
-    _fixed_colors: dict[str, terminal.Color | None] = dict()
-    _gradient_colors: dict[str, terminal.OptionalColor | None] = dict()
+    _fixed_colors: ClassVar[dict[str, terminal.Color | None]] = dict()
+    _gradient_colors: ClassVar[dict[str, terminal.OptionalColor | None]] = (
+        dict())
     _len: typing.Callable[[str | bytes], int] = len
 
     @functools.cached_property
     def uses_colors(self):
-        for key, value in self._gradient_colors.items():  # pragma: no branch
+        for value in self._gradient_colors.values():  # pragma: no branch
             if value is not None:  # pragma: no branch
                 return True
 
-        for key, value in self._fixed_colors.items():  # pragma: no branch
-            if value is not None:  # pragma: no branch
-                return True
-
-        return False
+        return any(value is not None for value in self._fixed_colors.values())
 
     def _apply_colors(self, text: str, data: Data) -> str:
         if self.uses_colors:
@@ -287,7 +291,7 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
             return text
 
     def __init__(
-            self, *args, fixed_colors=None, gradient_colors=None, **kwargs
+            self, *args, fixed_colors=None, gradient_colors=None, **kwargs,
     ):
         if fixed_colors is not None:
             self._fixed_colors.update(fixed_colors)
@@ -334,7 +338,7 @@ class TimeSensitiveWidgetBase(WidgetBase, metaclass=abc.ABCMeta):
 
 
 class FormatLabel(FormatWidgetMixin, WidgetBase):
-    '''Displays a formatted label
+    '''Displays a formatted label.
 
     >>> label = FormatLabel('%(value)s', min_width=5, max_width=10)
     >>> class Progress:
@@ -345,15 +349,15 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
 
     '''
 
-    mapping = {
-        'finished': ('end_time', None),
-        'last_update': ('last_update_time', None),
-        'max': ('max_value', None),
-        'seconds': ('seconds_elapsed', None),
-        'start': ('start_time', None),
-        'elapsed': ('total_seconds_elapsed', utils.format_time),
-        'value': ('value', None),
-    }
+    mapping: ClassVar[types.Dict[str, types.Tuple[str, types.Any]]] = dict(
+        finished=('end_time', None),
+        last_update=('last_update_time', None),
+        max=('max_value', None),
+        seconds=('seconds_elapsed', None),
+        start=('start_time', None),
+        elapsed=('total_seconds_elapsed', utils.format_time),
+        value=('value', None),
+    )
 
     def __init__(self, format: str, **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
@@ -366,13 +370,11 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
             format: types.Optional[str] = None,
     ):
         for name, (key, transform) in self.mapping.items():
-            try:
+            with contextlib.suppress(KeyError, ValueError, IndexError):
                 if transform is None:
                     data[name] = data[key]
                 else:
                     data[name] = transform(data[key])
-            except (KeyError, ValueError, IndexError):  # pragma: no cover
-                pass
 
         return FormatWidgetMixin.__call__(self, progress, data, format)
 
@@ -393,7 +395,7 @@ class Timer(FormatLabel, TimeSensitiveWidgetBase):
 
 class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
     '''
-    Mixing for widgets that average multiple measurements
+    Mixing for widgets that average multiple measurements.
 
     Note that samples can be either an integer or a timedelta to indicate a
     certain amount of time
@@ -431,23 +433,23 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
     ):
         self.samples = samples
         self.key_prefix = (
-                              key_prefix if key_prefix else self.__class__.__name__
+                                  key_prefix or self.__class__.__name__
                           ) + '_'
         TimeSensitiveWidgetBase.__init__(self, **kwargs)
 
     def get_sample_times(self, progress: ProgressBarMixinBase, data: Data):
         return progress.extra.setdefault(
-            self.key_prefix + 'sample_times', SliceableDeque()
+            f'{self.key_prefix}sample_times', SliceableDeque(),
         )
 
     def get_sample_values(self, progress: ProgressBarMixinBase, data: Data):
         return progress.extra.setdefault(
-            self.key_prefix + 'sample_values', SliceableDeque()
+            f'{self.key_prefix}sample_values', SliceableDeque(),
         )
 
     def __call__(
             self, progress: ProgressBarMixinBase, data: Data,
-            delta: bool = False
+            delta: bool = False,
     ):
         sample_times = self.get_sample_times(progress, data)
         sample_values = self.get_sample_values(progress, data)
@@ -472,15 +474,13 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
                 ):
                     sample_times.pop(0)
                     sample_values.pop(0)
-            else:
-                if len(sample_times) > self.samples:
-                    sample_times.pop(0)
-                    sample_values.pop(0)
+            elif len(sample_times) > self.samples:
+                sample_times.pop(0)
+                sample_values.pop(0)
 
         if delta:
-            delta_time = sample_times[-1] - sample_times[0]
-            delta_value = sample_values[-1] - sample_values[0]
-            if delta_time:
+            if delta_time := sample_times[-1] - sample_times[0]:
+                delta_value = sample_values[-1] - sample_values[0]
                 return delta_time, delta_value
             else:
                 return None, None
@@ -497,7 +497,7 @@ class ETA(Timer):
             format_finished='Time: %(elapsed)8s',
             format='ETA:  %(eta)8s',
             format_zero='ETA:  00:00:00',
-            format_NA='ETA:      N/A',
+            format_na='ETA:      N/A',
             **kwargs,
     ):
         if '%s' in format and '%(eta)s' not in format:
@@ -508,21 +508,19 @@ class ETA(Timer):
         self.format_finished = format_finished
         self.format = format
         self.format_zero = format_zero
-        self.format_NA = format_NA
+        self.format_NA = format_na
 
     def _calculate_eta(
-            self, progress: ProgressBarMixinBase, data: Data, value, elapsed
+            self, progress: ProgressBarMixinBase, data: Data, value, elapsed,
     ):
         '''Updates the widget to show the ETA or total time when finished.'''
         if elapsed:
             # The max() prevents zero division errors
             per_item = elapsed.total_seconds() / max(value, 1e-6)
             remaining = progress.max_value - data['value']
-            eta_seconds = remaining * per_item
+            return remaining * per_item
         else:
-            eta_seconds = 0
-
-        return eta_seconds
+            return 0
 
     def __call__(
             self,
@@ -538,41 +536,39 @@ class ETA(Timer):
         if elapsed is None:
             elapsed = data['time_elapsed']
 
-        ETA_NA = False
+        eta_na = False
         try:
             data['eta_seconds'] = self._calculate_eta(
-                progress, data, value=value, elapsed=elapsed
+                progress, data, value=value, elapsed=elapsed,
             )
         except TypeError:
             data['eta_seconds'] = None
-            ETA_NA = True
+            eta_na = True
 
         data['eta'] = None
         if data['eta_seconds']:
-            try:
+            with contextlib.suppress(ValueError, OverflowError):
                 data['eta'] = utils.format_time(data['eta_seconds'])
-            except (ValueError, OverflowError):  # pragma: no cover
-                pass
 
         if data['value'] == progress.min_value:
-            format = self.format_not_started
+            fmt = self.format_not_started
         elif progress.end_time:
-            format = self.format_finished
+            fmt = self.format_finished
         elif data['eta']:
-            format = self.format
-        elif ETA_NA:
-            format = self.format_NA
+            fmt = self.format
+        elif eta_na:
+            fmt = self.format_NA
         else:
-            format = self.format_zero
+            fmt = self.format_zero
 
-        return Timer.__call__(self, progress, data, format=format)
+        return Timer.__call__(self, progress, data, format=fmt)
 
 
 class AbsoluteETA(ETA):
     '''Widget which attempts to estimate the absolute time of arrival.'''
 
     def _calculate_eta(
-            self, progress: ProgressBarMixinBase, data: Data, value, elapsed
+            self, progress: ProgressBarMixinBase, data: Data, value, elapsed,
     ):
         eta_seconds = ETA._calculate_eta(self, progress, data, value, elapsed)
         now = datetime.datetime.now()
@@ -616,7 +612,7 @@ class AdaptiveETA(ETA, SamplesMixin):
             elapsed=None,
     ):
         elapsed, value = SamplesMixin.__call__(
-            self, progress, data, delta=True
+            self, progress, data, delta=True,
         )
         if not elapsed:
             value = None
@@ -701,7 +697,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
             value = data['value']
 
         elapsed = utils.deltas_to_seconds(
-            total_seconds_elapsed, data['total_seconds_elapsed']
+            total_seconds_elapsed, data['total_seconds_elapsed'],
         )
 
         if (
@@ -721,7 +717,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
             data['scaled'] = scaled
             data['prefix'] = self.prefixes[0]
             return FormatWidgetMixin.__call__(
-                self, progress, data, self.inverse_format
+                self, progress, data, self.inverse_format,
             )
         else:
             data['scaled'] = scaled
@@ -730,7 +726,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
 
 
 class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
-    '''Widget for showing the transfer speed based on the last X samples'''
+    '''Widget for showing the transfer speed based on the last X samples.'''
 
     def __init__(self, **kwargs):
         FileTransferSpeed.__init__(self, **kwargs)
@@ -744,7 +740,7 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
             total_seconds_elapsed=None,
     ):
         elapsed, value = SamplesMixin.__call__(
-            self, progress, data, delta=True
+            self, progress, data, delta=True,
         )
         return FileTransferSpeed.__call__(self, progress, data, value, elapsed)
 
@@ -772,8 +768,8 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
 
     def __call__(self, progress: ProgressBarMixinBase, data: Data, width=None):
         '''Updates the widget to show the next marker or the first marker when
-        finished'''
-
+        finished.
+        '''
         if progress.end_time:
             return self.default
 
@@ -807,27 +803,24 @@ RotatingMarker = AnimatedMarker
 
 
 class Counter(FormatWidgetMixin, WidgetBase):
-    '''Displays the current count'''
+    '''Displays the current count.'''
 
     def __init__(self, format='%(value)d', **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
     def __call__(
-            self, progress: ProgressBarMixinBase, data: Data, format=None
+            self, progress: ProgressBarMixinBase, data: Data, format=None,
     ):
         return FormatWidgetMixin.__call__(self, progress, data, format)
 
 
 class ColoredMixin:
-    _fixed_colors: dict[str, terminal.Color | None] = dict(
-        fg_none=colors.yellow,
-        bg_none=None,
-    )
-    _gradient_colors: dict[str, terminal.OptionalColor | None] = dict(
-        fg=colors.gradient,
-        bg=None,
-    )
+    _fixed_colors: ClassVar[dict[str, terminal.Color | None]] = dict(
+        fg_none=colors.yellow, bg_none=None)
+    _gradient_colors: ClassVar[dict[str, terminal.OptionalColor |
+                                         None]] = dict(fg=colors.gradient,
+                                                       bg=None)
 
 
 class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
@@ -839,7 +832,7 @@ class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
         WidgetBase.__init__(self, format=format, **kwargs)
 
     def get_format(
-            self, progress: ProgressBarMixinBase, data: Data, format=None
+            self, progress: ProgressBarMixinBase, data: Data, format=None,
     ):
         # If percentage is not available, display N/A%
         percentage = data.get('percentage', base.Undefined)
@@ -852,7 +845,7 @@ class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
 
 
 class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
-    '''Returns progress as a count of the total (e.g.: "5 of 47")'''
+    '''Returns progress as a count of the total (e.g.: "5 of 47").'''
 
     max_width_cache: dict[
         types.Union[str, tuple[float, float | types.Type[base.UnknownLength]]],
@@ -864,11 +857,10 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
     def __init__(self, format=DEFAULT_FORMAT, **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
-        self.max_width_cache = dict()
-        self.max_width_cache['default'] = self.max_width or 0
+        self.max_width_cache = dict(default=self.max_width or 0)
 
     def __call__(
-            self, progress: ProgressBarMixinBase, data: Data, format=None
+            self, progress: ProgressBarMixinBase, data: Data, format=None,
     ):
         # If max_value is not available, display N/A
         if data.get('max_value'):
@@ -883,13 +875,13 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
             data['value_s'] = 0
 
         formatted = FormatWidgetMixin.__call__(
-            self, progress, data, format=format
+            self, progress, data, format=format,
         )
 
         # Guess the maximum width from the min and max value
         key = progress.min_value, progress.max_value
         max_width: types.Optional[int] = self.max_width_cache.get(
-            key, self.max_width
+            key, self.max_width,
         )
         if not max_width:
             temporary_data = data.copy()
@@ -898,12 +890,14 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
                     continue
 
                 temporary_data['value'] = value
-                width = progress.custom_len(
-                    FormatWidgetMixin.__call__(
-                        self, progress, temporary_data, format=format
-                    )
-                )
-                if width:  # pragma: no branch
+                if width := progress.custom_len(
+                        FormatWidgetMixin.__call__(
+                            self,
+                            progress,
+                            temporary_data,
+                            format=format,
+                        ),
+                ):
                     max_width = max(max_width or 0, width)
 
             self.max_width_cache[key] = max_width
@@ -941,7 +935,6 @@ class Bar(AutoWidthWidgetBase):
         fill - character to use for the empty part of the progress bar
         fill_left - whether to fill from the left or the right
         '''
-
         self.marker = create_marker(marker, marker_wrap)
         self.left = string_or_lambda(left)
         self.right = string_or_lambda(right)
@@ -957,8 +950,7 @@ class Bar(AutoWidthWidgetBase):
             width: int = 0,
             color=True,
     ):
-        '''Updates the progress bar and its subcomponents'''
-
+        '''Updates the progress bar and its subcomponents.'''
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
@@ -980,7 +972,7 @@ class Bar(AutoWidthWidgetBase):
 
 
 class ReverseBar(Bar):
-    '''A bar which has a marker that goes from right to left'''
+    '''A bar which has a marker that goes from right to left.'''
 
     def __init__(
             self,
@@ -1021,8 +1013,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
             data: Data,
             width: int = 0,
     ):
-        '''Updates the progress bar and its subcomponents'''
-
+        '''Updates the progress bar and its subcomponents.'''
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
@@ -1032,7 +1023,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
         if width:  # pragma: no branch
             value = int(
-                data['total_seconds_elapsed'] / self.INTERVAL.total_seconds()
+                data['total_seconds_elapsed'] / self.INTERVAL.total_seconds(),
             )
 
             a = value % width
@@ -1049,7 +1040,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
 
 class FormatCustomText(FormatWidgetMixin, WidgetBase):
-    mapping: types.Dict[str, types.Any] = {}
+    mapping: ClassVar[types.Dict[str, types.Any]] = dict()
     copy = False
 
     def __init__(
@@ -1073,12 +1064,12 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
             format: types.Optional[str] = None,
     ):
         return FormatWidgetMixin.__call__(
-            self, progress, self.mapping, format or self.format
+            self, progress, self.mapping, format or self.format,
         )
 
 
 class VariableMixin:
-    '''Mixin to display a custom user variable'''
+    '''Mixin to display a custom user variable.'''
 
     def __init__(self, name, **kwargs):
         if not isinstance(name, str):
@@ -1090,7 +1081,7 @@ class VariableMixin:
 
 class MultiRangeBar(Bar, VariableMixin):
     '''
-    A bar with multiple sub-ranges, each represented by a different symbol
+    A bar with multiple sub-ranges, each represented by a different symbol.
 
     The various ranges are represented on a user-defined variable, formatted as
 
@@ -1117,8 +1108,7 @@ class MultiRangeBar(Bar, VariableMixin):
             data: Data,
             width: int = 0,
     ):
-        '''Updates the progress bar and its subcomponents'''
-
+        '''Updates the progress bar and its subcomponents.'''
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
@@ -1172,9 +1162,7 @@ class MultiProgressBar(MultiRangeBar):
 
             if not 0 <= value <= 1:
                 raise ValueError(
-                    'Range value needs to be in the range [0..1], got %s'
-                    % value
-                )
+                    f'Range value needs to be in the range [0..1], got {value}')
 
             range_ = value * (len(ranges) - 1)
             pos = int(range_)
@@ -1260,8 +1248,7 @@ class GranularBar(AutoWidthWidgetBase):
 
         marker = self.markers[-1] * int(num_chars)
 
-        marker_idx = int((num_chars % 1) * (len(self.markers) - 1))
-        if marker_idx:
+        if marker_idx := int((num_chars % 1) * (len(self.markers) - 1)):
             marker += self.markers[marker_idx]
 
         marker = converters.to_unicode(marker)
@@ -1370,7 +1357,7 @@ class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
         except (TypeError, ValueError):
             if value:
                 context['formatted_value'] = '{value:{width}}'.format(
-                    **context
+                    **context,
                 )
             else:
                 context['formatted_value'] = '-' * self.width
@@ -1380,8 +1367,6 @@ class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
 
 class DynamicMessage(Variable):
     '''Kept for backwards compatibility, please use `Variable` instead.'''
-
-    pass
 
 
 class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):

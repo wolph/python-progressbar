@@ -8,10 +8,14 @@ import os
 import threading
 from collections import defaultdict
 
+# Ruff is being stupid and doesn't understand `ClassVar` if it comes from the
+# `types` module
+from typing import ClassVar
+
 from python_utils import converters, types
 
-from .os_specific import getch
 from .. import base
+from .os_specific import getch
 
 ESC = '\x1B'
 
@@ -167,7 +171,7 @@ class ColorSupport(enum.IntEnum):
         )
 
         if os.environ.get('JUPYTER_COLUMNS') or os.environ.get(
-            'JUPYTER_LINES'
+                'JUPYTER_LINES',
         ):
             # Jupyter notebook always supports true color.
             return cls.XTERM_TRUECOLOR
@@ -271,8 +275,8 @@ class HLS(collections.namedtuple('HLS', ['hue', 'lightness', 'saturation'])):
     def from_rgb(cls, rgb: RGB) -> HLS:
         return cls(
             *colorsys.rgb_to_hls(
-                rgb.red / 255, rgb.green / 255, rgb.blue / 255
-            )
+                rgb.red / 255, rgb.green / 255, rgb.blue / 255,
+            ),
         )
 
     def interpolate(self, end: HLS, step: float) -> HLS:
@@ -284,6 +288,7 @@ class HLS(collections.namedtuple('HLS', ['hue', 'lightness', 'saturation'])):
 
 
 class ColorBase(abc.ABC):
+    @abc.abstractmethod
     def get_color(self, value: float) -> Color:
         raise NotImplementedError()
 
@@ -301,7 +306,7 @@ class Color(
     ColorBase,
 ):
     '''
-    Color base class
+    Color base class.
 
     This class contains the colors in RGB (Red, Green, Blue), HLS (Hue,
     Lightness, Saturation) and Xterm (8-bit) formats. It also contains the
@@ -364,24 +369,25 @@ class Color(
 
 
 class Colors:
-    by_name: defaultdict[str, types.List[Color]] = collections.defaultdict(
-        list
-    )
-    by_lowername: defaultdict[
-        str, types.List[Color]
-    ] = collections.defaultdict(list)
-    by_hex: defaultdict[str, types.List[Color]] = collections.defaultdict(list)
-    by_rgb: defaultdict[RGB, types.List[Color]] = collections.defaultdict(list)
-    by_hls: defaultdict[HLS, types.List[Color]] = collections.defaultdict(list)
-    by_xterm: dict[int, Color] = dict()
+    by_name: ClassVar[
+        defaultdict[str, types.List[Color]]] = collections.defaultdict(list)
+    by_lowername: ClassVar[
+        defaultdict[str, types.List[Color]]] = collections.defaultdict(list)
+    by_hex: ClassVar[defaultdict[str, types.List[Color]]] = (
+        collections.defaultdict(list))
+    by_rgb: ClassVar[defaultdict[RGB, types.List[Color]]] = (
+        collections.defaultdict(list))
+    by_hls: ClassVar[defaultdict[HLS, types.List[Color]]] = (
+        collections.defaultdict(list))
+    by_xterm: ClassVar[dict[int, Color]] = dict()
 
     @classmethod
     def register(
-        cls,
-        rgb: RGB,
-        hls: types.Optional[HLS] = None,
-        name: types.Optional[str] = None,
-        xterm: types.Optional[int] = None,
+            cls,
+            rgb: RGB,
+            hls: types.Optional[HLS] = None,
+            name: types.Optional[str] = None,
+            xterm: types.Optional[int] = None,
     ) -> Color:
         color = Color(rgb, hls, name, xterm)
 
@@ -416,12 +422,8 @@ class ColorGradient(ColorBase):
         return self.get_color(value)
 
     def get_color(self, value: float) -> Color:
-        'Map a value from 0 to 1 to a color'
-        if (
-            value is base.Undefined
-            or value is base.UnknownLength
-            or value <= 0
-        ):
+        'Map a value from 0 to 1 to a color.'
+        if value == base.Undefined or value == base.UnknownLength or value <= 0:
             return self.colors[0]
         elif value >= 1:
             return self.colors[-1]
@@ -460,14 +462,14 @@ def get_color(value: float, color: OptionalColor) -> Color | None:
 
 
 def apply_colors(
-    text: str,
-    percentage: float | None = None,
-    *,
-    fg: OptionalColor = None,
-    bg: OptionalColor = None,
-    fg_none: Color | None = None,
-    bg_none: Color | None = None,
-    **kwargs: types.Any,
+        text: str,
+        percentage: float | None = None,
+        *,
+        fg: OptionalColor = None,
+        bg: OptionalColor = None,
+        fg_none: Color | None = None,
+        bg_none: Color | None = None,
+        **kwargs: types.Any,
 ) -> str:
     if fg is None and bg is None:
         return text

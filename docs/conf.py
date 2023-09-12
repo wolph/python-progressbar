@@ -72,6 +72,7 @@ copyright = u'%s,  <a href="http://wol.ph/">%s</a>' % (
 #
 # The short X.Y version.
 version = metadata.__version__
+assert version == '4.3b0', version
 # The full version, including alpha/beta/rc tags.
 release = metadata.__version__
 
