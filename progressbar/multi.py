@@ -125,7 +125,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
 
     def __setitem__(self, key: str, value: bar.ProgressBar):
         '''Add a progressbar to the multibar.'''
-        if value.label != key:  # pragma: no branch
+        if value.label != key or not key:  # pragma: no branch
             value.label = key
             value.fd = stream.LastLineStream(self.fd)
             value.paused = True
@@ -144,13 +144,13 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         self._finished_at.pop(key, None)
         self._labeled.discard(key)
 
-    def __getitem__(self, item):
+    def __getitem__(self, key):
         '''Get (and create if needed) a progressbar from the multibar.'''
         try:
-            return super().__getitem__(item)
+            return super().__getitem__(key)
         except KeyError:
             progress = bar.ProgressBar(**self.progressbar_kwargs)
-            self[item] = progress
+            self[key] = progress
             return progress
 
     def _label_bar(self, bar: bar.ProgressBar):

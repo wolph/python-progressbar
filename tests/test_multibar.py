@@ -148,3 +148,15 @@ def test_multibar_show_initial():
     multibar = progressbar.MultiBar(show_initial=False)
     multibar['bar'] = progressbar.ProgressBar(max_value=N)
     multibar.render(force=True)
+
+
+def test_multibar_empty_key():
+    multibar = progressbar.MultiBar()
+    multibar[''] = progressbar.ProgressBar(max_value=N)
+
+    for name in multibar:
+        assert name == ''
+        bar = multibar[name]
+        bar.update(1)
+
+    multibar.render(force=True)
