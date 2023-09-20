@@ -1,8 +1,7 @@
 import time
 
-import pytest
-
 import progressbar
+import pytest
 
 
 class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
@@ -11,7 +10,7 @@ class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
     def update(self, pbar):
         if 45 < pbar.percentage() < 80:
             return 'Bigger Now ' + progressbar.FileTransferSpeed.update(
-                self, pbar
+                self, pbar,
             )
         else:
             return progressbar.FileTransferSpeed.update(self, pbar)
@@ -88,7 +87,7 @@ def test_format_custom_text_widget():
     bar = progressbar.ProgressBar(
         widgets=[
             widget,
-        ]
+        ],
     )
 
     for i in bar(range(5)):

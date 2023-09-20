@@ -1,8 +1,9 @@
+import signal
 import sys
 import time
-import signal
-import progressbar
 from datetime import timedelta
+
+import progressbar
 
 
 def test_left_justify():
@@ -49,7 +50,7 @@ def test_auto_width(monkeypatch):
         monkeypatch.setattr(signal, 'signal', fake_signal)
         p = progressbar.ProgressBar(
             widgets=[
-                progressbar.BouncingBar(marker=progressbar.RotatingMarker())
+                progressbar.BouncingBar(marker=progressbar.RotatingMarker()),
             ],
             max_value=100,
             left_justify=True,
@@ -94,7 +95,7 @@ def test_no_fill(monkeypatch):
     bar = progressbar.BouncingBar()
     bar.INTERVAL = timedelta(seconds=1)
     p = progressbar.ProgressBar(
-        widgets=[bar], max_value=progressbar.UnknownLength, term_width=20
+        widgets=[bar], max_value=progressbar.UnknownLength, term_width=20,
     )
 
     assert p.term_width is not None
@@ -106,7 +107,7 @@ def test_no_fill(monkeypatch):
 
 def test_stdout_redirection():
     p = progressbar.ProgressBar(
-        fd=sys.stdout, max_value=10, redirect_stdout=True
+        fd=sys.stdout, max_value=10, redirect_stdout=True,
     )
 
     for i in range(10):
@@ -134,7 +135,7 @@ def test_stderr_redirection():
 
 def test_stdout_stderr_redirection():
     p = progressbar.ProgressBar(
-        max_value=10, redirect_stdout=True, redirect_stderr=True
+        max_value=10, redirect_stdout=True, redirect_stderr=True,
     )
     p.start()
 

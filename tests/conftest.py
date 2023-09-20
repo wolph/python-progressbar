@@ -1,11 +1,11 @@
+import logging
 import time
 import timeit
-import pytest
-import logging
-import freezegun
-import progressbar
 from datetime import datetime
 
+import freezegun
+import progressbar
+import pytest
 
 LOG_LEVELS = {
     '0': logging.ERROR,
@@ -17,7 +17,7 @@ LOG_LEVELS = {
 
 def pytest_configure(config):
     logging.basicConfig(
-        level=LOG_LEVELS.get(config.option.verbose, logging.DEBUG)
+        level=LOG_LEVELS.get(config.option.verbose, logging.DEBUG),
     )
 
 
@@ -25,7 +25,7 @@ def pytest_configure(config):
 def small_interval(monkeypatch):
     # Remove the update limit for tests by default
     monkeypatch.setattr(
-        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1e-6
+        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1e-6,
     )
     monkeypatch.setattr(timeit, 'default_timer', time.time)
 

@@ -1,9 +1,8 @@
 import threading
 import time
 
-import pytest
-
 import progressbar
+import pytest
 
 N = 10
 BARS = 3
@@ -71,7 +70,8 @@ def test_multibar():
 
     for i in range(BARS):
         thread = threading.Thread(
-            target=do_something, args=(multibar['bar {}'.format(i)],)
+            target=do_something,
+            args=(multibar[f'bar {i}'],),
         )
         thread.start()
 
@@ -108,11 +108,11 @@ def test_multibar():
 def test_multibar_sorting(sort_key):
     with progressbar.MultiBar() as multibar:
         for i in range(BARS):
-            label = 'bar {}'.format(i)
+            label = f'bar {i}'
             multibar[label] = progressbar.ProgressBar(max_value=N)
 
         for bar in multibar.values():
-            for j in bar(range(N)):
+            for _j in bar(range(N)):
                 assert bar.started()
                 time.sleep(SLEEP)
 
@@ -134,7 +134,7 @@ def test_multibar_show_finished():
         multibar.finished_format = 'finished: {label}'
 
         for i in range(3):
-            multibar['bar {}'.format(i)] = progressbar.ProgressBar(max_value=N)
+            multibar[f'bar {i}'] = progressbar.ProgressBar(max_value=N)
 
         for bar in multibar.values():
             for i in range(N):

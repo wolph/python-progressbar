@@ -1,5 +1,6 @@
-import time
 import datetime
+import time
+
 import progressbar
 
 
@@ -9,7 +10,7 @@ def test_timer():
         progressbar.Timer(),
     ]
     p = progressbar.ProgressBar(
-        max_value=2, widgets=widgets, poll_interval=0.0001
+        max_value=2, widgets=widgets, poll_interval=0.0001,
     )
 
     p.start()
@@ -27,7 +28,7 @@ def test_eta():
         progressbar.ETA(),
     ]
     p = progressbar.ProgressBar(
-        min_value=0, max_value=2, widgets=widgets, poll_interval=0.0001
+        min_value=0, max_value=2, widgets=widgets, poll_interval=0.0001,
     )
 
     p.start()
@@ -59,7 +60,7 @@ def test_adaptive_eta():
     )
 
     p.start()
-    for i in range(20):
+    for _i in range(20):
         p.update(1)
         time.sleep(0.001)
     p.finish()
@@ -71,7 +72,7 @@ def test_adaptive_transfer_speed():
         progressbar.AdaptiveTransferSpeed(),
     ]
     p = progressbar.ProgressBar(
-        max_value=2, widgets=widgets, poll_interval=0.0001
+        max_value=2, widgets=widgets, poll_interval=0.0001,
     )
 
     p.start()
@@ -104,7 +105,7 @@ def test_etas(monkeypatch):
 
     monkeypatch.setattr(progressbar.FileTransferSpeed, '_speed', calculate_eta)
     monkeypatch.setattr(
-        progressbar.AdaptiveTransferSpeed, '_speed', calculate_eta
+        progressbar.AdaptiveTransferSpeed, '_speed', calculate_eta,
     )
 
     for widget in widgets:
@@ -149,7 +150,7 @@ def test_non_changing_eta():
         progressbar.AdaptiveTransferSpeed(),
     ]
     p = progressbar.ProgressBar(
-        max_value=2, widgets=widgets, poll_interval=0.0001
+        max_value=2, widgets=widgets, poll_interval=0.0001,
     )
 
     p.start()
@@ -160,17 +161,16 @@ def test_non_changing_eta():
 
 
 def test_eta_not_available():
-    """
+    '''
     When ETA is not available (data coming from a generator),
     ETAs should not raise exceptions.
-    """
+    '''
 
     def gen():
-        for x in range(200):
-            yield x
+        yield from range(200)
 
     widgets = [progressbar.AdaptiveETA(), progressbar.ETA()]
 
     bar = progressbar.ProgressBar(widgets=widgets)
-    for i in bar(gen()):
+    for _i in bar(gen()):
         pass

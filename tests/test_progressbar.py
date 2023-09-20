@@ -1,7 +1,9 @@
+import contextlib
 import time
-import pytest
-import progressbar
+
 import original_examples
+import progressbar
+import pytest
 
 # Import hack to allow for parallel Tox
 try:
@@ -17,10 +19,9 @@ except ImportError:
 
 def test_examples(monkeypatch):
     for example in examples.examples:
-        try:
+        with contextlib.suppress(ValueError):
             example()
-        except ValueError:
-            pass
+
 
 
 @pytest.mark.filterwarnings('ignore:.*maxval.*:DeprecationWarning')

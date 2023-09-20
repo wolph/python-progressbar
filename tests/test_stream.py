@@ -1,12 +1,13 @@
 import io
 import sys
-import pytest
+
 import progressbar
+import pytest
 
 
 def test_nowrap():
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
     stdout = sys.stdout
@@ -23,13 +24,13 @@ def test_nowrap():
     assert stderr == sys.stderr
 
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
 def test_wrap():
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
     stdout = sys.stdout
@@ -50,7 +51,7 @@ def test_wrap():
     assert stderr == sys.stderr
 
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
@@ -58,7 +59,7 @@ def test_excepthook():
     progressbar.streams.wrap(stderr=True, stdout=True)
 
     try:
-        raise RuntimeError()
+        raise RuntimeError()  # noqa: TRY301
     except RuntimeError:
         progressbar.streams.excepthook(*sys.exc_info())
 

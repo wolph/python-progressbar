@@ -1,16 +1,15 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
 import sys
 import time
 
 from progressbar import (
+    ETA,
+    AdaptiveETA,
     AnimatedMarker,
     Bar,
     BouncingBar,
     Counter,
-    ETA,
-    AdaptiveETA,
     FileTransferSpeed,
     FormatLabel,
     Percentage,
@@ -151,21 +150,21 @@ def example6():
 @example
 def example7():
     pbar = ProgressBar()  # Progressbar can guess maxval automatically.
-    for i in pbar(range(80)):
+    for _i in pbar(range(80)):
         time.sleep(0.01)
 
 
 @example
 def example8():
     pbar = ProgressBar(maxval=80)  # Progressbar can't guess maxval.
-    for i in pbar((i for i in range(80))):
+    for _i in pbar(i for i in range(80)):
         time.sleep(0.01)
 
 
 @example
 def example9():
     pbar = ProgressBar(widgets=['Working: ', AnimatedMarker()])
-    for i in pbar((i for i in range(50))):
+    for _i in pbar(i for i in range(50)):
         time.sleep(0.08)
 
 
@@ -173,7 +172,7 @@ def example9():
 def example10():
     widgets = ['Processed: ', Counter(), ' lines (', Timer(), ')']
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(150))):
+    for _i in pbar(i for i in range(150)):
         time.sleep(0.1)
 
 
@@ -181,7 +180,7 @@ def example10():
 def example11():
     widgets = [FormatLabel('Processed: %(value)d lines (in: %(elapsed)s)')]
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(150))):
+    for _i in pbar(i for i in range(150)):
         time.sleep(0.1)
 
 
@@ -189,7 +188,7 @@ def example11():
 def example12():
     widgets = ['Balloon: ', AnimatedMarker(markers='.oO@* ')]
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(24))):
+    for _i in pbar(i for i in range(24)):
         time.sleep(0.3)
 
 
@@ -199,7 +198,7 @@ def example13():
     try:
         widgets = ['Arrows: ', AnimatedMarker(markers='←↖↑↗→↘↓↙')]
         pbar = ProgressBar(widgets=widgets)
-        for i in pbar((i for i in range(24))):
+        for _i in pbar(i for i in range(24)):
             time.sleep(0.3)
     except UnicodeError:
         sys.stdout.write('Unicode error: skipping example')
@@ -211,7 +210,7 @@ def example14():
     try:
         widgets = ['Arrows: ', AnimatedMarker(markers='◢◣◤◥')]
         pbar = ProgressBar(widgets=widgets)
-        for i in pbar((i for i in range(24))):
+        for _i in pbar(i for i in range(24)):
             time.sleep(0.3)
     except UnicodeError:
         sys.stdout.write('Unicode error: skipping example')
@@ -223,7 +222,7 @@ def example15():
     try:
         widgets = ['Wheels: ', AnimatedMarker(markers='◐◓◑◒')]
         pbar = ProgressBar(widgets=widgets)
-        for i in pbar((i for i in range(24))):
+        for _i in pbar(i for i in range(24)):
             time.sleep(0.3)
     except UnicodeError:
         sys.stdout.write('Unicode error: skipping example')
@@ -233,7 +232,7 @@ def example15():
 def example16():
     widgets = [FormatLabel('Bouncer: value %(value)d - '), BouncingBar()]
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(180))):
+    for _i in pbar(i for i in range(180)):
         time.sleep(0.05)
 
 
@@ -245,7 +244,7 @@ def example17():
     ]
 
     pbar = ProgressBar(widgets=widgets)
-    for i in pbar((i for i in range(180))):
+    for _i in pbar(i for i in range(180)):
         time.sleep(0.05)
 
 
@@ -263,14 +262,14 @@ def example18():
 @example
 def example19():
     pbar = ProgressBar()
-    for i in pbar([]):
+    for _i in pbar([]):
         pass
     pbar.finish()
 
 
 @example
 def example20():
-    """Widgets that behave differently when length is unknown"""
+    '''Widgets that behave differently when length is unknown'''
     widgets = [
         '[When length is unknown at first]',
         ' Progress: ',

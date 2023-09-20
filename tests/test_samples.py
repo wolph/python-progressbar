@@ -1,6 +1,6 @@
 import time
-from datetime import timedelta
-from datetime import datetime
+from datetime import datetime, timedelta
+
 import progressbar
 from progressbar import widgets
 
@@ -37,7 +37,7 @@ def test_numeric_samples():
     assert samples_widget(bar, None, True) == (timedelta(0, 16), 16)
 
     assert samples_widget(bar, None)[1] == progressbar.SliceableDeque(
-        [4, 5, 8, 10, 20]
+        [4, 5, 8, 10, 20],
     )
 
 

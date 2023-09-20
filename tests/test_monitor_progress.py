@@ -1,5 +1,6 @@
 import os
 import pprint
+
 import progressbar
 
 pytest_plugins = 'pytester'
@@ -28,11 +29,13 @@ def _non_empty_lines(lines):
 
 def _create_script(
         widgets=None,
-        items=list(range(9)),
+        items=None,
         loop_code='fake_time.tick(1)',
         term_width=60,
         **kwargs,
 ):
+    if items is None:
+        items = list(range(9))
     kwargs['term_width'] = term_width
 
     # Reindent the loop code
@@ -48,7 +51,7 @@ def _create_script(
         kwargs=kwargs,
         loop_code=indent.join(loop_code),
         progressbar_path=os.path.dirname(
-            os.path.dirname(progressbar.__file__)
+            os.path.dirname(progressbar.__file__),
         ),
     )
     print('# Script:')
@@ -70,8 +73,8 @@ def test_list_example(testdir):
         testdir.makepyfile(
             _create_script(
                 term_width=65,
-            )
-        )
+            ),
+        ),
     )
     result.stderr.lines = [
         line.rstrip() for line in _non_empty_lines(result.stderr.lines)
@@ -89,7 +92,7 @@ def test_list_example(testdir):
             ' 77% (7 of 9) |#########   | Elapsed Time: ?:00:07 ETA:   ?:00:02',
             ' 88% (8 of 9) |##########  | Elapsed Time: ?:00:08 ETA:   ?:00:01',
             '100% (9 of 9) |############| Elapsed Time: ?:00:09 Time:  ?:00:09',
-        ]
+        ],
     )
 
 
@@ -103,19 +106,16 @@ def test_generator_example(testdir):
         testdir.makepyfile(
             _create_script(
                 items='iter(range(9))',
-            )
-        )
+            ),
+        ),
     )
     result.stderr.lines = _non_empty_lines(result.stderr.lines)
     pprint.pprint(result.stderr.lines, width=70)
 
-    lines = []
-    for i in range(9):
-        lines.append(
-            r'[/\\|\-]\s+\|\s*#\s*\| %(i)d Elapsed Time: \d:00:%(i)02d'
-            % dict(i=i)
-        )
-
+    lines = [
+        r'[/\\|\-]\s+\|\s*#\s*\| %(i)d Elapsed Time: \d:00:%(i)02d' % dict(i=i)
+        for i in range(9)
+    ]
     result.stderr.re_match_lines(lines)
 
 
@@ -135,8 +135,8 @@ def test_rapid_updates(testdir):
         else:
             fake_time.tick(2)
         ''',
-            )
-        )
+            ),
+        ),
     )
     result.stderr.lines = _non_empty_lines(result.stderr.lines)
     pprint.pprint(result.stderr.lines, width=70)
@@ -153,7 +153,7 @@ def test_rapid_updates(testdir):
             ' 80% (8 of 10) |####  | Elapsed Time: ?:00:11 ETA:   ?:00:04',
             ' 90% (9 of 10) |##### | Elapsed Time: ?:00:13 ETA:   ?:00:02',
             '100% (10 of 10) |#####| Elapsed Time: ?:00:15 Time:  ?:00:15',
-        ]
+        ],
     )
 
 
@@ -163,8 +163,8 @@ def test_non_timed(testdir):
             _create_script(
                 widgets='[progressbar.Percentage(), progressbar.Bar()]',
                 items=list(range(5)),
-            )
-        )
+            ),
+        ),
     )
     result.stderr.lines = _non_empty_lines(result.stderr.lines)
     pprint.pprint(result.stderr.lines, width=70)
@@ -176,7 +176,7 @@ def test_non_timed(testdir):
             ' 60%|################################                      |',
             ' 80%|###########################################           |',
             '100%|######################################################|',
-        ]
+        ],
     )
 
 
@@ -187,20 +187,20 @@ def test_line_breaks(testdir):
                 widgets='[progressbar.Percentage(), progressbar.Bar()]',
                 line_breaks=True,
                 items=list(range(5)),
-            )
-        )
+            ),
+        ),
     )
     pprint.pprint(result.stderr.str(), width=70)
-    assert result.stderr.str() == u'\n'.join(
+    assert result.stderr.str() == '\n'.join(
         (
-            u'  0%|                                                      |',
-            u' 20%|##########                                            |',
-            u' 40%|#####################                                 |',
-            u' 60%|################################                      |',
-            u' 80%|###########################################           |',
-            u'100%|######################################################|',
-            u'100%|######################################################|',
-        )
+            '  0%|                                                      |',
+            ' 20%|##########                                            |',
+            ' 40%|#####################                                 |',
+            ' 60%|################################                      |',
+            ' 80%|###########################################           |',
+            '100%|######################################################|',
+            '100%|######################################################|',
+        ),
     )
 
 
@@ -211,20 +211,20 @@ def test_no_line_breaks(testdir):
                 widgets='[progressbar.Percentage(), progressbar.Bar()]',
                 line_breaks=False,
                 items=list(range(5)),
-            )
-        )
+            ),
+        ),
     )
     pprint.pprint(result.stderr.lines, width=70)
     assert result.stderr.lines == [
-        u'',
-        u'  0%|                                                      |',
-        u' 20%|##########                                            |',
-        u' 40%|#####################                                 |',
-        u' 60%|################################                      |',
-        u' 80%|###########################################           |',
-        u'100%|######################################################|',
-        u'',
-        u'100%|######################################################|',
+        '',
+        '  0%|                                                      |',
+        ' 20%|##########                                            |',
+        ' 40%|#####################                                 |',
+        ' 60%|################################                      |',
+        ' 80%|###########################################           |',
+        '100%|######################################################|',
+        '',
+        '100%|######################################################|',
     ]
 
 
@@ -235,20 +235,20 @@ def test_percentage_label_bar(testdir):
                 widgets='[progressbar.PercentageLabelBar()]',
                 line_breaks=False,
                 items=list(range(5)),
-            )
-        )
+            ),
+        ),
     )
     pprint.pprint(result.stderr.lines, width=70)
     assert result.stderr.lines == [
-        u'',
-        u'|                            0%                            |',
-        u'|###########                20%                            |',
-        u'|#######################    40%                            |',
-        u'|###########################60%####                        |',
-        u'|###########################80%################            |',
-        u'|###########################100%###########################|',
-        u'',
-        u'|###########################100%###########################|',
+        '',
+        '|                            0%                            |',
+        '|###########                20%                            |',
+        '|#######################    40%                            |',
+        '|###########################60%####                        |',
+        '|###########################80%################            |',
+        '|###########################100%###########################|',
+        '',
+        '|###########################100%###########################|',
     ]
 
 
@@ -259,20 +259,20 @@ def test_granular_bar(testdir):
                 widgets='[progressbar.GranularBar(markers=" .oO")]',
                 line_breaks=False,
                 items=list(range(5)),
-            )
-        )
+            ),
+        ),
     )
     pprint.pprint(result.stderr.lines, width=70)
     assert result.stderr.lines == [
-        u'',
-        u'|                                                          |',
-        u'|OOOOOOOOOOO.                                              |',
-        u'|OOOOOOOOOOOOOOOOOOOOOOO                                   |',
-        u'|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOo                       |',
-        u'|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO.           |',
-        u'|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|',
-        u'',
-        u'|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|',
+        '',
+        '|                                                          |',
+        '|OOOOOOOOOOO.                                              |',
+        '|OOOOOOOOOOOOOOOOOOOOOOO                                   |',
+        '|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOo                       |',
+        '|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO.           |',
+        '|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|',
+        '',
+        '|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|',
     ]
 
 
@@ -283,13 +283,13 @@ def test_colors(testdir):
     )
 
     result = testdir.runpython(
-        testdir.makepyfile(_create_script(enable_colors=True, **kwargs))
+        testdir.makepyfile(_create_script(enable_colors=True, **kwargs)),
     )
     pprint.pprint(result.stderr.lines, width=70)
-    assert result.stderr.lines == [u'\x1b[92mgreen\x1b[0m'] * 3
+    assert result.stderr.lines == ['\x1b[92mgreen\x1b[0m'] * 3
 
     result = testdir.runpython(
-        testdir.makepyfile(_create_script(enable_colors=False, **kwargs))
+        testdir.makepyfile(_create_script(enable_colors=False, **kwargs)),
     )
     pprint.pprint(result.stderr.lines, width=70)
-    assert result.stderr.lines == [u'green'] * 3
+    assert result.stderr.lines == ['green'] * 3

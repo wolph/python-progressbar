@@ -1,6 +1,9 @@
-import pytest
+from __future__ import annotations
+
+import typing
 
 import progressbar
+import pytest
 from progressbar import terminal
 
 
@@ -35,7 +38,7 @@ def test_enable_colors_flags():
     assert not bar.enable_colors
 
     bar = progressbar.ProgressBar(
-        enable_colors=terminal.ColorSupport.XTERM_TRUECOLOR
+        enable_colors=terminal.ColorSupport.XTERM_TRUECOLOR,
     )
     assert bar.enable_colors
 
@@ -44,7 +47,7 @@ def test_enable_colors_flags():
 
 
 class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
-    _fixed_colors = dict(
+    _fixed_colors: typing.ClassVar[dict[str, terminal.Color | None]] = dict(
         fg_none=progressbar.widgets.colors.yellow,
         bg_none=None,
     )
@@ -54,10 +57,12 @@ class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
 
 
 class _TestFixedGradientSupport(progressbar.widgets.WidgetBase):
-    _gradient_colors = dict(
+    _gradient_colors: typing.ClassVar[dict[str, terminal.ColorGradient |
+                                                None]] = (
+        dict(
         fg=progressbar.widgets.colors.gradient,
         bg=None,
-    )
+    ))
 
     def __call__(self, *args, **kwargs):
         pass
@@ -88,8 +93,8 @@ def test_no_color_widgets(widget):
     print(f'{widget} has colors? {widget.uses_colors}')
 
     assert widget(
-        fixed_colors=_TestFixedColorSupport._fixed_colors
+        fixed_colors=_TestFixedColorSupport._fixed_colors,
     ).uses_colors
     assert widget(
-        gradient_colors=_TestFixedGradientSupport._gradient_colors
+        gradient_colors=_TestFixedGradientSupport._gradient_colors,
     ).uses_colors
