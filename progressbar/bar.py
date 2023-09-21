@@ -66,8 +66,17 @@ class ProgressBarMixinBase(abc.ABC):
     #: no updates
     min_poll_interval: float
 
+    #: Deprecated: The number of intervals that can fit on the screen with a
+    #: minimum of 100
+    num_intervals: int = 0
+    #: Deprecated: The `next_update` is kept for compatibility with external
+    #: libs: https://github.com/WoLpH/python-progressbar/issues/207
+    next_update: int = 0
+
     #: Current progress (min_value <= value <= max_value)
     value: T
+    #: Previous progress value
+    previous_value: types.Optional[T]
     #: The minimum/start value for the progress bar
     min_value: T
     #: Maximum (and final) value. Beyond this value an error will be raised
@@ -848,7 +857,6 @@ class ProgressBar(
         'Updates the ProgressBar to a new value.'
         if self.start_time is None:
             self.start()
-            return self.update(value, force=force, **kwargs)
 
         if (
                 value is not None
@@ -874,26 +882,32 @@ class ProgressBar(
             self.value = value  # type: ignore
 
         # Save the updated values for dynamic messages
-        variables_changed = False
-        for key in kwargs:
-            if key not in self.variables:
-                raise TypeError(
-                    f'update() got an unexpected variable name as argument '
-                f'{key!r}')
-            elif self.variables[key] != kwargs[key]:
-                self.variables[key] = kwargs[key]
-                variables_changed = True
+        variables_changed = self._update_variables(kwargs)
 
         if self._needs_update() or variables_changed or force:
-            self.updates += 1
-            ResizableMixin.update(self, value=value)
-            ProgressBarBase.update(self, value=value)
-            StdRedirectMixin.update(self, value=value)  # type: ignore
+            self._update_parents(value)
 
-            # Only flush if something was actually written
-            self.fd.flush()
-            return None
-        return None
+    def _update_variables(self, kwargs):
+        variables_changed = False
+        for key, value_ in kwargs.items():
+            if key not in self.variables:
+                raise TypeError(
+                    'update() got an unexpected variable name as argument '
+                    '{key!r}',
+                )
+            elif self.variables[key] != value_:
+                self.variables[key] = kwargs[key]
+                variables_changed = True
+        return variables_changed
+
+    def _update_parents(self, value):
+        self.updates += 1
+        ResizableMixin.update(self, value=value)
+        ProgressBarBase.update(self, value=value)
+        StdRedirectMixin.update(self, value=value)  # type: ignore
+
+        # Only flush if something was actually written
+        self.fd.flush()
 
     def start(self, max_value=None, init=True):
         '''Starts measuring time, and prints the bar at 0%.
@@ -902,9 +916,9 @@ class ProgressBar(
 
         Args:
             max_value (int): The maximum value of the progressbar
-            reinit (bool): Initialize the progressbar, this is useful if you
+            init (bool): (Re)Initialize the progressbar, this is useful if you
                 wish to reuse the same progressbar but can be disabled if
-                data needs to be passed along to the next run
+                data needs to be persisted between runs
 
         >>> pbar = ProgressBar().start()
         >>> for i in range(100):
@@ -934,6 +948,29 @@ class ProgressBar(
         if not self.widgets:
             self.widgets = self.default_widgets()
 
+        self._init_prefix()
+        self._init_suffix()
+        self._calculate_poll_interval()
+        self._verify_max_value()
+
+        now = datetime.now()
+        self.start_time = self.initial_start_time or now
+        self.last_update_time = now
+        self._last_update_timer = timeit.default_timer()
+        self.update(self.min_value, force=True)
+
+        return self
+
+    def _init_suffix(self):
+        if self.suffix:
+            self.widgets.append(
+                widgets.FormatLabel(self.suffix, new_style=True),
+            )
+            # Unset the suffix variable after applying so an extra start()
+            # won't keep copying it
+            self.suffix = None
+
+    def _init_prefix(self):
         if self.prefix:
             self.widgets.insert(
                 0,
@@ -943,14 +980,16 @@ class ProgressBar(
             # won't keep copying it
             self.prefix = None
 
-        if self.suffix:
-            self.widgets.append(
-                widgets.FormatLabel(self.suffix, new_style=True),
-            )
-            # Unset the suffix variable after applying so an extra start()
-            # won't keep copying it
-            self.suffix = None
+    def _verify_max_value(self):
+        if (
+                self.max_value is not base.UnknownLength
+                and self.max_value is not None
+                and self.max_value < 0  # type: ignore
+        ):
+            raise ValueError('max_value out of range, got %r' % self.max_value)
 
+    def _calculate_poll_interval(self):
+        self.num_intervals = max(100, self.term_width)
         for widget in self.widgets:
             interval: int | float | None = utils.deltas_to_seconds(
                 getattr(widget, 'INTERVAL', None),
@@ -961,26 +1000,6 @@ class ProgressBar(
                     self.poll_interval or interval,
                     interval,
                 )
-
-        self.num_intervals = max(100, self.term_width)
-        # The `next_update` is kept for compatibility with external libs:
-        # https://github.com/WoLpH/python-progressbar/issues/207
-        self.next_update = 0
-
-        if (
-                self.max_value is not base.UnknownLength
-                and self.max_value is not None
-                and self.max_value < 0  # type: ignore
-        ):
-            raise ValueError('max_value out of range, got %r' % self.max_value)
-
-        now = datetime.now()
-        self.start_time = self.initial_start_time or now
-        self.last_update_time = now
-        self._last_update_timer = timeit.default_timer()
-        self.update(self.min_value, force=True)
-
-        return self
 
     def finish(self, end='\n', dirty=False):
         '''

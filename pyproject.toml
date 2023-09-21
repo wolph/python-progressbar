@@ -130,7 +130,7 @@ repository = 'https://github.com/wolph/python-progressbar/'
 
 [build-system]
 build-backend = 'setuptools.build_meta'
-requires = ['setuptools', 'setuptools-scm', 'wheel']
+requires = ['setuptools', 'setuptools-scm']
 
 [tool.codespell]
 skip = '*/htmlcov,./docs/_build,*.asc'

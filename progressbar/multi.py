@@ -12,6 +12,7 @@ import typing
 from datetime import timedelta
 
 import python_utils
+from python_utils import decorators
 
 from . import bar, terminal
 from .terminal import stream
@@ -171,48 +172,14 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         '''Render the multibar to the given stream.'''
         now = timeit.default_timer()
         expired = now - self.remove_finished if self.remove_finished else None
+
+        # sourcery skip: list-comprehension
         output = []
         for bar_ in self.get_sorted_bars():
             if not bar_.started() and not self.show_initial:
                 continue
 
-            def update(force=True, write=True):
-                self._label_bar(bar_)
-                bar_.update(force=force)
-                if write:
-                    output.append(bar_.fd.line)
-
-            if bar_.finished():
-                if bar_ not in self._finished_at:
-                    self._finished_at[bar_] = now
-                    # Force update to get the finished format
-                    update(write=False)
-
-                if (
-                        self.remove_finished
-                        and expired is not None
-                        and expired >= self._finished_at[bar_]):
-                    del self[bar_.label]
-                    continue
-
-                if not self.show_finished:
-                    continue
-
-            if bar_.finished():
-                if self.finished_format is None:
-                    update(force=False)
-                else:
-                    output.append(
-                        self.finished_format.format(label=bar_.label),
-                    )
-            elif bar_.started():
-                update()
-            else:
-                if self.initial_format is None:
-                    bar_.start()
-                    update()
-                else:
-                    output.append(self.initial_format.format(label=bar_.label))
+            output += self._render_bar(bar_, expired=expired, now=now)
 
         with self._print_lock:
             # Clear the previous output if progressbars have been removed
@@ -243,6 +210,50 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
 
             if flush:
                 self.flush()
+
+    @decorators.listify()
+    def _render_bar(self, bar_: bar.ProgressBar, now, expired) -> str | None:
+        def update(force=True, write=True):
+            self._label_bar(bar_)
+            bar_.update(force=force)
+            if write:
+                yield bar_.fd.line
+
+        if bar_.finished():
+            yield from self._render_finished_bar(bar_, now, expired, update)
+
+        elif bar_.started():
+            update()
+        else:
+            if self.initial_format is None:
+                bar_.start()
+                update()
+            else:
+                yield self.initial_format.format(label=bar_.label)
+
+    def _render_finished_bar(
+            self, bar_: bar.ProgressBar, now, expired, update,
+    ) -> str | None:
+        if bar_ not in self._finished_at:
+            self._finished_at[bar_] = now
+            # Force update to get the finished format
+            update(write=False)
+
+        if (
+                self.remove_finished
+                and expired is not None
+                and expired >= self._finished_at[bar_]):
+            del self[bar_.label]
+            return
+
+        if not self.show_finished:
+            return
+
+        if bar_.finished():
+            if self.finished_format is None:
+                update(force=False)
+            else:
+                yield self.finished_format.format(label=bar_.label)
 
     def print(
             self, *args, end='\n', offset=None, flush=True, clear=True,
