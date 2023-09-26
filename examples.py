@@ -5,10 +5,11 @@ import functools
 import random
 import sys
 import time
+import typing
 
 import progressbar
 
-examples = []
+examples: typing.List[typing.Callable[[typing.Any], typing.Any]] = []
 
 
 def example(fn):
@@ -778,4 +779,4 @@ if __name__ == '__main__':
     try:
         test(*sys.argv[1:])
     except KeyboardInterrupt:
-        sys.stdout('\nQuitting examples.\n')
+        sys.stdout.write('\nQuitting examples.\n')

@@ -14,7 +14,7 @@ def test_list():
 def test_iterator_with_max_value():
     '''Progressbar can't guess max_value.'''
     p = progressbar.ProgressBar(max_value=10)
-    for _i in p(i for i in range(10)):
+    for _i in p(iter(range(10))):
         time.sleep(0.001)
 
 
@@ -22,7 +22,7 @@ def test_iterator_without_max_value_error():
     '''Progressbar can't guess max_value.'''
     p = progressbar.ProgressBar()
 
-    for _i in p(i for i in range(10)):
+    for _i in p(iter(range(10))):
         time.sleep(0.001)
 
     assert p.max_value is progressbar.UnknownLength
@@ -38,7 +38,7 @@ def test_iterator_without_max_value():
             progressbar.BouncingBar(marker=progressbar.RotatingMarker()),
         ],
     )
-    for _i in p(i for i in range(10)):
+    for _i in p(iter(range(10))):
         time.sleep(0.001)
 
 
@@ -46,7 +46,7 @@ def test_iterator_with_incorrect_max_value():
     '''Progressbar can't guess max_value.'''
     p = progressbar.ProgressBar(max_value=10)
     with pytest.raises(ValueError):
-        for _i in p(i for i in range(20)):
+        for _i in p(iter(range(20))):
             time.sleep(0.001)
 
 

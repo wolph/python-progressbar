@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import typing
 
-import progressbar
 import pytest
-from progressbar import terminal
+
+import progressbar
+from progressbar import terminal, widgets
 
 
 @pytest.mark.parametrize(
@@ -47,7 +48,7 @@ def test_enable_colors_flags():
 
 
 class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
-    _fixed_colors: typing.ClassVar[dict[str, terminal.Color | None]] = dict(
+    _fixed_colors: typing.ClassVar[widgets.TFixedColors] = widgets.TFixedColors(
         fg_none=progressbar.widgets.colors.yellow,
         bg_none=None,
     )
@@ -57,12 +58,10 @@ class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
 
 
 class _TestFixedGradientSupport(progressbar.widgets.WidgetBase):
-    _gradient_colors: typing.ClassVar[dict[str, terminal.ColorGradient |
-                                                None]] = (
-        dict(
+    _gradient_colors: typing.ClassVar[widgets.TGradientColors] = widgets.TGradientColors(
         fg=progressbar.widgets.colors.gradient,
         bg=None,
-    ))
+    )
 
     def __call__(self, *args, **kwargs):
         pass

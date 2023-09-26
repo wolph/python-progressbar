@@ -97,7 +97,7 @@ classifiers = [
 description = 'A Python Progressbar library to provide visual (yet text based) progress to long running operations.'
 readme = 'README.rst'
 
-dependencies = ['python-utils >= 3.4.5']
+dependencies = ['python-utils >= 3.8.0']
 
 [tool.setuptools.dynamic]
 version = { attr = 'progressbar.__about__.__version__' }
@@ -112,7 +112,7 @@ include-package-data = true
 cli-name = 'progressbar.cli:main'
 
 [project.optional-dependencies]
-docs = ['sphinx>=1.8.5']
+docs = ['sphinx>=1.8.5', 'sphinx-autodoc-typehints>=1.6.0']
 tests = [
     'dill>=0.3.6',
     'flake8>=3.7.7',
@@ -140,3 +140,11 @@ ignore-words-list = 'datas'
 [tool.black]
 line-length = 79
 skip-string-normalization = true
+
+[tool.mypy]
+packages = ['progressbar', 'tests']
+exclude = [
+    'docs',
+    'tests/original_examples.py',
+    'examples.py',
+]
