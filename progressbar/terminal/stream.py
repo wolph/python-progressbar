@@ -32,10 +32,10 @@ class TextIOOutputWrapper(base.TextIO):
     def readline(self, __limit: int = -1) -> str:
         return self.stream.readline(__limit)
 
-    def readlines(self, __hint: int = ...) -> list[str]:
+    def readlines(self, __hint: int = -1) -> list[str]:
         return self.stream.readlines(__hint)
 
-    def seek(self, __offset: int, __whence: int = ...) -> int:
+    def seek(self, __offset: int, __whence: int = 0) -> int:
         return self.stream.seek(__offset, __whence)
 
     def seekable(self) -> bool:
@@ -44,7 +44,7 @@ class TextIOOutputWrapper(base.TextIO):
     def tell(self) -> int:
         return self.stream.tell()
 
-    def truncate(self, __size: int | None = ...) -> int:
+    def truncate(self, __size: int | None = None) -> int:
         return self.stream.truncate(__size)
 
     def writable(self) -> bool:
@@ -121,7 +121,7 @@ class LastLineStream(TextIOOutputWrapper):
     def writelines(self, __lines: Iterable[str]) -> None:
         line = ''
         # Walk through the lines and take the last one
-        for _ in __lines:
+        for line in __lines:
             pass
 
         self.line = line

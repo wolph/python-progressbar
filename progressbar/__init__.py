@@ -31,7 +31,6 @@ from .widgets import (
     ReverseBar,
     RotatingMarker,
     SimpleProgress,
-    SliceableDeque,
     Timer,
     Variable,
     VariableMixin,
@@ -77,5 +76,4 @@ __all__ = [
     'LineOffsetStreamWrapper',
     'MultiBar',
     'SortKey',
-    'SliceableDeque',
 ]

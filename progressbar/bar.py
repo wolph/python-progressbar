@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import contextlib
 import itertools
 import logging
 import math
@@ -159,6 +160,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
     #: compatible we will automatically enable `colors` and disable
     #: `line_breaks`.
     is_ansi_terminal: bool = False
+    #: Whether the file descriptor is a terminal or not. This is used to
+    #: determine whether to use ANSI escape codes or not.
+    is_terminal: bool
     #: Whether to print line breaks. This is useful for logging the
     #: progressbar. When disabled the current line is overwritten.
     line_breaks: bool = True
@@ -175,13 +179,13 @@ class DefaultFdMixin(ProgressBarMixinBase):
     enable_colors: terminal.ColorSupport | bool | None = terminal.color_support
 
     def __init__(
-            self,
-            fd: base.IO = sys.stderr,
-            is_terminal: bool | None = None,
-            line_breaks: bool | None = None,
-            enable_colors: terminal.ColorSupport | None = None,
-            line_offset: int = 0,
-            **kwargs,
+        self,
+        fd: base.IO = sys.stderr,
+        is_terminal: bool | None = None,
+        line_breaks: bool | None = None,
+        enable_colors: terminal.ColorSupport | None = None,
+        line_offset: int = 0,
+        **kwargs,
     ):
         if fd is sys.stdout:
             fd = utils.streams.original_stdout
@@ -201,15 +205,15 @@ class DefaultFdMixin(ProgressBarMixinBase):
         if line_offset:
             return progressbar.terminal.stream.LineOffsetStreamWrapper(
                 line_offset,
-                fd,
+                types.cast(base.TextIO, fd),
             )
         else:
             return fd
 
     def _determine_is_terminal(
-            self,
-            fd: base.IO,
-            is_terminal: bool | None,
+        self,
+        fd: base.IO,
+        is_terminal: bool | None,
     ) -> bool:
         if is_terminal is not None:
             return utils.is_terminal(fd, is_terminal)
@@ -226,8 +230,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
             return bool(line_breaks)
 
     def _determine_enable_colors(
-            self,
-            enable_colors: terminal.ColorSupport | None,
+        self,
+        enable_colors: terminal.ColorSupport | None,
     ) -> terminal.ColorSupport:
         if enable_colors is None:
             colors = (
@@ -243,6 +247,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
                     else:
                         enable_colors = terminal.ColorSupport.NONE
                     break
+            else:  # pragma: no cover
+                # This scenario should never occur because `is_ansi_terminal`
+                # should always be `True` or `False`
+                raise ValueError('Unable to determine color support')
 
         elif enable_colors is True:
             enable_colors = terminal.ColorSupport.XTERM_256
@@ -253,10 +261,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         return enable_colors
 
-    def print(self, *args, **kwargs):
+    def print(self, *args: types.Any, **kwargs: types.Any) -> None:
         print(*args, file=self.fd, **kwargs)
 
-    def update(self, *args, **kwargs):
+    def update(self, *args: types.Any, **kwargs: types.Any) -> None:
         ProgressBarMixinBase.update(self, *args, **kwargs)
 
         line: str = converters.to_unicode(self._format_line())
@@ -270,7 +278,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
         except UnicodeEncodeError:  # pragma: no cover
             self.fd.write(line.encode('ascii', 'replace'))
 
-    def finish(self, *args, **kwargs):  # pragma: no cover
+    def finish(
+        self, *args: types.Any, **kwargs: types.Any
+    ) -> None:  # pragma: no cover
         if self._finished:
             return
 
@@ -299,8 +309,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         for index, widget in enumerate(self.widgets):
             if isinstance(
-                    widget,
-                    widgets.WidgetBase,
+                widget,
+                widgets.WidgetBase,
             ) and not widget.check_size(self):
                 continue
             elif isinstance(widget, widgets.AutoWidthWidgetBase):
@@ -341,15 +351,13 @@ class ResizableMixin(ProgressBarMixinBase):
         if term_width:
             self.term_width = term_width
         else:  # pragma: no cover
-            try:
+            with contextlib.suppress(Exception):
                 self._handle_resize()
                 import signal
 
                 self._prev_handle = signal.getsignal(signal.SIGWINCH)
                 signal.signal(signal.SIGWINCH, self._handle_resize)
                 self.signal_set = True
-            except Exception:
-                pass
 
     def _handle_resize(self, signum=None, frame=None):
         'Tries to catch resize signals sent from the terminal.'
@@ -359,12 +367,10 @@ class ResizableMixin(ProgressBarMixinBase):
     def finish(self):  # pragma: no cover
         ProgressBarMixinBase.finish(self)
         if self.signal_set:
-            try:
+            with contextlib.suppress(Exception):
                 import signal
 
                 signal.signal(signal.SIGWINCH, self._prev_handle)
-            except Exception:  # pragma no cover
-                pass
 
 
 class StdRedirectMixin(DefaultFdMixin):
@@ -376,10 +382,10 @@ class StdRedirectMixin(DefaultFdMixin):
     _stderr: base.IO
 
     def __init__(
-            self,
-            redirect_stderr: bool = False,
-            redirect_stdout: bool = False,
-            **kwargs,
+        self,
+        redirect_stderr: bool = False,
+        redirect_stdout: bool = False,
+        **kwargs,
     ):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
@@ -507,24 +513,24 @@ class ProgressBar(
     paused: bool = False
 
     def __init__(
-            self,
-            min_value: T = 0,
-            max_value: T | types.Type[base.UnknownLength] | None = None,
-            widgets: types.Optional[
-                types.Sequence[widgets_module.WidgetBase | str]
-            ] = None,
-            left_justify: bool = True,
-            initial_value: T = 0,
-            poll_interval: types.Optional[float] = None,
-            widget_kwargs: types.Optional[types.Dict[str, types.Any]] = None,
-            custom_len: types.Callable[[str], int] = utils.len_color,
-            max_error=True,
-            prefix=None,
-            suffix=None,
-            variables=None,
-            min_poll_interval=None,
-            **kwargs,
-    ):
+        self,
+        min_value: T = 0,
+        max_value: T | types.Type[base.UnknownLength] | None = None,
+        widgets: types.Optional[
+            types.Sequence[widgets_module.WidgetBase | str]
+        ] = None,
+        left_justify: bool = True,
+        initial_value: T = 0,
+        poll_interval: types.Optional[float] = None,
+        widget_kwargs: types.Optional[types.Dict[str, types.Any]] = None,
+        custom_len: types.Callable[[str], int] = utils.len_color,
+        max_error=True,
+        prefix=None,
+        suffix=None,
+        variables=None,
+        min_poll_interval=None,
+        **kwargs,
+    ):  # sourcery skip: low-code-quality
         '''Initializes a progress bar with sane defaults.'''
         StdRedirectMixin.__init__(self, **kwargs)
         ResizableMixin.__init__(self, **kwargs)
@@ -547,7 +553,7 @@ class ProgressBar(
             )
             poll_interval = kwargs.get('poll')
 
-        if max_value and min_value > max_value:
+        if max_value and min_value > types.cast(T, max_value):
             raise ValueError(
                 'Max value needs to be bigger than the min value',
             )
@@ -588,8 +594,8 @@ class ProgressBar(
             default=None,
         )
         self._MINIMUM_UPDATE_INTERVAL = (
-                utils.deltas_to_seconds(self._MINIMUM_UPDATE_INTERVAL)
-                or self._MINIMUM_UPDATE_INTERVAL
+            utils.deltas_to_seconds(self._MINIMUM_UPDATE_INTERVAL)
+            or self._MINIMUM_UPDATE_INTERVAL
         )
 
         # Note that the _MINIMUM_UPDATE_INTERVAL sets the minimum in case of
@@ -604,8 +610,10 @@ class ProgressBar(
         # A dictionary of names that can be used by Variable and FormatWidget
         self.variables = utils.AttributeDict(variables or {})
         for widget in self.widgets:
-            if isinstance(widget, widgets_module.VariableMixin) \
-                    and widget.name not in self.variables:
+            if (
+                isinstance(widget, widgets_module.VariableMixin)
+                and widget.name not in self.variables
+            ):
                 self.variables[widget.name] = None
 
     @property
@@ -725,7 +733,7 @@ class ProgressBar(
             total_seconds_elapsed=total_seconds_elapsed,
             # The seconds since the bar started modulo 60
             seconds_elapsed=(elapsed.seconds % 60)
-                            + (elapsed.microseconds / 1000000.0),
+            + (elapsed.microseconds / 1000000.0),
             # The minutes since the bar started modulo 60
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24
@@ -840,16 +848,12 @@ class ProgressBar(
         # Update if value increment is not large enough to
         # add more bars to progressbar (according to current
         # terminal width)
-        try:
+        with contextlib.suppress(Exception):
             divisor: float = self.max_value / self.term_width  # type: ignore
             value_divisor = self.value // divisor  # type: ignore
             pvalue_divisor = self.previous_value // divisor  # type: ignore
             if value_divisor != pvalue_divisor:
                 return True
-        except Exception:
-            # ignore any division errors
-            pass
-
         # No need to redraw yet
         return False
 
@@ -859,9 +863,9 @@ class ProgressBar(
             self.start()
 
         if (
-                value is not None
-                and value is not base.UnknownLength
-                and isinstance(value, int)
+            value is not None
+            and value is not base.UnknownLength
+            and isinstance(value, int)
         ):
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
@@ -869,12 +873,14 @@ class ProgressBar(
             elif self.min_value > value:  # type: ignore
                 raise ValueError(
                     f'Value {value} is too small. Should be '
-                f'between {self.min_value} and {self.max_value}')
+                    f'between {self.min_value} and {self.max_value}'
+                )
             elif self.max_value < value:  # type: ignore
                 if self.max_error:
                     raise ValueError(
                         f'Value {value} is too large. Should be between '
-                    f'{self.min_value} and {self.max_value}')
+                        f'{self.min_value} and {self.max_value}'
+                    )
                 else:
                     value = self.max_value
 
@@ -982,9 +988,9 @@ class ProgressBar(
 
     def _verify_max_value(self):
         if (
-                self.max_value is not base.UnknownLength
-                and self.max_value is not None
-                and self.max_value < 0  # type: ignore
+            self.max_value is not base.UnknownLength
+            and self.max_value is not None
+            and self.max_value < 0  # type: ignore
         ):
             raise ValueError('max_value out of range, got %r' % self.max_value)
 

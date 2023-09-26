@@ -10,6 +10,7 @@ import re
 import sys
 from types import TracebackType
 from typing import Iterable, Iterator
+import typing
 
 from python_utils import types
 from python_utils.converters import scale_1024
@@ -21,11 +22,12 @@ from progressbar import base, terminal
 if types.TYPE_CHECKING:
     from .bar import ProgressBar, ProgressBarMixinBase
 
-assert timedelta_to_seconds
-assert get_terminal_size
-assert format_time
-assert scale_1024
-assert epoch
+# Make sure these are available for import
+assert timedelta_to_seconds is not None
+assert get_terminal_size is not None
+assert format_time is not None
+assert scale_1024 is not None
+assert epoch is not None
 
 StringT = types.TypeVar('StringT', bound=types.StringTypes)
 
@@ -44,7 +46,8 @@ ANSI_TERM_RE = re.compile(f"^({'|'.join(ANSI_TERMS)})", re.IGNORECASE)
 
 
 def is_ansi_terminal(
-    fd: base.IO, is_terminal: bool | None = None,
+    fd: base.IO,
+    is_terminal: bool | None = None,
 ) -> bool:  # pragma: no cover
     if is_terminal is None:
         # Jupyter Notebooks define this variable and support progress bars
@@ -182,7 +185,17 @@ def len_color(value: types.StringTypes) -> int:
     return len(no_color(value))
 
 
+@typing.overload
+def env_flag(name: str, default: bool) -> bool:
+    ...
+
+
+@typing.overload
 def env_flag(name: str, default: bool | None = None) -> bool | None:
+    ...
+
+
+def env_flag(name, default=None):
     '''
     Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
     on/off, and returns it as a boolean.
@@ -247,7 +260,7 @@ class WrappingIO:
         self.flush_target()
 
     def flush_target(self) -> None:  # pragma: no cover
-        if not self.target.closed and self.target.flush:
+        if not self.target.closed and getattr(self.target, 'flush', None):
             self.target.flush()
 
     def __enter__(self) -> WrappingIO:
@@ -360,7 +373,6 @@ class StreamWrapper:
             with contextlib.suppress(KeyError):
                 self.listeners.remove(bar)
 
-
         self.capturing -= 1
         self.update_capturing()
 
@@ -386,7 +398,8 @@ class StreamWrapper:
 
         if not self.wrapped_stdout:
             self.stdout = sys.stdout = WrappingIO(  # type: ignore
-                self.original_stdout, listeners=self.listeners,
+                self.original_stdout,
+                listeners=self.listeners,
             )
         self.wrapped_stdout += 1
 
@@ -397,7 +410,8 @@ class StreamWrapper:
 
         if not self.wrapped_stderr:
             self.stderr = sys.stderr = WrappingIO(  # type: ignore
-                self.original_stderr, listeners=self.listeners,
+                self.original_stderr,
+                listeners=self.listeners,
             )
         self.wrapped_stderr += 1
 

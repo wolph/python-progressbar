@@ -97,7 +97,7 @@ classifiers = [
 description = 'A Python Progressbar library to provide visual (yet text based) progress to long running operations.'
 readme = 'README.rst'
 
-dependencies = ['python-utils >= 3.8.0']
+dependencies = ['python-utils >= 3.8.1']
 
 [tool.setuptools.dynamic]
 version = { attr = 'progressbar.__about__.__version__' }

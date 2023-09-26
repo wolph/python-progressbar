@@ -13,6 +13,7 @@ from collections import deque
 from typing import ClassVar
 
 from python_utils import converters, types
+from python_utils.containers import SliceableDeque
 
 from . import base, terminal, utils
 from .terminal import colors
@@ -30,39 +31,6 @@ Data = types.Dict[str, types.Any]
 FormatString = typing.Optional[str]
 
 T = typing.TypeVar('T')
-
-
-class SliceableDeque(typing.Generic[T], deque):
-    def __getitem__(
-            self,
-            index: int | slice,
-    ) -> T | deque[T]:
-        if isinstance(index, slice):
-            start, stop, step = index.indices(len(self))
-            return self.__class__(self[i] for i in range(start, stop, step))
-        else:
-            return super().__getitem__(index)
-
-    def pop(self, index=-1) -> T:
-        # We need to allow for an index but a deque only allows the removal of
-        # the first or last item.
-        if index == 0:
-            return super().popleft()
-        elif index in {-1, len(self) - 1}:
-            return super().pop()
-        else:
-            raise IndexError(
-                'Only index 0 and the last index (`N-1` or `-1`) are supported',
-            )
-
-    def __eq__(self, other):
-        # Allow for comparison with a list or tuple
-        if isinstance(other, list):
-            return list(self) == other
-        elif isinstance(other, tuple):
-            return tuple(self) == other
-        else:
-            return super().__eq__(other)
 
 
 def string_or_lambda(input_):
