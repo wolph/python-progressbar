@@ -9,7 +9,8 @@ class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
 
     def update(self, pbar):
         if 45 < pbar.percentage() < 80:
-            return f'Bigger Now {progressbar.FileTransferSpeed.update(self, pbar)}'
+            value = progressbar.FileTransferSpeed.update(self, pbar)
+            return f'Bigger Now {value}'
         else:
             return progressbar.FileTransferSpeed.update(self, pbar)
 

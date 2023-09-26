@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 import progressbar
 from progressbar import widgets
+from python_utils.containers import SliceableDeque
 
 
 def test_numeric_samples():
@@ -36,7 +37,7 @@ def test_numeric_samples():
     bar.last_update_time = start + timedelta(seconds=bar.value)
     assert samples_widget(bar, None, True) == (timedelta(0, 16), 16)
 
-    assert samples_widget(bar, None)[1] == progressbar.SliceableDeque(
+    assert samples_widget(bar, None)[1] == SliceableDeque(
         [4, 5, 8, 10, 20],
     )
 

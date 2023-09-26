@@ -279,7 +279,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
             self.fd.write(line.encode('ascii', 'replace'))
 
     def finish(
-        self, *args: types.Any, **kwargs: types.Any
+        self, *args: types.Any, **kwargs: types.Any,
     ) -> None:  # pragma: no cover
         if self._finished:
             return
@@ -873,13 +873,13 @@ class ProgressBar(
             elif self.min_value > value:  # type: ignore
                 raise ValueError(
                     f'Value {value} is too small. Should be '
-                    f'between {self.min_value} and {self.max_value}'
+                    f'between {self.min_value} and {self.max_value}',
                 )
             elif self.max_value < value:  # type: ignore
                 if self.max_error:
                     raise ValueError(
                         f'Value {value} is too large. Should be between '
-                        f'{self.min_value} and {self.max_value}'
+                        f'{self.min_value} and {self.max_value}',
                     )
                 else:
                     value = self.max_value

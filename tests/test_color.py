@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import typing
 
-import pytest
-
 import progressbar
+import pytest
 from progressbar import terminal, widgets
 
 
@@ -58,7 +57,8 @@ class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
 
 
 class _TestFixedGradientSupport(progressbar.widgets.WidgetBase):
-    _gradient_colors: typing.ClassVar[widgets.TGradientColors] = widgets.TGradientColors(
+    _gradient_colors: typing.ClassVar[
+        widgets.TGradientColors] = widgets.TGradientColors(
         fg=progressbar.widgets.colors.gradient,
         bg=None,
     )

@@ -8,9 +8,9 @@ import logging
 import os
 import re
 import sys
+import typing
 from types import TracebackType
 from typing import Iterable, Iterator
-import typing
 
 from python_utils import types
 from python_utils.converters import scale_1024

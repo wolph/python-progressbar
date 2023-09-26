@@ -1,4 +1,3 @@
-__test__ = False
 import sys
 
 if sys.platform.startswith('win'):

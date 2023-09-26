@@ -60,7 +60,6 @@ select = [
 [per-file-ignores]
 'tests/*' = ['INP001', 'T201', 'T203']
 'examples.py' = ['T201']
-'docs/*' = ['*']
 
 [pydocstyle]
 convention = 'google'

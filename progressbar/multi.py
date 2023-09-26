@@ -10,10 +10,8 @@ import time
 import timeit
 import typing
 from datetime import timedelta
-from typing import List, Any
 
 import python_utils
-from python_utils import decorators
 
 from . import bar, terminal
 from .terminal import stream
@@ -132,7 +130,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             bar.fd = stream.LastLineStream(self.fd)
             bar.paused = True
             # Essentially `bar.print = self.print`, but `mypy` doesn't like that
-            setattr(bar, 'print', self.print)
+            bar.print = self.print
 
         # Just in case someone is using a progressbar with a custom
         # constructor and forgot to call the super constructor
@@ -182,7 +180,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                 continue
 
             output.extend(
-                iter(self._render_bar(bar_, expired=expired, now=now))
+                iter(self._render_bar(bar_, expired=expired, now=now)),
             )
 
         with self._print_lock:
@@ -218,7 +216,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                 self.flush()
 
     def _render_bar(
-        self, bar_: bar.ProgressBar, now, expired
+        self, bar_: bar.ProgressBar, now, expired,
     ) -> typing.Iterable[str]:
         def update(force=True, write=True):
             self._label_bar(bar_)

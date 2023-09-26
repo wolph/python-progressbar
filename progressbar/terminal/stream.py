@@ -121,7 +121,7 @@ class LastLineStream(TextIOOutputWrapper):
     def writelines(self, __lines: Iterable[str]) -> None:
         line = ''
         # Walk through the lines and take the last one
-        for line in __lines:
+        for line in __lines:  # noqa: B007
             pass
 
         self.line = line
