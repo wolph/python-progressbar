@@ -8,7 +8,6 @@ import logging
 import os
 import re
 import sys
-import typing
 from types import TracebackType
 from typing import Iterable, Iterator
 
@@ -17,7 +16,7 @@ from python_utils.converters import scale_1024
 from python_utils.terminal import get_terminal_size
 from python_utils.time import epoch, format_time, timedelta_to_seconds
 
-from progressbar import base, terminal
+from progressbar import base, env, terminal
 
 if types.TYPE_CHECKING:
     from .bar import ProgressBar, ProgressBarMixinBase
@@ -31,80 +30,10 @@ assert epoch is not None
 
 StringT = types.TypeVar('StringT', bound=types.StringTypes)
 
-ANSI_TERMS = (
-    '([xe]|bv)term',
-    '(sco)?ansi',
-    'cygwin',
-    'konsole',
-    'linux',
-    'rxvt',
-    'screen',
-    'tmux',
-    'vt(10[02]|220|320)',
-)
-ANSI_TERM_RE = re.compile(f"^({'|'.join(ANSI_TERMS)})", re.IGNORECASE)
-
-
-def is_ansi_terminal(
-    fd: base.IO,
-    is_terminal: bool | None = None,
-) -> bool:  # pragma: no cover
-    if is_terminal is None:
-        # Jupyter Notebooks define this variable and support progress bars
-        if 'JPY_PARENT_PID' in os.environ:
-            is_terminal = True
-        # This works for newer versions of pycharm only. With older versions
-        # there is no way to check.
-        elif os.environ.get('PYCHARM_HOSTED') == '1' and not os.environ.get(
-            'PYTEST_CURRENT_TEST',
-        ):
-            is_terminal = True
-
-    if is_terminal is None:
-        # check if we are writing to a terminal or not. typically a file object
-        # is going to return False if the instance has been overridden and
-        # isatty has not been defined we have no way of knowing so we will not
-        # use ansi.  ansi terminals will typically define one of the 2
-        # environment variables.
-        try:
-            is_tty = fd.isatty()
-            # Try and match any of the huge amount of Linux/Unix ANSI consoles
-            if is_tty and ANSI_TERM_RE.match(os.environ.get('TERM', '')):
-                is_terminal = True
-            # ANSICON is a Windows ANSI compatible console
-            elif 'ANSICON' in os.environ:
-                is_terminal = True
-            else:
-                is_terminal = None
-        except Exception:
-            is_terminal = False
-
-    return bool(is_terminal)
-
-
-def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool:
-    if is_terminal is None:
-        # Full ansi support encompasses what we expect from a terminal
-        is_terminal = is_ansi_terminal(fd) or None
-
-    if is_terminal is None:
-        # Allow a environment variable override
-        is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
-
-    if is_terminal is None:  # pragma: no cover
-        # Bare except because a lot can go wrong on different systems. If we do
-        # get a TTY we know this is a valid terminal
-        try:
-            is_terminal = fd.isatty()
-        except Exception:
-            is_terminal = False
-
-    return bool(is_terminal)
-
 
 def deltas_to_seconds(
-    *deltas,
-    default: types.Optional[types.Type[ValueError]] = ValueError,
+        *deltas,
+        default: types.Optional[types.Type[ValueError]] = ValueError,
 ) -> int | float | None:
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing.
@@ -185,32 +114,6 @@ def len_color(value: types.StringTypes) -> int:
     return len(no_color(value))
 
 
-@typing.overload
-def env_flag(name: str, default: bool) -> bool:
-    ...
-
-
-@typing.overload
-def env_flag(name: str, default: bool | None = None) -> bool | None:
-    ...
-
-
-def env_flag(name, default=None):
-    '''
-    Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
-    on/off, and returns it as a boolean.
-
-    If the environment variable is not defined, or has an unknown value,
-    returns `default`
-    '''
-    v = os.getenv(name)
-    if v and v.lower() in ('y', 'yes', 't', 'true', 'on', '1'):
-        return True
-    if v and v.lower() in ('n', 'no', 'f', 'false', 'off', '0'):
-        return False
-    return default
-
-
 class WrappingIO:
     buffer: io.StringIO
     target: base.IO
@@ -219,10 +122,10 @@ class WrappingIO:
     needs_clear: bool = False
 
     def __init__(
-        self,
-        target: base.IO,
-        capturing: bool = False,
-        listeners: types.Optional[types.Set[ProgressBar]] = None,
+            self,
+            target: base.IO,
+            capturing: bool = False,
+            listeners: types.Optional[types.Set[ProgressBar]] = None,
     ) -> None:
         self.buffer = io.StringIO()
         self.target = target
@@ -313,10 +216,10 @@ class WrappingIO:
         return self.target.__iter__()
 
     def __exit__(
-        self,
-        __t: type[BaseException] | None,
-        __value: BaseException | None,
-        __traceback: TracebackType | None,
+            self,
+            __t: type[BaseException] | None,
+            __value: BaseException | None,
+            __traceback: TracebackType | None,
     ) -> None:
         self.close()
 
@@ -334,11 +237,6 @@ class StreamWrapper:
         ],
         None,
     ]
-    # original_excepthook: types.Callable[
-    #                          [
-    #                              types.Type[BaseException],
-    #                              BaseException, TracebackType | None,
-    #                          ], None] | None
     wrapped_stdout: int = 0
     wrapped_stderr: int = 0
     wrapped_excepthook: int = 0
@@ -355,10 +253,10 @@ class StreamWrapper:
         self.capturing = 0
         self.listeners = set()
 
-        if env_flag('WRAP_STDOUT', default=False):  # pragma: no cover
+        if env.env_flag('WRAP_STDOUT', default=False):  # pragma: no cover
             self.wrap_stdout()
 
-        if env_flag('WRAP_STDERR', default=False):  # pragma: no cover
+        if env.env_flag('WRAP_STDERR', default=False):  # pragma: no cover
             self.wrap_stderr()
 
     def start_capturing(self, bar: ProgressBarMixinBase | None = None) -> None:

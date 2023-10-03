@@ -917,7 +917,7 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
                     continue
 
                 temporary_data['value'] = value
-                if width := progress.custom_len(
+                if width := progress.custom_len(  # pragma: no branch
                     FormatWidgetMixin.__call__(
                         self,
                         progress,

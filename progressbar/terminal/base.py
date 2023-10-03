@@ -3,8 +3,6 @@ from __future__ import annotations
 import abc
 import collections
 import colorsys
-import enum
-import os
 import threading
 from collections import defaultdict
 
@@ -14,7 +12,7 @@ from typing import ClassVar
 
 from python_utils import converters, types
 
-from .. import base
+from .. import base as pbase, env
 from .os_specific import getch
 
 ESC = '\x1B'
@@ -140,64 +138,8 @@ def clear_line(n):
     return UP(n) + CLEAR_LINE_ALL() + DOWN(n)
 
 
-class ColorSupport(enum.IntEnum):
-    '''Color support for the terminal.'''
-
-    NONE = 0
-    XTERM = 16
-    XTERM_256 = 256
-    XTERM_TRUECOLOR = 16777216
-
-    @classmethod
-    def from_env(cls):
-        '''Get the color support from the environment.
-
-        If any of the environment variables contain `24bit` or `truecolor`,
-        we will enable true color/24 bit support. If they contain `256`, we
-        will enable 256 color/8 bit support. If they contain `xterm`, we will
-        enable 16 color support. Otherwise, we will assume no color support.
-
-        If `JUPYTER_COLUMNS` or `JUPYTER_LINES` is set, we will assume true
-        color support.
-
-        Note that the highest available value will be used! Having
-        `COLORTERM=truecolor` will override `TERM=xterm-256color`.
-        '''
-        variables = (
-            'FORCE_COLOR',
-            'PROGRESSBAR_ENABLE_COLORS',
-            'COLORTERM',
-            'TERM',
-        )
-
-        if os.environ.get('JUPYTER_COLUMNS') or os.environ.get(
-            'JUPYTER_LINES',
-        ):
-            # Jupyter notebook always supports true color.
-            return cls.XTERM_TRUECOLOR
-
-        support = cls.NONE
-        for variable in variables:
-            value = os.environ.get(variable)
-            if value is None:
-                continue
-            elif value in {'truecolor', '24bit'}:
-                # Truecolor support, we don't need to check anything else.
-                support = cls.XTERM_TRUECOLOR
-                break
-            elif '256' in value:
-                support = max(cls.XTERM_256, support)
-            elif value == 'xterm':
-                support = max(cls.XTERM, support)
-
-        return support
-
-
-color_support = ColorSupport.from_env()
-
-
 # Report Cursor Position (CPR), response = [row;column] as row;columnR
-class _CPR(str):
+class _CPR(str):  # pragma: no cover
     _response_lock = threading.Lock()
 
     def __call__(self, stream):
@@ -268,21 +210,30 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
         )
 
 
-class HLS(collections.namedtuple('HLS', ['hue', 'lightness', 'saturation'])):
+class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
+    '''
+    Hue, Saturation, Lightness color.
+
+    Hue is a value between 0 and 360, saturation and lightness are between 0(%)
+    and 100(%).
+
+    '''
     __slots__ = ()
 
     @classmethod
-    def from_rgb(cls, rgb: RGB) -> HLS:
+    def from_rgb(cls, rgb: RGB) -> HSL:
+        '''
+        Convert a 0-255 RGB color to a 0-255 HLS color.
+        '''
+        hls = colorsys.rgb_to_hls(rgb.red/255,rgb.green/255,rgb.blue/255)
         return cls(
-            *colorsys.rgb_to_hls(
-                rgb.red / 255,
-                rgb.green / 255,
-                rgb.blue / 255,
-            ),
+            round(hls[0] * 360),
+            round(hls[2] * 100),
+            round(hls[1] * 100),
         )
 
-    def interpolate(self, end: HLS, step: float) -> HLS:
-        return HLS(
+    def interpolate(self, end: HSL, step: float) -> HSL:
+        return HSL(
             self.hue + (end.hue - self.hue) * step,
             self.lightness + (end.lightness - self.lightness) * step,
             self.saturation + (end.saturation - self.saturation) * step,
@@ -309,7 +260,7 @@ class Color(
     '''
     Color base class.
 
-    This class contains the colors in RGB (Red, Green, Blue), HLS (Hue,
+    This class contains the colors in RGB (Red, Green, Blue), HSL (Hue,
     Lightness, Saturation) and Xterm (8-bit) formats. It also contains the
     color name.
 
@@ -337,16 +288,16 @@ class Color(
 
     @property
     def ansi(self) -> types.Optional[str]:
-        if color_support is ColorSupport.XTERM_TRUECOLOR:
+        if env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR:  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
-        if self.xterm:
+        if self.xterm:  # pragma: no branch
             color = self.xterm
-        elif color_support is ColorSupport.XTERM_256:
+        elif env.COLOR_SUPPORT is env.ColorSupport.XTERM_256:  # pragma: no branch
             color = self.rgb.to_ansi_256
-        elif color_support is ColorSupport.XTERM:
+        elif env.COLOR_SUPPORT is env.ColorSupport.XTERM:  # pragma: no branch
             color = self.rgb.to_ansi_16
-        else:
+        else:  # pragma: no branch
             return None
 
         return f'5;{color}'
@@ -383,7 +334,7 @@ class Colors:
         defaultdict[RGB, types.List[Color]]
     ] = collections.defaultdict(list)
     by_hls: ClassVar[
-        defaultdict[HLS, types.List[Color]]
+        defaultdict[HSL, types.List[Color]]
     ] = collections.defaultdict(list)
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
@@ -391,7 +342,7 @@ class Colors:
     def register(
         cls,
         rgb: RGB,
-        hls: types.Optional[HLS] = None,
+        hls: types.Optional[HSL] = None,
         name: types.Optional[str] = None,
         xterm: types.Optional[int] = None,
     ) -> Color:
@@ -402,7 +353,7 @@ class Colors:
             cls.by_lowername[name.lower()].append(color)
 
         if hls is None:
-            hls = HLS.from_rgb(rgb)
+            hls = HSL.from_rgb(rgb)
 
         cls.by_hex[rgb.hex].append(color)
         cls.by_rgb[rgb].append(color)
@@ -430,8 +381,8 @@ class ColorGradient(ColorBase):
     def get_color(self, value: float) -> Color:
         'Map a value from 0 to 1 to a color.'
         if (
-            value == base.Undefined
-            or value == base.UnknownLength
+            value == pbase.Undefined
+            or value == pbase.UnknownLength
             or value <= 0
         ):
             return self.colors[0]
@@ -442,7 +393,12 @@ class ColorGradient(ColorBase):
         if max_color_idx == 0:
             return self.colors[0]
         elif self.interpolate:
-            index = round(converters.remap(value, 0, 1, 0, max_color_idx - 1))
+            if max_color_idx > 1:
+                index = round(
+                    converters.remap(value, 0, 1, 0, max_color_idx - 1))
+            else:
+                index = 0
+
             step = converters.remap(
                 value,
                 index / (max_color_idx),
@@ -481,21 +437,24 @@ def apply_colors(
     bg_none: Color | None = None,
     **kwargs: types.Any,
 ) -> str:
-    if fg is None and bg is None:
-        return text
+    '''Apply colors/gradients to a string depending on the given percentage.
 
+    When percentage is `None`, the `fg_none` and `bg_none` colors will be used.
+    Otherwise, the `fg` and `bg` colors will be used. If the colors are
+    gradients, the color will be interpolated depending on the percentage.
+    '''
     if percentage is None:
         if fg_none is not None:
             text = fg_none.fg(text)
         if bg_none is not None:
             text = bg_none.bg(text)
-    else:
+    elif fg is not None or bg is not None:
         fg = get_color(percentage * 0.01, fg)
         bg = get_color(percentage * 0.01, bg)
 
-        if fg is not None:
+        if fg is not None:  # pragma: no branch
             text = fg.fg(text)
-        if bg is not None:
+        if bg is not None:  # pragma: no branch
             text = bg.bg(text)
 
     return text

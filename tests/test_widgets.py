@@ -145,7 +145,9 @@ def test_all_widgets_min_width(min_width, term_width):
         progressbar.ReverseBar(min_width=min_width),
         progressbar.BouncingBar(min_width=min_width),
         progressbar.FormatCustomText(
-            'Custom %(text)s', dict(text='text'), min_width=min_width,
+            'Custom %(text)s',
+            dict(text='text'),
+            min_width=min_width,
         ),
         progressbar.DynamicMessage('custom', min_width=min_width),
         progressbar.CurrentTime(min_width=min_width),
@@ -180,7 +182,9 @@ def test_all_widgets_max_width(max_width, term_width):
         progressbar.ReverseBar(max_width=max_width),
         progressbar.BouncingBar(max_width=max_width),
         progressbar.FormatCustomText(
-            'Custom %(text)s', dict(text='text'), max_width=max_width,
+            'Custom %(text)s',
+            dict(text='text'),
+            max_width=max_width,
         ),
         progressbar.DynamicMessage('custom', max_width=max_width),
         progressbar.CurrentTime(max_width=max_width),

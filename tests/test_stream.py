@@ -3,6 +3,9 @@ import sys
 
 import progressbar
 import pytest
+from progressbar import terminal
+
+from progressbar.terminal.stream import LastLineStream
 
 
 def test_nowrap():
@@ -101,3 +104,46 @@ def test_fd_as_standard_streams(stream):
     with progressbar.ProgressBar(fd=stream) as pb:
         for i in range(101):
             pb.update(i)
+
+
+def test_line_offset_stream_wrapper():
+    stream = terminal.LineOffsetStreamWrapper(5, io.StringIO())
+    stream.write('Hello World!')
+
+
+def test_last_line_stream_methods():
+    stream = terminal.LastLineStream(io.StringIO())
+
+    # Test write method
+    stream.write('Hello World!')
+    assert stream.read() == 'Hello World!'
+    assert stream.read(5) == 'Hello'
+
+    # Test flush method
+    stream.flush()
+    assert stream.line == 'Hello World!'
+    assert stream.readline() == 'Hello World!'
+    assert stream.readline(5) == 'Hello'
+
+    # Test truncate method
+    stream.truncate(5)
+    assert stream.line == 'Hello'
+    stream.truncate()
+    assert stream.line == ''
+    
+    # Test seekable/readable
+    assert not stream.seekable()
+    assert stream.readable()
+    
+    stream.writelines(['a', 'b', 'c'])
+    assert stream.read() == 'c'
+
+    assert list(stream) == ['c']
+    
+    with stream:
+        stream.write('Hello World!')
+        assert stream.read() == 'Hello World!'
+        assert stream.read(5) == 'Hello'
+
+    # Test close method
+    stream.close()

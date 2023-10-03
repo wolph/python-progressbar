@@ -10,7 +10,9 @@ def test_timer():
         progressbar.Timer(),
     ]
     p = progressbar.ProgressBar(
-        max_value=2, widgets=widgets, poll_interval=0.0001,
+        max_value=2,
+        widgets=widgets,
+        poll_interval=0.0001,
     )
 
     p.start()
@@ -28,7 +30,10 @@ def test_eta():
         progressbar.ETA(),
     ]
     p = progressbar.ProgressBar(
-        min_value=0, max_value=2, widgets=widgets, poll_interval=0.0001,
+        min_value=0,
+        max_value=2,
+        widgets=widgets,
+        poll_interval=0.0001,
     )
 
     p.start()
@@ -72,7 +77,9 @@ def test_adaptive_transfer_speed():
         progressbar.AdaptiveTransferSpeed(),
     ]
     p = progressbar.ProgressBar(
-        max_value=2, widgets=widgets, poll_interval=0.0001,
+        max_value=2,
+        widgets=widgets,
+        poll_interval=0.0001,
     )
 
     p.start()
@@ -105,7 +112,9 @@ def test_etas(monkeypatch):
 
     monkeypatch.setattr(progressbar.FileTransferSpeed, '_speed', calculate_eta)
     monkeypatch.setattr(
-        progressbar.AdaptiveTransferSpeed, '_speed', calculate_eta,
+        progressbar.AdaptiveTransferSpeed,
+        '_speed',
+        calculate_eta,
     )
 
     for widget in widgets:
@@ -150,7 +159,9 @@ def test_non_changing_eta():
         progressbar.AdaptiveTransferSpeed(),
     ]
     p = progressbar.ProgressBar(
-        max_value=2, widgets=widgets, poll_interval=0.0001,
+        max_value=2,
+        widgets=widgets,
+        poll_interval=0.0001,
     )
 
     p.start()

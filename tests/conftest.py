@@ -25,7 +25,9 @@ def pytest_configure(config):
 def small_interval(monkeypatch):
     # Remove the update limit for tests by default
     monkeypatch.setattr(
-        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1e-6,
+        progressbar.ProgressBar,
+        '_MINIMUM_UPDATE_INTERVAL',
+        1e-6,
     )
     monkeypatch.setattr(timeit, 'default_timer', time.time)
 

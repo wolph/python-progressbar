@@ -35,7 +35,9 @@ def test_poll_interval(parameter, poll_interval, expected):
 )
 def test_intervals(monkeypatch, interval):
     monkeypatch.setattr(
-        progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', interval,
+        progressbar.ProgressBar,
+        '_MINIMUM_UPDATE_INTERVAL',
+        interval,
     )
     bar = progressbar.ProgressBar(max_value=100)
 

@@ -3,6 +3,8 @@ import io
 import progressbar
 import pytest
 
+import progressbar.env
+
 
 @pytest.mark.parametrize(
     'value,expected',
@@ -24,11 +26,11 @@ import pytest
 def test_env_flag(value, expected, monkeypatch):
     if value is not None:
         monkeypatch.setenv('TEST_ENV', value)
-    assert progressbar.utils.env_flag('TEST_ENV') == expected
+    assert progressbar.env.env_flag('TEST_ENV') == expected
 
     if value:
         monkeypatch.setenv('TEST_ENV', value.upper())
-        assert progressbar.utils.env_flag('TEST_ENV') == expected
+        assert progressbar.env.env_flag('TEST_ENV') == expected
 
     monkeypatch.undo()
 
@@ -39,25 +41,25 @@ def test_is_terminal(monkeypatch):
     monkeypatch.delenv('PROGRESSBAR_IS_TERMINAL', raising=False)
     monkeypatch.delenv('JPY_PARENT_PID', raising=False)
 
-    assert progressbar.utils.is_terminal(fd) is False
-    assert progressbar.utils.is_terminal(fd, True) is True
-    assert progressbar.utils.is_terminal(fd, False) is False
+    assert progressbar.env.is_terminal(fd) is False
+    assert progressbar.env.is_terminal(fd, True) is True
+    assert progressbar.env.is_terminal(fd, False) is False
 
     monkeypatch.setenv('JPY_PARENT_PID', '123')
-    assert progressbar.utils.is_terminal(fd) is True
+    assert progressbar.env.is_terminal(fd) is True
     monkeypatch.delenv('JPY_PARENT_PID')
 
     # Sanity check
-    assert progressbar.utils.is_terminal(fd) is False
+    assert progressbar.env.is_terminal(fd) is False
 
     monkeypatch.setenv('PROGRESSBAR_IS_TERMINAL', 'true')
-    assert progressbar.utils.is_terminal(fd) is True
+    assert progressbar.env.is_terminal(fd) is True
     monkeypatch.setenv('PROGRESSBAR_IS_TERMINAL', 'false')
-    assert progressbar.utils.is_terminal(fd) is False
+    assert progressbar.env.is_terminal(fd) is False
     monkeypatch.delenv('PROGRESSBAR_IS_TERMINAL')
 
     # Sanity check
-    assert progressbar.utils.is_terminal(fd) is False
+    assert progressbar.env.is_terminal(fd) is False
 
 
 def test_is_ansi_terminal(monkeypatch):
@@ -66,22 +68,22 @@ def test_is_ansi_terminal(monkeypatch):
     monkeypatch.delenv('PROGRESSBAR_IS_TERMINAL', raising=False)
     monkeypatch.delenv('JPY_PARENT_PID', raising=False)
 
-    assert progressbar.utils.is_ansi_terminal(fd) is False
-    assert progressbar.utils.is_ansi_terminal(fd, True) is True
-    assert progressbar.utils.is_ansi_terminal(fd, False) is False
+    assert progressbar.env.is_ansi_terminal(fd) is False
+    assert progressbar.env.is_ansi_terminal(fd, True) is True
+    assert progressbar.env.is_ansi_terminal(fd, False) is False
 
     monkeypatch.setenv('JPY_PARENT_PID', '123')
-    assert progressbar.utils.is_ansi_terminal(fd) is True
+    assert progressbar.env.is_ansi_terminal(fd) is True
     monkeypatch.delenv('JPY_PARENT_PID')
 
     # Sanity check
-    assert progressbar.utils.is_ansi_terminal(fd) is False
+    assert progressbar.env.is_ansi_terminal(fd) is False
 
     monkeypatch.setenv('PROGRESSBAR_IS_TERMINAL', 'true')
-    assert progressbar.utils.is_ansi_terminal(fd) is False
+    assert progressbar.env.is_ansi_terminal(fd) is False
     monkeypatch.setenv('PROGRESSBAR_IS_TERMINAL', 'false')
-    assert progressbar.utils.is_ansi_terminal(fd) is False
+    assert progressbar.env.is_ansi_terminal(fd) is False
     monkeypatch.delenv('PROGRESSBAR_IS_TERMINAL')
 
     # Sanity check
-    assert progressbar.utils.is_ansi_terminal(fd) is False
+    assert progressbar.env.is_ansi_terminal(fd) is False

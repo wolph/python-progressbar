@@ -23,7 +23,6 @@ def test_examples(monkeypatch):
             example()
 
 
-
 @pytest.mark.filterwarnings('ignore:.*maxval.*:DeprecationWarning')
 @pytest.mark.parametrize('example', original_examples.examples)
 def test_original_examples(example, monkeypatch):

@@ -4,6 +4,7 @@ import time
 from datetime import timedelta
 
 import progressbar
+from progressbar import terminal
 
 
 def test_left_justify():
@@ -95,7 +96,9 @@ def test_no_fill(monkeypatch):
     bar = progressbar.BouncingBar()
     bar.INTERVAL = timedelta(seconds=1)
     p = progressbar.ProgressBar(
-        widgets=[bar], max_value=progressbar.UnknownLength, term_width=20,
+        widgets=[bar],
+        max_value=progressbar.UnknownLength,
+        term_width=20,
     )
 
     assert p.term_width is not None
@@ -107,7 +110,9 @@ def test_no_fill(monkeypatch):
 
 def test_stdout_redirection():
     p = progressbar.ProgressBar(
-        fd=sys.stdout, max_value=10, redirect_stdout=True,
+        fd=sys.stdout,
+        max_value=10,
+        redirect_stdout=True,
     )
 
     for i in range(10):
@@ -135,7 +140,9 @@ def test_stderr_redirection():
 
 def test_stdout_stderr_redirection():
     p = progressbar.ProgressBar(
-        max_value=10, redirect_stdout=True, redirect_stderr=True,
+        max_value=10,
+        redirect_stdout=True,
+        redirect_stderr=True,
     )
     p.start()
 
@@ -171,3 +178,11 @@ def test_resize(monkeypatch):
         p.finish()
     except ImportError:
         pass  # Skip on Windows
+
+
+def test_base():
+    assert str(terminal.CUP)
+    assert str(terminal.CLEAR_SCREEN_ALL_AND_HISTORY)
+
+    terminal.clear_line(0)
+    terminal.clear_line(1)

@@ -7,7 +7,7 @@ from typing import Iterable, Iterator
 from progressbar import base
 
 
-class TextIOOutputWrapper(base.TextIO):
+class TextIOOutputWrapper(base.TextIO):  # pragma: no cover
     def __init__(self, stream: base.TextIO):
         self.stream = stream
 
@@ -102,10 +102,16 @@ class LastLineStream(TextIOOutputWrapper):
         return True
 
     def read(self, __n: int = -1) -> str:
-        return self.line[:__n]
+        if __n < 0:
+            return self.line
+        else:
+            return self.line[:__n]
 
     def readline(self, __limit: int = -1) -> str:
-        return self.line[:__limit]
+        if __limit < 0:
+            return self.line
+        else:
+            return self.line[:__limit]
 
     def write(self, data):
         self.line = data
@@ -117,6 +123,9 @@ class LastLineStream(TextIOOutputWrapper):
             self.line = self.line[:__size]
 
         return len(self.line)
+    
+    def __iter__(self) -> Iterator[str]:
+        yield self.line
 
     def writelines(self, __lines: Iterable[str]) -> None:
         line = ''

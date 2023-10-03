@@ -28,11 +28,11 @@ def _non_empty_lines(lines):
 
 
 def _create_script(
-        widgets=None,
-        items=None,
-        loop_code='fake_time.tick(1)',
-        term_width=60,
-        **kwargs,
+    widgets=None,
+    items=None,
+    loop_code='fake_time.tick(1)',
+    term_width=60,
+    **kwargs,
 ):
     if items is None:
         items = list(range(9))
