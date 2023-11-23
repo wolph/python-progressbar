@@ -106,7 +106,7 @@ class ProgressBarMixinBase(abc.ABC):
     def update(self, value=None):
         pass
 
-    def finish(self):  # pragma: no cover
+    def finish(self) -> None:  # pragma: no cover
         self._finished = True
 
     def __del__(self):
@@ -185,7 +185,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         ProgressBarMixinBase.__init__(self, **kwargs)
 
-    def update(self, *args, **kwargs):
+    def update(self, *args: types.Any, **kwargs: types.Any) -> None:
         ProgressBarMixinBase.update(self, *args, **kwargs)
 
         line: str = converters.to_unicode(self._format_line())
@@ -202,7 +202,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
         except UnicodeEncodeError:  # pragma: no cover
             self.fd.write(line.encode('ascii', 'replace'))
 
-    def finish(self, *args, **kwargs):  # pragma: no cover
+    def finish(self, *args: types.Any, **kwargs: types.Any) -> None:  # pragma: no cover
+
         if self._finished:
             return
 
@@ -824,14 +825,18 @@ class ProgressBar(
             # Only flush if something was actually written
             self.fd.flush()
 
-    def start(self, max_value=None, init=True):
+    def start(  # type: ignore[override]
+            self,
+            max_value: int | None=None,
+            init: bool=True,
+    ):
         '''Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
 
         Args:
             max_value (int): The maximum value of the progressbar
-            reinit (bool): Initialize the progressbar, this is useful if you
+            init (bool): (Re)Initialize the progressbar, this is useful if you
                 wish to reuse the same progressbar but can be disabled if
                 data needs to be passed along to the next run
 

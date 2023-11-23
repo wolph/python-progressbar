@@ -20,11 +20,11 @@ from progressbar import base
 if types.TYPE_CHECKING:
     from .bar import ProgressBar, ProgressBarMixinBase
 
-assert timedelta_to_seconds
-assert get_terminal_size
-assert format_time
-assert scale_1024
-assert epoch
+assert timedelta_to_seconds is not None
+assert get_terminal_size is not None
+assert format_time is not None
+assert scale_1024 is not None
+assert epoch is not None
 
 StringT = types.TypeVar('StringT', bound=types.StringTypes)
 
