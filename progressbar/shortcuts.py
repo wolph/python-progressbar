@@ -8,7 +8,7 @@ def progressbar(
     widgets=None,
     prefix=None,
     suffix=None,
-    **kwargs
+    **kwargs,
 ):
     progressbar = bar.ProgressBar(
         min_value=min_value,
@@ -16,7 +16,7 @@ def progressbar(
         widgets=widgets,
         prefix=prefix,
         suffix=suffix,
-        **kwargs
+        **kwargs,
     )
 
     for result in progressbar(iterator):

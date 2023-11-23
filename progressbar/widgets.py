@@ -417,7 +417,6 @@ class ETA(Timer):
         format_NA='ETA:      N/A',
         **kwargs,
     ):
-
         if '%s' in format and '%(eta)s' not in format:
             format = format.replace('%s', '%(eta)s')
 

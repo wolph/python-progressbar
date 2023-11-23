@@ -202,8 +202,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
         except UnicodeEncodeError:  # pragma: no cover
             self.fd.write(line.encode('ascii', 'replace'))
 
-    def finish(self, *args: types.Any, **kwargs: types.Any) -> None:  # pragma: no cover
-
+    def finish(
+        self, *args: types.Any, **kwargs: types.Any
+    ) -> None:  # pragma: no cover
         if self._finished:
             return
 
@@ -826,9 +827,9 @@ class ProgressBar(
             self.fd.flush()
 
     def start(  # type: ignore[override]
-            self,
-            max_value: int | None=None,
-            init: bool=True,
+        self,
+        max_value: int | None = None,
+        init: bool = True,
     ):
         '''Starts measuring time, and prints the bar at 0%.
 
