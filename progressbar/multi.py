@@ -186,7 +186,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         with self._print_lock:
             # Clear the previous output if progressbars have been removed
             for i in range(len(output), len(self._previous_output)):
-                self._buffer.write(terminal.clear_line(i + 1))
+                self._buffer.write(terminal.clear_line(i + 1))  # pragma: no cover
 
             # Add empty lines to the end of the output if progressbars have
             # been added
@@ -201,7 +201,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                     fillvalue='',
                 ),
             ):
-                if previous != current or force:
+                if previous != current or force: # pragma: no branch
                     self.print(
                         '\r' + current.strip(),
                         offset=i + 1,
@@ -212,7 +212,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
 
             self._previous_output = output
 
-            if flush:
+            if flush: # pragma: no branch
                 self.flush()
 
     def _render_bar(
