@@ -3,10 +3,9 @@ from __future__ import annotations
 import typing
 
 import progressbar
-import pytest
-
-import progressbar.terminal
 import progressbar.env
+import progressbar.terminal
+import pytest
 from progressbar import env, terminal, widgets
 from progressbar.terminal import Colors, apply_colors, colors
 
@@ -41,7 +40,7 @@ def test_color_environment_variables(monkeypatch, variable):
         'PROGRESSBAR_ENABLE_COLORS',
         'COLORTERM',
         'TERM',
-    ]
+    ],
 )
 @pytest.mark.parametrize(
     'value',
@@ -52,7 +51,7 @@ def test_color_environment_variables(monkeypatch, variable):
         '256',
         'xterm-256',
         'xterm',
-    ]
+    ],
     )
 def test_color_support_from_env(monkeypatch, variable, value):
     monkeypatch.setenv('JUPYTER_COLUMNS', '')
@@ -283,7 +282,8 @@ def test_rgb_to_hls(rgb, hls):
         ),
     ],
 )
-def test_apply_colors(text, fg, bg, fg_none, bg_none, percentage, expected, monkeypatch):
+def test_apply_colors(text, fg, bg, fg_none, bg_none, percentage, expected,
+                      monkeypatch):
     monkeypatch.setattr(
         env,
         'COLOR_SUPPORT',

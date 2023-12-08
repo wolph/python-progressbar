@@ -123,7 +123,7 @@ class LastLineStream(TextIOOutputWrapper):
             self.line = self.line[:__size]
 
         return len(self.line)
-    
+
     def __iter__(self) -> Iterator[str]:
         yield self.line
 

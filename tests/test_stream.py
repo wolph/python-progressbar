@@ -5,8 +5,6 @@ import progressbar
 import pytest
 from progressbar import terminal
 
-from progressbar.terminal.stream import LastLineStream
-
 
 def test_nowrap():
     # Make sure we definitely unwrap

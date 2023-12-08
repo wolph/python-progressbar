@@ -65,7 +65,7 @@ class ColorSupport(enum.IntEnum):
         )
 
         if os.environ.get('JUPYTER_COLUMNS') or os.environ.get(
-                'JUPYTER_LINES',
+            'JUPYTER_LINES',
         ):
             # Jupyter notebook always supports true color.
             return cls.XTERM_TRUECOLOR
@@ -88,8 +88,8 @@ class ColorSupport(enum.IntEnum):
 
 
 def is_ansi_terminal(
-        fd: base.IO,
-        is_terminal: bool | None = None,
+    fd: base.IO,
+    is_terminal: bool | None = None,
 ) -> bool:  # pragma: no cover
     if is_terminal is None:
         # Jupyter Notebooks define this variable and support progress bars
@@ -98,7 +98,7 @@ def is_ansi_terminal(
         # This works for newer versions of pycharm only. With older versions
         # there is no way to check.
         elif os.environ.get('PYCHARM_HOSTED') == '1' and not os.environ.get(
-                'PYTEST_CURRENT_TEST',
+            'PYTEST_CURRENT_TEST',
         ):
             is_terminal = True
 

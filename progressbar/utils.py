@@ -32,8 +32,8 @@ StringT = types.TypeVar('StringT', bound=types.StringTypes)
 
 
 def deltas_to_seconds(
-        *deltas,
-        default: types.Optional[types.Type[ValueError]] = ValueError,
+    *deltas,
+    default: types.Optional[types.Type[ValueError]] = ValueError,
 ) -> int | float | None:
     '''
     Convert timedeltas and seconds as int to seconds as float while coalescing.
@@ -122,10 +122,10 @@ class WrappingIO:
     needs_clear: bool = False
 
     def __init__(
-            self,
-            target: base.IO,
-            capturing: bool = False,
-            listeners: types.Optional[types.Set[ProgressBar]] = None,
+        self,
+        target: base.IO,
+        capturing: bool = False,
+        listeners: types.Optional[types.Set[ProgressBar]] = None,
     ) -> None:
         self.buffer = io.StringIO()
         self.target = target
@@ -216,10 +216,10 @@ class WrappingIO:
         return self.target.__iter__()
 
     def __exit__(
-            self,
-            __t: type[BaseException] | None,
-            __value: BaseException | None,
-            __traceback: TracebackType | None,
+        self,
+        __t: type[BaseException] | None,
+        __value: BaseException | None,
+        __traceback: TracebackType | None,
     ) -> None:
         self.close()
 

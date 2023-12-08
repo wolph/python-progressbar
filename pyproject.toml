@@ -144,7 +144,7 @@ skip-string-normalization = true
 [tool.mypy]
 packages = ['progressbar', 'tests']
 exclude = [
-    'docs',
-    'tests/original_examples.py',
-    'examples.py',
+    '^docs$',
+    '^tests/original_examples.py$',
+    '^examples.py$',
 ]

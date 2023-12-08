@@ -1,7 +1,7 @@
 import contextlib
 import time
 
-import original_examples
+import original_examples  # type: ignore
 import progressbar
 import pytest
 

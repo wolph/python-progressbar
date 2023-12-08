@@ -150,7 +150,9 @@ class FormatWidgetMixin(abc.ABC):
                 return format_ % data
         except (TypeError, KeyError):
             logger.exception(
-                'Error while formatting %r with data: %r', format_, data,
+                'Error while formatting %r with data: %r',
+                format_,
+                data,
             )
             raise
 
@@ -244,10 +246,12 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
         '''
 
     _fixed_colors: ClassVar[TFixedColors] = TFixedColors(
-        fg_none=None, bg_none=None,
+        fg_none=None,
+        bg_none=None,
     )
     _gradient_colors: ClassVar[TGradientColors] = TGradientColors(
-        fg=None, bg=None,
+        fg=None,
+        bg=None,
     )
     # _fixed_colors: ClassVar[dict[str, terminal.Color | None]] = dict()
     # _gradient_colors: ClassVar[dict[str, terminal.OptionalColor | None]] = (
@@ -424,12 +428,14 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
 
     def get_sample_times(self, progress: ProgressBarMixinBase, data: Data):
         return progress.extra.setdefault(
-            f'{self.key_prefix}sample_times', containers.SliceableDeque(),
+            f'{self.key_prefix}sample_times',
+            containers.SliceableDeque(),
         )
 
     def get_sample_values(self, progress: ProgressBarMixinBase, data: Data):
         return progress.extra.setdefault(
-            f'{self.key_prefix}sample_values', containers.SliceableDeque(),
+            f'{self.key_prefix}sample_values',
+            containers.SliceableDeque(),
         )
 
     def __call__(
@@ -828,10 +834,12 @@ class Counter(FormatWidgetMixin, WidgetBase):
 
 class ColoredMixin:
     _fixed_colors: ClassVar[TFixedColors] = TFixedColors(
-        fg_none=colors.yellow, bg_none=None,
+        fg_none=colors.yellow,
+        bg_none=None,
     )
     _gradient_colors: ClassVar[TGradientColors] = TGradientColors(
-        fg=colors.gradient, bg=None,
+        fg=colors.gradient,
+        bg=None,
     )
     # _fixed_colors: ClassVar[dict[str, terminal.Color | None]] = dict(
     #     fg_none=colors.yellow, bg_none=None)
@@ -1068,7 +1076,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
 
 class FormatCustomText(FormatWidgetMixin, WidgetBase):
-    mapping: ClassVar[types.Dict[str, types.Any]] = dict()
+    mapping: types.Dict[str, types.Any] = dict()  # noqa: RUF012
     copy = False
 
     def __init__(

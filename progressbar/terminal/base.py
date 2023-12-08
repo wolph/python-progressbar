@@ -12,7 +12,10 @@ from typing import ClassVar
 
 from python_utils import converters, types
 
-from .. import base as pbase, env
+from .. import (
+    base as pbase,
+    env,
+)
 from .os_specific import getch
 
 ESC = '\x1B'
@@ -218,6 +221,7 @@ class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
     and 100(%).
 
     '''
+
     __slots__ = ()
 
     @classmethod
@@ -225,7 +229,11 @@ class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
         '''
         Convert a 0-255 RGB color to a 0-255 HLS color.
         '''
-        hls = colorsys.rgb_to_hls(rgb.red/255,rgb.green/255,rgb.blue/255)
+        hls = colorsys.rgb_to_hls(
+            rgb.red / 255,
+            rgb.green / 255,
+            rgb.blue / 255,
+        )
         return cls(
             round(hls[0] * 360),
             round(hls[2] * 100),
@@ -288,12 +296,16 @@ class Color(
 
     @property
     def ansi(self) -> types.Optional[str]:
-        if env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR:  # pragma: no branch
+        if (
+            env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR
+        ):  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
         if self.xterm:  # pragma: no branch
             color = self.xterm
-        elif env.COLOR_SUPPORT is env.ColorSupport.XTERM_256:  # pragma: no branch
+        elif (
+            env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
+        ):  # pragma: no branch
             color = self.rgb.to_ansi_256
         elif env.COLOR_SUPPORT is env.ColorSupport.XTERM:  # pragma: no branch
             color = self.rgb.to_ansi_16
@@ -395,7 +407,8 @@ class ColorGradient(ColorBase):
         elif self.interpolate:
             if max_color_idx > 1:
                 index = round(
-                    converters.remap(value, 0, 1, 0, max_color_idx - 1))
+                    converters.remap(value, 0, 1, 0, max_color_idx - 1),
+                )
             else:
                 index = 0
 

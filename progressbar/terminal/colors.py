@@ -162,7 +162,10 @@ cyan2 = Colors.register(RGB(0, 255, 215), HSL(70, 100, 50), 'Cyan2', 50)
 cyan1 = Colors.register(RGB(0, 255, 255), HSL(180, 100, 50), 'Cyan1', 51)
 dark_red = Colors.register(RGB(95, 0, 0), HSL(0, 100, 18), 'DarkRed', 52)
 deep_pink4 = Colors.register(
-    RGB(95, 0, 95), HSL(300, 100, 18), 'DeepPink4', 53,
+    RGB(95, 0, 95),
+    HSL(300, 100, 18),
+    'DeepPink4',
+    53,
 )
 purple4 = Colors.register(RGB(95, 0, 135), HSL(82, 100, 26), 'Purple4', 54)
 purple4 = Colors.register(RGB(95, 0, 175), HSL(72, 100, 34), 'Purple4', 55)
@@ -260,7 +263,10 @@ cadet_blue = Colors.register(
     73,
 )
 sky_blue3 = Colors.register(
-    RGB(95, 175, 215), HSL(200, 60, 60), 'SkyBlue3', 74,
+    RGB(95, 175, 215),
+    HSL(200, 60, 60),
+    'SkyBlue3',
+    74,
 )
 steel_blue1 = Colors.register(
     RGB(95, 175, 255),
@@ -342,7 +348,10 @@ dark_slate_gray2 = Colors.register(
 )
 dark_red = Colors.register(RGB(135, 0, 0), HSL(0, 100, 26), 'DarkRed', 88)
 deep_pink4 = Colors.register(
-    RGB(135, 0, 95), HSL(17, 100, 26), 'DeepPink4', 89,
+    RGB(135, 0, 95),
+    HSL(17, 100, 26),
+    'DeepPink4',
+    89,
 )
 dark_magenta = Colors.register(
     RGB(135, 0, 135),
@@ -546,7 +555,10 @@ dark_orange3 = Colors.register(
     130,
 )
 indian_red = Colors.register(
-    RGB(175, 95, 95), HSL(0, 33, 52), 'IndianRed', 131,
+    RGB(175, 95, 95),
+    HSL(0, 33, 52),
+    'IndianRed',
+    131,
 )
 hot_pink3 = Colors.register(
     RGB(175, 95, 135),
@@ -724,7 +736,10 @@ dark_orange3 = Colors.register(
     166,
 )
 indian_red = Colors.register(
-    RGB(215, 95, 95), HSL(0, 60, 60), 'IndianRed', 167,
+    RGB(215, 95, 95),
+    HSL(0, 60, 60),
+    'IndianRed',
+    167,
 )
 hot_pink3 = Colors.register(
     RGB(215, 95, 135),
@@ -879,10 +894,16 @@ indian_red1 = Colors.register(
     204,
 )
 hot_pink = Colors.register(
-    RGB(255, 95, 175), HSL(330, 100, 68), 'HotPink', 205,
+    RGB(255, 95, 175),
+    HSL(330, 100, 68),
+    'HotPink',
+    205,
 )
 hot_pink = Colors.register(
-    RGB(255, 95, 215), HSL(315, 100, 68), 'HotPink', 206,
+    RGB(255, 95, 215),
+    HSL(315, 100, 68),
+    'HotPink',
+    206,
 )
 medium_orchid1 = Colors.register(
     RGB(255, 95, 255),

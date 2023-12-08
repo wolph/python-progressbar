@@ -15,8 +15,8 @@ from datetime import datetime
 
 from python_utils import converters, types
 
-import progressbar.terminal
 import progressbar.env
+import progressbar.terminal
 import progressbar.terminal.stream
 
 from . import (
@@ -30,8 +30,9 @@ logger = logging.getLogger(__name__)
 
 # float also accepts integers and longs but we don't want an explicit union
 # due to type checking complexity
-T = float
+NumberT = float
 
+T = types.TypeVar('T')
 
 class ProgressBarMixinBase(abc.ABC):
     _started = False
@@ -76,14 +77,14 @@ class ProgressBarMixinBase(abc.ABC):
     next_update: int = 0
 
     #: Current progress (min_value <= value <= max_value)
-    value: T
+    value: NumberT
     #: Previous progress value
-    previous_value: types.Optional[T]
+    previous_value: types.Optional[NumberT]
     #: The minimum/start value for the progress bar
-    min_value: T
+    min_value: NumberT
     #: Maximum (and final) value. Beyond this value an error will be raised
     #: unless the `max_error` parameter is `False`.
-    max_value: T | types.Type[base.UnknownLength]
+    max_value: NumberT | types.Type[base.UnknownLength]
     #: The time the progressbar reached `max_value` or when `finish()` was
     #: called.
     end_time: types.Optional[datetime]
@@ -156,7 +157,7 @@ class ProgressBarBase(types.Iterable, ProgressBarMixinBase):
 
 class DefaultFdMixin(ProgressBarMixinBase):
     # The file descriptor to write to. Defaults to `sys.stderr`
-    fd: base.IO = sys.stderr
+    fd: base.TextIO = sys.stderr
     #: Set the terminal to be ANSI compatible. If a terminal is ANSI
     #: compatible we will automatically enable `colors` and disable
     #: `line_breaks`.
@@ -177,11 +178,13 @@ class DefaultFdMixin(ProgressBarMixinBase):
     #: For true (24 bit/16M) color support you can use `COLORTERM=truecolor`.
     #: For 256 color support you can use `TERM=xterm-256color`.
     #: For 16 colorsupport you can use `TERM=xterm`.
-    enable_colors: progressbar.env.ColorSupport | bool | None = progressbar.env.COLOR_SUPPORT
+    enable_colors: progressbar.env.ColorSupport | bool | None = (
+        progressbar.env.COLOR_SUPPORT
+    )
 
     def __init__(
         self,
-        fd: base.IO = sys.stderr,
+        fd: base.IO[str] = sys.stderr,
         is_terminal: bool | None = None,
         line_breaks: bool | None = None,
         enable_colors: progressbar.env.ColorSupport | None = None,
@@ -202,7 +205,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         super().__init__(**kwargs)
 
-    def _apply_line_offset(self, fd: base.IO, line_offset: int) -> base.IO:
+    def _apply_line_offset(self, fd: base.IO[T], line_offset: int) -> base.IO[T]:
         if line_offset:
             return progressbar.terminal.stream.LineOffsetStreamWrapper(
                 line_offset,
@@ -213,7 +216,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
     def _determine_is_terminal(
         self,
-        fd: base.IO,
+        fd: base.TextIO,
         is_terminal: bool | None,
     ) -> bool:
         if is_terminal is not None:
@@ -257,8 +260,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
             enable_colors = progressbar.env.ColorSupport.XTERM_256
         elif enable_colors is False:
             enable_colors = progressbar.env.ColorSupport.NONE
-        elif not isinstance(enable_colors,
-                            progressbar.env.ColorSupport):
+        elif not isinstance(enable_colors, progressbar.env.ColorSupport):
             raise ValueError(f'Invalid color support value: {enable_colors}')
 
         return enable_colors
@@ -281,7 +283,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
             self.fd.write(line.encode('ascii', 'replace'))
 
     def finish(
-        self, *args: types.Any, **kwargs: types.Any,
+        self,
+        *args: types.Any,
+        **kwargs: types.Any,
     ) -> None:  # pragma: no cover
         if self._finished:
             return
@@ -516,13 +520,13 @@ class ProgressBar(
 
     def __init__(
         self,
-        min_value: T = 0,
-        max_value: T | types.Type[base.UnknownLength] | None = None,
+        min_value: NumberT = 0,
+        max_value: NumberT | types.Type[base.UnknownLength] | None = None,
         widgets: types.Optional[
             types.Sequence[widgets_module.WidgetBase | str]
         ] = None,
         left_justify: bool = True,
-        initial_value: T = 0,
+        initial_value: NumberT = 0,
         poll_interval: types.Optional[float] = None,
         widget_kwargs: types.Optional[types.Dict[str, types.Any]] = None,
         custom_len: types.Callable[[str], int] = utils.len_color,
@@ -555,7 +559,7 @@ class ProgressBar(
             )
             poll_interval = kwargs.get('poll')
 
-        if max_value and min_value > types.cast(T, max_value):
+        if max_value and min_value > types.cast(NumberT, max_value):
             raise ValueError(
                 'Max value needs to be bigger than the min value',
             )
@@ -996,7 +1000,7 @@ class ProgressBar(
         ):
             raise ValueError('max_value out of range, got %r' % self.max_value)
 
-    def _calculate_poll_interval(self):
+    def _calculate_poll_interval(self) -> None:
         self.num_intervals = max(100, self.term_width)
         for widget in self.widgets:
             interval: int | float | None = utils.deltas_to_seconds(

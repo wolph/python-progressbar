@@ -1,9 +1,8 @@
 import io
 
 import progressbar
-import pytest
-
 import progressbar.env
+import pytest
 
 
 @pytest.mark.parametrize(

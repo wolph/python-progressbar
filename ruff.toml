@@ -5,7 +5,6 @@ target-version = 'py38'
 
 src = ['progressbar']
 
-format = 'grouped'
 ignore = [
     'A001', # Variable {name} is shadowing a Python builtin
     'A002', # Argument {name} is shadowing a Python builtin
