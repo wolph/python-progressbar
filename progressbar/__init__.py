@@ -34,6 +34,7 @@ from .widgets import (
     Timer,
     Variable,
     VariableMixin,
+    JobStatusBar,
 )
 
 __date__ = str(date.today())
@@ -76,4 +77,5 @@ __all__ = [
     'LineOffsetStreamWrapper',
     'MultiBar',
     'SortKey',
+    'JobStatusBar',
 ]

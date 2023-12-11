@@ -57,6 +57,18 @@ def templated_shortcut_example():
 
 
 @example
+def job_status_example():
+    with progressbar.ProgressBar(
+            redirect_stdout=True,
+            widgets=[progressbar.widgets.JobStatusBar('status')],
+    ) as bar:
+        for i in range(30):
+            print('random', random.random())
+            bar.increment(status=random.random() > 0.5)
+            time.sleep(0.1)
+
+
+@example
 def with_example_stdout_redirection():
     with progressbar.ProgressBar(max_value=10, redirect_stdout=True) as p:
         for i in range(10):
