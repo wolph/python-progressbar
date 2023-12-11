@@ -223,7 +223,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             now,
             expired,
     ) -> typing.Iterable[str]:
-        def update(force=True, write=True):
+        def update(force=True, write=True):  # pragma: no cover
             self._label_bar(bar_)
             bar_.update(force=force)
             if write:
@@ -325,15 +325,14 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         Start the multibar render loop and run the progressbars until they
         have force _thread_finished.
         '''
-        while not self._thread_finished.is_set():
+        while not self._thread_finished.is_set():  # pragma: no branch
             self.render()
             time.sleep(self.update_interval)
 
             if join or self._thread_closed.is_set():
-                # If the thread is closed, we need to check if force
-                # progressbars
+                # If the thread is closed, we need to check if the progressbars
                 # have finished. If they have, we can exit the loop
-                for bar_ in self.values():
+                for bar_ in self.values():  # pragma: no cover
                     if not bar_.finished():
                         break
                 else:

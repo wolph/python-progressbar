@@ -1,4 +1,5 @@
 import threading
+import random
 import time
 
 import progressbar
@@ -20,12 +21,6 @@ def test_multi_progress_bar_out_of_range():
 
     with pytest.raises(ValueError):
         bar.update(multivalues=[-1])
-
-
-def test_multi_progress_bar_fill_left():
-    import examples
-
-    return examples.multi_progress_bar_example(False)
 
 
 def test_multibar():
@@ -159,4 +154,94 @@ def test_multibar_empty_key():
         bar = multibar[name]
         bar.update(1)
 
+    multibar.render(force=True)
+
+
+def test_multibar_print():
+
+    bars = 5
+    n = 10
+
+
+    def print_sometimes(bar, probability):
+        for i in bar(range(n)):
+            # Sleep up to 0.1 seconds
+            time.sleep(random.random() * 0.1)
+
+            # print messages at random intervals to show how extra output works
+            if random.random() < probability:
+                bar.print('random message for bar', bar, i)
+
+    with progressbar.MultiBar() as multibar:
+        for i in range(bars):
+            # Get a progressbar
+            bar = multibar[f'Thread label here {i}']
+            bar.max_error = False
+            # Create a thread and pass the progressbar
+            # Print never, sometimes and always
+            threading.Thread(target=print_sometimes, args=(bar, 0)).start()
+            threading.Thread(target=print_sometimes, args=(bar, 0.5)).start()
+            threading.Thread(target=print_sometimes, args=(bar, 1)).start()
+
+
+        for i in range(5):
+            multibar.print(f'{i}', flush=False)
+
+        multibar.update(force=True, flush=False)
+        multibar.update(force=True, flush=True)
+
+def test_multibar_no_format():
+    with progressbar.MultiBar(initial_format=None, finished_format=None) as multibar:
+        bar = multibar['a']
+
+        for i in bar(range(5)):
+            bar.print(i)
+
+
+def test_multibar_finished():
+    multibar = progressbar.MultiBar(initial_format=None, finished_format=None)
+    bar = multibar['bar'] = progressbar.ProgressBar(max_value=5)
+    bar2 = multibar['bar2']
+    multibar.render(force=True)
+    multibar.print('Hi')
+    multibar.render(force=True, flush=False)
+
+    for i in range(6):
+        bar.update(i)
+        bar2.update(i)
+
+    multibar.render(force=True)
+
+
+
+def test_multibar_finished_format():
+    multibar = progressbar.MultiBar(finished_format='Finished {label}', show_finished=True)
+    bar = multibar['bar'] = progressbar.ProgressBar(max_value=5)
+    bar2 = multibar['bar2']
+    multibar.render(force=True)
+    multibar.print('Hi')
+    multibar.render(force=True, flush=False)
+    bar.start()
+    bar2.start()
+    multibar.render(force=True)
+    multibar.print('Hi')
+    multibar.render(force=True, flush=False)
+
+    for i in range(6):
+        bar.update(i)
+        bar2.update(i)
+
+    multibar.render(force=True)
+
+
+def test_multibar_threads():
+    multibar = progressbar.MultiBar(finished_format=None, show_finished=True)
+    bar = multibar['bar'] = progressbar.ProgressBar(max_value=5)
+    multibar.start()
+    time.sleep(0.1)
+    bar.update(3)
+    time.sleep(0.1)
+    multibar.join()
+    bar.finish()
+    multibar.join()
     multibar.render(force=True)

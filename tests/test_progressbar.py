@@ -1,3 +1,4 @@
+import os
 import contextlib
 import time
 
@@ -11,10 +12,11 @@ try:
 except ImportError:
     import sys
 
-    sys.path.append('..')
+    _project_dir = os.path.dirname(os.path.dirname(__file__))
+    sys.path.append(_project_dir)
     import examples
 
-    sys.path.remove('..')
+    sys.path.remove(_project_dir)
 
 
 def test_examples(monkeypatch):
@@ -40,8 +42,6 @@ def test_examples_nullbar(monkeypatch, example):
 
 
 def test_reuse():
-    import progressbar
-
     bar = progressbar.ProgressBar()
     bar.start()
     for i in range(10):
@@ -60,8 +60,6 @@ def test_reuse():
 
 
 def test_dirty():
-    import progressbar
-
     bar = progressbar.ProgressBar()
     bar.start()
     assert bar.started()
