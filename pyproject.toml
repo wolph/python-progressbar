@@ -165,6 +165,7 @@ omit = [
 source = [
     'progressbar',
 ]
+
 [tool.coverage.report]
 fail_under = 100
 exclude_lines = [

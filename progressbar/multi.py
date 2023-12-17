@@ -75,22 +75,22 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
     _thread_closed: threading.Event = threading.Event()
 
     def __init__(
-            self,
-            bars: typing.Iterable[tuple[str, bar.ProgressBar]] | None = None,
-            fd: typing.TextIO = sys.stderr,
-            prepend_label: bool = True,
-            append_label: bool = False,
-            label_format='{label:20.20} ',
-            initial_format: str | None = '{label:20.20} Not yet started',
-            finished_format: str | None = None,
-            update_interval: float = 1 / 60.0,  # 60fps
-            show_initial: bool = True,
-            show_finished: bool = True,
-            remove_finished: timedelta | float = timedelta(seconds=3600),
-            sort_key: str | SortKey = SortKey.CREATED,
-            sort_reverse: bool = True,
-            sort_keyfunc: SortKeyFunc | None = None,
-            **progressbar_kwargs,
+        self,
+        bars: typing.Iterable[tuple[str, bar.ProgressBar]] | None = None,
+        fd: typing.TextIO = sys.stderr,
+        prepend_label: bool = True,
+        append_label: bool = False,
+        label_format='{label:20.20} ',
+        initial_format: str | None = '{label:20.20} Not yet started',
+        finished_format: str | None = None,
+        update_interval: float = 1 / 60.0,  # 60fps
+        show_initial: bool = True,
+        show_finished: bool = True,
+        remove_finished: timedelta | float = timedelta(seconds=3600),
+        sort_key: str | SortKey = SortKey.CREATED,
+        sort_reverse: bool = True,
+        sort_keyfunc: SortKeyFunc | None = None,
+        **progressbar_kwargs,
     ):
         self.fd = fd
 
@@ -197,11 +197,11 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                 self._buffer.write('\n')
 
             for i, (previous, current) in enumerate(
-                    itertools.zip_longest(
-                        self._previous_output,
-                        output,
-                        fillvalue='',
-                    ),
+                itertools.zip_longest(
+                    self._previous_output,
+                    output,
+                    fillvalue='',
+                ),
             ):
                 if previous != current or force:  # pragma: no branch
                     self.print(
@@ -218,10 +218,10 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                 self.flush()
 
     def _render_bar(
-            self,
-            bar_: bar.ProgressBar,
-            now,
-            expired,
+        self,
+        bar_: bar.ProgressBar,
+        now,
+        expired,
     ) -> typing.Iterable[str]:
         def update(force=True, write=True):  # pragma: no cover
             self._label_bar(bar_)
@@ -242,11 +242,11 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                 yield self.initial_format.format(label=bar_.label)
 
     def _render_finished_bar(
-            self,
-            bar_: bar.ProgressBar,
-            now,
-            expired,
-            update,
+        self,
+        bar_: bar.ProgressBar,
+        now,
+        expired,
+        update,
     ) -> typing.Iterable[str]:
         if bar_ not in self._finished_at:
             self._finished_at[bar_] = now
@@ -254,9 +254,9 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             update(write=False)
 
         if (
-                self.remove_finished
-                and expired is not None
-                and expired >= self._finished_at[bar_]
+            self.remove_finished
+            and expired is not None
+            and expired >= self._finished_at[bar_]
         ):
             del self[bar_.label]
             return
@@ -271,13 +271,13 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                 yield self.finished_format.format(label=bar_.label)
 
     def print(
-            self,
-            *args,
-            end='\n',
-            offset=None,
-            flush=True,
-            clear=True,
-            **kwargs,
+        self,
+        *args,
+        end='\n',
+        offset=None,
+        flush=True,
+        clear=True,
+        **kwargs,
     ):
         '''
         Print to the progressbar stream without overwriting the progressbars.

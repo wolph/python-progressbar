@@ -34,6 +34,7 @@ NumberT = float
 
 T = types.TypeVar('T')
 
+
 class ProgressBarMixinBase(abc.ABC):
     _started = False
     _finished = False
@@ -184,7 +185,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
     def __init__(
         self,
-        fd: base.IO[str] = sys.stderr,
+        fd: base.TextIO = sys.stderr,
         is_terminal: bool | None = None,
         line_breaks: bool | None = None,
         enable_colors: progressbar.env.ColorSupport | None = None,
@@ -205,11 +206,12 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         super().__init__(**kwargs)
 
-    def _apply_line_offset(self, fd: base.IO[T], line_offset: int) -> base.IO[T]:
+    def _apply_line_offset(
+        self, fd: base.TextIO, line_offset: int
+    ) -> base.TextIO:
         if line_offset:
             return progressbar.terminal.stream.LineOffsetStreamWrapper(
-                line_offset,
-                types.cast(base.TextIO, fd),
+                line_offset, fd,
             )
         else:
             return fd
@@ -280,7 +282,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         try:  # pragma: no cover
             self.fd.write(line)
         except UnicodeEncodeError:  # pragma: no cover
-            self.fd.write(line.encode('ascii', 'replace'))
+            self.fd.write(types.cast(str, line.encode('ascii', 'replace')))
 
     def finish(
         self,
@@ -921,7 +923,7 @@ class ProgressBar(
         # Only flush if something was actually written
         self.fd.flush()
 
-    def start(self, max_value=None, init=True):
+    def start(self, max_value=None, init=True, *args, **kwargs):
         '''Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
@@ -952,9 +954,9 @@ class ProgressBar(
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
-        StdRedirectMixin.start(self, max_value=max_value)
-        ResizableMixin.start(self, max_value=max_value)
-        ProgressBarBase.start(self, max_value=max_value)
+        StdRedirectMixin.start(self, max_value=max_value, *args, **kwargs)
+        ResizableMixin.start(self, max_value=max_value, *args, **kwargs)
+        ProgressBarBase.start(self, max_value=max_value, *args, **kwargs)
 
         # Constructing the default widgets is only done when we know max_value
         if not self.widgets:

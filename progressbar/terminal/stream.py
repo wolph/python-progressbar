@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import typing
 from types import TracebackType
 from typing import Iterable, Iterator
 
@@ -23,16 +24,16 @@ class TextIOOutputWrapper(base.TextIO):  # pragma: no cover
     def isatty(self) -> bool:
         return self.stream.isatty()
 
-    def read(self, __n: int = -1) -> str:
+    def read(self, __n: int = -1) -> typing.AnyStr:
         return self.stream.read(__n)
 
     def readable(self) -> bool:
         return self.stream.readable()
 
-    def readline(self, __limit: int = -1) -> str:
+    def readline(self, __limit: int = -1) -> typing.AnyStr:
         return self.stream.readline(__limit)
 
-    def readlines(self, __hint: int = -1) -> list[str]:
+    def readlines(self, __hint: int = -1) -> list[typing.AnyStr]:
         return self.stream.readlines(__hint)
 
     def seek(self, __offset: int, __whence: int = 0) -> int:
@@ -50,13 +51,13 @@ class TextIOOutputWrapper(base.TextIO):  # pragma: no cover
     def writable(self) -> bool:
         return self.stream.writable()
 
-    def writelines(self, __lines: Iterable[str]) -> None:
+    def writelines(self, __lines: Iterable[typing.AnyStr]) -> None:
         return self.stream.writelines(__lines)
 
-    def __next__(self) -> str:
+    def __next__(self) -> typing.AnyStr:
         return self.stream.__next__()
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> Iterator[typing.AnyStr]:
         return self.stream.__iter__()
 
     def __exit__(
@@ -93,7 +94,7 @@ class LineOffsetStreamWrapper(TextIOOutputWrapper):
 
 
 class LastLineStream(TextIOOutputWrapper):
-    line: str = ''
+    line: typing.AnyStr = ''
 
     def seekable(self) -> bool:
         return False
@@ -101,20 +102,21 @@ class LastLineStream(TextIOOutputWrapper):
     def readable(self) -> bool:
         return True
 
-    def read(self, __n: int = -1) -> str:
+    def read(self, __n: int = -1) -> typing.AnyStr:
         if __n < 0:
             return self.line
         else:
             return self.line[:__n]
 
-    def readline(self, __limit: int = -1) -> str:
+    def readline(self, __limit: int = -1) -> typing.AnyStr:
         if __limit < 0:
             return self.line
         else:
             return self.line[:__limit]
 
-    def write(self, data):
+    def write(self, data: typing.AnyStr) -> int:
         self.line = data
+        return len(data)
 
     def truncate(self, __size: int | None = None) -> int:
         if __size is None:
@@ -124,10 +126,11 @@ class LastLineStream(TextIOOutputWrapper):
 
         return len(self.line)
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> typing.Generator[typing.AnyStr, typing.Any,
+                                           typing.Any]:
         yield self.line
 
-    def writelines(self, __lines: Iterable[str]) -> None:
+    def writelines(self, __lines: Iterable[typing.AnyStr]) -> None:
         line = ''
         # Walk through the lines and take the last one
         for line in __lines:  # noqa: B007
