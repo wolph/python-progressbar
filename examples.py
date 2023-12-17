@@ -64,7 +64,14 @@ def job_status_example():
     ) as bar:
         for i in range(30):
             print('random', random.random())
-            bar.increment(status=random.random() > 0.5)
+            # Roughly 1/3 probability for each status ;)
+            # Yes... probability is confusing at times
+            if random.random() > 0.66:
+                bar.increment(status=True)
+            elif random.random() > 0.5:
+                bar.increment(status=False)
+            else:
+                bar.increment(status=None)
             time.sleep(0.1)
 
 

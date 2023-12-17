@@ -1059,7 +1059,8 @@ bg_gradient = ColorGradient(black)
 
 # Check if the background is light or dark. This is by no means a foolproof
 # method, but there is no reliable way to detect this.
-if os.environ.get('COLORFGBG', '15;0').split(';')[-1] == str(white.xterm):
+_colorfgbg = os.environ.get('COLORFGBG', '15;0').split(';')
+if _colorfgbg[-1] == str(white.xterm):  # pragma: no cover
     # Light background
     gradient = light_gradient
     primary = black

@@ -1211,7 +1211,7 @@ class MultiProgressBar(MultiRangeBar):
             if frac:
                 ranges[pos + 1] += frac
 
-        if self.fill_left:
+        if self.fill_left:  # pragma: no branch
             ranges = list(reversed(ranges))
 
         return ranges
@@ -1532,18 +1532,18 @@ class JobStatusBar(Bar, VariableMixin):
                 marker = self.success_marker
                 fg_color = self.success_fg_color
                 bg_color = self.success_bg_color
-            elif status is False:
+            elif status is False:  # pragma: no branch
                 marker = self.failure_marker
                 fg_color = self.failure_fg_color
                 bg_color = self.failure_bg_color
-            else:
+            else:  # pragma: no cover
                 marker = status
                 fg_color = bg_color = None
 
             marker = converters.to_unicode(marker)
-            if fg_color:
+            if fg_color:  # pragma: no branch
                 marker = fg_color.fg(marker)
-            if bg_color:
+            if bg_color:  # pragma: no cover
                 marker = bg_color.bg(marker)
 
             self.job_markers.append(marker)
@@ -1553,9 +1553,9 @@ class JobStatusBar(Bar, VariableMixin):
             fill = converters.to_unicode(self.fill(progress, data, width))
             fill = self._apply_colors(fill * width, data)
 
-            if self.fill_left:
+            if self.fill_left:  # pragma: no branch
                 marker += fill
-            else:
+            else: # pragma: no cover
                 marker = fill + marker
         else:
             marker = ''

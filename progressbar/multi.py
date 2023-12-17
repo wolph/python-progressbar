@@ -264,10 +264,10 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         if not self.show_finished:
             return
 
-        if bar_.finished():
+        if bar_.finished():  # pragma: no branch
             if self.finished_format is None:
                 update(force=False)
-            else:
+            else:  # pragma: no cover
                 yield self.finished_format.format(label=bar_.label)
 
     def print(

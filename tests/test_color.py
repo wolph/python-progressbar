@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import typing
 
+import pytest
+
 import progressbar
 import progressbar.env
 import progressbar.terminal
-import pytest
 from progressbar import env, terminal, widgets
-from progressbar.terminal import Colors, apply_colors, colors
+from progressbar.terminal import apply_colors, Colors, colors
 
 
 @pytest.mark.parametrize(
@@ -52,7 +53,7 @@ def test_color_environment_variables(monkeypatch, variable):
         'xterm-256',
         'xterm',
     ],
-    )
+)
 def test_color_support_from_env(monkeypatch, variable, value):
     monkeypatch.setenv('JUPYTER_COLUMNS', '')
     monkeypatch.setenv('JUPYTER_LINES', '')
@@ -222,63 +223,63 @@ def test_rgb_to_hls(rgb, hls):
         ('test', None, None, None, None, None, 'test'),
         ('test', None, None, None, None, 1, 'test'),
         (
-            'test',
-            None,
-            None,
-            None,
-            colors.red,
-            None,
-            '\x1b[48;5;9mtest\x1b[49m',
+                'test',
+                None,
+                None,
+                None,
+                colors.red,
+                None,
+                '\x1b[48;5;9mtest\x1b[49m',
         ),
         (
-            'test',
-            None,
-            colors.green,
-            None,
-            colors.red,
-            None,
-            '\x1b[48;5;9mtest\x1b[49m',
+                'test',
+                None,
+                colors.green,
+                None,
+                colors.red,
+                None,
+                '\x1b[48;5;9mtest\x1b[49m',
         ),
         ('test', None, colors.red, None, None, 1, '\x1b[48;5;9mtest\x1b[49m'),
         ('test', None, colors.red, None, None, None, 'test'),
         (
-            'test',
-            colors.green,
-            None,
-            colors.red,
-            None,
-            None,
-            '\x1b[38;5;9mtest\x1b[39m',
+                'test',
+                colors.green,
+                None,
+                colors.red,
+                None,
+                None,
+                '\x1b[38;5;9mtest\x1b[39m',
         ),
         (
-            'test',
-            colors.green,
-            colors.red,
-            None,
-            None,
-            1,
-            '\x1b[48;5;9m\x1b[38;5;2mtest\x1b[39m\x1b[49m',
+                'test',
+                colors.green,
+                colors.red,
+                None,
+                None,
+                1,
+                '\x1b[48;5;9m\x1b[38;5;2mtest\x1b[39m\x1b[49m',
         ),
         ('test', colors.red, None, None, None, 1, '\x1b[38;5;9mtest\x1b[39m'),
         ('test', colors.red, None, None, None, None, 'test'),
         ('test', colors.red, colors.red, None, None, None, 'test'),
         (
-            'test',
-            colors.red,
-            colors.yellow,
-            None,
-            None,
-            1,
-            '\x1b[48;5;11m\x1b[38;5;9mtest\x1b[39m\x1b[49m',
+                'test',
+                colors.red,
+                colors.yellow,
+                None,
+                None,
+                1,
+                '\x1b[48;5;11m\x1b[38;5;9mtest\x1b[39m\x1b[49m',
         ),
         (
-            'test',
-            colors.red,
-            colors.yellow,
-            None,
-            None,
-            1,
-            '\x1b[48;5;11m\x1b[38;5;9mtest\x1b[39m\x1b[49m',
+                'test',
+                colors.red,
+                colors.yellow,
+                None,
+                None,
+                1,
+                '\x1b[48;5;11m\x1b[38;5;9mtest\x1b[39m\x1b[49m',
         ),
     ],
 )
@@ -290,13 +291,39 @@ def test_apply_colors(text, fg, bg, fg_none, bg_none, percentage, expected,
         progressbar.env.ColorSupport.XTERM_256,
     )
     assert (
-        apply_colors(
-            text,
-            fg=fg,
-            bg=bg,
-            fg_none=fg_none,
-            bg_none=bg_none,
-            percentage=percentage,
-        )
-        == expected
+            apply_colors(
+                text,
+                fg=fg,
+                bg=bg,
+                fg_none=fg_none,
+                bg_none=bg_none,
+                percentage=percentage,
+            )
+            == expected
     )
+
+
+def test_ansi_color(monkeypatch):
+    color = progressbar.terminal.Color(
+        colors.red.rgb,
+        colors.red.hls,
+        'red-ansi',
+        None,
+    )
+
+    for color_support in {
+        env.ColorSupport.NONE,
+        env.ColorSupport.XTERM,
+        env.ColorSupport.XTERM_256,
+        env.ColorSupport.XTERM_TRUECOLOR,
+    }:
+        monkeypatch.setattr(
+            env,
+            'COLOR_SUPPORT',
+            color_support,
+        )
+        assert color.ansi is not None or color_support == env.ColorSupport.NONE
+
+
+def test_sgr_call():
+    assert progressbar.terminal.encircled('test') == '\x1b[52mtest\x1b[54m'

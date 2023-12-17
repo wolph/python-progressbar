@@ -148,3 +148,35 @@ exclude = [
     '^tests/original_examples.py$',
     '^examples.py$',
 ]
+
+[tool.coverage.run]
+branch = true
+source = [
+    'progressbar',
+    'tests',
+]
+omit = [
+    '*/mock/*',
+    '*/nose/*',
+    '.tox/*',
+    '*/os_specific/*',
+]
+[tool.coverage.paths]
+source = [
+    'progressbar',
+]
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = [
+    'pragma: no cover',
+    '@abc.abstractmethod',
+    'def __repr__',
+    'if self.debug:',
+    'if settings.DEBUG',
+    'raise AssertionError',
+    'raise NotImplementedError',
+    'if 0:',
+    'if __name__ == .__main__.:',
+    'if types.TYPE_CHECKING:',
+    '@typing.overload',
+]
