@@ -54,7 +54,7 @@ class _COORD(ctypes.Structure):
 
 
 class _FOCUS_EVENT_RECORD(ctypes.Structure):
-    _fields_ = ('bSetFocus', _BOOL)
+    _fields_ = (('bSetFocus', _BOOL), )
 
 
 class _KEY_EVENT_RECORD(ctypes.Structure):
@@ -72,7 +72,7 @@ class _KEY_EVENT_RECORD(ctypes.Structure):
 
 
 class _MENU_EVENT_RECORD(ctypes.Structure):
-    _fields_ = ('dwCommandId', _UINT)
+    _fields_ = (('dwCommandId', _UINT), )
 
 
 class _MOUSE_EVENT_RECORD(ctypes.Structure):
@@ -85,7 +85,7 @@ class _MOUSE_EVENT_RECORD(ctypes.Structure):
 
 
 class _WINDOW_BUFFER_SIZE_RECORD(ctypes.Structure):
-    _fields_ = ('dwSize', _COORD)
+    _fields_ = (('dwSize', _COORD), )
 
 
 class _INPUT_RECORD(ctypes.Structure):
