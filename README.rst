@@ -304,7 +304,7 @@ Showing multiple independent progress bars in parallel
         )
 
     # Create a file descriptor for regular printing as well
-    print_fd = progressbar.LineOffsetStreamWrapper(sys.stdout, 0)
+    print_fd = progressbar.LineOffsetStreamWrapper(lines=0, stream=sys.stdout)
 
     # The progress bar updates, normally you would do something useful here
     for i in range(N * BARS):
