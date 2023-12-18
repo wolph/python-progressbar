@@ -103,7 +103,7 @@ dependencies = ['python-utils >= 3.8.1']
 version = { attr = 'progressbar.__about__.__version__' }
 
 [tool.setuptools.packages.find]
-exclude = ['docs', 'tests']
+exclude = ['docs*', 'tests*']
 
 [tool.setuptools]
 include-package-data = true
