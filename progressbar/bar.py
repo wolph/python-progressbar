@@ -207,7 +207,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
         super().__init__(**kwargs)
 
     def _apply_line_offset(
-        self, fd: base.TextIO, line_offset: int,
+        self,
+        fd: base.TextIO,
+        line_offset: int,
     ) -> base.TextIO:
         if line_offset:
             return progressbar.terminal.stream.LineOffsetStreamWrapper(
