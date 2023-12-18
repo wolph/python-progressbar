@@ -135,7 +135,7 @@ requires = ['setuptools', 'setuptools-scm']
 [tool.codespell]
 skip = '*/htmlcov,./docs/_build,*.asc'
 
-ignore-words-list = 'datas'
+ignore-words-list = 'datas,numbert'
 
 [tool.black]
 line-length = 79
