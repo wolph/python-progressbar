@@ -181,3 +181,10 @@ exclude_lines = [
     'if types.TYPE_CHECKING:',
     '@typing.overload',
 ]
+
+[tool.pyright]
+include= ['progressbar']
+exclude= ['examples']
+ignore= ['docs']
+
+reportIncompatibleMethodOverride = false

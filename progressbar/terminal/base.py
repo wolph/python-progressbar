@@ -145,8 +145,8 @@ def clear_line(n):
 class _CPR(str):  # pragma: no cover
     _response_lock = threading.Lock()
 
-    def __call__(self, stream):
-        res = ''
+    def __call__(self, stream) -> tuple[int, int]:
+        res : str = ''
 
         with self._response_lock:
             stream.write(str(self))
@@ -158,14 +158,17 @@ class _CPR(str):  # pragma: no cover
                 if char is not None:
                     res += char
 
-            res = res[2:-1].split(';')
+            res_list = res[2:-1].split(';')
 
-            res = tuple(int(item) if item.isdigit() else item for item in res)
+            res_list = tuple(int(item)
+                             if item.isdigit()
+                             else item
+                             for item in res_list)
 
-            if len(res) == 1:
-                return res[0]
+            if len(res_list) == 1:
+                return types.cast(tuple[int, int], res_list[0])
 
-            return res
+            return types.cast(tuple[int, int], tuple(res_list))
 
     def row(self, stream):
         row, _ = self(stream)
@@ -491,7 +494,7 @@ class SGR(CSI):
     def _end_template(self):
         return super().__call__(self._end_code)
 
-    def __call__(self, text):
+    def __call__(self, text, *args):
         return self._start_template + text + self._end_template
 
 

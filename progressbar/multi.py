@@ -227,7 +227,8 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             self._label_bar(bar_)
             bar_.update(force=force)
             if write:
-                yield bar_.fd.line
+                yield typing.cast(
+                    stream.LastLineStream, bar_.fd).line
 
         if bar_.finished():
             yield from self._render_finished_bar(bar_, now, expired, update)

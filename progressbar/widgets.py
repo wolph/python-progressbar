@@ -1470,11 +1470,11 @@ class JobStatusBar(Bar, VariableMixin):
         failure_marker: The marker to use for failed jobs.
     '''
 
-    success_fg_color: terminal.OptionalColor | None = colors.green
-    success_bg_color: terminal.OptionalColor | None = None
+    success_fg_color: terminal.Color | None = colors.green
+    success_bg_color: terminal.Color | None = None
     success_marker: str = '█'
-    failure_fg_color: terminal.OptionalColor | None = colors.red
-    failure_bg_color: terminal.OptionalColor | None = None
+    failure_fg_color: terminal.Color | None = colors.red
+    failure_bg_color: terminal.Color | None = None
     failure_marker: str = 'X'
     job_markers: list[str]
 
