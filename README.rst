@@ -72,13 +72,19 @@ The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
 
 ******************************************************************************
+Security contact information
+******************************************************************************
+
+To report a security vulnerability, please use the
+`Tidelift security contact <https://tidelift.com/security>`_.
+Tidelift will coordinate the fix and disclosure.
+
+******************************************************************************
 Known issues
 ******************************************************************************
 
-Due to limitations in both the IDLE shell and the Jetbrains (Pycharm) shells this progressbar cannot function properly within those.
-
+- The Jetbrains (PyCharm, etc) editors work out of the box, but for more advanced features such as the `MultiBar` support you will need to enable the "Enable terminal in output console" checkbox in the Run dialog.
 - The IDLE editor doesn't support these types of progress bars at all: https://bugs.python.org/issue23220
-- The Jetbrains (Pycharm) editors partially work but break with fast output. As a workaround make sure you only write to either `sys.stdout` (regular print) or `sys.stderr` at the same time. If you do plan to use both, make sure you wait about ~200 milliseconds for the next output or it will break regularly. Linked issue: https://github.com/WoLpH/python-progressbar/issues/115
 - Jupyter notebooks buffer `sys.stdout` which can cause mixed output. This issue can be resolved easily using: `import sys; sys.stdout.flush()`. Linked issue: https://github.com/WoLpH/python-progressbar/issues/173
 
 ******************************************************************************
@@ -151,6 +157,38 @@ In most cases the following will work as well, as long as you initialize the
     for i in progressbar.progressbar(range(10)):
         logging.error('Got %d', i)
         time.sleep(0.2)
+
+Multiple (threaded) progressbars
+==============================================================================
+
+.. code:: python
+
+    import random
+    import threading
+    import time
+
+    import progressbar
+
+    BARS = 5
+    N = 50
+
+
+    def do_something(bar):
+        for i in bar(range(N)):
+            # Sleep up to 0.1 seconds
+            time.sleep(random.random() * 0.1)
+
+            # print messages at random intervals to show how extra output works
+            if random.random() > 0.9:
+                bar.print('random message for bar', bar, i)
+
+
+    with progressbar.MultiBar() as multibar:
+        for i in range(BARS):
+            # Get a progressbar
+            bar = multibar[f'Thread label here {i}']
+            # Create a thread and pass the progressbar
+            threading.Thread(target=do_something, args=(bar,)).start()
 
 Context wrapper
 ==============================================================================
@@ -238,55 +276,72 @@ Bar with wide Chinese (or other multibyte) characters
     for i in bar(range(10)):
         time.sleep(0.1)
 
-Showing multiple (threaded) independent progress bars in parallel
+Showing multiple independent progress bars in parallel
 ==============================================================================
-
-While this method works fine and will continue to work fine, a smarter and
-fully automatic version of this is currently being made:
-https://github.com/WoLpH/python-progressbar/issues/176
 
 .. code:: python
 
     import random
     import sys
+    import time
+
+    import progressbar
+
+    BARS = 5
+    N = 100
+
+    # Construct the list of progress bars with the `line_offset` so they draw
+    # below each other
+    bars = []
+    for i in range(BARS):
+        bars.append(
+            progressbar.ProgressBar(
+                max_value=N,
+                # We add 1 to the line offset to account for the `print_fd`
+                line_offset=i + 1,
+                max_error=False,
+            )
+        )
+
+    # Create a file descriptor for regular printing as well
+    print_fd = progressbar.LineOffsetStreamWrapper(sys.stdout, 0)
+
+    # The progress bar updates, normally you would do something useful here
+    for i in range(N * BARS):
+        time.sleep(0.005)
+
+        # Increment one of the progress bars at random
+        bars[random.randrange(0, BARS)].increment()
+
+        # Print a status message to the `print_fd` below the progress bars
+        print(f'Hi, we are at update {i+1} of {N * BARS}', file=print_fd)
+
+    # Cleanup the bars
+    for bar in bars:
+        bar.finish()
+
+    # Add a newline to make sure the next print starts on a new line
+    print()
+
+******************************************************************************
+
+Naturally we can do this from separate threads as well:
+
+.. code:: python
+
+    import random
     import threading
     import time
 
     import progressbar
 
-    output_lock = threading.Lock()
+    BARS = 5
+    N = 100
 
-
-    class LineOffsetStreamWrapper:
-        UP = '\033[F'
-        DOWN = '\033[B'
-
-        def __init__(self, lines=0, stream=sys.stderr):
-            self.stream = stream
-            self.lines = lines
-
-        def write(self, data):
-            with output_lock:
-                self.stream.write(self.UP * self.lines)
-                self.stream.write(data)
-                self.stream.write(self.DOWN * self.lines)
-                self.stream.flush()
-
-        def __getattr__(self, name):
-            return getattr(self.stream, name)
-
-
+    # Create the bars with the given line offset
     bars = []
-    for i in range(5):
-        bars.append(
-            progressbar.ProgressBar(
-                fd=LineOffsetStreamWrapper(i),
-                max_value=1000,
-            )
-        )
-
-        if i:
-            print('Reserve a line for the progressbar')
+    for line_offset in range(BARS):
+        bars.append(progressbar.ProgressBar(line_offset=line_offset, max_value=N))
 
 
     class Worker(threading.Thread):
@@ -295,10 +350,12 @@ https://github.com/WoLpH/python-progressbar/issues/176
             self.bar = bar
 
         def run(self):
-            for i in range(1000):
-                time.sleep(random.random() / 100)
+            for i in range(N):
+                time.sleep(random.random() / 25)
                 self.bar.update(i)
 
 
     for bar in bars:
         Worker(bar).start()
+
+    print()

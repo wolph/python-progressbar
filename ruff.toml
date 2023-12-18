@@ -1,0 +1,75 @@
+# We keep the ruff configuration separate so it can easily be shared across
+# all projects
+
+target-version = 'py38'
+
+src = ['progressbar']
+
+ignore = [
+    'A001', # Variable {name} is shadowing a Python builtin
+    'A002', # Argument {name} is shadowing a Python builtin
+    'A003', # Class attribute {name} is shadowing a Python builtin
+    'B023', # function-uses-loop-variable
+    'B024', # `FormatWidgetMixin` is an abstract base class, but it has no abstract methods
+    'D205', # blank-line-after-summary
+    'D212', # multi-line-summary-first-line
+    'RET505', # Unnecessary `else` after `return` statement
+    'TRY003', # Avoid specifying long messages outside the exception class
+    'RET507', # Unnecessary `elif` after `continue` statement
+    'C405', # Unnecessary {obj_type} literal (rewrite as a set literal)
+    'C406', # Unnecessary {obj_type} literal (rewrite as a dict literal)
+    'C408', # Unnecessary {obj_type} call (rewrite as a literal)
+    'SIM114', # Combine `if` branches using logical `or` operator
+    'RET506', # Unnecessary `else` after `raise` statement
+]
+line-length = 80
+select = [
+    'A', # flake8-builtins
+    'ASYNC', # flake8 async checker
+    'B', # flake8-bugbear
+    'C4', # flake8-comprehensions
+    'C90', # mccabe
+    'COM', # flake8-commas
+
+    ## Require docstrings for all public methods, would be good to enable at some point
+    # 'D',     # pydocstyle
+
+    'E', # pycodestyle error ('W' for warning)
+    'F', # pyflakes
+    'FA', # flake8-future-annotations
+    'I', # isort
+    'ICN', # flake8-import-conventions
+    'INP', # flake8-no-pep420
+    'ISC', # flake8-implicit-str-concat
+    'N', # pep8-naming
+    'NPY', # NumPy-specific rules
+    'PERF', # perflint,
+    'PIE', # flake8-pie
+    'Q', # flake8-quotes
+
+    'RET', # flake8-return
+    'RUF', # Ruff-specific rules
+    'SIM', # flake8-simplify
+    'T20', # flake8-print
+    'TD', # flake8-todos
+    'TRY', # tryceratops
+    'UP', # pyupgrade
+]
+
+[per-file-ignores]
+'tests/*' = ['INP001', 'T201', 'T203']
+'examples.py' = ['T201']
+
+[pydocstyle]
+convention = 'google'
+ignore-decorators = ['typing.overload']
+
+[isort]
+case-sensitive = true
+combine-as-imports = true
+force-wrap-aliases = true
+
+[flake8-quotes]
+docstring-quotes = 'single'
+inline-quotes = 'single'
+multiline-quotes = 'single'

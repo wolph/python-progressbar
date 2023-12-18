@@ -1,0 +1,190 @@
+
+[project]
+authors = [{ name = 'Rick van Hattem (Wolph)', email = 'wolph@wol.ph' }]
+dynamic = ['version']
+keywords = [
+    'REPL',
+    'animated',
+    'bar',
+    'color',
+    'console',
+    'duration',
+    'efficient',
+    'elapsed',
+    'eta',
+    'feedback',
+    'live',
+    'meter',
+    'monitor',
+    'monitoring',
+    'multi-threaded',
+    'progress',
+    'progress-bar',
+    'progressbar',
+    'progressmeter',
+    'python',
+    'rate',
+    'simple',
+    'speed',
+    'spinner',
+    'stats',
+    'terminal',
+    'throughput',
+    'time',
+    'visual',
+]
+license = { text = 'BSD-3-Clause' }
+name = 'progressbar2'
+requires-python = '>=3.8'
+
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Development Status :: 6 - Mature',
+    'Environment :: Console',
+    'Environment :: MacOS X',
+    'Environment :: Other Environment',
+    'Environment :: Win32 (MS Windows)',
+    'Environment :: X11 Applications',
+    'Framework :: IPython',
+    'Framework :: Jupyter',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Education',
+    'Intended Audience :: End Users/Desktop',
+    'Intended Audience :: Other Audience',
+    'Intended Audience :: System Administrators',
+    'License :: OSI Approved :: BSD License',
+    'Natural Language :: English',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: MacOS',
+    'Operating System :: Microsoft :: MS-DOS',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: Microsoft',
+    'Operating System :: POSIX :: BSD :: FreeBSD',
+    'Operating System :: POSIX :: BSD',
+    'Operating System :: POSIX :: Linux',
+    'Operating System :: POSIX :: SunOS/Solaris',
+    'Operating System :: POSIX',
+    'Operating System :: Unix',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: Implementation :: IronPython',
+    'Programming Language :: Python :: Implementation :: PyPy',
+    'Programming Language :: Python :: Implementation',
+    'Programming Language :: Python',
+    'Programming Language :: Unix Shell',
+    'Topic :: Desktop Environment',
+    'Topic :: Education :: Computer Aided Instruction (CAI)',
+    'Topic :: Education :: Testing',
+    'Topic :: Office/Business',
+    'Topic :: Other/Nonlisted Topic',
+    'Topic :: Software Development :: Build Tools',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Software Development :: Libraries',
+    'Topic :: Software Development :: Pre-processors',
+    'Topic :: Software Development :: User Interfaces',
+    'Topic :: System :: Installation/Setup',
+    'Topic :: System :: Logging',
+    'Topic :: System :: Monitoring',
+    'Topic :: System :: Shells',
+    'Topic :: Terminals',
+    'Topic :: Utilities',
+]
+description = 'A Python Progressbar library to provide visual (yet text based) progress to long running operations.'
+readme = 'README.rst'
+
+dependencies = ['python-utils >= 3.8.1']
+
+[tool.setuptools.dynamic]
+version = { attr = 'progressbar.__about__.__version__' }
+
+[tool.setuptools.packages.find]
+exclude = ['docs', 'tests']
+
+[tool.setuptools]
+include-package-data = true
+
+[project.scripts]
+cli-name = 'progressbar.cli:main'
+
+[project.optional-dependencies]
+docs = ['sphinx>=1.8.5', 'sphinx-autodoc-typehints>=1.6.0']
+tests = [
+    'dill>=0.3.6',
+    'flake8>=3.7.7',
+    'freezegun>=0.3.11',
+    'pytest-cov>=2.6.1',
+    'pytest-mypy',
+    'pytest>=4.6.9',
+    'sphinx>=1.8.5',
+]
+
+[project.urls]
+bugs = 'https://github.com/wolph/python-progressbar/issues'
+documentation = 'https://progressbar-2.readthedocs.io/en/latest/'
+repository = 'https://github.com/wolph/python-progressbar/'
+
+[build-system]
+build-backend = 'setuptools.build_meta'
+requires = ['setuptools', 'setuptools-scm']
+
+[tool.codespell]
+skip = '*/htmlcov,./docs/_build,*.asc'
+
+ignore-words-list = 'datas,numbert'
+
+[tool.black]
+line-length = 79
+skip-string-normalization = true
+
+[tool.mypy]
+packages = ['progressbar', 'tests']
+exclude = [
+    '^docs$',
+    '^tests/original_examples.py$',
+    '^examples.py$',
+]
+
+[tool.coverage.run]
+branch = true
+source = [
+    'progressbar',
+    'tests',
+]
+omit = [
+    '*/mock/*',
+    '*/nose/*',
+    '.tox/*',
+    '*/os_specific/*',
+]
+[tool.coverage.paths]
+source = [
+    'progressbar',
+]
+
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = [
+    'pragma: no cover',
+    '@abc.abstractmethod',
+    'def __repr__',
+    'if self.debug:',
+    'if settings.DEBUG',
+    'raise AssertionError',
+    'raise NotImplementedError',
+    'if 0:',
+    'if __name__ == .__main__.:',
+    'if types.TYPE_CHECKING:',
+    '@typing.overload',
+]
+
+[tool.pyright]
+include= ['progressbar']
+exclude= ['examples']
+ignore= ['docs']
+
+reportIncompatibleMethodOverride = false

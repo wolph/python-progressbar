@@ -1,31 +1,34 @@
+import contextlib
+import os
 import time
-import pytest
+
+import original_examples  # type: ignore
 import progressbar
-import original_examples
+import pytest
 
 # Import hack to allow for parallel Tox
 try:
     import examples
 except ImportError:
     import sys
-    sys.path.append('..')
+
+    _project_dir = os.path.dirname(os.path.dirname(__file__))
+    sys.path.append(_project_dir)
     import examples
-    sys.path.remove('..')
+
+    sys.path.remove(_project_dir)
 
 
 def test_examples(monkeypatch):
     for example in examples.examples:
-        try:
+        with contextlib.suppress(ValueError):
             example()
-        except ValueError:
-            pass
 
 
 @pytest.mark.filterwarnings('ignore:.*maxval.*:DeprecationWarning')
 @pytest.mark.parametrize('example', original_examples.examples)
 def test_original_examples(example, monkeypatch):
-    monkeypatch.setattr(progressbar.ProgressBar,
-                        '_MINIMUM_UPDATE_INTERVAL', 1)
+    monkeypatch.setattr(progressbar.ProgressBar, '_MINIMUM_UPDATE_INTERVAL', 1)
     monkeypatch.setattr(time, 'sleep', lambda t: None)
     example()
 
@@ -39,8 +42,6 @@ def test_examples_nullbar(monkeypatch, example):
 
 
 def test_reuse():
-    import progressbar
-
     bar = progressbar.ProgressBar()
     bar.start()
     for i in range(10):
@@ -59,10 +60,11 @@ def test_reuse():
 
 
 def test_dirty():
-    import progressbar
-
     bar = progressbar.ProgressBar()
     bar.start()
+    assert bar.started()
     for i in range(10):
         bar.update(i)
     bar.finish(dirty=True)
+    assert bar.finished()
+    assert bar.started()

@@ -1,6 +1,7 @@
 import time
-import pytest
+
 import progressbar
+import pytest
 
 
 def test_missing_format_values():
@@ -64,7 +65,7 @@ def test_one_max_value():
 def test_changing_max_value():
     '''Changing max_value? No problem'''
     p = progressbar.ProgressBar(max_value=10)(range(20), max_value=20)
-    for i in p:
+    for _i in p:
         time.sleep(1)
 
 
@@ -122,3 +123,15 @@ def test_variable_not_str():
 def test_variable_too_many_strs():
     with pytest.raises(ValueError):
         progressbar.Variable('too long')
+
+
+def test_negative_value():
+    bar = progressbar.ProgressBar(max_value=10)
+    with pytest.raises(ValueError):
+        bar.update(value=-1)
+
+
+def test_increment():
+    bar = progressbar.ProgressBar(max_value=10)
+    bar.increment()
+    del bar

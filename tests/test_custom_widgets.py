@@ -1,5 +1,7 @@
 import time
+
 import progressbar
+import pytest
 
 
 class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
@@ -7,8 +9,8 @@ class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
 
     def update(self, pbar):
         if 45 < pbar.percentage() < 80:
-            return 'Bigger Now ' + progressbar.FileTransferSpeed.update(self,
-                                                                        pbar)
+            value = progressbar.FileTransferSpeed.update(self, pbar)
+            return f'Bigger Now {value}'
         else:
             return progressbar.FileTransferSpeed.update(self, pbar)
 
@@ -36,9 +38,13 @@ def test_crazy_file_transfer_speed_widget():
 
 def test_variable_widget_widget():
     widgets = [
-        ' [', progressbar.Timer(), '] ',
+        ' [',
+        progressbar.Timer(),
+        '] ',
         progressbar.Bar(),
-        ' (', progressbar.ETA(), ') ',
+        ' (',
+        progressbar.ETA(),
+        ') ',
         progressbar.Variable('loss'),
         progressbar.Variable('text'),
         progressbar.Variable('error', precision=None),
@@ -46,13 +52,16 @@ def test_variable_widget_widget():
         progressbar.Variable('predefined'),
     ]
 
-    p = progressbar.ProgressBar(widgets=widgets, max_value=1000,
-                                variables=dict(predefined='predefined'))
+    p = progressbar.ProgressBar(
+        widgets=widgets,
+        max_value=1000,
+        variables=dict(predefined='predefined'),
+    )
     p.start()
     print('time', time, time.sleep)
     for i in range(0, 200, 5):
         time.sleep(0.1)
-        p.update(i + 1, loss=.5, text='spam', error=1)
+        p.update(i + 1, loss=0.5, text='spam', error=1)
 
     i += 1
     p.update(i, text=None)
@@ -60,6 +69,8 @@ def test_variable_widget_widget():
     p.update(i, text=False)
     i += 1
     p.update(i, text=True, error='a')
+    with pytest.raises(TypeError):
+        p.update(i, non_existing_variable='error!')
     p.finish()
 
 
@@ -72,11 +83,12 @@ def test_format_custom_text_widget():
         ),
     )
 
-    bar = progressbar.ProgressBar(widgets=[
-        widget,
-    ])
+    bar = progressbar.ProgressBar(
+        widgets=[
+            widget,
+        ],
+    )
 
     for i in bar(range(5)):
         widget.update_mapping(eggs=i * 2)
         assert widget.mapping['eggs'] == bar.widgets[0].mapping['eggs']
-

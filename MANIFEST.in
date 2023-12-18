@@ -1,3 +1,6 @@
+recursive-exclude *.pyc
+recursive-exclude *.pyo
+recursive-exclude *.html
 include AUTHORS.rst
 include CHANGES.rst
 include CONTRIBUTING.rst
@@ -7,6 +10,3 @@ include examples.py
 include requirements.txt
 include Makefile
 include pytest.ini
-recursive-include tests *
-recursive-exclude *.pyc
-recursive-exclude *.pyo

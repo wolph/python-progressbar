@@ -1,12 +1,14 @@
 import io
 import sys
-import pytest
+
 import progressbar
+import pytest
+from progressbar import terminal
 
 
 def test_nowrap():
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
     stdout = sys.stdout
@@ -23,13 +25,13 @@ def test_nowrap():
     assert stderr == sys.stderr
 
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
 def test_wrap():
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
     stdout = sys.stdout
@@ -50,7 +52,7 @@ def test_wrap():
     assert stderr == sys.stderr
 
     # Make sure we definitely unwrap
-    for i in range(5):
+    for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
@@ -58,7 +60,7 @@ def test_excepthook():
     progressbar.streams.wrap(stderr=True, stdout=True)
 
     try:
-        raise RuntimeError()
+        raise RuntimeError()  # noqa: TRY301
     except RuntimeError:
         progressbar.streams.excepthook(*sys.exc_info())
 
@@ -100,3 +102,46 @@ def test_fd_as_standard_streams(stream):
     with progressbar.ProgressBar(fd=stream) as pb:
         for i in range(101):
             pb.update(i)
+
+
+def test_line_offset_stream_wrapper():
+    stream = terminal.LineOffsetStreamWrapper(5, io.StringIO())
+    stream.write('Hello World!')
+
+
+def test_last_line_stream_methods():
+    stream = terminal.LastLineStream(io.StringIO())
+
+    # Test write method
+    stream.write('Hello World!')
+    assert stream.read() == 'Hello World!'
+    assert stream.read(5) == 'Hello'
+
+    # Test flush method
+    stream.flush()
+    assert stream.line == 'Hello World!'
+    assert stream.readline() == 'Hello World!'
+    assert stream.readline(5) == 'Hello'
+
+    # Test truncate method
+    stream.truncate(5)
+    assert stream.line == 'Hello'
+    stream.truncate()
+    assert stream.line == ''
+    
+    # Test seekable/readable
+    assert not stream.seekable()
+    assert stream.readable()
+    
+    stream.writelines(['a', 'b', 'c'])
+    assert stream.read() == 'c'
+
+    assert list(stream) == ['c']
+    
+    with stream:
+        stream.write('Hello World!')
+        assert stream.read() == 'Hello World!'
+        assert stream.read(5) == 'Hello'
+
+    # Test close method
+    stream.close()

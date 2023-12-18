@@ -20,7 +20,7 @@ import datetime
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
 
-from progressbar import __about__ as metadata
+from progressbar import __about__ as metadata  # noqa: E402
 
 # -- General configuration -----------------------------------------------
 
@@ -61,10 +61,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'Progress Bar'
 project_slug = ''.join(project.capitalize().split())
-copyright = u'%s,  <a href="http://wol.ph/">%s</a>' % (
-    datetime.date.today().year,
-    metadata.__author__,
-)
+copyright = f'{datetime.date.today().year},  <a href="http://wol.ph/">{metadata.__author__}</a>'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -190,7 +187,7 @@ html_static_path = ['_static']
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = '%sdoc' % project_slug
+htmlhelp_basename = f'{project_slug}doc'
 
 
 # -- Options for LaTeX output --------------------------------------------
@@ -198,10 +195,8 @@ htmlhelp_basename = '%sdoc' % project_slug
 latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #'preamble': '',
 }
@@ -209,8 +204,13 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-    ('index', '%s.tex' % project_slug, u'%s Documentation' % project,
-     metadata.__author__, 'manual'),
+    (
+        'index',
+        f'{project_slug}.tex',
+        f'{project} Documentation',
+        metadata.__author__,
+        'manual',
+    )
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -239,8 +239,13 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', project_slug.lower(), u'%s Documentation' % project,
-     [metadata.__author__], 1)
+    (
+        'index',
+        project_slug.lower(),
+        f'{project} Documentation',
+        [metadata.__author__],
+        1,
+    )
 ]
 
 # If true, show URL addresses after external links.
@@ -253,9 +258,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    ('index', project_slug, u'%s Documentation' % project,
-     metadata.__author__, project_slug, 'One line description of project.',
-     'Miscellaneous'),
+    (
+        'index',
+        project_slug,
+        f'{project} Documentation',
+        metadata.__author__,
+        project_slug,
+        'One line description of project.',
+        'Miscellaneous',
+    )
 ]
 
 # Documents to append as an appendix to all manuals.
@@ -303,7 +314,7 @@ epub_copyright = copyright
 # The format is a list of tuples containing the path and title.
 # epub_pre_files = []
 
-# HTML files shat should be inserted after the pages created by sphinx.
+# HTML files that should be inserted after the pages created by sphinx.
 # The format is a list of tuples containing the path and title.
 # epub_post_files = []
 
