@@ -165,9 +165,9 @@ class _CPR(str):  # pragma: no cover
             )
 
             if len(res_list) == 1:
-                return types.cast(tuple[int, int], res_list[0])
+                return types.cast(types.Tuple[int, int], res_list[0])
 
-            return types.cast(tuple[int, int], tuple(res_list))
+            return types.cast(types.Tuple[int, int], tuple(res_list))
 
     def row(self, stream):
         row, _ = self(stream)
