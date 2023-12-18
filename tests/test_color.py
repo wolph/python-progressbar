@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import typing
 
-import pytest
-
 import progressbar
 import progressbar.env
 import progressbar.terminal
+import pytest
 from progressbar import env, terminal, widgets
-from progressbar.terminal import apply_colors, Colors, colors
+from progressbar.terminal import Colors, apply_colors, colors
 
 
 @pytest.mark.parametrize(

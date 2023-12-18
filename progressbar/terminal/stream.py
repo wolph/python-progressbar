@@ -126,8 +126,7 @@ class LastLineStream(TextIOOutputWrapper):
 
         return len(self.line)
 
-    def __iter__(self) -> typing.Generator[str, typing.Any,
-                                           typing.Any]:
+    def __iter__(self) -> typing.Generator[str, typing.Any, typing.Any]:
         yield self.line
 
     def writelines(self, __lines: Iterable[str]) -> None:

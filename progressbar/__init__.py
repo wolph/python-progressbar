@@ -24,6 +24,7 @@ from .widgets import (
     FormatLabel,
     FormatLabelBar,
     GranularBar,
+    JobStatusBar,
     MultiProgressBar,
     MultiRangeBar,
     Percentage,
@@ -34,7 +35,6 @@ from .widgets import (
     Timer,
     Variable,
     VariableMixin,
-    JobStatusBar,
 )
 
 __date__ = str(date.today())

@@ -146,7 +146,7 @@ class _CPR(str):  # pragma: no cover
     _response_lock = threading.Lock()
 
     def __call__(self, stream) -> tuple[int, int]:
-        res : str = ''
+        res: str = ''
 
         with self._response_lock:
             stream.write(str(self))
@@ -160,10 +160,9 @@ class _CPR(str):  # pragma: no cover
 
             res_list = res[2:-1].split(';')
 
-            res_list = tuple(int(item)
-                             if item.isdigit()
-                             else item
-                             for item in res_list)
+            res_list = tuple(
+                int(item) if item.isdigit() else item for item in res_list
+            )
 
             if len(res_list) == 1:
                 return types.cast(tuple[int, int], res_list[0])

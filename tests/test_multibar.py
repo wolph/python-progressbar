@@ -1,5 +1,5 @@
-import threading
 import random
+import threading
 import time
 
 import progressbar
@@ -191,7 +191,8 @@ def test_multibar_print():
         multibar.update(force=True, flush=True)
 
 def test_multibar_no_format():
-    with progressbar.MultiBar(initial_format=None, finished_format=None) as multibar:
+    with progressbar.MultiBar(
+        initial_format=None, finished_format=None) as multibar:
         bar = multibar['a']
 
         for i in bar(range(5)):
@@ -215,7 +216,8 @@ def test_multibar_finished():
 
 
 def test_multibar_finished_format():
-    multibar = progressbar.MultiBar(finished_format='Finished {label}', show_finished=True)
+    multibar = progressbar.MultiBar(
+        finished_format='Finished {label}', show_finished=True)
     bar = multibar['bar'] = progressbar.ProgressBar(max_value=5)
     bar2 = multibar['bar2']
     multibar.render(force=True)

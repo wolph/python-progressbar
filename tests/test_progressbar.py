@@ -1,5 +1,5 @@
-import os
 import contextlib
+import os
 import time
 
 import original_examples  # type: ignore

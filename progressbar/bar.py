@@ -207,11 +207,12 @@ class DefaultFdMixin(ProgressBarMixinBase):
         super().__init__(**kwargs)
 
     def _apply_line_offset(
-        self, fd: base.TextIO, line_offset: int
+        self, fd: base.TextIO, line_offset: int,
     ) -> base.TextIO:
         if line_offset:
             return progressbar.terminal.stream.LineOffsetStreamWrapper(
-                line_offset, fd,
+                line_offset,
+                fd,
             )
         else:
             return fd
@@ -954,9 +955,9 @@ class ProgressBar(
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
-        StdRedirectMixin.start(self, max_value=max_value, *args, **kwargs)
-        ResizableMixin.start(self, max_value=max_value, *args, **kwargs)
-        ProgressBarBase.start(self, max_value=max_value, *args, **kwargs)
+        StdRedirectMixin.start(self, max_value=max_value)
+        ResizableMixin.start(self, max_value=max_value)
+        ProgressBarBase.start(self, max_value=max_value)
 
         # Constructing the default widgets is only done when we know max_value
         if not self.widgets:
