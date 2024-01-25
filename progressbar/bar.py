@@ -776,7 +776,7 @@ class ProgressBar(
                 ' ',
                 widgets.Timer(**self.widget_kwargs),
                 ' ',
-                widgets.AdaptiveETA(**self.widget_kwargs),
+                widgets.SmoothingETA(**self.widget_kwargs),
             ]
         else:
             return [
@@ -1071,7 +1071,7 @@ class DataTransferBar(ProgressBar):
                 ' ',
                 widgets.Timer(),
                 ' ',
-                widgets.AdaptiveETA(),
+                widgets.SmoothingETA(),
             ]
         else:
             return [
