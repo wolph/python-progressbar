@@ -256,10 +256,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
                     else:
                         enable_colors = progressbar.env.ColorSupport.NONE
                     break
-            else:  # pragma: no cover
-                # This scenario should never occur because `is_ansi_terminal`
-                # should always be `True` or `False`
-                raise ValueError('Unable to determine color support')
+            else:
+                enable_colors = False
 
         elif enable_colors is True:
             enable_colors = progressbar.env.ColorSupport.XTERM_256

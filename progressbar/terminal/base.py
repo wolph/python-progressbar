@@ -199,7 +199,24 @@ class WindowsColors(enum.Enum):
 
     @staticmethod
     def from_rgb(rgb: types.Tuple[int, int, int]):
-        """Find the closest ConsoleColor to the given RGB color."""
+        '''
+        Find the closest WindowsColors to the given RGB color.
+
+        >>> WindowsColors.from_rgb((0, 0, 0))
+        <WindowsColors.BLACK: (0, 0, 0)>
+
+        >>> WindowsColors.from_rgb((255, 255, 255))
+        <WindowsColors.INTENSE_WHITE: (255, 255, 255)>
+
+        >>> WindowsColors.from_rgb((0, 255, 0))
+        <WindowsColors.INTENSE_GREEN: (0, 255, 0)>
+
+        >>> WindowsColors.from_rgb((45, 45, 45))
+        <WindowsColors.BLACK: (0, 0, 0)>
+
+        >>> WindowsColors.from_rgb((128, 0, 128))
+        <WindowsColors.MAGENTA: (128, 0, 128)>
+        '''
 
         def color_distance(rgb1, rgb2):
             return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
@@ -211,6 +228,13 @@ class WindowsColors(enum.Enum):
 
 
 class WindowsColor:
+    '''
+    Windows compatible color class for when ANSI is not supported.
+    Currently a no-op because it is not possible to buffer these colors.
+
+    >>> WindowsColor(WindowsColors.RED)('test')
+    'test'
+    '''
     __slots__ = 'color',
 
     def __init__(self, color: Color):
@@ -542,9 +566,6 @@ def apply_colors(
 class DummyColor:
     def __call__(self, text):
         return text
-
-    def __getattr__(self, item):
-        return self
 
     def __repr__(self):
         return 'DummyColor()'

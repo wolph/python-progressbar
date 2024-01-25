@@ -68,7 +68,7 @@ def test_is_ansi_terminal(monkeypatch):
     monkeypatch.delenv('PROGRESSBAR_IS_TERMINAL', raising=False)
     monkeypatch.delenv('JPY_PARENT_PID', raising=False)
 
-    assert progressbar.env.is_ansi_terminal(fd) is False
+    assert not progressbar.env.is_ansi_terminal(fd)
     assert progressbar.env.is_ansi_terminal(fd, True) is True
     assert progressbar.env.is_ansi_terminal(fd, False) is False
 
@@ -77,16 +77,16 @@ def test_is_ansi_terminal(monkeypatch):
     monkeypatch.delenv('JPY_PARENT_PID')
 
     # Sanity check
-    assert progressbar.env.is_ansi_terminal(fd) is False
+    assert not progressbar.env.is_ansi_terminal(fd)
 
     monkeypatch.setenv('PROGRESSBAR_IS_TERMINAL', 'true')
-    assert progressbar.env.is_ansi_terminal(fd) is False
+    assert not progressbar.env.is_ansi_terminal(fd)
     monkeypatch.setenv('PROGRESSBAR_IS_TERMINAL', 'false')
-    assert progressbar.env.is_ansi_terminal(fd) is False
+    assert not progressbar.env.is_ansi_terminal(fd)
     monkeypatch.delenv('PROGRESSBAR_IS_TERMINAL')
 
     # Sanity check
-    assert progressbar.env.is_ansi_terminal(fd) is False
+    assert not progressbar.env.is_ansi_terminal(fd)
 
     # Fake TTY mode for environment testing
     fd.isatty = lambda: True
@@ -103,12 +103,9 @@ def test_is_ansi_terminal(monkeypatch):
     monkeypatch.setenv('ANSICON', 'true')
     assert progressbar.env.is_ansi_terminal(fd) is True
     monkeypatch.delenv('ANSICON')
-    assert progressbar.env.is_ansi_terminal(fd) is False
+    assert not progressbar.env.is_ansi_terminal(fd)
 
     def raise_error():
         raise RuntimeError('test')
     fd.isatty = raise_error
-    if os.name == 'nt':
-        assert progressbar.env.is_ansi_terminal(fd) is None
-    else:
-        assert progressbar.env.is_ansi_terminal(fd) is False
+    assert not progressbar.env.is_ansi_terminal(fd)

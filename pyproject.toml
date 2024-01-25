@@ -181,6 +181,7 @@ exclude_lines = [
     'if __name__ == .__main__.:',
     'if types.TYPE_CHECKING:',
     '@typing.overload',
+    'if os.name == .nt.:',
 ]
 
 [tool.pyright]

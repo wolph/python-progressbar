@@ -175,6 +175,7 @@ def test_colors():
             assert rgb.hex
             assert rgb.to_ansi_16 is not None
             assert rgb.to_ansi_256 is not None
+            assert rgb.to_windows is not None
             assert color.underline
             assert color.fg
             assert color.bg
@@ -302,6 +303,22 @@ def test_apply_colors(text, fg, bg, fg_none, bg_none, percentage, expected,
             )
             == expected
     )
+
+
+def test_windows_colors(monkeypatch):
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.WINDOWS)
+    assert (
+            apply_colors(
+                'test',
+                fg=colors.red,
+                bg=colors.red,
+                fg_none=colors.red,
+                bg_none=colors.red,
+                percentage=1,
+            )
+            == 'test'
+    )
+    colors.red.underline('test')
 
 
 def test_ansi_color(monkeypatch):
