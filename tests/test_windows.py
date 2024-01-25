@@ -1,5 +1,6 @@
-import time
 import sys
+import time
+
 import pytest
 
 if sys.platform.startswith('win'):
@@ -36,8 +37,10 @@ def scrape_console(line_count):
 # ---------------------------------------------------------------------------
 def runprogress():
     print('***BEGIN***')
-    b = progressbar.ProgressBar(widgets=['example.m4v: '] + _WIDGETS,
-                                max_value=10 * _MB)
+    b = progressbar.ProgressBar(
+        widgets=['example.m4v: ', *_WIDGETS],
+        max_value=10 * _MB,
+    )
     for i in range(10):
         b.update((i + 1) * _MB)
         time.sleep(0.25)
@@ -47,9 +50,9 @@ def runprogress():
 
 
 # ---------------------------------------------------------------------------
-def find(L, x):
+def find(lines, x):
     try:
-        return L.index(x)
+        return lines.index(x)
     except ValueError:
         return -sys.maxsize
 
@@ -59,7 +62,8 @@ def test_windows():
     runprogress()
 
     scraped_lines = scrape_console(100)
-    scraped_lines.reverse()  # reverse lines so we find the LAST instances of output.
+    # reverse lines so we find the LAST instances of output.
+    scraped_lines.reverse()
     index_begin = find(scraped_lines, '***BEGIN***')
     index_end = find(scraped_lines, '***END***')
 

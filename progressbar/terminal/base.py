@@ -6,17 +6,18 @@ import colorsys
 import enum
 import threading
 from collections import defaultdict
+
 # Ruff is being stupid and doesn't understand `ClassVar` if it comes from the
 # `types` module
 from typing import ClassVar
 
 from python_utils import converters, types
 
-from .os_specific import getch
 from .. import (
     base as pbase,
     env,
 )
+from .os_specific import getch
 
 ESC = '\x1B'
 
@@ -178,7 +179,6 @@ class _CPR(str):  # pragma: no cover
         return column
 
 
-
 class WindowsColors(enum.Enum):
     BLACK = 0, 0, 0
     BLUE = 0, 0, 128
@@ -235,18 +235,21 @@ class WindowsColor:
     >>> WindowsColor(WindowsColors.RED)('test')
     'test'
     '''
-    __slots__ = 'color',
+
+    __slots__ = ('color',)
 
     def __init__(self, color: Color):
         self.color = color
 
     def __call__(self, text):
         return text
-        # In the future we might want to use this, but it requires direct printing to stdout and all of our surrounding functions expect buffered output so it's not feasible right now.
-        # Additionally, recent Windows versions all support ANSI codes without issue so there is little need.
+        ## In the future we might want to use this, but it requires direct
+        ## printing to stdout and all of our surrounding functions expect
+        ## buffered output so it's not feasible right now. Additionally,
+        ## recent Windows versions all support ANSI codes without issue so
+        ## there is little need.
         # from progressbar.terminal.os_specific import windows
         # windows.print_color(text, WindowsColors.from_rgb(self.color.rgb))
-
 
 
 class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
@@ -387,14 +390,14 @@ class Color(
     @property
     def ansi(self) -> types.Optional[str]:
         if (
-                env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR
+            env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR
         ):  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
         if self.xterm:  # pragma: no branch
             color = self.xterm
         elif (
-                env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
+            env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
         ):  # pragma: no branch
             color = self.rgb.to_ansi_256
         elif env.COLOR_SUPPORT is env.ColorSupport.XTERM:  # pragma: no branch
@@ -442,11 +445,11 @@ class Colors:
 
     @classmethod
     def register(
-            cls,
-            rgb: RGB,
-            hls: types.Optional[HSL] = None,
-            name: types.Optional[str] = None,
-            xterm: types.Optional[int] = None,
+        cls,
+        rgb: RGB,
+        hls: types.Optional[HSL] = None,
+        name: types.Optional[str] = None,
+        xterm: types.Optional[int] = None,
     ) -> Color:
         color = Color(rgb, hls, name, xterm)
 
@@ -483,9 +486,9 @@ class ColorGradient(ColorBase):
     def get_color(self, value: float) -> Color:
         'Map a value from 0 to 1 to a color.'
         if (
-                value == pbase.Undefined
-                or value == pbase.UnknownLength
-                or value <= 0
+            value == pbase.Undefined
+            or value == pbase.UnknownLength
+            or value <= 0
         ):
             return self.colors[0]
         elif value >= 1:
@@ -531,14 +534,14 @@ def get_color(value: float, color: OptionalColor) -> Color | None:
 
 
 def apply_colors(
-        text: str,
-        percentage: float | None = None,
-        *,
-        fg: OptionalColor = None,
-        bg: OptionalColor = None,
-        fg_none: Color | None = None,
-        bg_none: Color | None = None,
-        **kwargs: types.Any,
+    text: str,
+    percentage: float | None = None,
+    *,
+    fg: OptionalColor = None,
+    bg: OptionalColor = None,
+    fg_none: Color | None = None,
+    bg_none: Color | None = None,
+    **kwargs: types.Any,
 ) -> str:
     '''Apply colors/gradients to a string depending on the given percentage.
 

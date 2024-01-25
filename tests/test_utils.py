@@ -1,5 +1,4 @@
 import io
-import os
 
 import progressbar
 import progressbar.env

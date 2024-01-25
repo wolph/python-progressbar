@@ -5,7 +5,6 @@ from datetime import timedelta
 
 
 class SmoothingAlgorithm(abc.ABC):
-
     @abc.abstractmethod
     def __init__(self, **kwargs):
         raise NotImplementedError
@@ -41,7 +40,7 @@ class DoubleExponentialMovingAverage(SmoothingAlgorithm):
     It's more responsive to recent changes in data.
     '''
 
-    def __init__(self, alpha: float=0.5) -> None:
+    def __init__(self, alpha: float = 0.5) -> None:
         self.alpha = alpha
         self.ema1 = 0
         self.ema2 = 0
@@ -50,4 +49,3 @@ class DoubleExponentialMovingAverage(SmoothingAlgorithm):
         self.ema1 = self.alpha * new_value + (1 - self.alpha) * self.ema1
         self.ema2 = self.alpha * self.ema1 + (1 - self.alpha) * self.ema2
         return 2 * self.ema1 - self.ema2
-

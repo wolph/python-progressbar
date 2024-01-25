@@ -9,7 +9,6 @@ import typing
 from . import base
 
 
-
 @typing.overload
 def env_flag(name: str, default: bool) -> bool:
     ...
@@ -68,7 +67,7 @@ class ColorSupport(enum.IntEnum):
         )
 
         if os.environ.get('JUPYTER_COLUMNS') or os.environ.get(
-                'JUPYTER_LINES',
+            'JUPYTER_LINES',
         ):
             # Jupyter notebook always supports true color.
             return cls.XTERM_TRUECOLOR
@@ -77,9 +76,10 @@ class ColorSupport(enum.IntEnum):
             # will assume it is supported if the console is configured to
             # support it.
             from .terminal.os_specific import windows
+
             if (
-                    windows.get_console_mode() &
-                    windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
+                windows.get_console_mode()
+                & windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
             ):
                 return cls.XTERM_TRUECOLOR
             else:
@@ -103,8 +103,8 @@ class ColorSupport(enum.IntEnum):
 
 
 def is_ansi_terminal(
-        fd: base.IO,
-        is_terminal: bool | None = None,
+    fd: base.IO,
+    is_terminal: bool | None = None,
 ) -> bool | None:  # pragma: no cover
     if is_terminal is None:
         # Jupyter Notebooks define this variable and support progress bars
@@ -113,7 +113,7 @@ def is_ansi_terminal(
         # This works for newer versions of pycharm only. With older versions
         # there is no way to check.
         elif os.environ.get('PYCHARM_HOSTED') == '1' and not os.environ.get(
-                'PYTEST_CURRENT_TEST',
+            'PYTEST_CURRENT_TEST',
         ):
             is_terminal = True
 
@@ -133,9 +133,10 @@ def is_ansi_terminal(
                 is_terminal = True
             elif os.name == 'nt':
                 from .terminal.os_specific import windows
+
                 return bool(
-                    windows.get_console_mode() &
-                    windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
+                    windows.get_console_mode()
+                    & windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT,
                 )
             else:
                 is_terminal = None

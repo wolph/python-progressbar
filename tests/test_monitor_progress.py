@@ -140,7 +140,8 @@ def test_rapid_updates(testdir):
     )
     result.stderr.lines = _non_empty_lines(result.stderr.lines)
     pprint.pprint(result.stderr.lines, width=70)
-    result.stderr.fnmatch_lines(['  0% (0 of 10) |      | Elapsed Time: 0:00:00 ETA:  --:--:--',
+    result.stderr.fnmatch_lines([
+        '  0% (0 of 10) |      | Elapsed Time: 0:00:00 ETA:  --:--:--',
          ' 10% (1 of 10) |      | Elapsed Time: 0:00:01 ETA:   0:00:09',
          ' 20% (2 of 10) |#     | Elapsed Time: 0:00:02 ETA:   0:00:08',
          ' 30% (3 of 10) |#     | Elapsed Time: 0:00:03 ETA:   0:00:07',
@@ -151,7 +152,7 @@ def test_rapid_updates(testdir):
          ' 80% (8 of 10) |####  | Elapsed Time: 0:00:11 ETA:   0:00:02',
          ' 90% (9 of 10) |##### | Elapsed Time: 0:00:13 ETA:   0:00:01',
          '100% (10 of 10) |#####| Elapsed Time: 0:00:15 Time:  0:00:15',
-     ]
+     ],
     )
 
 

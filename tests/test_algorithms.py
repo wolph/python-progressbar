@@ -1,6 +1,6 @@
-import pytest
 from datetime import timedelta
 
+import pytest
 from progressbar import algorithms
 
 
@@ -17,7 +17,7 @@ def test_ema_initialization():
     (0.7, 40, 28),
     (0.5, 0, 0),
     (0.2, 100, 20),
-    (0.8, 50, 40)
+    (0.8, 50, 40),
 ])
 def test_ema_update(alpha, new_value, expected):
     ema = algorithms.ExponentialMovingAverage(alpha)
@@ -37,7 +37,7 @@ def test_dema_initialization():
     (0.3, 15, 7.65),
     (0.5, 0, 0),
     (0.2, 100, 36.0),
-    (0.8, 50, 48.0)
+    (0.8, 50, 48.0),
 ])
 def test_dema_update(alpha, new_value, expected):
     dema = algorithms.DoubleExponentialMovingAverage(alpha)

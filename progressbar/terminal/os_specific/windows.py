@@ -126,13 +126,16 @@ def reset_console_mode():
 
 
 def set_console_mode() -> bool:
-    mode = _input_mode.value | WindowsConsoleModeFlags.ENABLE_VIRTUAL_TERMINAL_INPUT
+    mode = (
+        _input_mode.value
+        | WindowsConsoleModeFlags.ENABLE_VIRTUAL_TERMINAL_INPUT
+    )
     _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(mode))
 
     mode = (
-            _output_mode.value
-            | WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
-            | WindowsConsoleModeFlags.ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        _output_mode.value
+        | WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
+        | WindowsConsoleModeFlags.ENABLE_VIRTUAL_TERMINAL_PROCESSING
     )
     return bool(_SetConsoleMode(_HANDLE(_h_console_output), _DWORD(mode)))
 
@@ -147,7 +150,7 @@ def set_text_color(color):
 
 def print_color(text, color):
     set_text_color(color)
-    print(text)
+    print(text)  # noqa: T201
     set_text_color(7)  # Reset to default color, grey
 
 
