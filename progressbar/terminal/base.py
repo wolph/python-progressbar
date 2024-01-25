@@ -3,20 +3,20 @@ from __future__ import annotations
 import abc
 import collections
 import colorsys
+import enum
 import threading
 from collections import defaultdict
-
 # Ruff is being stupid and doesn't understand `ClassVar` if it comes from the
 # `types` module
 from typing import ClassVar
 
 from python_utils import converters, types
 
+from .os_specific import getch
 from .. import (
     base as pbase,
     env,
 )
-from .os_specific import getch
 
 ESC = '\x1B'
 
@@ -178,6 +178,53 @@ class _CPR(str):  # pragma: no cover
         return column
 
 
+
+class WindowsColors(enum.Enum):
+    BLACK = 0, 0, 0
+    BLUE = 0, 0, 128
+    GREEN = 0, 128, 0
+    CYAN = 0, 128, 128
+    RED = 128, 0, 0
+    MAGENTA = 128, 0, 128
+    YELLOW = 128, 128, 0
+    GREY = 192, 192, 192
+    INTENSE_BLACK = 128, 128, 128
+    INTENSE_BLUE = 0, 0, 255
+    INTENSE_GREEN = 0, 255, 0
+    INTENSE_CYAN = 0, 255, 255
+    INTENSE_RED = 255, 0, 0
+    INTENSE_MAGENTA = 255, 0, 255
+    INTENSE_YELLOW = 255, 255, 0
+    INTENSE_WHITE = 255, 255, 255
+
+    @staticmethod
+    def from_rgb(rgb: types.Tuple[int, int, int]):
+        """Find the closest ConsoleColor to the given RGB color."""
+
+        def color_distance(rgb1, rgb2):
+            return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
+
+        return min(
+            WindowsColors,
+            key=lambda color: color_distance(color.value, rgb),
+        )
+
+
+class WindowsColor:
+    __slots__ = 'color',
+
+    def __init__(self, color: Color):
+        self.color = color
+
+    def __call__(self, text):
+        return text
+        # In the future we might want to use this, but it requires direct printing to stdout and all of our surrounding functions expect buffered output so it's not feasible right now.
+        # Additionally, recent Windows versions all support ANSI codes without issue so there is little need.
+        # from progressbar.terminal.os_specific import windows
+        # windows.print_color(text, WindowsColors.from_rgb(self.color.rgb))
+
+
+
 class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
     __slots__ = ()
 
@@ -206,6 +253,14 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
         green = round(self.green / 255 * 5)
         blue = round(self.blue / 255 * 5)
         return 16 + 36 * red + 6 * green + blue
+
+    @property
+    def to_windows(self):
+        '''
+        Convert an RGB color (0-255 per channel) to the closest color in the
+        Windows 16 color scheme.
+        '''
+        return WindowsColors.from_rgb((self.red, self.green, self.blue))
 
     def interpolate(self, end: RGB, step: float) -> RGB:
         return RGB(
@@ -286,27 +341,36 @@ class Color(
 
     @property
     def fg(self):
-        return SGRColor(self, 38, 39)
+        if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+            return WindowsColor(self)
+        else:
+            return SGRColor(self, 38, 39)
 
     @property
     def bg(self):
-        return SGRColor(self, 48, 49)
+        if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+            return DummyColor()
+        else:
+            return SGRColor(self, 48, 49)
 
     @property
     def underline(self):
-        return SGRColor(self, 58, 59)
+        if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+            return DummyColor()
+        else:
+            return SGRColor(self, 58, 59)
 
     @property
     def ansi(self) -> types.Optional[str]:
         if (
-            env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR
+                env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR
         ):  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
         if self.xterm:  # pragma: no branch
             color = self.xterm
         elif (
-            env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
+                env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
         ):  # pragma: no branch
             color = self.rgb.to_ansi_256
         elif env.COLOR_SUPPORT is env.ColorSupport.XTERM:  # pragma: no branch
@@ -354,11 +418,11 @@ class Colors:
 
     @classmethod
     def register(
-        cls,
-        rgb: RGB,
-        hls: types.Optional[HSL] = None,
-        name: types.Optional[str] = None,
-        xterm: types.Optional[int] = None,
+            cls,
+            rgb: RGB,
+            hls: types.Optional[HSL] = None,
+            name: types.Optional[str] = None,
+            xterm: types.Optional[int] = None,
     ) -> Color:
         color = Color(rgb, hls, name, xterm)
 
@@ -395,9 +459,9 @@ class ColorGradient(ColorBase):
     def get_color(self, value: float) -> Color:
         'Map a value from 0 to 1 to a color.'
         if (
-            value == pbase.Undefined
-            or value == pbase.UnknownLength
-            or value <= 0
+                value == pbase.Undefined
+                or value == pbase.UnknownLength
+                or value <= 0
         ):
             return self.colors[0]
         elif value >= 1:
@@ -443,14 +507,14 @@ def get_color(value: float, color: OptionalColor) -> Color | None:
 
 
 def apply_colors(
-    text: str,
-    percentage: float | None = None,
-    *,
-    fg: OptionalColor = None,
-    bg: OptionalColor = None,
-    fg_none: Color | None = None,
-    bg_none: Color | None = None,
-    **kwargs: types.Any,
+        text: str,
+        percentage: float | None = None,
+        *,
+        fg: OptionalColor = None,
+        bg: OptionalColor = None,
+        fg_none: Color | None = None,
+        bg_none: Color | None = None,
+        **kwargs: types.Any,
 ) -> str:
     '''Apply colors/gradients to a string depending on the given percentage.
 
@@ -473,6 +537,17 @@ def apply_colors(
             text = bg.bg(text)
 
     return text
+
+
+class DummyColor:
+    def __call__(self, text):
+        return text
+
+    def __getattr__(self, item):
+        return self
+
+    def __repr__(self):
+        return 'DummyColor()'
 
 
 class SGR(CSI):

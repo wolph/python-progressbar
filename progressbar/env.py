@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 import enum
 import os
 import re
 import typing
 
 from . import base
+
 
 
 @typing.overload
@@ -41,6 +43,7 @@ class ColorSupport(enum.IntEnum):
     XTERM = 16
     XTERM_256 = 256
     XTERM_TRUECOLOR = 16777216
+    WINDOWS = 8
 
     @classmethod
     def from_env(cls):
@@ -65,10 +68,22 @@ class ColorSupport(enum.IntEnum):
         )
 
         if os.environ.get('JUPYTER_COLUMNS') or os.environ.get(
-            'JUPYTER_LINES',
+                'JUPYTER_LINES',
         ):
             # Jupyter notebook always supports true color.
             return cls.XTERM_TRUECOLOR
+        elif os.name == 'nt':
+            # We can't reliably detect true color support on Windows, so we
+            # will assume it is supported if the console is configured to
+            # support it.
+            from .terminal.os_specific import windows
+            if (
+                    windows.get_console_mode() &
+                    windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
+            ):
+                return cls.XTERM_TRUECOLOR
+            else:
+                return cls.WINDOWS
 
         support = cls.NONE
         for variable in variables:
@@ -88,9 +103,9 @@ class ColorSupport(enum.IntEnum):
 
 
 def is_ansi_terminal(
-    fd: base.IO,
-    is_terminal: bool | None = None,
-) -> bool:  # pragma: no cover
+        fd: base.IO,
+        is_terminal: bool | None = None,
+) -> bool | None:  # pragma: no cover
     if is_terminal is None:
         # Jupyter Notebooks define this variable and support progress bars
         if 'JPY_PARENT_PID' in os.environ:
@@ -98,7 +113,7 @@ def is_ansi_terminal(
         # This works for newer versions of pycharm only. With older versions
         # there is no way to check.
         elif os.environ.get('PYCHARM_HOSTED') == '1' and not os.environ.get(
-            'PYTEST_CURRENT_TEST',
+                'PYTEST_CURRENT_TEST',
         ):
             is_terminal = True
 
@@ -108,7 +123,7 @@ def is_ansi_terminal(
         # isatty has not been defined we have no way of knowing so we will not
         # use ansi.  ansi terminals will typically define one of the 2
         # environment variables.
-        try:
+        with contextlib.suppress(Exception):
             is_tty = fd.isatty()
             # Try and match any of the huge amount of Linux/Unix ANSI consoles
             if is_tty and ANSI_TERM_RE.match(os.environ.get('TERM', '')):
@@ -116,12 +131,16 @@ def is_ansi_terminal(
             # ANSICON is a Windows ANSI compatible console
             elif 'ANSICON' in os.environ:
                 is_terminal = True
+            elif os.name == 'nt':
+                from .terminal.os_specific import windows
+                return bool(
+                    windows.get_console_mode() &
+                    windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
+                )
             else:
                 is_terminal = None
-        except Exception:
-            is_terminal = False
 
-    return bool(is_terminal)
+    return is_terminal
 
 
 def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool:
@@ -143,6 +162,12 @@ def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool:
 
     return bool(is_terminal)
 
+
+# Enable Windows full color mode if possible
+if os.name == 'nt':
+    from .terminal import os_specific
+
+    os_specific.set_console_mode()
 
 COLOR_SUPPORT = ColorSupport.from_env()
 ANSI_TERMS = (
