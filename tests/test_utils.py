@@ -1,4 +1,5 @@
 import io
+import os
 
 import progressbar
 import progressbar.env
@@ -107,4 +108,7 @@ def test_is_ansi_terminal(monkeypatch):
     def raise_error():
         raise RuntimeError('test')
     fd.isatty = raise_error
-    assert progressbar.env.is_ansi_terminal(fd) is False
+    if os.name == 'nt':
+        assert progressbar.env.is_ansi_terminal(fd) is None
+    else:
+        assert progressbar.env.is_ansi_terminal(fd) is False

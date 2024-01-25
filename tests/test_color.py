@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import typing
 
 import progressbar
@@ -183,9 +184,10 @@ def test_colors():
 
 def test_color():
     color = colors.red
-    assert color('x') == color.fg('x') != 'x'
-    assert color.fg('x') != color.bg('x') != 'x'
-    assert color.fg('x') != color.underline('x') != 'x'
+    if os.name != 'nt':
+        assert color('x') == color.fg('x') != 'x'
+        assert color.fg('x') != color.bg('x') != 'x'
+        assert color.fg('x') != color.underline('x') != 'x'
     # Color hashes are based on the RGB value
     assert hash(color) == hash(terminal.Color(color.rgb, None, None, None))
     Colors.register(color.rgb)

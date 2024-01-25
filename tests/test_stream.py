@@ -1,4 +1,5 @@
 import io
+import os
 import sys
 
 import progressbar
@@ -98,6 +99,7 @@ def test_no_newlines():
 
 
 @pytest.mark.parametrize('stream', [sys.__stdout__, sys.__stderr__])
+@pytest.mark.skipif(os.name == 'nt', reason='Windows does not support this')
 def test_fd_as_standard_streams(stream):
     with progressbar.ProgressBar(fd=stream) as pb:
         for i in range(101):
