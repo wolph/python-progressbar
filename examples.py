@@ -4,6 +4,7 @@
 import functools
 import random
 import sys
+import threading
 import time
 import typing
 
@@ -48,6 +49,68 @@ def shortcut_example():
 def prefixed_shortcut_example():
     for i in progressbar.progressbar(range(10), prefix='Hi: '):
         time.sleep(0.1)
+
+
+@example
+def parallel_bars_multibar_example():
+    BARS = 5
+    N = 50
+
+    def do_something(bar):
+        for i in bar(range(N)):
+            # Sleep up to 0.1 seconds
+            time.sleep(random.random() * 0.1)
+
+    with (progressbar.MultiBar() as multibar):
+        bar_labels = []
+        for i in range(BARS):
+            # Get a progressbar
+            bar_label = 'Bar #%d' % i
+            bar_labels.append(bar_label)
+            bar = multibar[bar_label]
+
+        for i in range(N * BARS):
+
+            time.sleep(0.005)
+
+            bar_i = random.randrange(0, BARS)
+            bar_label = bar_labels[bar_i]
+            # Increment one of the progress bars at random
+            multibar[bar_label].increment()
+
+@example
+def multiple_bars_line_offset_example():
+    BARS = 5
+    N = 100
+
+    # Construct the list of progress bars with the `line_offset` so they draw
+    # below each other
+    bars = []
+    for i in range(BARS):
+        bars.append(
+            progressbar.ProgressBar(
+                max_value=N,
+                # We add 1 to the line offset to account for the `print_fd`
+                line_offset=i + 1,
+                max_error=False,
+            )
+        )
+
+    # Create a file descriptor for regular printing as well
+    print_fd = progressbar.LineOffsetStreamWrapper(lines=0, stream=sys.stdout)
+
+    # The progress bar updates, normally you would do something useful here
+    for i in range(N * BARS):
+        time.sleep(0.005)
+
+        # Increment one of the progress bars at random
+        bars[random.randrange(0, BARS)].increment()
+
+    # Cleanup the bars
+    for bar in bars:
+        bar.finish()
+        # Add a newline to make sure the next print starts on a new line
+        print()
 
 
 @example
