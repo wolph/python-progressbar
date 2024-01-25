@@ -121,6 +121,7 @@ tests = [
     'pytest-mypy',
     'pytest>=4.6.9',
     'sphinx>=1.8.5',
+    'pywin32; sys_platform == "win32"',
 ]
 
 [project.urls]

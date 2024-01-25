@@ -55,7 +55,7 @@ def find(L, x):
 
 
 # ---------------------------------------------------------------------------
-def test_windows(argv):
+def test_windows():
     runprogress()
 
     scraped_lines = scrape_console(100)
