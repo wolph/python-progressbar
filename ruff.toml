@@ -5,7 +5,7 @@ target-version = 'py38'
 
 src = ['progressbar']
 
-ignore = [
+lint.ignore = [
     'A001', # Variable {name} is shadowing a Python builtin
     'A002', # Argument {name} is shadowing a Python builtin
     'A003', # Class attribute {name} is shadowing a Python builtin
@@ -21,9 +21,14 @@ ignore = [
     'C408', # Unnecessary {obj_type} call (rewrite as a literal)
     'SIM114', # Combine `if` branches using logical `or` operator
     'RET506', # Unnecessary `else` after `raise` statement
+    'Q001', # Remove bad quotes
+    'Q002', # Remove bad quotes
+    'COM812', # Missing trailing comma in a list
+    'ISC001', # String concatenation with implicit str conversion
+    'SIM108', # Ternary operators are not always more readable
 ]
 line-length = 80
-select = [
+lint.select = [
     'A', # flake8-builtins
     'ASYNC', # flake8 async checker
     'B', # flake8-bugbear
@@ -56,20 +61,40 @@ select = [
     'UP', # pyupgrade
 ]
 
-[per-file-ignores]
+[lint.per-file-ignores]
 'tests/*' = ['INP001', 'T201', 'T203']
 'examples.py' = ['T201']
 
-[pydocstyle]
+[lint.pydocstyle]
 convention = 'google'
-ignore-decorators = ['typing.overload']
+ignore-decorators = [
+    'typing.overload',
+    'typing.override',
+]
 
-[isort]
+[lint.isort]
 case-sensitive = true
 combine-as-imports = true
 force-wrap-aliases = true
 
-[flake8-quotes]
+[lint.flake8-quotes]
 docstring-quotes = 'single'
 inline-quotes = 'single'
 multiline-quotes = 'single'
+
+[format]
+line-ending = 'lf'
+indent-style = 'space'
+quote-style = 'single'
+docstring-code-format = true
+skip-magic-trailing-comma = false
+exclude = [
+    '__init__.py',
+]
+
+[lint.pycodestyle]
+max-line-length = 79
+
+[lint.flake8-pytest-style]
+mark-parentheses = true
+

@@ -80,20 +80,18 @@ def test_list_example(testdir):
         line.rstrip() for line in _non_empty_lines(result.stderr.lines)
     ]
     pprint.pprint(result.stderr.lines, width=70)
-    result.stderr.fnmatch_lines(
-        [
-            '  0% (0 of 9) |            | Elapsed Time: ?:00:00 ETA:  --:--:--',
-            ' 11% (1 of 9) |#           | Elapsed Time: ?:00:01 ETA:   ?:00:08',
-            ' 22% (2 of 9) |##          | Elapsed Time: ?:00:02 ETA:   ?:00:07',
-            ' 33% (3 of 9) |####        | Elapsed Time: ?:00:03 ETA:   ?:00:06',
-            ' 44% (4 of 9) |#####       | Elapsed Time: ?:00:04 ETA:   ?:00:05',
-            ' 55% (5 of 9) |######      | Elapsed Time: ?:00:05 ETA:   ?:00:04',
-            ' 66% (6 of 9) |########    | Elapsed Time: ?:00:06 ETA:   ?:00:03',
-            ' 77% (7 of 9) |#########   | Elapsed Time: ?:00:07 ETA:   ?:00:02',
-            ' 88% (8 of 9) |##########  | Elapsed Time: ?:00:08 ETA:   ?:00:01',
-            '100% (9 of 9) |############| Elapsed Time: ?:00:09 Time:  ?:00:09',
-        ],
-    )
+    result.stderr.fnmatch_lines([
+        '  0% (0 of 9) |            | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        ' 11% (1 of 9) |#           | Elapsed Time: ?:00:01 ETA:   ?:00:08',
+        ' 22% (2 of 9) |##          | Elapsed Time: ?:00:02 ETA:   ?:00:07',
+        ' 33% (3 of 9) |####        | Elapsed Time: ?:00:03 ETA:   ?:00:06',
+        ' 44% (4 of 9) |#####       | Elapsed Time: ?:00:04 ETA:   ?:00:05',
+        ' 55% (5 of 9) |######      | Elapsed Time: ?:00:05 ETA:   ?:00:04',
+        ' 66% (6 of 9) |########    | Elapsed Time: ?:00:06 ETA:   ?:00:03',
+        ' 77% (7 of 9) |#########   | Elapsed Time: ?:00:07 ETA:   ?:00:02',
+        ' 88% (8 of 9) |##########  | Elapsed Time: ?:00:08 ETA:   ?:00:01',
+        '100% (9 of 9) |############| Elapsed Time: ?:00:09 Time:  ?:00:09',
+    ])
 
 
 def test_generator_example(testdir):

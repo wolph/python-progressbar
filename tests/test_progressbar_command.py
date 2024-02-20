@@ -1,9 +1,7 @@
 import io
-import os.path
-
-import pytest
 
 import progressbar.__main__ as main
+import pytest
 
 
 def test_size_to_bytes():
@@ -57,8 +55,6 @@ def test_main_binary(capsys):
 
     captured = capsys.readouterr()
     assert 'test_main(capsys):' in captured.out
-    # TODO: Capture the output and check that it is correct
-    # assert '' in captured.err
 
 
 def test_main_lines(capsys):
@@ -70,8 +66,6 @@ def test_main_lines(capsys):
 
     captured = capsys.readouterr()
     assert 'test_main(capsys):' in captured.out
-    # TODO: Capture the output and check that it is correct
-    # assert '' in captured.err
 
 
 class Input(io.StringIO):

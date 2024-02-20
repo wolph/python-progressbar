@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import argparse
 import contextlib
 import pathlib
 import sys
-import time
 from typing import BinaryIO
 
 import progressbar
@@ -57,13 +58,6 @@ def size_to_bytes(size_str: str) -> int:
 def create_argument_parser() -> argparse.ArgumentParser:
     '''
     Create the argument parser for the `progressbar` command.
-
-    >>> parser = create_argument_parser()
-    >>> parser.parse_args(['-p', '-t', '-e', '-r', '-a', '-b', '-8', '-T', '-A', '-F', '-n', '-q', 'input', '-o', 'output'])
-    Namespace(average_rate=True, bytes=True, eta=True, fineta=False, format=None, height=None, input=['input'], interval=None, last_written=None, line_mode=False, name=None, numeric=True, output='output', progress=True, quiet=True, rate=True, rate_limit=None, remote=None, size=None, stop_at_size=False, sync=False, timer=True, wait=False, watchfd=None, width=None)
-
-    Returns:
-        argparse.ArgumentParser: The argument parser for the `progressbar` command.
     '''
 
     parser = argparse.ArgumentParser(
@@ -72,87 +66,191 @@ def create_argument_parser() -> argparse.ArgumentParser:
         
         Note that this is a Python implementation of the original `pv` command
         that is functional but not yet feature complete.
-    ''')
+    '''
+    )
 
     # Display switches
-    parser.add_argument('-p', '--progress', action='store_true',
-                        help='Turn the progress bar on.')
-    parser.add_argument('-t', '--timer', action='store_true',
-                        help='Turn the timer on.')
-    parser.add_argument('-e', '--eta', action='store_true',
-                        help='Turn the ETA timer on.')
-    parser.add_argument('-I', '--fineta', action='store_true',
-                        help='Display the ETA as local time of arrival.')
-    parser.add_argument('-r', '--rate', action='store_true',
-                        help='Turn the rate counter on.')
-    parser.add_argument('-a', '--average-rate', action='store_true',
-                        help='Turn the average rate counter on.')
-    parser.add_argument('-b', '--bytes', action='store_true',
-                        help='Turn the total byte counter on.')
-    parser.add_argument('-8', '--bits', action='store_true',
-                        help='Display total bits instead of bytes.')
-    parser.add_argument('-T', '--buffer-percent', action='store_true',
-                        help='Turn on the transfer buffer percentage display.')
-    parser.add_argument('-A', '--last-written', type=int,
-                        help='Show the last NUM bytes written.')
-    parser.add_argument('-F', '--format', type=str,
-                        help='Use the format string FORMAT for output format.')
-    parser.add_argument('-n', '--numeric', action='store_true',
-                        help='Numeric output.')
-    parser.add_argument('-q', '--quiet', action='store_true', help='No output.')
+    parser.add_argument(
+        '-p',
+        '--progress',
+        action='store_true',
+        help='Turn the progress bar on.',
+    )
+    parser.add_argument(
+        '-t', '--timer', action='store_true', help='Turn the timer on.'
+    )
+    parser.add_argument(
+        '-e', '--eta', action='store_true', help='Turn the ETA timer on.'
+    )
+    parser.add_argument(
+        '-I',
+        '--fineta',
+        action='store_true',
+        help='Display the ETA as local time of arrival.',
+    )
+    parser.add_argument(
+        '-r', '--rate', action='store_true', help='Turn the rate counter on.'
+    )
+    parser.add_argument(
+        '-a',
+        '--average-rate',
+        action='store_true',
+        help='Turn the average rate counter on.',
+    )
+    parser.add_argument(
+        '-b',
+        '--bytes',
+        action='store_true',
+        help='Turn the total byte counter on.',
+    )
+    parser.add_argument(
+        '-8',
+        '--bits',
+        action='store_true',
+        help='Display total bits instead of bytes.',
+    )
+    parser.add_argument(
+        '-T',
+        '--buffer-percent',
+        action='store_true',
+        help='Turn on the transfer buffer percentage display.',
+    )
+    parser.add_argument(
+        '-A',
+        '--last-written',
+        type=int,
+        help='Show the last NUM bytes written.',
+    )
+    parser.add_argument(
+        '-F',
+        '--format',
+        type=str,
+        help='Use the format string FORMAT for output format.',
+    )
+    parser.add_argument(
+        '-n', '--numeric', action='store_true', help='Numeric output.'
+    )
+    parser.add_argument(
+        '-q', '--quiet', action='store_true', help='No output.'
+    )
 
     # Output modifiers
-    parser.add_argument('-W', '--wait', action='store_true',
-                        help='Wait until the first byte has been transferred.')
+    parser.add_argument(
+        '-W',
+        '--wait',
+        action='store_true',
+        help='Wait until the first byte has been transferred.',
+    )
     parser.add_argument('-D', '--delay-start', type=float, help='Delay start.')
-    parser.add_argument('-s', '--size', type=str,
-                        help='Assume total data size is SIZE.')
-    parser.add_argument('-l', '--line-mode', action='store_true',
-                        help='Count lines instead of bytes.')
-    parser.add_argument('-0', '--null', action='store_true',
-                        help='Count lines terminated with a zero byte.')
-    parser.add_argument('-i', '--interval', type=float,
-                        help='Interval between updates.')
-    parser.add_argument('-m', '--average-rate-window', type=int,
-                        help='Window for average rate calculation.')
-    parser.add_argument('-w', '--width', type=int,
-                        help='Assume terminal is WIDTH characters wide.')
-    parser.add_argument('-H', '--height', type=int,
-                        help='Assume terminal is HEIGHT rows high.')
-    parser.add_argument('-N', '--name', type=str,
-                        help='Prefix output information with NAME.')
-    parser.add_argument('-f', '--force', action='store_true',
-                        help='Force output.')
-    parser.add_argument('-c', '--cursor', action='store_true',
-                        help='Use cursor positioning escape sequences.')
+    parser.add_argument(
+        '-s', '--size', type=str, help='Assume total data size is SIZE.'
+    )
+    parser.add_argument(
+        '-l',
+        '--line-mode',
+        action='store_true',
+        help='Count lines instead of bytes.',
+    )
+    parser.add_argument(
+        '-0',
+        '--null',
+        action='store_true',
+        help='Count lines terminated with a zero byte.',
+    )
+    parser.add_argument(
+        '-i', '--interval', type=float, help='Interval between updates.'
+    )
+    parser.add_argument(
+        '-m',
+        '--average-rate-window',
+        type=int,
+        help='Window for average rate calculation.',
+    )
+    parser.add_argument(
+        '-w',
+        '--width',
+        type=int,
+        help='Assume terminal is WIDTH characters wide.',
+    )
+    parser.add_argument(
+        '-H', '--height', type=int, help='Assume terminal is HEIGHT rows high.'
+    )
+    parser.add_argument(
+        '-N', '--name', type=str, help='Prefix output information with NAME.'
+    )
+    parser.add_argument(
+        '-f', '--force', action='store_true', help='Force output.'
+    )
+    parser.add_argument(
+        '-c',
+        '--cursor',
+        action='store_true',
+        help='Use cursor positioning escape sequences.',
+    )
 
     # Data transfer modifiers
-    parser.add_argument('-L', '--rate-limit', type=str,
-                        help='Limit transfer to RATE bytes per second.')
-    parser.add_argument('-B', '--buffer-size', type=str,
-                        help='Use transfer buffer size of BYTES.')
-    parser.add_argument('-C', '--no-splice', action='store_true',
-                        help='Never use splice.')
-    parser.add_argument('-E', '--skip-errors', action='store_true',
-                        help='Ignore read errors.')
-    parser.add_argument('-Z', '--error-skip-block', type=str,
-                        help='Skip block size when ignoring errors.')
-    parser.add_argument('-S', '--stop-at-size', action='store_true',
-                        help='Stop transferring after SIZE bytes.')
-    parser.add_argument('-Y', '--sync', action='store_true',
-                        help='Synchronise buffer caches to disk after writes.')
-    parser.add_argument('-K', '--direct-io', action='store_true',
-                        help='Set O_DIRECT flag on all inputs/outputs.')
-    parser.add_argument('-X', '--discard', action='store_true',
-                        help='Discard input data instead of transferring it.')
-    parser.add_argument('-d', '--watchfd', type=str,
-                        help='Watch file descriptor of process.')
-    parser.add_argument('-R', '--remote', type=int,
-                        help='Remote control another running instance of pv.')
+    parser.add_argument(
+        '-L',
+        '--rate-limit',
+        type=str,
+        help='Limit transfer to RATE bytes per second.',
+    )
+    parser.add_argument(
+        '-B',
+        '--buffer-size',
+        type=str,
+        help='Use transfer buffer size of BYTES.',
+    )
+    parser.add_argument(
+        '-C', '--no-splice', action='store_true', help='Never use splice.'
+    )
+    parser.add_argument(
+        '-E', '--skip-errors', action='store_true', help='Ignore read errors.'
+    )
+    parser.add_argument(
+        '-Z',
+        '--error-skip-block',
+        type=str,
+        help='Skip block size when ignoring errors.',
+    )
+    parser.add_argument(
+        '-S',
+        '--stop-at-size',
+        action='store_true',
+        help='Stop transferring after SIZE bytes.',
+    )
+    parser.add_argument(
+        '-Y',
+        '--sync',
+        action='store_true',
+        help='Synchronise buffer caches to disk after writes.',
+    )
+    parser.add_argument(
+        '-K',
+        '--direct-io',
+        action='store_true',
+        help='Set O_DIRECT flag on all inputs/outputs.',
+    )
+    parser.add_argument(
+        '-X',
+        '--discard',
+        action='store_true',
+        help='Discard input data instead of transferring it.',
+    )
+    parser.add_argument(
+        '-d', '--watchfd', type=str, help='Watch file descriptor of process.'
+    )
+    parser.add_argument(
+        '-R',
+        '--remote',
+        type=int,
+        help='Remote control another running instance of pv.',
+    )
 
     # General options
-    parser.add_argument('-P', '--pidfile', type=pathlib.Path,
-                        help='Save process ID in FILE.')
+    parser.add_argument(
+        '-P', '--pidfile', type=pathlib.Path, help='Save process ID in FILE.'
+    )
     parser.add_argument(
         'input',
         help='Input file path. Uses stdin if not specified.',
@@ -163,12 +261,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
         '-o',
         '--output',
         default='-',
-        help='Output file path. Uses stdout if not specified.')
+        help='Output file path. Uses stdout if not specified.',
+    )
 
     return parser
 
 
-def main(argv: list[str] = sys.argv[1:]):
+def main(argv: list[str] | None = None):  # noqa: C901
     '''
     Main function for the `progressbar` command.
     '''
@@ -180,7 +279,8 @@ def main(argv: list[str] = sys.argv[1:]):
     with contextlib.ExitStack() as stack:
         if args.output and args.output != '-':
             output_stream = stack.enter_context(
-                open(args.output, 'w' + binary_mode))
+                open(args.output, 'w' + binary_mode)
+            )
         else:
             if args.line_mode:
                 output_stream = sys.stdout
@@ -246,8 +346,9 @@ def main(argv: list[str] = sys.argv[1:]):
         )
 
         # Data processing and updating the progress bar
-        buffer_size = size_to_bytes(
-            args.buffer_size) if args.buffer_size else 1024
+        buffer_size = (
+            size_to_bytes(args.buffer_size) if args.buffer_size else 1024
+        )
         total_transferred = 0
 
         bar.start()
@@ -255,7 +356,8 @@ def main(argv: list[str] = sys.argv[1:]):
             for input_path in input_paths:
                 if isinstance(input_path, pathlib.Path):
                     input_stream = stack.enter_context(
-                        input_path.open('r' + binary_mode))
+                        input_path.open('r' + binary_mode)
+                    )
                 else:
                     input_stream = input_path
 

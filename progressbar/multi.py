@@ -129,7 +129,8 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             bar.label = key
             bar.fd = stream.LastLineStream(self.fd)
             bar.paused = True
-            # Essentially `bar.print = self.print`, but `mypy` doesn't like that
+            # Essentially `bar.print = self.print`, but `mypy` doesn't
+            # like that
             bar.print = self.print  # type: ignore
 
         # Just in case someone is using a progressbar with a custom

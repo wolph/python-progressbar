@@ -10,13 +10,11 @@ from . import base
 
 
 @typing.overload
-def env_flag(name: str, default: bool) -> bool:
-    ...
+def env_flag(name: str, default: bool) -> bool: ...
 
 
 @typing.overload
-def env_flag(name: str, default: bool | None = None) -> bool | None:
-    ...
+def env_flag(name: str, default: bool | None = None) -> bool | None: ...
 
 
 def env_flag(name, default=None):

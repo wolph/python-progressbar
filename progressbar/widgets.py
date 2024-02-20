@@ -1256,7 +1256,8 @@ class MultiProgressBar(MultiRangeBar):
 
             if not 0 <= value <= 1:
                 raise ValueError(
-                    f'Range value needs to be in the range [0..1], got {value}',
+                    'Range value needs to be in the range [0..1], '
+                    f'got {value}',
                 )
 
             range_ = value * (len(ranges) - 1)

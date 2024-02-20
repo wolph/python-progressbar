@@ -426,21 +426,21 @@ class Color(
 
 
 class Colors:
-    by_name: ClassVar[
-        defaultdict[str, types.List[Color]]
-    ] = collections.defaultdict(list)
-    by_lowername: ClassVar[
-        defaultdict[str, types.List[Color]]
-    ] = collections.defaultdict(list)
-    by_hex: ClassVar[
-        defaultdict[str, types.List[Color]]
-    ] = collections.defaultdict(list)
-    by_rgb: ClassVar[
-        defaultdict[RGB, types.List[Color]]
-    ] = collections.defaultdict(list)
-    by_hls: ClassVar[
-        defaultdict[HSL, types.List[Color]]
-    ] = collections.defaultdict(list)
+    by_name: ClassVar[defaultdict[str, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
+    by_lowername: ClassVar[defaultdict[str, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
+    by_hex: ClassVar[defaultdict[str, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
+    by_rgb: ClassVar[defaultdict[RGB, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
+    by_hls: ClassVar[defaultdict[HSL, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
     @classmethod

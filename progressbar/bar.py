@@ -252,21 +252,21 @@ class DefaultFdMixin(ProgressBarMixinBase):
             for color_enabled in colors:
                 if color_enabled is not None:
                     if color_enabled:
-                        enable_colors = progressbar.env.COLOR_SUPPORT
+                        enable = progressbar.env.COLOR_SUPPORT
                     else:
-                        enable_colors = progressbar.env.ColorSupport.NONE
+                        enable = progressbar.env.ColorSupport.NONE
                     break
             else:
-                enable_colors = False
+                enable = False
 
         elif enable_colors is True:
-            enable_colors = progressbar.env.ColorSupport.XTERM_256
+            enable = progressbar.env.ColorSupport.XTERM_256
         elif enable_colors is False:
-            enable_colors = progressbar.env.ColorSupport.NONE
+            enable = progressbar.env.ColorSupport.NONE
         elif not isinstance(enable_colors, progressbar.env.ColorSupport):
             raise ValueError(f'Invalid color support value: {enable_colors}')
 
-        return enable_colors
+        return enable
 
     def print(self, *args: types.Any, **kwargs: types.Any) -> None:
         print(*args, file=self.fd, **kwargs)
