@@ -61,7 +61,7 @@ def parallel_bars_multibar_example():
             # Sleep up to 0.1 seconds
             time.sleep(random.random() * 0.1)
 
-    with (progressbar.MultiBar() as multibar):
+    with progressbar.MultiBar() as multibar:
         bar_labels = []
         for i in range(BARS):
             # Get a progressbar

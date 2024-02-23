@@ -120,7 +120,7 @@ class _INPUT_RECORD(ctypes.Structure):
     _fields_ = (('EventType', _WORD), ('Event', _Event))
 
 
-def reset_console_mode():
+def reset_console_mode() -> None:
     _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(_input_mode.value))
     _SetConsoleMode(_HANDLE(_h_console_output), _DWORD(_output_mode.value))
 
@@ -144,7 +144,7 @@ def get_console_mode() -> int:
     return _input_mode.value
 
 
-def set_text_color(color):
+def set_text_color(color) -> None:
     _kernel32.SetConsoleTextAttribute(_h_console_output, color)
 
 

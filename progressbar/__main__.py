@@ -4,7 +4,9 @@ import argparse
 import contextlib
 import pathlib
 import sys
-from typing import BinaryIO
+import typing
+from pathlib import Path
+from typing import BinaryIO, TextIO
 
 import progressbar
 
@@ -52,7 +54,7 @@ def size_to_bytes(size_str: str) -> int:
         size_str = size_str[:-1]
 
     # Convert the size_str to an integer and apply the exponent
-    return int(size_str) * (1024 ** exponent)
+    return int(size_str) * (1024**exponent)
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -63,7 +65,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description='''
         Monitor the progress of data through a pipe.
-        
+
         Note that this is a Python implementation of the original `pv` command
         that is functional but not yet feature complete.
     '''
@@ -270,28 +272,26 @@ def create_argument_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None):  # noqa: C901
     '''
     Main function for the `progressbar` command.
-    '''
-    parser = create_argument_parser()
-    args = parser.parse_args(argv)
 
-    binary_mode = '' if args.line_mode else 'b'
+    Args:
+        argv (list[str] | None): Command-line arguments passed to the script.
+
+    Returns:
+        None
+    '''
+    parser: argparse.ArgumentParser = create_argument_parser()
+    args: argparse.Namespace = parser.parse_args(argv)
 
     with contextlib.ExitStack() as stack:
-        if args.output and args.output != '-':
-            output_stream = stack.enter_context(
-                open(args.output, 'w' + binary_mode)
-            )
-        else:
-            if args.line_mode:
-                output_stream = sys.stdout
-            else:
-                output_stream = sys.stdout.buffer
+        output_stream: typing.IO[typing.Any] = _get_output_stream(
+            args.output, args.line_mode, stack
+        )
 
-        input_paths = []
-        total_size = 0
-        filesize_available = True
+        input_paths: list[BinaryIO | TextIO | Path] = []
+        total_size: int = 0
+        filesize_available: bool = True
         for filename in args.input:
-            input_path: BinaryIO | pathlib.Path
+            input_path: typing.IO[typing.Any] | pathlib.Path
             if filename == '-':
                 if args.line_mode:
                     input_path = sys.stdin
@@ -356,12 +356,13 @@ def main(argv: list[str] | None = None):  # noqa: C901
             for input_path in input_paths:
                 if isinstance(input_path, pathlib.Path):
                     input_stream = stack.enter_context(
-                        input_path.open('r' + binary_mode)
+                        input_path.open('r' if args.line_mode else 'rb')
                     )
                 else:
                     input_stream = input_path
 
                 while True:
+                    data: str | bytes
                     if args.line_mode:
                         data = input_stream.readline(buffer_size)
                     else:
@@ -375,6 +376,20 @@ def main(argv: list[str] | None = None):  # noqa: C901
                     bar.update(total_transferred)
 
         bar.finish(dirty=True)
+
+
+def _get_output_stream(
+    output: str | None,
+    line_mode: bool,
+    stack: contextlib.ExitStack,
+) -> typing.IO[typing.Any]:
+    if output and output != '-':
+        mode = 'w' if line_mode else 'wb'
+        return stack.enter_context(open(output, mode))  # noqa: SIM115
+    elif line_mode:
+        return sys.stdout
+    else:
+        return sys.stdout.buffer
 
 
 if __name__ == '__main__':

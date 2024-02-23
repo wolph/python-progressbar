@@ -81,7 +81,7 @@ class ColorSupport(enum.IntEnum):
             ):
                 return cls.XTERM_TRUECOLOR
             else:
-                return cls.WINDOWS
+                return cls.WINDOWS  # pragma: no cover
 
         support = cls.NONE
         for variable in variables:
@@ -142,7 +142,7 @@ def is_ansi_terminal(
     return is_terminal
 
 
-def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool:
+def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool | None:
     if is_terminal is None:
         # Full ansi support encompasses what we expect from a terminal
         is_terminal = is_ansi_terminal(fd) or None
@@ -159,7 +159,7 @@ def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool:
         except Exception:
             is_terminal = False
 
-    return bool(is_terminal)
+    return is_terminal
 
 
 # Enable Windows full color mode if possible

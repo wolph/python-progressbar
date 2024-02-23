@@ -162,13 +162,13 @@ class DefaultFdMixin(ProgressBarMixinBase):
     #: Set the terminal to be ANSI compatible. If a terminal is ANSI
     #: compatible we will automatically enable `colors` and disable
     #: `line_breaks`.
-    is_ansi_terminal: bool = False
+    is_ansi_terminal: bool | None = False
     #: Whether the file descriptor is a terminal or not. This is used to
     #: determine whether to use ANSI escape codes or not.
-    is_terminal: bool
+    is_terminal: bool | None
     #: Whether to print line breaks. This is useful for logging the
     #: progressbar. When disabled the current line is overwritten.
-    line_breaks: bool = True
+    line_breaks: bool | None = True
     #: Specify the type and number of colors to support. Defaults to auto
     #: detection based on the file descriptor type (i.e. interactive terminal)
     #: environment variables such as `COLORTERM` and `TERM`. Color output can
@@ -179,9 +179,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
     #: For true (24 bit/16M) color support you can use `COLORTERM=truecolor`.
     #: For 256 color support you can use `TERM=xterm-256color`.
     #: For 16 colorsupport you can use `TERM=xterm`.
-    enable_colors: progressbar.env.ColorSupport | bool | None = (
-        progressbar.env.COLOR_SUPPORT
-    )
+    enable_colors: progressbar.env.ColorSupport = progressbar.env.COLOR_SUPPORT
 
     def __init__(
         self,
@@ -200,7 +198,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         fd = self._apply_line_offset(fd, line_offset)
         self.fd = fd
         self.is_ansi_terminal = progressbar.env.is_ansi_terminal(fd)
-        self.is_terminal = self._determine_is_terminal(fd, is_terminal)
+        self.is_terminal = progressbar.env.is_terminal(fd, is_terminal)
         self.line_breaks = self._determine_line_breaks(line_breaks)
         self.enable_colors = self._determine_enable_colors(enable_colors)
 
@@ -219,29 +217,47 @@ class DefaultFdMixin(ProgressBarMixinBase):
         else:
             return fd
 
-    def _determine_is_terminal(
-        self,
-        fd: base.TextIO,
-        is_terminal: bool | None,
-    ) -> bool:
-        if is_terminal is not None:
-            return progressbar.env.is_terminal(fd, is_terminal)
-        else:
-            return progressbar.env.is_ansi_terminal(fd)
-
-    def _determine_line_breaks(self, line_breaks: bool | None) -> bool:
+    def _determine_line_breaks(self, line_breaks: bool | None) -> bool | None:
         if line_breaks is None:
             return progressbar.env.env_flag(
                 'PROGRESSBAR_LINE_BREAKS',
                 not self.is_terminal,
             )
         else:
-            return bool(line_breaks)
+            return line_breaks
 
     def _determine_enable_colors(
         self,
         enable_colors: progressbar.env.ColorSupport | None,
     ) -> progressbar.env.ColorSupport:
+        '''
+        Determines the color support for the progress bar.
+
+        This method checks the `enable_colors` parameter and the environment
+        variables `PROGRESSBAR_ENABLE_COLORS` and `FORCE_COLOR` to determine
+        the color support.
+
+        If `enable_colors` is:
+         - `None`, it checks the environment variables and the terminal
+            compatibility to ANSI.
+         - `True`, it sets the color support to XTERM_256.
+         - `False`, it sets the color support to NONE.
+         - For different values that are not instances of
+           `progressbar.env.ColorSupport`, it raises a ValueError.
+
+        Args:
+             enable_colors (progressbar.env.ColorSupport | None): The color
+             support setting from the user. It can be None, True, False,
+             or an instance of `progressbar.env.ColorSupport`.
+
+        Returns:
+            progressbar.env.ColorSupport: The determined color support.
+
+        Raises:
+            ValueError: If `enable_colors` is not None, True, False, or an
+            instance of `progressbar.env.ColorSupport`.
+        '''
+        color_support = progressbar.env.ColorSupport.NONE
         if enable_colors is None:
             colors = (
                 progressbar.env.env_flag('PROGRESSBAR_ENABLE_COLORS'),
@@ -252,21 +268,23 @@ class DefaultFdMixin(ProgressBarMixinBase):
             for color_enabled in colors:
                 if color_enabled is not None:
                     if color_enabled:
-                        enable = progressbar.env.COLOR_SUPPORT
+                        color_support = progressbar.env.COLOR_SUPPORT
                     else:
-                        enable = progressbar.env.ColorSupport.NONE
+                        color_support = progressbar.env.ColorSupport.NONE
                     break
             else:
-                enable = False
+                color_support = progressbar.env.ColorSupport.NONE
 
         elif enable_colors is True:
-            enable = progressbar.env.ColorSupport.XTERM_256
+            color_support = progressbar.env.ColorSupport.XTERM_256
         elif enable_colors is False:
-            enable = progressbar.env.ColorSupport.NONE
-        elif not isinstance(enable_colors, progressbar.env.ColorSupport):
+            color_support = progressbar.env.ColorSupport.NONE
+        elif isinstance(enable_colors, progressbar.env.ColorSupport):
+            color_support = enable_colors
+        else:
             raise ValueError(f'Invalid color support value: {enable_colors}')
 
-        return enable
+        return color_support
 
     def print(self, *args: types.Any, **kwargs: types.Any) -> None:
         print(*args, file=self.fd, **kwargs)
