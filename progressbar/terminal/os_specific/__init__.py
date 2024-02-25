@@ -11,17 +11,15 @@ if os.name == 'nt':
 else:
     from .posix import getch as _getch
 
-
     def _reset_console_mode() -> None:
         pass
-
 
     def _set_console_mode() -> bool:
         return False
 
-
     def _get_console_mode() -> int:
         return 0
+
 
 getch = _getch
 reset_console_mode = _reset_console_mode
