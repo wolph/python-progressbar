@@ -55,6 +55,10 @@ def test_color_environment_variables(monkeypatch: pytest.MonkeyPatch,
     assert not bar.is_ansi_terminal
     assert bar.enable_colors
 
+    monkeypatch.setenv(variable, 'false')
+    bar = progressbar.ProgressBar()
+    assert not bar.enable_colors
+
     monkeypatch.setenv(variable, '')
     bar = progressbar.ProgressBar()
     assert not bar.enable_colors
