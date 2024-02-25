@@ -1,6 +1,11 @@
 from datetime import date
 
 from .__about__ import __author__, __version__
+from .algorithms import (
+    DoubleExponentialMovingAverage,
+    ExponentialMovingAverage,
+    SmoothingAlgorithm,
+)
 from .bar import DataTransferBar, NullBar, ProgressBar
 from .base import UnknownLength
 from .multi import MultiBar, SortKey
@@ -32,6 +37,7 @@ from .widgets import (
     ReverseBar,
     RotatingMarker,
     SimpleProgress,
+    SmoothingETA,
     Timer,
     Variable,
     VariableMixin,
@@ -46,6 +52,10 @@ __all__ = [
     'ETA',
     'AdaptiveETA',
     'AbsoluteETA',
+    'SmoothingETA',
+    'SmoothingAlgorithm',
+    'ExponentialMovingAverage',
+    'DoubleExponentialMovingAverage',
     'DataSize',
     'FileTransferSpeed',
     'AdaptiveTransferSpeed',

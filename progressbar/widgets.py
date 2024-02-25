@@ -13,7 +13,7 @@ from typing import ClassVar
 
 from python_utils import containers, converters, types
 
-from . import base, terminal, utils
+from . import algorithms, base, terminal, utils
 from .terminal import colors
 
 if types.TYPE_CHECKING:
@@ -604,7 +604,17 @@ class AdaptiveETA(ETA, SamplesMixin):
     Very convenient for resuming the progress halfway.
     '''
 
-    def __init__(self, **kwargs):
+    exponential_smoothing: bool
+    exponential_smoothing_factor: float
+
+    def __init__(
+        self,
+        exponential_smoothing=True,
+        exponential_smoothing_factor=0.1,
+        **kwargs,
+    ):
+        self.exponential_smoothing = exponential_smoothing
+        self.exponential_smoothing_factor = exponential_smoothing_factor
         ETA.__init__(self, **kwargs)
         SamplesMixin.__init__(self, **kwargs)
 
@@ -625,6 +635,50 @@ class AdaptiveETA(ETA, SamplesMixin):
             value = None
             elapsed = 0
 
+        return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
+
+
+class SmoothingETA(ETA):
+    '''
+    WidgetBase which attempts to estimate the time of arrival using an
+    exponential moving average (EMA) of the speed.
+
+    EMA applies more weight to recent data points and less to older ones,
+    and doesn't require storing all past values. This approach works well
+    with varying data points and smooths out fluctuations effectively.
+    '''
+
+    smoothing_algorithm: algorithms.SmoothingAlgorithm
+    smoothing_parameters: dict[str, float]
+
+    def __init__(
+        self,
+        smoothing_algorithm: type[
+            algorithms.SmoothingAlgorithm
+        ] = algorithms.ExponentialMovingAverage,
+        smoothing_parameters: dict[str, float] | None = None,
+        **kwargs,
+    ):
+        self.smoothing_parameters = smoothing_parameters or {}
+        self.smoothing_algorithm = smoothing_algorithm(
+            **(self.smoothing_parameters or {}),
+        )
+        ETA.__init__(self, **kwargs)
+
+    def __call__(
+        self,
+        progress: ProgressBarMixinBase,
+        data: Data,
+        value=None,
+        elapsed=None,
+    ):
+        if value is None:  # pragma: no branch
+            value = data['value']
+
+        if elapsed is None:  # pragma: no branch
+            elapsed = data['time_elapsed']
+
+        self.smoothing_algorithm.update(value, elapsed)
         return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
 
 
@@ -1202,7 +1256,8 @@ class MultiProgressBar(MultiRangeBar):
 
             if not 0 <= value <= 1:
                 raise ValueError(
-                    f'Range value needs to be in the range [0..1], got {value}',
+                    'Range value needs to be in the range [0..1], '
+                    f'got {value}',
                 )
 
             range_ = value * (len(ranges) - 1)

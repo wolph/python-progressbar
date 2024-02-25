@@ -5,7 +5,10 @@ Windows specific code for the terminal.
 Note that the naming convention here is non-pythonic because we are
 matching the Windows API naming.
 '''
+from __future__ import annotations
+
 import ctypes
+import enum
 from ctypes.wintypes import (
     BOOL as _BOOL,
     CHAR as _CHAR,
@@ -19,12 +22,29 @@ from ctypes.wintypes import (
 
 _kernel32 = ctypes.windll.Kernel32  # type: ignore
 
-_ENABLE_VIRTUAL_TERMINAL_INPUT = 0x0200
-_ENABLE_PROCESSED_OUTPUT = 0x0001
-_ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
-
 _STD_INPUT_HANDLE = _DWORD(-10)
 _STD_OUTPUT_HANDLE = _DWORD(-11)
+
+
+class WindowsConsoleModeFlags(enum.IntFlag):
+    ENABLE_ECHO_INPUT = 0x0004
+    ENABLE_EXTENDED_FLAGS = 0x0080
+    ENABLE_INSERT_MODE = 0x0020
+    ENABLE_LINE_INPUT = 0x0002
+    ENABLE_MOUSE_INPUT = 0x0010
+    ENABLE_PROCESSED_INPUT = 0x0001
+    ENABLE_QUICK_EDIT_MODE = 0x0040
+    ENABLE_WINDOW_INPUT = 0x0008
+    ENABLE_VIRTUAL_TERMINAL_INPUT = 0x0200
+
+    ENABLE_PROCESSED_OUTPUT = 0x0001
+    ENABLE_WRAP_AT_EOL_OUTPUT = 0x0002
+    ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+    DISABLE_NEWLINE_AUTO_RETURN = 0x0008
+    ENABLE_LVB_GRID_WORLDWIDE = 0x0010
+
+    def __str__(self):
+        return f'{self.name} (0x{self.value:04X})'
 
 
 _GetConsoleMode = _kernel32.GetConsoleMode
@@ -38,7 +58,6 @@ _GetStdHandle.restype = _HANDLE
 
 _ReadConsoleInput = _kernel32.ReadConsoleInputA
 _ReadConsoleInput.restype = _BOOL
-
 
 _h_console_input = _GetStdHandle(_STD_INPUT_HANDLE)
 _input_mode = _DWORD()
@@ -54,7 +73,7 @@ class _COORD(ctypes.Structure):
 
 
 class _FOCUS_EVENT_RECORD(ctypes.Structure):
-    _fields_ = (('bSetFocus', _BOOL), )
+    _fields_ = (('bSetFocus', _BOOL),)
 
 
 class _KEY_EVENT_RECORD(ctypes.Structure):
@@ -72,7 +91,7 @@ class _KEY_EVENT_RECORD(ctypes.Structure):
 
 
 class _MENU_EVENT_RECORD(ctypes.Structure):
-    _fields_ = (('dwCommandId', _UINT), )
+    _fields_ = (('dwCommandId', _UINT),)
 
 
 class _MOUSE_EVENT_RECORD(ctypes.Structure):
@@ -85,7 +104,7 @@ class _MOUSE_EVENT_RECORD(ctypes.Structure):
 
 
 class _WINDOW_BUFFER_SIZE_RECORD(ctypes.Structure):
-    _fields_ = (('dwSize', _COORD), )
+    _fields_ = (('dwSize', _COORD),)
 
 
 class _INPUT_RECORD(ctypes.Structure):
@@ -101,21 +120,38 @@ class _INPUT_RECORD(ctypes.Structure):
     _fields_ = (('EventType', _WORD), ('Event', _Event))
 
 
-def reset_console_mode():
+def reset_console_mode() -> None:
     _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(_input_mode.value))
     _SetConsoleMode(_HANDLE(_h_console_output), _DWORD(_output_mode.value))
 
 
-def set_console_mode():
-    mode = _input_mode.value | _ENABLE_VIRTUAL_TERMINAL_INPUT
+def set_console_mode() -> bool:
+    mode = (
+        _input_mode.value
+        | WindowsConsoleModeFlags.ENABLE_VIRTUAL_TERMINAL_INPUT
+    )
     _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(mode))
 
     mode = (
         _output_mode.value
-        | _ENABLE_PROCESSED_OUTPUT
-        | _ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        | WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
+        | WindowsConsoleModeFlags.ENABLE_VIRTUAL_TERMINAL_PROCESSING
     )
-    _SetConsoleMode(_HANDLE(_h_console_output), _DWORD(mode))
+    return bool(_SetConsoleMode(_HANDLE(_h_console_output), _DWORD(mode)))
+
+
+def get_console_mode() -> int:
+    return _input_mode.value
+
+
+def set_text_color(color) -> None:
+    _kernel32.SetConsoleTextAttribute(_h_console_output, color)
+
+
+def print_color(text, color):
+    set_text_color(color)
+    print(text)  # noqa: T201
+    set_text_color(7)  # Reset to default color, grey
 
 
 def getch():

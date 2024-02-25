@@ -80,20 +80,18 @@ def test_list_example(testdir):
         line.rstrip() for line in _non_empty_lines(result.stderr.lines)
     ]
     pprint.pprint(result.stderr.lines, width=70)
-    result.stderr.fnmatch_lines(
-        [
-            '  0% (0 of 9) |            | Elapsed Time: ?:00:00 ETA:  --:--:--',
-            ' 11% (1 of 9) |#           | Elapsed Time: ?:00:01 ETA:   ?:00:08',
-            ' 22% (2 of 9) |##          | Elapsed Time: ?:00:02 ETA:   ?:00:07',
-            ' 33% (3 of 9) |####        | Elapsed Time: ?:00:03 ETA:   ?:00:06',
-            ' 44% (4 of 9) |#####       | Elapsed Time: ?:00:04 ETA:   ?:00:05',
-            ' 55% (5 of 9) |######      | Elapsed Time: ?:00:05 ETA:   ?:00:04',
-            ' 66% (6 of 9) |########    | Elapsed Time: ?:00:06 ETA:   ?:00:03',
-            ' 77% (7 of 9) |#########   | Elapsed Time: ?:00:07 ETA:   ?:00:02',
-            ' 88% (8 of 9) |##########  | Elapsed Time: ?:00:08 ETA:   ?:00:01',
-            '100% (9 of 9) |############| Elapsed Time: ?:00:09 Time:  ?:00:09',
-        ],
-    )
+    result.stderr.fnmatch_lines([
+        '  0% (0 of 9) |            | Elapsed Time: ?:00:00 ETA:  --:--:--',
+        ' 11% (1 of 9) |#           | Elapsed Time: ?:00:01 ETA:   ?:00:08',
+        ' 22% (2 of 9) |##          | Elapsed Time: ?:00:02 ETA:   ?:00:07',
+        ' 33% (3 of 9) |####        | Elapsed Time: ?:00:03 ETA:   ?:00:06',
+        ' 44% (4 of 9) |#####       | Elapsed Time: ?:00:04 ETA:   ?:00:05',
+        ' 55% (5 of 9) |######      | Elapsed Time: ?:00:05 ETA:   ?:00:04',
+        ' 66% (6 of 9) |########    | Elapsed Time: ?:00:06 ETA:   ?:00:03',
+        ' 77% (7 of 9) |#########   | Elapsed Time: ?:00:07 ETA:   ?:00:02',
+        ' 88% (8 of 9) |##########  | Elapsed Time: ?:00:08 ETA:   ?:00:01',
+        '100% (9 of 9) |############| Elapsed Time: ?:00:09 Time:  ?:00:09',
+    ])
 
 
 def test_generator_example(testdir):
@@ -140,20 +138,19 @@ def test_rapid_updates(testdir):
     )
     result.stderr.lines = _non_empty_lines(result.stderr.lines)
     pprint.pprint(result.stderr.lines, width=70)
-    result.stderr.fnmatch_lines(
-        [
-            '  0% (0 of 10) |      | Elapsed Time: ?:00:00 ETA:  --:--:--',
-            ' 10% (1 of 10) |      | Elapsed Time: ?:00:01 ETA:   ?:00:09',
-            ' 20% (2 of 10) |#     | Elapsed Time: ?:00:02 ETA:   ?:00:08',
-            ' 30% (3 of 10) |#     | Elapsed Time: ?:00:03 ETA:   ?:00:07',
-            ' 40% (4 of 10) |##    | Elapsed Time: ?:00:04 ETA:   ?:00:06',
-            ' 50% (5 of 10) |###   | Elapsed Time: ?:00:05 ETA:   ?:00:05',
-            ' 60% (6 of 10) |###   | Elapsed Time: ?:00:07 ETA:   ?:00:06',
-            ' 70% (7 of 10) |####  | Elapsed Time: ?:00:09 ETA:   ?:00:06',
-            ' 80% (8 of 10) |####  | Elapsed Time: ?:00:11 ETA:   ?:00:04',
-            ' 90% (9 of 10) |##### | Elapsed Time: ?:00:13 ETA:   ?:00:02',
-            '100% (10 of 10) |#####| Elapsed Time: ?:00:15 Time:  ?:00:15',
-        ],
+    result.stderr.fnmatch_lines([
+        '  0% (0 of 10) |      | Elapsed Time: 0:00:00 ETA:  --:--:--',
+         ' 10% (1 of 10) |      | Elapsed Time: 0:00:01 ETA:   0:00:09',
+         ' 20% (2 of 10) |#     | Elapsed Time: 0:00:02 ETA:   0:00:08',
+         ' 30% (3 of 10) |#     | Elapsed Time: 0:00:03 ETA:   0:00:07',
+         ' 40% (4 of 10) |##    | Elapsed Time: 0:00:04 ETA:   0:00:06',
+         ' 50% (5 of 10) |###   | Elapsed Time: 0:00:05 ETA:   0:00:05',
+         ' 60% (6 of 10) |###   | Elapsed Time: 0:00:07 ETA:   0:00:04',
+         ' 70% (7 of 10) |####  | Elapsed Time: 0:00:09 ETA:   0:00:03',
+         ' 80% (8 of 10) |####  | Elapsed Time: 0:00:11 ETA:   0:00:02',
+         ' 90% (9 of 10) |##### | Elapsed Time: 0:00:13 ETA:   0:00:01',
+         '100% (10 of 10) |#####| Elapsed Time: 0:00:15 Time:  0:00:15',
+     ],
     )
 
 

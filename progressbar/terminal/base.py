@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import collections
 import colorsys
+import enum
 import threading
 from collections import defaultdict
 
@@ -178,6 +179,79 @@ class _CPR(str):  # pragma: no cover
         return column
 
 
+class WindowsColors(enum.Enum):
+    BLACK = 0, 0, 0
+    BLUE = 0, 0, 128
+    GREEN = 0, 128, 0
+    CYAN = 0, 128, 128
+    RED = 128, 0, 0
+    MAGENTA = 128, 0, 128
+    YELLOW = 128, 128, 0
+    GREY = 192, 192, 192
+    INTENSE_BLACK = 128, 128, 128
+    INTENSE_BLUE = 0, 0, 255
+    INTENSE_GREEN = 0, 255, 0
+    INTENSE_CYAN = 0, 255, 255
+    INTENSE_RED = 255, 0, 0
+    INTENSE_MAGENTA = 255, 0, 255
+    INTENSE_YELLOW = 255, 255, 0
+    INTENSE_WHITE = 255, 255, 255
+
+    @staticmethod
+    def from_rgb(rgb: types.Tuple[int, int, int]):
+        '''
+        Find the closest WindowsColors to the given RGB color.
+
+        >>> WindowsColors.from_rgb((0, 0, 0))
+        <WindowsColors.BLACK: (0, 0, 0)>
+
+        >>> WindowsColors.from_rgb((255, 255, 255))
+        <WindowsColors.INTENSE_WHITE: (255, 255, 255)>
+
+        >>> WindowsColors.from_rgb((0, 255, 0))
+        <WindowsColors.INTENSE_GREEN: (0, 255, 0)>
+
+        >>> WindowsColors.from_rgb((45, 45, 45))
+        <WindowsColors.BLACK: (0, 0, 0)>
+
+        >>> WindowsColors.from_rgb((128, 0, 128))
+        <WindowsColors.MAGENTA: (128, 0, 128)>
+        '''
+
+        def color_distance(rgb1, rgb2):
+            return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
+
+        return min(
+            WindowsColors,
+            key=lambda color: color_distance(color.value, rgb),
+        )
+
+
+class WindowsColor:
+    '''
+    Windows compatible color class for when ANSI is not supported.
+    Currently a no-op because it is not possible to buffer these colors.
+
+    >>> WindowsColor(WindowsColors.RED)('test')
+    'test'
+    '''
+
+    __slots__ = ('color',)
+
+    def __init__(self, color: Color):
+        self.color = color
+
+    def __call__(self, text):
+        return text
+        ## In the future we might want to use this, but it requires direct
+        ## printing to stdout and all of our surrounding functions expect
+        ## buffered output so it's not feasible right now. Additionally,
+        ## recent Windows versions all support ANSI codes without issue so
+        ## there is little need.
+        # from progressbar.terminal.os_specific import windows
+        # windows.print_color(text, WindowsColors.from_rgb(self.color.rgb))
+
+
 class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
     __slots__ = ()
 
@@ -206,6 +280,14 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
         green = round(self.green / 255 * 5)
         blue = round(self.blue / 255 * 5)
         return 16 + 36 * red + 6 * green + blue
+
+    @property
+    def to_windows(self):
+        '''
+        Convert an RGB color (0-255 per channel) to the closest color in the
+        Windows 16 color scheme.
+        '''
+        return WindowsColors.from_rgb((self.red, self.green, self.blue))
 
     def interpolate(self, end: RGB, step: float) -> RGB:
         return RGB(
@@ -286,15 +368,24 @@ class Color(
 
     @property
     def fg(self):
-        return SGRColor(self, 38, 39)
+        if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+            return WindowsColor(self)
+        else:
+            return SGRColor(self, 38, 39)
 
     @property
     def bg(self):
-        return SGRColor(self, 48, 49)
+        if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+            return DummyColor()
+        else:
+            return SGRColor(self, 48, 49)
 
     @property
     def underline(self):
-        return SGRColor(self, 58, 59)
+        if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+            return DummyColor()
+        else:
+            return SGRColor(self, 58, 59)
 
     @property
     def ansi(self) -> types.Optional[str]:
@@ -335,21 +426,21 @@ class Color(
 
 
 class Colors:
-    by_name: ClassVar[
-        defaultdict[str, types.List[Color]]
-    ] = collections.defaultdict(list)
-    by_lowername: ClassVar[
-        defaultdict[str, types.List[Color]]
-    ] = collections.defaultdict(list)
-    by_hex: ClassVar[
-        defaultdict[str, types.List[Color]]
-    ] = collections.defaultdict(list)
-    by_rgb: ClassVar[
-        defaultdict[RGB, types.List[Color]]
-    ] = collections.defaultdict(list)
-    by_hls: ClassVar[
-        defaultdict[HSL, types.List[Color]]
-    ] = collections.defaultdict(list)
+    by_name: ClassVar[defaultdict[str, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
+    by_lowername: ClassVar[defaultdict[str, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
+    by_hex: ClassVar[defaultdict[str, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
+    by_rgb: ClassVar[defaultdict[RGB, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
+    by_hls: ClassVar[defaultdict[HSL, types.List[Color]]] = (
+        collections.defaultdict(list)
+    )
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
     @classmethod
@@ -473,6 +564,14 @@ def apply_colors(
             text = bg.bg(text)
 
     return text
+
+
+class DummyColor:
+    def __call__(self, text):
+        return text
+
+    def __repr__(self):
+        return 'DummyColor()'
 
 
 class SGR(CSI):

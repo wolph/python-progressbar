@@ -1,10 +1,12 @@
+import logging
 import time
 
 import progressbar
 import pytest
 
 
-def test_missing_format_values():
+def test_missing_format_values(caplog):
+    caplog.set_level(logging.CRITICAL, logger='progressbar.widgets')
     with pytest.raises(KeyError):
         p = progressbar.ProgressBar(
             widgets=[progressbar.widgets.FormatLabel('%(x)s')],

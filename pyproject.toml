@@ -108,8 +108,8 @@ exclude = ['docs*', 'tests*']
 [tool.setuptools]
 include-package-data = true
 
-# [project.scripts]
-# progressbar2 = 'progressbar.cli:main'
+[project.scripts]
+progressbar = 'progressbar.cli:main'
 
 [project.optional-dependencies]
 docs = ['sphinx>=1.8.5', 'sphinx-autodoc-typehints>=1.6.0']
@@ -121,6 +121,7 @@ tests = [
     'pytest-mypy',
     'pytest>=4.6.9',
     'sphinx>=1.8.5',
+    'pywin32; sys_platform == "win32"',
 ]
 
 [project.urls]
@@ -180,6 +181,7 @@ exclude_lines = [
     'if __name__ == .__main__.:',
     'if types.TYPE_CHECKING:',
     '@typing.overload',
+    'if os.name == .nt.:',
 ]
 
 [tool.pyright]
