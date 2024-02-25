@@ -51,8 +51,8 @@ class ColorSupport(enum.IntEnum):
         will enable 256 color/8 bit support. If they contain `xterm`, we will
         enable 16 color support. Otherwise, we will assume no color support.
 
-        If `JUPYTER_COLUMNS` or `JUPYTER_LINES` is set, we will assume true
-        color support.
+        If `JUPYTER_COLUMNS` or `JUPYTER_LINES` or `JPY_PARENT_PID` is set, we
+        will assume true color support.
 
         Note that the highest available value will be used! Having
         `COLORTERM=truecolor` will override `TERM=xterm-256color`.
@@ -64,9 +64,7 @@ class ColorSupport(enum.IntEnum):
             'TERM',
         )
 
-        if os.environ.get('JUPYTER_COLUMNS') or os.environ.get(
-            'JUPYTER_LINES',
-        ):
+        if JUPYTER:
             # Jupyter notebook always supports true color.
             return cls.XTERM_TRUECOLOR
         elif os.name == 'nt':
@@ -76,8 +74,8 @@ class ColorSupport(enum.IntEnum):
             from .terminal.os_specific import windows
 
             if (
-                windows.get_console_mode()
-                & windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
+                    windows.get_console_mode()
+                    & windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
             ):
                 return cls.XTERM_TRUECOLOR
             else:
@@ -101,18 +99,17 @@ class ColorSupport(enum.IntEnum):
 
 
 def is_ansi_terminal(
-    fd: base.IO,
-    is_terminal: bool | None = None,
+        fd: base.IO,
+        is_terminal: bool | None = None,
 ) -> bool | None:  # pragma: no cover
     if is_terminal is None:
-        # Jupyter Notebooks define this variable and support progress bars
-        if 'JPY_PARENT_PID' in os.environ:
+        # Jupyter Notebooks support progress bars
+        if JUPYTER:
             is_terminal = True
         # This works for newer versions of pycharm only. With older versions
         # there is no way to check.
         elif os.environ.get('PYCHARM_HOSTED') == '1' and not os.environ.get(
-            'PYTEST_CURRENT_TEST',
-        ):
+                'PYTEST_CURRENT_TEST'):
             is_terminal = True
 
     if is_terminal is None:
@@ -168,6 +165,8 @@ if os.name == 'nt':
 
     os_specific.set_console_mode()
 
+JUPYTER = bool(os.environ.get('JUPYTER_COLUMNS') or os.environ.get(
+    'JUPYTER_LINES') or os.environ.get('JPY_PARENT_PID'))
 COLOR_SUPPORT = ColorSupport.from_env()
 ANSI_TERMS = (
     '([xe]|bv)term',

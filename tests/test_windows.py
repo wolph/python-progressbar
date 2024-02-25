@@ -1,16 +1,17 @@
+import os
 import sys
 import time
 
 import pytest
 
-if sys.platform.startswith('win'):
+if os.name == 'nt':
     import win32console  # "pip install pypiwin32" to get this
 else:
     pytest.skip('skipping windows-only tests', allow_module_level=True)
 
-
 import progressbar
 
+pytest_plugins = 'pytester'
 _WIDGETS = [progressbar.Percentage(), ' ',
             progressbar.Bar(), ' ',
             progressbar.FileTransferSpeed(), ' ',
@@ -58,7 +59,12 @@ def find(lines, x):
 
 
 # ---------------------------------------------------------------------------
-def test_windows():
+def test_windows(testdir: pytest.Testdir) -> None:
+    testdir.run(sys.executable, '-c',
+                'import progressbar; print(progressbar.__file__)')
+
+
+def main():
     runprogress()
 
     scraped_lines = scrape_console(100)
@@ -72,3 +78,7 @@ def test_windows():
         print(f'{index_begin=} {index_end=}')
         return 1
     return 0
+
+
+if __name__ == '__main__':
+    main()

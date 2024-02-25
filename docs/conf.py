@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Progress Bar documentation build configuration file, created by
 # sphinx-quickstart on Tue Aug 20 11:47:33 2013.
@@ -11,16 +10,16 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import datetime
 import os
 import sys
-import datetime
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
 
-from progressbar import __about__ as metadata  # noqa: E402
+from progressbar import __about__ as metadata
 
 # -- General configuration -----------------------------------------------
 
@@ -59,7 +58,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Progress Bar'
+project = 'Progress Bar'
 project_slug = ''.join(project.capitalize().split())
 copyright = f'{datetime.date.today().year},  <a href="http://wol.ph/">{metadata.__author__}</a>'
 

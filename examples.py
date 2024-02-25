@@ -1,16 +1,17 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
+import contextlib
 import functools
+import os
 import random
 import sys
-import threading
 import time
 import typing
 
 import progressbar
 
-examples: typing.List[typing.Callable[[typing.Any], typing.Any]] = []
+examples: list[typing.Callable[[typing.Any], typing.Any]] = []
 
 
 def example(fn):
@@ -41,23 +42,28 @@ def fast_example():
 
 @example
 def shortcut_example():
-    for i in progressbar.progressbar(range(10)):
+    for _ in progressbar.progressbar(range(10)):
         time.sleep(0.1)
 
 
 @example
 def prefixed_shortcut_example():
-    for i in progressbar.progressbar(range(10), prefix='Hi: '):
+    for _ in progressbar.progressbar(range(10), prefix='Hi: '):
         time.sleep(0.1)
 
 
 @example
 def parallel_bars_multibar_example():
+    if os.name == 'nt':
+        print('Skipping multibar example on Windows due to threading '
+              'incompatibilities with the example code.')
+        return
+
     BARS = 5
     N = 50
 
     def do_something(bar):
-        for i in bar(range(N)):
+        for _ in bar(range(N)):
             # Sleep up to 0.1 seconds
             time.sleep(random.random() * 0.1)
 
@@ -67,10 +73,9 @@ def parallel_bars_multibar_example():
             # Get a progressbar
             bar_label = 'Bar #%d' % i
             bar_labels.append(bar_label)
-            bar = multibar[bar_label]
+            multibar[bar_label]
 
-        for i in range(N * BARS):
-
+        for _ in range(N * BARS):
             time.sleep(0.005)
 
             bar_i = random.randrange(0, BARS)
@@ -78,29 +83,27 @@ def parallel_bars_multibar_example():
             # Increment one of the progress bars at random
             multibar[bar_label].increment()
 
+
 @example
 def multiple_bars_line_offset_example():
     BARS = 5
     N = 100
 
-    # Construct the list of progress bars with the `line_offset` so they draw
-    # below each other
-    bars = []
-    for i in range(BARS):
-        bars.append(
-            progressbar.ProgressBar(
-                max_value=N,
-                # We add 1 to the line offset to account for the `print_fd`
-                line_offset=i + 1,
-                max_error=False,
-            )
+    bars = [
+        progressbar.ProgressBar(
+            max_value=N,
+            # We add 1 to the line offset to account for the `print_fd`
+            line_offset=i + 1,
+            max_error=False,
         )
-
+        for i in range(BARS)
+    ]
     # Create a file descriptor for regular printing as well
     print_fd = progressbar.LineOffsetStreamWrapper(lines=0, stream=sys.stdout)
+    assert print_fd
 
     # The progress bar updates, normally you would do something useful here
-    for i in range(N * BARS):
+    for _ in range(N * BARS):
         time.sleep(0.005)
 
         # Increment one of the progress bars at random
@@ -115,7 +118,7 @@ def multiple_bars_line_offset_example():
 
 @example
 def templated_shortcut_example():
-    for i in progressbar.progressbar(range(10), suffix='{seconds_elapsed:.1}'):
+    for _ in progressbar.progressbar(range(10), suffix='{seconds_elapsed:.1}'):
         time.sleep(0.1)
 
 
@@ -125,7 +128,7 @@ def job_status_example():
             redirect_stdout=True,
             widgets=[progressbar.widgets.JobStatusBar('status')],
     ) as bar:
-        for i in range(30):
+        for _ in range(30):
             print('random', random.random())
             # Roughly 1/3 probability for each status ;)
             # Yes... probability is confusing at times
@@ -204,7 +207,7 @@ def multi_range_bar_example():
         '\x1b[31m.\x1b[39m',  # Scheduling
         ' ',  # Not started
     ]
-    widgets = [progressbar.MultiRangeBar("amounts", markers=markers)]
+    widgets = [progressbar.MultiRangeBar('amounts', markers=markers)]
     amounts = [0] * (len(markers) - 1) + [25]
 
     with progressbar.ProgressBar(widgets=widgets, max_value=10).start() as bar:
@@ -212,7 +215,7 @@ def multi_range_bar_example():
             incomplete_items = [
                 idx
                 for idx, amount in enumerate(amounts)
-                for i in range(amount)
+                for _ in range(amount)
                 if idx != 0
             ]
             if not incomplete_items:
@@ -230,7 +233,7 @@ def multi_progress_bar_example(left=True):
     jobs = [
         # Each job takes between 1 and 10 steps to complete
         [0, random.randint(1, 10)]
-        for i in range(25)  # 25 jobs total
+        for _ in range(25)  # 25 jobs total
     ]
 
     widgets = [
@@ -260,17 +263,17 @@ def multi_progress_bar_example(left=True):
 @example
 def granular_progress_example():
     widgets = [
-        progressbar.GranularBar(markers=" ▏▎▍▌▋▊▉█", left='', right='|'),
-        progressbar.GranularBar(markers=" ▁▂▃▄▅▆▇█", left='', right='|'),
-        progressbar.GranularBar(markers=" ▖▌▛█", left='', right='|'),
-        progressbar.GranularBar(markers=" ░▒▓█", left='', right='|'),
-        progressbar.GranularBar(markers=" ⡀⡄⡆⡇⣇⣧⣷⣿", left='', right='|'),
-        progressbar.GranularBar(markers=" .oO", left='', right=''),
+        progressbar.GranularBar(markers=' ▏▎▍▌▋▊▉█', left='', right='|'),
+        progressbar.GranularBar(markers=' ▁▂▃▄▅▆▇█', left='', right='|'),
+        progressbar.GranularBar(markers=' ▖▌▛█', left='', right='|'),
+        progressbar.GranularBar(markers=' ░▒▓█', left='', right='|'),
+        progressbar.GranularBar(markers=' ⡀⡄⡆⡇⣇⣧⣷⣿', left='', right='|'),
+        progressbar.GranularBar(markers=' .oO', left='', right=''),
     ]
-    for i in progressbar.progressbar(list(range(100)), widgets=widgets):
+    for _ in progressbar.progressbar(list(range(100)), widgets=widgets):
         time.sleep(0.03)
 
-    for i in progressbar.progressbar(iter(range(100)), widgets=widgets):
+    for _ in progressbar.progressbar(iter(range(100)), widgets=widgets):
         time.sleep(0.03)
 
 
@@ -300,6 +303,7 @@ def file_transfer_example():
     bar = progressbar.ProgressBar(widgets=widgets, max_value=1000).start()
     for i in range(100):
         # do something
+        time.sleep(0.01)
         bar.update(10 * i + 1)
     bar.finish()
 
@@ -333,6 +337,7 @@ def custom_file_transfer_example():
     bar.start()
     for i in range(200):
         # do something
+        time.sleep(0.01)
         bar.update(5 * i + 1)
     bar.finish()
 
@@ -349,8 +354,8 @@ def double_bar_example():
     bar = progressbar.ProgressBar(widgets=widgets, max_value=1000).start()
     for i in range(100):
         # do something
-        bar.update(10 * i + 1)
         time.sleep(0.01)
+        bar.update(10 * i + 1)
     bar.finish()
 
 
@@ -400,7 +405,7 @@ def basic_progress():
 def progress_with_automatic_max():
     # Progressbar can guess max_value automatically.
     bar = progressbar.ProgressBar()
-    for i in bar(range(8)):
+    for _ in bar(range(8)):
         time.sleep(0.1)
 
 
@@ -408,7 +413,7 @@ def progress_with_automatic_max():
 def progress_with_unavailable_max():
     # Progressbar can't guess max_value.
     bar = progressbar.ProgressBar(max_value=8)
-    for i in bar((i for i in range(8))):
+    for _ in bar(i for i in range(8)):
         time.sleep(0.1)
 
 
@@ -417,7 +422,7 @@ def animated_marker():
     bar = progressbar.ProgressBar(
         widgets=['Working: ', progressbar.AnimatedMarker()]
     )
-    for i in bar((i for i in range(5))):
+    for _ in bar(i for i in range(5)):
         time.sleep(0.1)
 
 
@@ -430,7 +435,7 @@ def filling_bar_animated_marker():
             ),
         ]
     )
-    for i in bar(range(15)):
+    for _ in bar(range(15)):
         time.sleep(0.1)
 
 
@@ -444,7 +449,7 @@ def counter_and_timer():
         ')',
     ]
     bar = progressbar.ProgressBar(widgets=widgets)
-    for i in bar((i for i in range(15))):
+    for _ in bar(i for i in range(15)):
         time.sleep(0.1)
 
 
@@ -454,7 +459,7 @@ def format_label():
         progressbar.FormatLabel('Processed: %(value)d lines (in: %(elapsed)s)')
     ]
     bar = progressbar.ProgressBar(widgets=widgets)
-    for i in bar((i for i in range(15))):
+    for _ in bar(i for i in range(15)):
         time.sleep(0.1)
 
 
@@ -462,7 +467,7 @@ def format_label():
 def animated_balloons():
     widgets = ['Balloon: ', progressbar.AnimatedMarker(markers='.oO@* ')]
     bar = progressbar.ProgressBar(widgets=widgets)
-    for i in bar((i for i in range(24))):
+    for _ in bar(i for i in range(24)):
         time.sleep(0.1)
 
 
@@ -472,7 +477,7 @@ def animated_arrows():
     try:
         widgets = ['Arrows: ', progressbar.AnimatedMarker(markers='←↖↑↗→↘↓↙')]
         bar = progressbar.ProgressBar(widgets=widgets)
-        for i in bar((i for i in range(24))):
+        for _ in bar(i for i in range(24)):
             time.sleep(0.1)
     except UnicodeError:
         sys.stdout.write('Unicode error: skipping example')
@@ -484,7 +489,7 @@ def animated_filled_arrows():
     try:
         widgets = ['Arrows: ', progressbar.AnimatedMarker(markers='◢◣◤◥')]
         bar = progressbar.ProgressBar(widgets=widgets)
-        for i in bar((i for i in range(24))):
+        for _ in bar(i for i in range(24)):
             time.sleep(0.1)
     except UnicodeError:
         sys.stdout.write('Unicode error: skipping example')
@@ -496,7 +501,7 @@ def animated_wheels():
     try:
         widgets = ['Wheels: ', progressbar.AnimatedMarker(markers='◐◓◑◒')]
         bar = progressbar.ProgressBar(widgets=widgets)
-        for i in bar((i for i in range(24))):
+        for _ in bar(i for i in range(24)):
             time.sleep(0.1)
     except UnicodeError:
         sys.stdout.write('Unicode error: skipping example')
@@ -509,7 +514,7 @@ def format_label_bouncer():
         progressbar.BouncingBar(),
     ]
     bar = progressbar.ProgressBar(widgets=widgets)
-    for i in bar((i for i in range(100))):
+    for _ in bar(i for i in range(100)):
         time.sleep(0.01)
 
 
@@ -521,14 +526,14 @@ def format_label_rotating_bouncer():
     ]
 
     bar = progressbar.ProgressBar(widgets=widgets)
-    for i in bar((i for i in range(18))):
+    for _ in bar(i for i in range(18)):
         time.sleep(0.1)
 
 
 @example
 def with_right_justify():
     with progressbar.ProgressBar(
-        max_value=10, term_width=20, left_justify=False
+            max_value=10, term_width=20, left_justify=False
     ) as progress:
         assert progress.term_width is not None
         for i in range(10):
@@ -537,20 +542,16 @@ def with_right_justify():
 
 @example
 def exceeding_maximum():
-    with progressbar.ProgressBar(max_value=1) as progress:
-        try:
-            progress.update(2)
-        except ValueError:
-            pass
+    with progressbar.ProgressBar(max_value=1) as progress, contextlib.suppress(
+            ValueError):
+        progress.update(2)
 
 
 @example
 def reaching_maximum():
     progress = progressbar.ProgressBar(max_value=1)
-    try:
+    with contextlib.suppress(RuntimeError):
         progress.update(1)
-    except RuntimeError:
-        pass
 
 
 @example
@@ -568,19 +569,10 @@ def stderr_redirection():
 
 
 @example
-def negative_maximum():
-    try:
-        with progressbar.ProgressBar(max_value=-1) as progress:
-            progress.start()
-    except ValueError:
-        pass
-
-
-@example
 def rotating_bouncing_marker():
     widgets = [progressbar.BouncingBar(marker=progressbar.RotatingMarker())]
     with progressbar.ProgressBar(
-        widgets=widgets, max_value=20, term_width=10
+            widgets=widgets, max_value=20, term_width=10
     ) as progress:
         for i in range(20):
             time.sleep(0.1)
@@ -592,7 +584,7 @@ def rotating_bouncing_marker():
         )
     ]
     with progressbar.ProgressBar(
-        widgets=widgets, max_value=20, term_width=10
+            widgets=widgets, max_value=20, term_width=10
     ) as progress:
         for i in range(20):
             time.sleep(0.1)
@@ -608,7 +600,7 @@ def incrementing_bar():
         ],
         max_value=10,
     ).start()
-    for i in range(10):
+    for _ in range(10):
         # do something
         time.sleep(0.1)
         bar += 1
@@ -684,7 +676,7 @@ def adaptive_eta_without_value_change():
         poll_interval=0.0001,
     )
     bar.start()
-    for i in range(100):
+    for _ in range(100):
         bar.update(1)
         time.sleep(0.1)
     bar.finish()
@@ -695,9 +687,9 @@ def iterator_with_max_value():
     # Testing using progressbar as an iterator with a max value
     bar = progressbar.ProgressBar()
 
-    for n in bar(iter(range(100)), 100):
+    for _ in bar(iter(range(100)), 100):
         # iter range is a way to get an iterator in both python 2 and 3
-        pass
+        time.sleep(0.01)
 
 
 @example
@@ -765,13 +757,13 @@ def user_variables():
     num_subtasks = sum(len(x) for x in tasks.values())
 
     with progressbar.ProgressBar(
-        prefix='{variables.task} >> {variables.subtask}',
-        variables={'task': '--', 'subtask': '--'},
-        max_value=10 * num_subtasks,
+            prefix='{variables.task} >> {variables.subtask}',
+            variables={'task': '--', 'subtask': '--'},
+            max_value=10 * num_subtasks,
     ) as bar:
         for tasks_name, subtasks in tasks.items():
             for subtask_name in subtasks:
-                for i in range(10):
+                for _ in range(10):
                     bar.update(
                         bar.value + 1, task=tasks_name, subtask=subtask_name
                     )
@@ -803,14 +795,14 @@ def format_custom_text():
 @example
 def simple_api_example():
     bar = progressbar.ProgressBar(widget_kwargs=dict(fill='█'))
-    for i in bar(range(200)):
+    for _ in bar(range(200)):
         time.sleep(0.02)
 
 
 @example
-def ETA_on_generators():
+def eta_on_generators():
     def gen():
-        for x in range(200):
+        for _ in range(200):
             yield None
 
     widgets = [
@@ -822,14 +814,14 @@ def ETA_on_generators():
     ]
 
     bar = progressbar.ProgressBar(widgets=widgets)
-    for i in bar(gen()):
+    for _ in bar(gen()):
         time.sleep(0.02)
 
 
 @example
 def percentage_on_generators():
     def gen():
-        for x in range(200):
+        for _ in range(200):
             yield None
 
     widgets = [
@@ -842,19 +834,22 @@ def percentage_on_generators():
     ]
 
     bar = progressbar.ProgressBar(widgets=widgets)
-    for i in bar(gen()):
+    for _ in bar(gen()):
         time.sleep(0.02)
 
 
 def test(*tests):
     if tests:
+        no_tests = True
         for example in examples:
             for test in tests:
                 if test in example.__name__:
                     example()
+                    no_tests = False
                     break
 
-            else:
+        if no_tests:
+            for example in examples:
                 print('Skipping', example.__name__)
     else:
         for example in examples:
