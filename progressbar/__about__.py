@@ -21,7 +21,7 @@ long running operations.
 '''.strip().split(),
 )
 __email__ = 'wolph@wol.ph'
-__version__ = '4.4.0'
+__version__ = '4.4.1'
 __license__ = 'BSD'
 __copyright__ = 'Copyright 2015 Rick van Hattem (Wolph)'
 __url__ = 'https://github.com/WoLpH/python-progressbar'
