@@ -112,7 +112,7 @@ include-package-data = true
 progressbar = 'progressbar.cli:main'
 
 [project.optional-dependencies]
-docs = ['sphinx>=1.8.5', 'sphinx-autodoc-typehints>=1.6.0', 'termios']
+docs = ['sphinx>=1.8.5', 'sphinx-autodoc-typehints>=1.6.0']
 tests = [
     'dill>=0.3.6',
     'flake8>=3.7.7',

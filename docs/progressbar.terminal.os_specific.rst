@@ -7,9 +7,6 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
-   progressbar.terminal.os_specific.posix
-   progressbar.terminal.os_specific.windows
-
 Module contents
 ---------------
 
