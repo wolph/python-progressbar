@@ -109,7 +109,7 @@ exclude = ['docs*', 'tests*']
 include-package-data = true
 
 [project.scripts]
-progressbar = 'progressbar.cli:main'
+progressbar = 'progressbar.__main__:main'
 
 [project.optional-dependencies]
 docs = ['sphinx>=1.8.5', 'sphinx-autodoc-typehints>=1.6.0']
