@@ -162,9 +162,9 @@ def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool | None:
 
 # Enable Windows full color mode if possible
 if os.name == 'nt':
-    from .terminal import os_specific
+    pass
 
-    os_specific.set_console_mode()
+    # os_specific.set_console_mode()
 
 JUPYTER = bool(
     os.environ.get('JUPYTER_COLUMNS')
