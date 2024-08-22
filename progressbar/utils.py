@@ -97,7 +97,7 @@ def no_color(value: StringT) -> StringT:
     elif isinstance(value, str):
         return re.sub('\x1b\\[.*?[@-~]', '', value)  # type: ignore
     else:
-        raise TypeError('`value` must be a string or bytes, got %r' % value)
+        raise TypeError(f'`value` must be a string or bytes, got {value!r}')
 
 
 def len_color(value: types.StringTypes) -> int:

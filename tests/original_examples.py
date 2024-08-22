@@ -32,7 +32,7 @@ def example(fn):
 
     def wrapped():
         try:
-            sys.stdout.write('Running: %s\n' % name)
+            sys.stdout.write(f'Running: {name}\n')
             fn()
             sys.stdout.write('\n')
         except KeyboardInterrupt:

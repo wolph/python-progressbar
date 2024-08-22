@@ -20,7 +20,7 @@ def example(fn):
     @functools.wraps(fn)
     def wrapped(*args, **kwargs):
         try:
-            sys.stdout.write('Running: %s\n' % fn.__name__)
+            sys.stdout.write(f'Running: {fn.__name__}\n')
             fn(*args, **kwargs)
             sys.stdout.write('\n')
         except KeyboardInterrupt:
