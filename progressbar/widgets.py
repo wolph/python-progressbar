@@ -547,7 +547,7 @@ class ETA(Timer):
 
         data['eta'] = None
         if data['eta_seconds']:
-            with contextlib.suppress(ValueError, OverflowError):
+            with contextlib.suppress(ValueError, OverflowError, OSError):
                 data['eta'] = utils.format_time(data['eta_seconds'])
 
         if data['value'] == progress.min_value:
@@ -560,7 +560,7 @@ class ETA(Timer):
             fmt = self.format_NA
         else:
             fmt = self.format_zero
-
+:
         return Timer.__call__(self, progress, data, format=fmt)
 
 

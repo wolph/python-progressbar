@@ -15,11 +15,13 @@ import pytest
         ('t', True),
         ('yes', True),
         ('true', True),
+        ('True', True),
         ('0', False),
         ('n', False),
         ('f', False),
         ('no', False),
         ('false', False),
+        ('False', False),
     ],
 )
 def test_env_flag(value, expected, monkeypatch):
