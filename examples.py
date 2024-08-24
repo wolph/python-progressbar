@@ -15,7 +15,7 @@ examples: list[typing.Callable[[typing.Any], typing.Any]] = []
 
 
 def example(fn):
-    '''Wrap the examples so they generate readable output'''
+    """Wrap the examples so they generate readable output"""
 
     @functools.wraps(fn)
     def wrapped(*args, **kwargs):
@@ -34,7 +34,7 @@ def example(fn):
 
 @example
 def fast_example():
-    '''Updates bar really quickly to cause flickering'''
+    """Updates bar really quickly to cause flickering"""
     with progressbar.ProgressBar(widgets=[progressbar.Bar()]) as bar:
         for i in range(100):
             bar.update(int(i / 10), force=True)
@@ -55,8 +55,10 @@ def prefixed_shortcut_example():
 @example
 def parallel_bars_multibar_example():
     if os.name == 'nt':
-        print('Skipping multibar example on Windows due to threading '
-              'incompatibilities with the example code.')
+        print(
+            'Skipping multibar example on Windows due to threading '
+            'incompatibilities with the example code.'
+        )
         return
 
     BARS = 5
@@ -125,8 +127,8 @@ def templated_shortcut_example():
 @example
 def job_status_example():
     with progressbar.ProgressBar(
-            redirect_stdout=True,
-            widgets=[progressbar.widgets.JobStatusBar('status')],
+        redirect_stdout=True,
+        widgets=[progressbar.widgets.JobStatusBar('status')],
     ) as bar:
         for _ in range(30):
             print('random', random.random())
@@ -311,9 +313,9 @@ def file_transfer_example():
 @example
 def custom_file_transfer_example():
     class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
-        '''
+        """
         It's bigger between 45 and 80 percent
-        '''
+        """
 
         def update(self, bar):
             if 45 < bar.percentage() < 80:
@@ -533,7 +535,7 @@ def format_label_rotating_bouncer():
 @example
 def with_right_justify():
     with progressbar.ProgressBar(
-            max_value=10, term_width=20, left_justify=False
+        max_value=10, term_width=20, left_justify=False
     ) as progress:
         assert progress.term_width is not None
         for i in range(10):
@@ -543,7 +545,8 @@ def with_right_justify():
 @example
 def exceeding_maximum():
     with progressbar.ProgressBar(max_value=1) as progress, contextlib.suppress(
-            ValueError):
+        ValueError
+    ):
         progress.update(2)
 
 
@@ -572,7 +575,7 @@ def stderr_redirection():
 def rotating_bouncing_marker():
     widgets = [progressbar.BouncingBar(marker=progressbar.RotatingMarker())]
     with progressbar.ProgressBar(
-            widgets=widgets, max_value=20, term_width=10
+        widgets=widgets, max_value=20, term_width=10
     ) as progress:
         for i in range(20):
             time.sleep(0.1)
@@ -584,7 +587,7 @@ def rotating_bouncing_marker():
         )
     ]
     with progressbar.ProgressBar(
-            widgets=widgets, max_value=20, term_width=10
+        widgets=widgets, max_value=20, term_width=10
     ) as progress:
         for i in range(20):
             time.sleep(0.1)
@@ -757,9 +760,9 @@ def user_variables():
     num_subtasks = sum(len(x) for x in tasks.values())
 
     with progressbar.ProgressBar(
-            prefix='{variables.task} >> {variables.subtask}',
-            variables={'task': '--', 'subtask': '--'},
-            max_value=10 * num_subtasks,
+        prefix='{variables.task} >> {variables.subtask}',
+        variables={'task': '--', 'subtask': '--'},
+        max_value=10 * num_subtasks,
     ) as bar:
         for tasks_name, subtasks in tasks.items():
             for subtask_name in subtasks:

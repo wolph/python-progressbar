@@ -8,7 +8,7 @@ from progressbar import terminal
 
 
 def test_left_justify():
-    '''Left justify using the terminal width'''
+    """Left justify using the terminal width"""
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
         max_value=100,
@@ -22,7 +22,7 @@ def test_left_justify():
 
 
 def test_right_justify():
-    '''Right justify using the terminal width'''
+    """Right justify using the terminal width"""
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
         max_value=100,
@@ -36,7 +36,7 @@ def test_right_justify():
 
 
 def test_auto_width(monkeypatch):
-    '''Right justify using the terminal width'''
+    """Right justify using the terminal width"""
 
     def ioctl(*args):
         return '\xbf\x00\xeb\x00\x00\x00\x00\x00'
@@ -66,7 +66,7 @@ def test_auto_width(monkeypatch):
 
 
 def test_fill_right():
-    '''Right justify using the terminal width'''
+    """Right justify using the terminal width"""
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(fill_left=False)],
         max_value=100,
@@ -79,7 +79,7 @@ def test_fill_right():
 
 
 def test_fill_left():
-    '''Right justify using the terminal width'''
+    """Right justify using the terminal width"""
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(fill_left=True)],
         max_value=100,
@@ -92,7 +92,7 @@ def test_fill_left():
 
 
 def test_no_fill(monkeypatch):
-    '''Simply bounce within the terminal width'''
+    """Simply bounce within the terminal width"""
     bar = progressbar.BouncingBar()
     bar.INTERVAL = timedelta(seconds=1)
     p = progressbar.ProgressBar(

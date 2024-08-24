@@ -4,8 +4,9 @@ import timeit
 from datetime import datetime
 
 import freezegun
-import progressbar
 import pytest
+
+import progressbar
 
 LOG_LEVELS = {
     '0': logging.ERROR,

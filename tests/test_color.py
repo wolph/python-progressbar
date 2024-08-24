@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 import typing
 
+import pytest
+
 import progressbar
 import progressbar.terminal
-import pytest
 from progressbar import env, terminal, widgets
 from progressbar.terminal import Colors, apply_colors, colors
 
@@ -36,8 +37,7 @@ def clear_env(monkeypatch: pytest.MonkeyPatch):
         'FORCE_COLOR',
     ],
 )
-def test_color_environment_variables(monkeypatch: pytest.MonkeyPatch,
-                                     variable):
+def test_color_environment_variables(monkeypatch: pytest.MonkeyPatch, variable):
     if os.name == 'nt':
         # Windows has special handling so we need to disable that to make the
         # tests work properly
@@ -130,9 +130,7 @@ def test_enable_colors_flags():
 
 
 class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
-    _fixed_colors: typing.ClassVar[
-        widgets.TFixedColors
-    ] = widgets.TFixedColors(
+    _fixed_colors: typing.ClassVar[widgets.TFixedColors] = widgets.TFixedColors(
         fg_none=progressbar.widgets.colors.yellow,
         bg_none=None,
     )
@@ -142,11 +140,11 @@ class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
 
 
 class _TestFixedGradientSupport(progressbar.widgets.WidgetBase):
-    _gradient_colors: typing.ClassVar[
-        widgets.TGradientColors
-    ] = widgets.TGradientColors(
-        fg=progressbar.widgets.colors.gradient,
-        bg=None,
+    _gradient_colors: typing.ClassVar[widgets.TGradientColors] = (
+        widgets.TGradientColors(
+            fg=progressbar.widgets.colors.gradient,
+            bg=None,
+        )
     )
 
     def __call__(self, *args, **kwargs):
@@ -181,7 +179,9 @@ def test_color_gradient():
     assert gradient.get_color(0.5) != colors.yellow
 
     gradient = terminal.ColorGradient(
-        colors.red, colors.yellow, interpolate=False,
+        colors.red,
+        colors.yellow,
+        interpolate=False,
     )
     assert gradient.get_color(0) == colors.red
     assert gradient.get_color(1) == colors.yellow
@@ -217,9 +217,9 @@ def test_colors(monkeypatch):
             assert rgb.to_windows is not None
 
             with monkeypatch.context() as context:
-                context.setattr(env,'COLOR_SUPPORT', env.ColorSupport.XTERM)
+                context.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM)
                 assert color.underline
-                context.setattr(env,'COLOR_SUPPORT', env.ColorSupport.WINDOWS)
+                context.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.WINDOWS)
                 assert color.underline
 
             assert color.fg
@@ -271,98 +271,99 @@ def test_rgb_to_hls(rgb, hls):
         ('test', None, None, None, None, None, 'test'),
         ('test', None, None, None, None, 1, 'test'),
         (
-                'test',
-                None,
-                None,
-                None,
-                colors.red,
-                None,
-                '\x1b[48;5;9mtest\x1b[49m',
+            'test',
+            None,
+            None,
+            None,
+            colors.red,
+            None,
+            '\x1b[48;5;9mtest\x1b[49m',
         ),
         (
-                'test',
-                None,
-                colors.green,
-                None,
-                colors.red,
-                None,
-                '\x1b[48;5;9mtest\x1b[49m',
+            'test',
+            None,
+            colors.green,
+            None,
+            colors.red,
+            None,
+            '\x1b[48;5;9mtest\x1b[49m',
         ),
         ('test', None, colors.red, None, None, 1, '\x1b[48;5;9mtest\x1b[49m'),
         ('test', None, colors.red, None, None, None, 'test'),
         (
-                'test',
-                colors.green,
-                None,
-                colors.red,
-                None,
-                None,
-                '\x1b[38;5;9mtest\x1b[39m',
+            'test',
+            colors.green,
+            None,
+            colors.red,
+            None,
+            None,
+            '\x1b[38;5;9mtest\x1b[39m',
         ),
         (
-                'test',
-                colors.green,
-                colors.red,
-                None,
-                None,
-                1,
-                '\x1b[48;5;9m\x1b[38;5;2mtest\x1b[39m\x1b[49m',
+            'test',
+            colors.green,
+            colors.red,
+            None,
+            None,
+            1,
+            '\x1b[48;5;9m\x1b[38;5;2mtest\x1b[39m\x1b[49m',
         ),
         ('test', colors.red, None, None, None, 1, '\x1b[38;5;9mtest\x1b[39m'),
         ('test', colors.red, None, None, None, None, 'test'),
         ('test', colors.red, colors.red, None, None, None, 'test'),
         (
-                'test',
-                colors.red,
-                colors.yellow,
-                None,
-                None,
-                1,
-                '\x1b[48;5;11m\x1b[38;5;9mtest\x1b[39m\x1b[49m',
+            'test',
+            colors.red,
+            colors.yellow,
+            None,
+            None,
+            1,
+            '\x1b[48;5;11m\x1b[38;5;9mtest\x1b[39m\x1b[49m',
         ),
         (
-                'test',
-                colors.red,
-                colors.yellow,
-                None,
-                None,
-                1,
-                '\x1b[48;5;11m\x1b[38;5;9mtest\x1b[39m\x1b[49m',
+            'test',
+            colors.red,
+            colors.yellow,
+            None,
+            None,
+            1,
+            '\x1b[48;5;11m\x1b[38;5;9mtest\x1b[39m\x1b[49m',
         ),
     ],
 )
-def test_apply_colors(text, fg, bg, fg_none, bg_none, percentage, expected,
-                      monkeypatch):
+def test_apply_colors(
+    text, fg, bg, fg_none, bg_none, percentage, expected, monkeypatch
+):
     monkeypatch.setattr(
         env,
         'COLOR_SUPPORT',
         env.ColorSupport.XTERM_256,
     )
     assert (
-            apply_colors(
-                text,
-                fg=fg,
-                bg=bg,
-                fg_none=fg_none,
-                bg_none=bg_none,
-                percentage=percentage,
-            )
-            == expected
+        apply_colors(
+            text,
+            fg=fg,
+            bg=bg,
+            fg_none=fg_none,
+            bg_none=bg_none,
+            percentage=percentage,
+        )
+        == expected
     )
 
 
 def test_windows_colors(monkeypatch):
     monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.WINDOWS)
     assert (
-            apply_colors(
-                'test',
-                fg=colors.red,
-                bg=colors.red,
-                fg_none=colors.red,
-                bg_none=colors.red,
-                percentage=1,
-            )
-            == 'test'
+        apply_colors(
+            'test',
+            fg=colors.red,
+            bg=colors.red,
+            fg_none=colors.red,
+            bg_none=colors.red,
+            percentage=1,
+        )
+        == 'test'
     )
     colors.red.underline('test')
 

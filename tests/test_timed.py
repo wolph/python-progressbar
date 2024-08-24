@@ -5,7 +5,7 @@ import progressbar
 
 
 def test_timer():
-    '''Testing (Adaptive)ETA when the value doesn't actually change'''
+    """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.Timer(),
     ]
@@ -25,7 +25,7 @@ def test_timer():
 
 
 def test_eta():
-    '''Testing (Adaptive)ETA when the value doesn't actually change'''
+    """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.ETA(),
     ]
@@ -52,7 +52,7 @@ def test_eta():
 
 
 def test_adaptive_eta():
-    '''Testing (Adaptive)ETA when the value doesn't actually change'''
+    """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.AdaptiveETA(),
     ]
@@ -72,7 +72,7 @@ def test_adaptive_eta():
 
 
 def test_adaptive_transfer_speed():
-    '''Testing (Adaptive)ETA when the value doesn't actually change'''
+    """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.AdaptiveTransferSpeed(),
     ]
@@ -90,7 +90,7 @@ def test_adaptive_transfer_speed():
 
 
 def test_etas(monkeypatch):
-    '''Compare file transfer speed to adaptive transfer speed'''
+    """Compare file transfer speed to adaptive transfer speed"""
     n = 10
     interval = datetime.timedelta(seconds=1)
     widgets = [
@@ -102,7 +102,7 @@ def test_etas(monkeypatch):
 
     # Capture the output sent towards the `_speed` method
     def calculate_eta(self, value, elapsed):
-        '''Capture the widget output'''
+        """Capture the widget output"""
         data = dict(
             value=value,
             elapsed=int(elapsed),
@@ -152,7 +152,7 @@ def test_etas(monkeypatch):
 
 
 def test_non_changing_eta():
-    '''Testing (Adaptive)ETA when the value doesn't actually change'''
+    """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.AdaptiveETA(),
         progressbar.ETA(),
@@ -172,10 +172,10 @@ def test_non_changing_eta():
 
 
 def test_eta_not_available():
-    '''
+    """
     When ETA is not available (data coming from a generator),
     ETAs should not raise exceptions.
-    '''
+    """
 
     def gen():
         yield from range(200)

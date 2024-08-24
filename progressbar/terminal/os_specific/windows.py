@@ -1,10 +1,11 @@
 # ruff: noqa: N801
-'''
+"""
 Windows specific code for the terminal.
 
 Note that the naming convention here is non-pythonic because we are
 matching the Windows API naming.
-'''
+"""
+
 from __future__ import annotations
 
 import ctypes

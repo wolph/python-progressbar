@@ -18,13 +18,13 @@ def env_flag(name: str, default: bool | None = None) -> bool | None: ...
 
 
 def env_flag(name, default=None):
-    '''
+    """
     Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
     on/off, and returns it as a boolean.
 
     If the environment variable is not defined, or has an unknown value,
     returns `default`
-    '''
+    """
     v = os.getenv(name)
     if v and v.lower() in ('y', 'yes', 't', 'true', 'on', '1'):
         return True
@@ -34,7 +34,7 @@ def env_flag(name, default=None):
 
 
 class ColorSupport(enum.IntEnum):
-    '''Color support for the terminal.'''
+    """Color support for the terminal."""
 
     NONE = 0
     XTERM = 16
@@ -44,7 +44,7 @@ class ColorSupport(enum.IntEnum):
 
     @classmethod
     def from_env(cls):
-        '''Get the color support from the environment.
+        """Get the color support from the environment.
 
         If any of the environment variables contain `24bit` or `truecolor`,
         we will enable true color/24 bit support. If they contain `256`, we
@@ -56,7 +56,7 @@ class ColorSupport(enum.IntEnum):
 
         Note that the highest available value will be used! Having
         `COLORTERM=truecolor` will override `TERM=xterm-256color`.
-        '''
+        """
         variables = (
             'FORCE_COLOR',
             'PROGRESSBAR_ENABLE_COLORS',

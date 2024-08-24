@@ -12,10 +12,15 @@ else:
 import progressbar
 
 pytest_plugins = 'pytester'
-_WIDGETS = [progressbar.Percentage(), ' ',
-            progressbar.Bar(), ' ',
-            progressbar.FileTransferSpeed(), ' ',
-            progressbar.ETA()]
+_WIDGETS = [
+    progressbar.Percentage(),
+    ' ',
+    progressbar.Bar(),
+    ' ',
+    progressbar.FileTransferSpeed(),
+    ' ',
+    progressbar.ETA(),
+]
 _MB = 1024 * 1024
 
 
@@ -60,8 +65,9 @@ def find(lines, x):
 
 # ---------------------------------------------------------------------------
 def test_windows(testdir: pytest.Testdir) -> None:
-    testdir.run(sys.executable, '-c',
-                'import progressbar; print(progressbar.__file__)')
+    testdir.run(
+        sys.executable, '-c', 'import progressbar; print(progressbar.__file__)'
+    )
 
 
 def main():

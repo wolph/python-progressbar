@@ -3,8 +3,9 @@ import os
 import time
 
 import original_examples  # type: ignore
-import progressbar
 import pytest
+
+import progressbar
 
 # Import hack to allow for parallel Tox
 try:
@@ -72,5 +73,6 @@ def test_dirty():
 
 def test_negative_maximum():
     with pytest.raises(ValueError), progressbar.ProgressBar(
-            max_value=-1) as progress:
+        max_value=-1
+    ) as progress:
         progress.start()

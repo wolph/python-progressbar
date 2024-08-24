@@ -1,4 +1,4 @@
-'''Text progress bar library for Python.
+"""Text progress bar library for Python.
 
 A text progress bar is typically used to display the progress of a long
 running operation, providing a visual cue that processing is underway.
@@ -9,16 +9,16 @@ differently depending on the state of the progress bar.
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
-'''
+"""
 
 __title__ = 'Python Progressbar'
 __package_name__ = 'progressbar2'
 __author__ = 'Rick van Hattem (Wolph)'
 __description__ = ' '.join(
-    '''
+    """
 A Python Progressbar library to provide visual (yet text based) progress to
 long running operations.
-'''.strip().split(),
+""".strip().split(),
 )
 __email__ = 'wolph@wol.ph'
 __version__ = '4.4.3'

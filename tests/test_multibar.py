@@ -2,8 +2,9 @@ import random
 import threading
 import time
 
-import progressbar
 import pytest
+
+import progressbar
 
 N = 10
 BARS = 3
@@ -158,10 +159,8 @@ def test_multibar_empty_key():
 
 
 def test_multibar_print():
-
     bars = 5
     n = 10
-
 
     def print_sometimes(bar, probability):
         for i in bar(range(n)):
@@ -183,16 +182,17 @@ def test_multibar_print():
             threading.Thread(target=print_sometimes, args=(bar, 0.5)).start()
             threading.Thread(target=print_sometimes, args=(bar, 1)).start()
 
-
         for i in range(5):
             multibar.print(f'{i}', flush=False)
 
         multibar.update(force=True, flush=False)
         multibar.update(force=True, flush=True)
 
+
 def test_multibar_no_format():
     with progressbar.MultiBar(
-        initial_format=None, finished_format=None) as multibar:
+        initial_format=None, finished_format=None
+    ) as multibar:
         bar = multibar['a']
 
         for i in bar(range(5)):
@@ -214,10 +214,10 @@ def test_multibar_finished():
     multibar.render(force=True)
 
 
-
 def test_multibar_finished_format():
     multibar = progressbar.MultiBar(
-        finished_format='Finished {label}', show_finished=True)
+        finished_format='Finished {label}', show_finished=True
+    )
     bar = multibar['bar'] = progressbar.ProgressBar(max_value=5)
     bar2 = multibar['bar2']
     multibar.render(force=True)

@@ -1,7 +1,8 @@
 import time
 
-import progressbar
 import pytest
+
+import progressbar
 
 
 class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):

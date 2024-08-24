@@ -2,6 +2,7 @@ import io
 import sys
 
 import pytest
+
 from progressbar import utils
 
 

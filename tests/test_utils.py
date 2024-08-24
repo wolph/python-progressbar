@@ -1,8 +1,9 @@
 import io
 
+import pytest
+
 import progressbar
 import progressbar.env
-import pytest
 
 
 @pytest.mark.parametrize(
@@ -108,5 +109,6 @@ def test_is_ansi_terminal(monkeypatch):
 
     def raise_error():
         raise RuntimeError('test')
+
     fd.isatty = raise_error
     assert not progressbar.env.is_ansi_terminal(fd)

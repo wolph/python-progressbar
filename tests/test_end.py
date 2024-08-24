@@ -1,5 +1,6 @@
-import progressbar
 import pytest
+
+import progressbar
 
 
 @pytest.fixture(autouse=True)

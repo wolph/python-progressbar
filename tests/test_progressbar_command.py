@@ -1,7 +1,8 @@
 import io
 
-import progressbar.__main__ as main
 import pytest
+
+import progressbar.__main__ as main
 
 
 def test_size_to_bytes():
@@ -30,8 +31,22 @@ def test_filename_to_bytes(tmp_path):
 def test_create_argument_parser():
     parser = main.create_argument_parser()
     args = parser.parse_args(
-        ['-p', '-t', '-e', '-r', '-a', '-b', '-8', '-T', '-n', '-q',
-         'input', '-o', 'output'])
+        [
+            '-p',
+            '-t',
+            '-e',
+            '-r',
+            '-a',
+            '-b',
+            '-8',
+            '-T',
+            '-n',
+            '-q',
+            'input',
+            '-o',
+            'output',
+        ]
+    )
     assert args.progress is True
     assert args.timer is True
     assert args.eta is True
@@ -51,7 +66,8 @@ def test_create_argument_parser():
 def test_main_binary(capsys):
     # Call the main function with different command line arguments
     main.main(
-        ['-p', '-t', '-e', '-r', '-a', '-b', '-8', '-T', '-n', '-q', __file__])
+        ['-p', '-t', '-e', '-r', '-a', '-b', '-8', '-T', '-n', '-q', __file__]
+    )
 
     captured = capsys.readouterr()
     assert 'test_main(capsys):' in captured.out
@@ -60,9 +76,23 @@ def test_main_binary(capsys):
 def test_main_lines(capsys):
     # Call the main function with different command line arguments
     main.main(
-        ['-p', '-t', '-e', '-r', '-a', '-b', '-8', '-T', '-n', '-q', '-l',
-         '-s', f'@{__file__}',
-         __file__])
+        [
+            '-p',
+            '-t',
+            '-e',
+            '-r',
+            '-a',
+            '-b',
+            '-8',
+            '-T',
+            '-n',
+            '-q',
+            '-l',
+            '-s',
+            f'@{__file__}',
+            __file__,
+        ]
+    )
 
     captured = capsys.readouterr()
     assert 'test_main(capsys):' in captured.out

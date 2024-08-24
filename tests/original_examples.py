@@ -269,7 +269,7 @@ def example19():
 
 @example
 def example20():
-    '''Widgets that behave differently when length is unknown'''
+    """Widgets that behave differently when length is unknown"""
     widgets = [
         '[When length is unknown at first]',
         ' Progress: ',

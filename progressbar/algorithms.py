@@ -11,18 +11,18 @@ class SmoothingAlgorithm(abc.ABC):
 
     @abc.abstractmethod
     def update(self, new_value: float, elapsed: timedelta) -> float:
-        '''Updates the algorithm with a new value and returns the smoothed
+        """Updates the algorithm with a new value and returns the smoothed
         value.
-        '''
+        """
         raise NotImplementedError
 
 
 class ExponentialMovingAverage(SmoothingAlgorithm):
-    '''
+    """
     The Exponential Moving Average (EMA) is an exponentially weighted moving
     average that reduces the lag that's typically associated with a simple
     moving average. It's more responsive to recent changes in data.
-    '''
+    """
 
     def __init__(self, alpha: float = 0.5) -> None:
         self.alpha = alpha
@@ -34,11 +34,11 @@ class ExponentialMovingAverage(SmoothingAlgorithm):
 
 
 class DoubleExponentialMovingAverage(SmoothingAlgorithm):
-    '''
+    """
     The Double Exponential Moving Average (DEMA) is essentially an EMA of an
     EMA, which reduces the lag that's typically associated with a simple EMA.
     It's more responsive to recent changes in data.
-    '''
+    """
 
     def __init__(self, alpha: float = 0.5) -> None:
         self.alpha = alpha

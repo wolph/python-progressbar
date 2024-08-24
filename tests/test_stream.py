@@ -2,8 +2,9 @@ import io
 import os
 import sys
 
-import progressbar
 import pytest
+
+import progressbar
 from progressbar import terminal
 
 
@@ -130,16 +131,16 @@ def test_last_line_stream_methods():
     assert stream.line == 'Hello'
     stream.truncate()
     assert stream.line == ''
-    
+
     # Test seekable/readable
     assert not stream.seekable()
     assert stream.readable()
-    
+
     stream.writelines(['a', 'b', 'c'])
     assert stream.read() == 'c'
 
     assert list(stream) == ['c']
-    
+
     with stream:
         stream.write('Hello World!')
         assert stream.read() == 'Hello World!'

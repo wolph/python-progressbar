@@ -1,7 +1,8 @@
 import time
 
-import progressbar
 import pytest
+
+import progressbar
 
 max_values = [None, 10, progressbar.UnknownLength]
 

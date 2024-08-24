@@ -1,7 +1,8 @@
 from datetime import timedelta
 
-import progressbar
 import pytest
+
+import progressbar
 
 
 @pytest.mark.parametrize(

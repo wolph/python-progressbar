@@ -236,7 +236,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self,
         enable_colors: progressbar.env.ColorSupport | None,
     ) -> progressbar.env.ColorSupport:
-        '''
+        """
         Determines the color support for the progress bar.
 
         This method checks the `enable_colors` parameter and the environment
@@ -262,7 +262,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         Raises:
             ValueError: If `enable_colors` is not None, True, False, or an
             instance of `progressbar.env.ColorSupport`.
-        '''
+        """
         color_support: progressbar.env.ColorSupport
         if enable_colors is None:
             colors = (
@@ -332,7 +332,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self.fd.flush()
 
     def _format_line(self):
-        'Joins the widgets and justifies the line.'
+        "Joins the widgets and justifies the line."
         widgets = ''.join(self._to_unicode(self._format_widgets()))
 
         if self.left_justify:
@@ -398,12 +398,13 @@ class ResizableMixin(ProgressBarMixinBase):
                     signal.SIGWINCH  # type: ignore
                 )
                 signal.signal(
-                    signal.SIGWINCH, self._handle_resize  # type: ignore
+                    signal.SIGWINCH,
+                    self._handle_resize,  # type: ignore
                 )
                 self.signal_set = True
 
     def _handle_resize(self, signum=None, frame=None):
-        'Tries to catch resize signals sent from the terminal.'
+        "Tries to catch resize signals sent from the terminal."
         w, h = utils.get_terminal_size()
         self.term_width = w
 
@@ -414,7 +415,8 @@ class ResizableMixin(ProgressBarMixinBase):
                 import signal
 
                 signal.signal(
-                    signal.SIGWINCH, self._prev_handle  # type: ignore
+                    signal.SIGWINCH,
+                    self._prev_handle,  # type: ignore
                 )
 
 
@@ -476,7 +478,7 @@ class ProgressBar(
     ResizableMixin,
     ProgressBarBase,
 ):
-    '''The ProgressBar class which updates and prints the bar.
+    """The ProgressBar class which updates and prints the bar.
 
     Args:
         min_value (int): The minimum/start value for the progress bar
@@ -520,7 +522,6 @@ class ProgressBar(
     >>> for i in range(100):
     ...     progress.update(i + 1)
     ...     # do something
-    ...
     >>> progress.finish()
 
     You can also use a ProgressBar as an iterator:
@@ -530,7 +531,6 @@ class ProgressBar(
     >>> for i in progress(some_iterable):
     ...     # do something
     ...     pass
-    ...
 
     Since the progress bar is incredibly customizable you can specify
     different widgets of any type in any order. You can even write your own
@@ -547,7 +547,7 @@ class ProgressBar(
     the current progress bar. As a result, you have access to the
     ProgressBar's methods and attributes. Although there is nothing preventing
     you from changing the ProgressBar you should treat it as read only.
-    '''
+    """
 
     _iterable: types.Optional[types.Iterator]
 
@@ -576,7 +576,7 @@ class ProgressBar(
         min_poll_interval=None,
         **kwargs,
     ):  # sourcery skip: low-code-quality
-        '''Initializes a progress bar with sane defaults.'''
+        """Initializes a progress bar with sane defaults."""
         StdRedirectMixin.__init__(self, **kwargs)
         ResizableMixin.__init__(self, **kwargs)
         ProgressBarBase.__init__(self, **kwargs)
@@ -670,10 +670,10 @@ class ProgressBar(
         self.variables = value
 
     def init(self):
-        '''
+        """
         (re)initialize values to original state so the progressbar can be
         used (again).
-        '''
+        """
         self.previous_value = None
         self.last_update_time = None
         self.start_time = None
@@ -684,7 +684,7 @@ class ProgressBar(
 
     @property
     def percentage(self) -> float | None:
-        '''Return current percentage, returns None if no max_value is given.
+        """Return current percentage, returns None if no max_value is given.
 
         >>> progress = ProgressBar()
         >>> progress.max_value = 10
@@ -713,7 +713,7 @@ class ProgressBar(
         25.0
         >>> progress.max_value = None
         >>> progress.percentage
-        '''
+        """
         if self.max_value is None or self.max_value is base.UnknownLength:
             return None
         elif self.max_value:
@@ -726,7 +726,7 @@ class ProgressBar(
         return percentage
 
     def data(self) -> types.Dict[str, types.Any]:
-        '''
+        """
 
         Returns:
             dict:
@@ -752,7 +752,7 @@ class ProgressBar(
                 - `variables`: Dictionary of user-defined variables for the
                   :py:class:`~progressbar.widgets.Variable`'s.
 
-        '''
+        """
         self._last_update_time = time.time()
         self._last_update_timer = timeit.default_timer()
         elapsed = self.last_update_time - self.start_time  # type: ignore
@@ -824,7 +824,7 @@ class ProgressBar(
             ]
 
     def __call__(self, iterable, max_value=None):
-        'Use a ProgressBar to iterate through an iterable.'
+        "Use a ProgressBar to iterate through an iterable."
         if max_value is not None:
             self.max_value = max_value
         elif self.max_value is None:
@@ -871,7 +871,7 @@ class ProgressBar(
     next = __next__
 
     def __iadd__(self, value):
-        'Updates the ProgressBar by adding a new value.'
+        "Updates the ProgressBar by adding a new value."
         return self.increment(value)
 
     def increment(self, value=1, *args, **kwargs):
@@ -879,7 +879,7 @@ class ProgressBar(
         return self
 
     def _needs_update(self):
-        'Returns whether the ProgressBar should redraw the line.'
+        "Returns whether the ProgressBar should redraw the line."
         if self.paused:
             return False
         delta = timeit.default_timer() - self._last_update_timer
@@ -903,7 +903,7 @@ class ProgressBar(
         return False
 
     def update(self, value=None, force=False, **kwargs):
-        'Updates the ProgressBar to a new value.'
+        "Updates the ProgressBar to a new value."
         if self.start_time is None:
             self.start()
 
@@ -961,7 +961,7 @@ class ProgressBar(
         self.fd.flush()
 
     def start(self, max_value=None, init=True, *args, **kwargs):
-        '''Starts measuring time, and prints the bar at 0%.
+        """Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
 
@@ -973,11 +973,10 @@ class ProgressBar(
 
         >>> pbar = ProgressBar().start()
         >>> for i in range(100):
-        ...    # do something
-        ...    pbar.update(i+1)
-        ...
+        ...     # do something
+        ...     pbar.update(i + 1)
         >>> pbar.finish()
-        '''
+        """
         if init:
             self.init()
 
@@ -1053,7 +1052,7 @@ class ProgressBar(
                 )
 
     def finish(self, end='\n', dirty=False):
-        '''
+        """
         Puts the ProgressBar bar in the finished state.
 
         Also flushes and disables output buffering if this was the last
@@ -1064,7 +1063,7 @@ class ProgressBar(
                 newline
             dirty (bool): When True the progressbar kept the current state and
                 won't be set to 100 percent
-        '''
+        """
         if not dirty:
             self.end_time = datetime.now()
             self.update(self.max_value, force=True)
@@ -1075,10 +1074,10 @@ class ProgressBar(
 
     @property
     def currval(self):
-        '''
+        """
         Legacy method to make progressbar-2 compatible with the original
         progressbar package.
-        '''
+        """
         warnings.warn(
             'The usage of `currval` is deprecated, please use '
             '`value` instead',
@@ -1089,10 +1088,10 @@ class ProgressBar(
 
 
 class DataTransferBar(ProgressBar):
-    '''A progress bar with sensible defaults for downloads etc.
+    """A progress bar with sensible defaults for downloads etc.
 
     This assumes that the values its given are numbers of bytes.
-    '''
+    """
 
     def default_widgets(self):
         if self.max_value:
@@ -1118,10 +1117,10 @@ class DataTransferBar(ProgressBar):
 
 
 class NullBar(ProgressBar):
-    '''
+    """
     Progress bar that does absolutely nothing. Useful for single verbosity
     flags.
-    '''
+    """
 
     def start(self, *args, **kwargs):
         return self

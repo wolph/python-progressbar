@@ -19,7 +19,7 @@ from .. import (
 )
 from .os_specific import getch
 
-ESC = '\x1B'
+ESC = '\x1b'
 
 
 class CSI:
@@ -199,7 +199,7 @@ class WindowsColors(enum.Enum):
 
     @staticmethod
     def from_rgb(rgb: types.Tuple[int, int, int]):
-        '''
+        """
         Find the closest WindowsColors to the given RGB color.
 
         >>> WindowsColors.from_rgb((0, 0, 0))
@@ -216,7 +216,7 @@ class WindowsColors(enum.Enum):
 
         >>> WindowsColors.from_rgb((128, 0, 128))
         <WindowsColors.MAGENTA: (128, 0, 128)>
-        '''
+        """
 
         def color_distance(rgb1, rgb2):
             return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
@@ -228,13 +228,13 @@ class WindowsColors(enum.Enum):
 
 
 class WindowsColor:
-    '''
+    """
     Windows compatible color class for when ANSI is not supported.
     Currently a no-op because it is not possible to buffer these colors.
 
     >>> WindowsColor(WindowsColors.RED)('test')
     'test'
-    '''
+    """
 
     __slots__ = ('color',)
 
@@ -283,10 +283,10 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
 
     @property
     def to_windows(self):
-        '''
+        """
         Convert an RGB color (0-255 per channel) to the closest color in the
         Windows 16 color scheme.
-        '''
+        """
         return WindowsColors.from_rgb((self.red, self.green, self.blue))
 
     def interpolate(self, end: RGB, step: float) -> RGB:
@@ -298,21 +298,21 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
 
 
 class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
-    '''
+    """
     Hue, Saturation, Lightness color.
 
     Hue is a value between 0 and 360, saturation and lightness are between 0(%)
     and 100(%).
 
-    '''
+    """
 
     __slots__ = ()
 
     @classmethod
     def from_rgb(cls, rgb: RGB) -> HSL:
-        '''
+        """
         Convert a 0-255 RGB color to a 0-255 HLS color.
-        '''
+        """
         hls = colorsys.rgb_to_hls(
             rgb.red / 255,
             rgb.green / 255,
@@ -349,7 +349,7 @@ class Color(
     ),
     ColorBase,
 ):
-    '''
+    """
     Color base class.
 
     This class contains the colors in RGB (Red, Green, Blue), HSL (Hue,
@@ -359,7 +359,7 @@ class Color(
     To make a custom color the only required arguments are the RGB values.
     The other values will be automatically interpolated from that if needed,
     but you can be more explicitly if you wish.
-    '''
+    """
 
     __slots__ = ()
 
@@ -484,7 +484,7 @@ class ColorGradient(ColorBase):
         return self.get_color(value)
 
     def get_color(self, value: float) -> Color:
-        'Map a value from 0 to 1 to a color.'
+        "Map a value from 0 to 1 to a color."
         if (
             value == pbase.Undefined
             or value == pbase.UnknownLength
@@ -543,12 +543,12 @@ def apply_colors(
     bg_none: Color | None = None,
     **kwargs: types.Any,
 ) -> str:
-    '''Apply colors/gradients to a string depending on the given percentage.
+    """Apply colors/gradients to a string depending on the given percentage.
 
     When percentage is `None`, the `fg_none` and `bg_none` colors will be used.
     Otherwise, the `fg` and `bg` colors will be used. If the colors are
     gradients, the color will be interpolated depending on the percentage.
-    '''
+    """
     if percentage is None:
         if fg_none is not None:
             text = fg_none.fg(text)

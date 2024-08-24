@@ -20,7 +20,7 @@ SortKeyFunc = typing.Callable[[bar.ProgressBar], typing.Any]
 
 
 class SortKey(str, enum.Enum):
-    '''
+    """
     Sort keys for the MultiBar.
 
     This is a string enum, so you can use any
@@ -30,7 +30,7 @@ class SortKey(str, enum.Enum):
     progressbars. This means that sorting by dynamic attributes such as
     `value` might result in more rendering which can have a small performance
     impact.
-    '''
+    """
 
     CREATED = 'index'
     LABEL = 'label'
@@ -124,7 +124,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         super().__init__(bars or {})
 
     def __setitem__(self, key: str, bar: bar.ProgressBar):
-        '''Add a progressbar to the multibar.'''
+        """Add a progressbar to the multibar."""
         if bar.label != key or not key:  # pragma: no branch
             bar.label = key
             bar.fd = stream.LastLineStream(self.fd)
@@ -141,13 +141,13 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         super().__setitem__(key, bar)
 
     def __delitem__(self, key):
-        '''Remove a progressbar from the multibar.'''
+        """Remove a progressbar from the multibar."""
         super().__delitem__(key)
         self._finished_at.pop(key, None)
         self._labeled.discard(key)
 
     def __getitem__(self, key):
-        '''Get (and create if needed) a progressbar from the multibar.'''
+        """Get (and create if needed) a progressbar from the multibar."""
         try:
             return super().__getitem__(key)
         except KeyError:
@@ -170,7 +170,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             bar.widgets.append(self.label_format.format(label=bar.label))
 
     def render(self, flush: bool = True, force: bool = False):
-        '''Render the multibar to the given stream.'''
+        """Render the multibar to the given stream."""
         now = timeit.default_timer()
         expired = now - self.remove_finished if self.remove_finished else None
 
@@ -280,7 +280,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         clear=True,
         **kwargs,
     ):
-        '''
+        """
         Print to the progressbar stream without overwriting the progressbars.
 
         Args:
@@ -290,7 +290,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             flush: Whether to flush the output to the stream
             clear: If True, the line will be cleared before printing.
             **kwargs: Additional keyword arguments to pass to print
-        '''
+        """
         with self._print_lock:
             if offset is None:
                 offset = len(self._previous_output)
@@ -322,10 +322,10 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         self.fd.flush()
 
     def run(self, join=True):
-        '''
+        """
         Start the multibar render loop and run the progressbars until they
         have force _thread_finished.
-        '''
+        """
         while not self._thread_finished.is_set():  # pragma: no branch
             self.render()
             time.sleep(self.update_interval)

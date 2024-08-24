@@ -1,9 +1,10 @@
 import time
 from datetime import datetime, timedelta
 
+from python_utils.containers import SliceableDeque
+
 import progressbar
 from progressbar import widgets
-from python_utils.containers import SliceableDeque
 
 
 def test_numeric_samples():
