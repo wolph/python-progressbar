@@ -133,7 +133,11 @@ def create_argument_parser() -> argparse.ArgumentParser:
         '-n', '--numeric', action='store_true', help='Numeric output.'
     )
     parser.add_argument(
-        '-q', '--quiet', action='store_true', help='No output.')
+        '-q',
+        '--quiet',
+        action='store_true',
+        help='No output.',
+    )
 
     # Output modifiers
     parser.add_argument(

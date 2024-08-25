@@ -99,8 +99,9 @@ def create_marker(marker, wrap=None):
 
     if isinstance(marker, str):
         marker = converters.to_unicode(marker)
-        assert utils.len_color(
-            marker) == 1, 'Markers are required to be 1 char'
+        # Ruff is silly at times... the format is not compatible with the check
+        marker_length_error = 'Markers are required to be 1 char'
+        assert utils.len_color(marker) == 1, marker_length_error
         return wrapper(_marker, wrap)
     else:
         return wrapper(marker, wrap)

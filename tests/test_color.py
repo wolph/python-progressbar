@@ -38,7 +38,9 @@ def clear_env(monkeypatch: pytest.MonkeyPatch):
     ],
 )
 def test_color_environment_variables(
-        monkeypatch: pytest.MonkeyPatch, variable):
+    monkeypatch: pytest.MonkeyPatch,
+    variable,
+):
     if os.name == 'nt':
         # Windows has special handling so we need to disable that to make the
         # tests work properly
