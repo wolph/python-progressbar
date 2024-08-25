@@ -66,7 +66,19 @@ def test_create_argument_parser():
 def test_main_binary(capsys):
     # Call the main function with different command line arguments
     main.main(
-        ['-p', '-t', '-e', '-r', '-a', '-b', '-8', '-T', '-n', '-q', __file__]
+        [
+            '-p',
+            '-t',
+            '-e',
+            '-r',
+            '-a',
+            '-b',
+            '-8',
+            '-T',
+            '-n',
+            '-q',
+            __file__,
+        ]
     )
 
     captured = capsys.readouterr()

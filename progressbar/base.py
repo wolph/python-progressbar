@@ -1,4 +1,6 @@
-from python_utils import types
+from __future__ import annotations
+
+from typing.io import IO, TextIO  # type: ignore
 
 
 class FalseMeta(type):
@@ -20,12 +22,6 @@ class UnknownLength(metaclass=FalseMeta):
 class Undefined(metaclass=FalseMeta):
     pass
 
-
-try:  # pragma: no cover
-    IO = types.IO  # type: ignore
-    TextIO = types.TextIO  # type: ignore
-except AttributeError:  # pragma: no cover
-    from typing.io import IO, TextIO  # type: ignore
 
 assert IO is not None
 assert TextIO is not None

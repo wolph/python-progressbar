@@ -99,7 +99,8 @@ def create_marker(marker, wrap=None):
 
     if isinstance(marker, str):
         marker = converters.to_unicode(marker)
-        assert utils.len_color(marker) == 1, 'Markers are required to be 1 char'
+        assert utils.len_color(
+            marker) == 1, 'Markers are required to be 1 char'
         return wrapper(_marker, wrap)
     else:
         return wrapper(marker, wrap)
@@ -937,7 +938,9 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
     def __init__(self, format=DEFAULT_FORMAT, **kwargs):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
-        self.max_width_cache = dict(default=self.max_width or 0)
+        self.max_width_cache = dict()
+        # Pyright isn't happy when we set the key in the initialiser
+        self.max_width_cache['default'] = self.max_width or 0
 
     def __call__(
         self,
@@ -1324,10 +1327,9 @@ class GranularBar(AutoWidthWidgetBase):
         width -= progress.custom_len(left) + progress.custom_len(right)
 
         max_value = progress.max_value
-        # mypy doesn't get that the first part of the if statement makes sure
-        # we get the correct type
         if (
-            max_value is not base.UnknownLength and max_value > 0  # type: ignore
+            max_value is not base.UnknownLength
+            and typing.cast(float, max_value) > 0
         ):
             percent = progress.value / max_value  # type: ignore
         else:

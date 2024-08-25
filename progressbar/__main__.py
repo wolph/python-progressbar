@@ -6,7 +6,7 @@ import pathlib
 import sys
 import typing
 from pathlib import Path
-from typing import BinaryIO, TextIO
+from typing import IO, BinaryIO, TextIO
 
 import progressbar
 
@@ -132,7 +132,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '-n', '--numeric', action='store_true', help='Numeric output.'
     )
-    parser.add_argument('-q', '--quiet', action='store_true', help='No output.')
+    parser.add_argument(
+        '-q', '--quiet', action='store_true', help='No output.')
 
     # Output modifiers
     parser.add_argument(
@@ -285,7 +286,7 @@ def main(argv: list[str] | None = None):  # noqa: C901
             args.output, args.line_mode, stack
         )
 
-        input_paths: list[BinaryIO | TextIO | Path] = []
+        input_paths: list[BinaryIO | TextIO | Path | IO[typing.Any]] = []
         total_size: int = 0
         filesize_available: bool = True
         for filename in args.input:

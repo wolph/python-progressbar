@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-import typing
+from typing import ClassVar
 
 import pytest
 
@@ -37,7 +37,8 @@ def clear_env(monkeypatch: pytest.MonkeyPatch):
         'FORCE_COLOR',
     ],
 )
-def test_color_environment_variables(monkeypatch: pytest.MonkeyPatch, variable):
+def test_color_environment_variables(
+        monkeypatch: pytest.MonkeyPatch, variable):
     if os.name == 'nt':
         # Windows has special handling so we need to disable that to make the
         # tests work properly
@@ -130,7 +131,7 @@ def test_enable_colors_flags():
 
 
 class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
-    _fixed_colors: typing.ClassVar[widgets.TFixedColors] = widgets.TFixedColors(
+    _fixed_colors: ClassVar[widgets.TFixedColors] = widgets.TFixedColors(
         fg_none=progressbar.widgets.colors.yellow,
         bg_none=None,
     )
@@ -140,7 +141,7 @@ class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
 
 
 class _TestFixedGradientSupport(progressbar.widgets.WidgetBase):
-    _gradient_colors: typing.ClassVar[widgets.TGradientColors] = (
+    _gradient_colors: ClassVar[widgets.TGradientColors] = (
         widgets.TGradientColors(
             fg=progressbar.widgets.colors.gradient,
             bg=None,
