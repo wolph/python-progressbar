@@ -14,7 +14,7 @@ automatically enable features like auto-resizing when the system supports it.
 __title__ = 'Python Progressbar'
 __package_name__ = 'progressbar2'
 __author__ = 'Rick van Hattem (Wolph)'
-__description__ = ' '.join(
+__description__: str = ' '.join(
     """
 A Python Progressbar library to provide visual (yet text based) progress to
 long running operations.

@@ -1,7 +1,7 @@
 import progressbar
 
 
-def test_unknown_length():
+def test_unknown_length() -> None:
     pb = progressbar.ProgressBar(
         widgets=[progressbar.AnimatedMarker()],
         max_value=progressbar.UnknownLength,
@@ -9,7 +9,7 @@ def test_unknown_length():
     assert pb.max_value is progressbar.UnknownLength
 
 
-def test_unknown_length_default_widgets():
+def test_unknown_length_default_widgets() -> None:
     # The default widgets picked should work without a known max_value
     pb = progressbar.ProgressBar(max_value=progressbar.UnknownLength).start()
     for i in range(60):
@@ -17,7 +17,7 @@ def test_unknown_length_default_widgets():
     pb.finish()
 
 
-def test_unknown_length_at_start():
+def test_unknown_length_at_start() -> None:
     # The default widgets should be picked after we call .start()
     pb = progressbar.ProgressBar().start(max_value=progressbar.UnknownLength)
     for i in range(60):

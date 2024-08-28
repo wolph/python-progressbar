@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 import timeit
@@ -8,7 +10,7 @@ import pytest
 
 import progressbar
 
-LOG_LEVELS = {
+LOG_LEVELS: dict[str, int] = {
     '0': logging.ERROR,
     '1': logging.WARNING,
     '2': logging.INFO,
@@ -16,14 +18,14 @@ LOG_LEVELS = {
 }
 
 
-def pytest_configure(config):
+def pytest_configure(config) -> None:
     logging.basicConfig(
         level=LOG_LEVELS.get(config.option.verbose, logging.DEBUG),
     )
 
 
 @pytest.fixture(autouse=True)
-def small_interval(monkeypatch):
+def small_interval(monkeypatch) -> None:
     # Remove the update limit for tests by default
     monkeypatch.setattr(
         progressbar.ProgressBar,

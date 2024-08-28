@@ -44,7 +44,7 @@ class WindowsConsoleModeFlags(enum.IntFlag):
     DISABLE_NEWLINE_AUTO_RETURN = 0x0008
     ENABLE_LVB_GRID_WORLDWIDE = 0x0010
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.name} (0x{self.value:04X})'
 
 
@@ -149,7 +149,7 @@ def set_text_color(color) -> None:
     _kernel32.SetConsoleTextAttribute(_h_console_output, color)
 
 
-def print_color(text, color):
+def print_color(text, color) -> None:
     set_text_color(color)
     print(text)  # noqa: T201
     set_text_color(7)  # Reset to default color, grey

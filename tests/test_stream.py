@@ -8,7 +8,7 @@ import progressbar
 from progressbar import terminal
 
 
-def test_nowrap():
+def test_nowrap() -> None:
     # Make sure we definitely unwrap
     for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
@@ -31,7 +31,7 @@ def test_nowrap():
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
-def test_wrap():
+def test_wrap() -> None:
     # Make sure we definitely unwrap
     for _i in range(5):
         progressbar.streams.unwrap(stderr=True, stdout=True)
@@ -58,7 +58,7 @@ def test_wrap():
         progressbar.streams.unwrap(stderr=True, stdout=True)
 
 
-def test_excepthook():
+def test_excepthook() -> None:
     progressbar.streams.wrap(stderr=True, stdout=True)
 
     try:
@@ -70,7 +70,7 @@ def test_excepthook():
     progressbar.streams.unwrap_excepthook()
 
 
-def test_fd_as_io_stream():
+def test_fd_as_io_stream() -> None:
     stream = io.StringIO()
     with progressbar.ProgressBar(fd=stream) as pb:
         for i in range(101):
@@ -78,7 +78,7 @@ def test_fd_as_io_stream():
     stream.close()
 
 
-def test_no_newlines():
+def test_no_newlines() -> None:
     kwargs = dict(
         redirect_stderr=True,
         redirect_stdout=True,
@@ -101,18 +101,18 @@ def test_no_newlines():
 
 @pytest.mark.parametrize('stream', [sys.__stdout__, sys.__stderr__])
 @pytest.mark.skipif(os.name == 'nt', reason='Windows does not support this')
-def test_fd_as_standard_streams(stream):
+def test_fd_as_standard_streams(stream) -> None:
     with progressbar.ProgressBar(fd=stream) as pb:
         for i in range(101):
             pb.update(i)
 
 
-def test_line_offset_stream_wrapper():
+def test_line_offset_stream_wrapper() -> None:
     stream = terminal.LineOffsetStreamWrapper(5, io.StringIO())
     stream.write('Hello World!')
 
 
-def test_last_line_stream_methods():
+def test_last_line_stream_methods() -> None:
     stream = terminal.LastLineStream(io.StringIO())
 
     # Test write method

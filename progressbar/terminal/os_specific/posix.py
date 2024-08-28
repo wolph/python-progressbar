@@ -3,7 +3,7 @@ import termios
 import tty
 
 
-def getch():
+def getch() -> str:
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)  # type: ignore
     try:

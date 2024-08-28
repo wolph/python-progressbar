@@ -9,9 +9,11 @@ import os
 import sys
 import time
 import timeit
+import typing
 import warnings
 from copy import deepcopy
 from datetime import datetime
+from types import FrameType
 
 from python_utils import converters, types
 
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 # float also accepts integers and longs but we don't want an explicit union
 # due to type checking complexity
 NumberT = float
+ValueT: typing.TypeAlias = NumberT | type[base.UnknownLength] | None
 
 T = types.TypeVar('T')
 
@@ -86,7 +89,7 @@ class ProgressBarMixinBase(abc.ABC):
     min_value: NumberT
     #: Maximum (and final) value. Beyond this value an error will be raised
     #: unless the `max_error` parameter is `False`.
-    max_value: NumberT | types.Type[base.UnknownLength]
+    max_value: ValueT
     #: The time the progressbar reached `max_value` or when `finish()` was
     #: called.
     end_time: types.Optional[datetime]
@@ -114,13 +117,13 @@ class ProgressBarMixinBase(abc.ABC):
 
     last_update_time = property(get_last_update_time, set_last_update_time)
 
-    def __init__(self, **kwargs):  # noqa: B027
+    def __init__(self, **kwargs: typing.Any):  # noqa: B027
         pass
 
-    def start(self, **kwargs):
+    def start(self, **kwargs: typing.Any):
         self._started = True
 
-    def update(self, value=None):  # noqa: B027
+    def update(self, value: ValueT = None):  # noqa: B027
         pass
 
     def finish(self):  # pragma: no cover
@@ -148,12 +151,12 @@ class ProgressBarMixinBase(abc.ABC):
         return self._finished
 
 
-class ProgressBarBase(types.Iterable, ProgressBarMixinBase):
+class ProgressBarBase(types.Iterable[NumberT], ProgressBarMixinBase):
     _index_counter = itertools.count()
     index: int = -1
     label: str = ''
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: typing.Any):
         self.index = next(self._index_counter)
         super().__init__(**kwargs)
 
@@ -194,7 +197,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         line_breaks: bool | None = None,
         enable_colors: progressbar.env.ColorSupport | None = None,
         line_offset: int = 0,
-        **kwargs,
+        **kwargs: typing.Any,
     ):
         if fd is sys.stdout:
             fd = utils.streams.original_stdout
@@ -295,7 +298,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
     def print(self, *args: types.Any, **kwargs: types.Any) -> None:
         print(*args, file=self.fd, **kwargs)
 
-    def start(self, **kwargs):
+    def start(self, **kwargs: typing.Any):
         os_specific.set_console_mode()
         super().start()
 
@@ -377,13 +380,13 @@ class DefaultFdMixin(ProgressBarMixinBase):
         return result
 
     @classmethod
-    def _to_unicode(cls, args):
+    def _to_unicode(cls, args: typing.Any):
         for arg in args:
             yield converters.to_unicode(arg)
 
 
 class ResizableMixin(ProgressBarMixinBase):
-    def __init__(self, term_width: int | None = None, **kwargs):
+    def __init__(self, term_width: int | None = None, **kwargs: typing.Any):
         ProgressBarMixinBase.__init__(self, **kwargs)
 
         self.signal_set = False
@@ -403,7 +406,9 @@ class ResizableMixin(ProgressBarMixinBase):
                 )
                 self.signal_set = True
 
-    def _handle_resize(self, signum=None, frame=None):
+    def _handle_resize(
+        self, signum: int | None = None, frame: None | FrameType = None
+    ):
         "Tries to catch resize signals sent from the terminal."
         w, h = utils.get_terminal_size()
         self.term_width = w
@@ -423,10 +428,10 @@ class ResizableMixin(ProgressBarMixinBase):
 class StdRedirectMixin(DefaultFdMixin):
     redirect_stderr: bool = False
     redirect_stdout: bool = False
-    stdout: utils.WrappingIO | base.IO
-    stderr: utils.WrappingIO | base.IO
-    _stdout: base.IO
-    _stderr: base.IO
+    stdout: utils.WrappingIO | base.IO[typing.Any]
+    stderr: utils.WrappingIO | base.IO[typing.Any]
+    _stdout: base.IO[typing.Any]
+    _stderr: base.IO[typing.Any]
 
     def __init__(
         self,
@@ -440,7 +445,7 @@ class StdRedirectMixin(DefaultFdMixin):
         self._stdout = self.stdout = sys.stdout
         self._stderr = self.stderr = sys.stderr
 
-    def start(self, *args, **kwargs):
+    def start(self, *args: typing.Any, **kwargs: typing.Any):
         if self.redirect_stdout:
             utils.streams.wrap_stdout()
 
@@ -456,21 +461,21 @@ class StdRedirectMixin(DefaultFdMixin):
         utils.streams.start_capturing(self)
         DefaultFdMixin.start(self, *args, **kwargs)
 
-    def update(self, value: types.Optional[float] = None):
-        if not self.line_breaks and utils.streams.needs_clear():
-            self.fd.write('\r' + ' ' * self.term_width + '\r')
+        def update(self, value: types.Optional[NumberT] = None):
+            if not self.line_breaks and utils.streams.needs_clear():
+                self.fd.write('\r' + ' ' * self.term_width + '\r')
 
-        utils.streams.flush()
-        DefaultFdMixin.update(self, value=value)
+            utils.streams.flush()
+            DefaultFdMixin.update(self, value=value)
 
-    def finish(self, end='\n'):
-        DefaultFdMixin.finish(self, end=end)
-        utils.streams.stop_capturing(self)
-        if self.redirect_stdout:
-            utils.streams.unwrap_stdout()
+        def finish(self, end='\n'):
+            DefaultFdMixin.finish(self, end=end)
+            utils.streams.stop_capturing(self)
+            if self.redirect_stdout:
+                utils.streams.unwrap_stdout()
 
-        if self.redirect_stderr:
-            utils.streams.unwrap_stderr()
+            if self.redirect_stderr:
+                utils.streams.unwrap_stderr()
 
 
 class ProgressBar(
@@ -560,7 +565,7 @@ class ProgressBar(
     def __init__(
         self,
         min_value: NumberT = 0,
-        max_value: NumberT | types.Type[base.UnknownLength] | None = None,
+        max_value: ValueT = None,
         widgets: types.Optional[
             types.Sequence[widgets_module.WidgetBase | str]
         ] = None,
@@ -874,7 +879,9 @@ class ProgressBar(
         "Updates the ProgressBar by adding a new value."
         return self.increment(value)
 
-    def increment(self, value=1, *args, **kwargs):
+    def increment(
+        self, value: NumberT = 1, *args: typing.Any, **kwargs: typing.Any
+    ):
         self.update(self.value + value, *args, **kwargs)
         return self
 
@@ -902,7 +909,9 @@ class ProgressBar(
         # No need to redraw yet
         return False
 
-    def update(self, value=None, force=False, **kwargs):
+    def update(
+        self, value: ValueT = None, force: bool = False, **kwargs: typing.Any
+    ):
         "Updates the ProgressBar to a new value."
         if self.start_time is None:
             self.start()
@@ -927,10 +936,10 @@ class ProgressBar(
                         f'{self.min_value} and {self.max_value}',
                     )
                 else:
-                    value = self.max_value
+                    value = typing.cast(NumberT, self.max_value)
 
             self.previous_value = self.value
-            self.value = value  # type: ignore
+            self.value = value
 
         # Save the updated values for dynamic messages
         variables_changed = self._update_variables(kwargs)
@@ -951,7 +960,7 @@ class ProgressBar(
                 variables_changed = True
         return variables_changed
 
-    def _update_parents(self, value):
+    def _update_parents(self, value: ValueT):
         self.updates += 1
         ResizableMixin.update(self, value=value)
         ProgressBarBase.update(self, value=value)
@@ -960,7 +969,13 @@ class ProgressBar(
         # Only flush if something was actually written
         self.fd.flush()
 
-    def start(self, max_value=None, init=True, *args, **kwargs):
+    def start(
+        self,
+        max_value: NumberT | None = None,
+        init: bool = True,
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> typing.Self:
         """Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
@@ -1051,7 +1066,7 @@ class ProgressBar(
                     interval,
                 )
 
-    def finish(self, end='\n', dirty=False):
+    def finish(self, end: str = '\n', dirty: bool = False):
         """
         Puts the ProgressBar bar in the finished state.
 
@@ -1122,11 +1137,11 @@ class NullBar(ProgressBar):
     flags.
     """
 
-    def start(self, *args, **kwargs):
+    def start(self, *args: typing.Any, **kwargs: typing.Any):
         return self
 
-    def update(self, *args, **kwargs):
+    def update(self, *args: typing.Any, **kwargs: typing.Any):
         return self
 
-    def finish(self, *args, **kwargs):
+    def finish(self, *args: typing.Any, **kwargs: typing.Any):
         return self

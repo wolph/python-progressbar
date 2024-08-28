@@ -4,7 +4,7 @@ import time
 import progressbar
 
 
-def test_timer():
+def test_timer() -> None:
     """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.Timer(),
@@ -24,7 +24,7 @@ def test_timer():
     p.finish()
 
 
-def test_eta():
+def test_eta() -> None:
     """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.ETA(),
@@ -51,7 +51,7 @@ def test_eta():
     p.update(2)
 
 
-def test_adaptive_eta():
+def test_adaptive_eta() -> None:
     """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.AdaptiveETA(),
@@ -71,7 +71,7 @@ def test_adaptive_eta():
     p.finish()
 
 
-def test_adaptive_transfer_speed():
+def test_adaptive_transfer_speed() -> None:
     """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.AdaptiveTransferSpeed(),
@@ -89,7 +89,7 @@ def test_adaptive_transfer_speed():
     p.finish()
 
 
-def test_etas(monkeypatch):
+def test_etas(monkeypatch) -> None:
     """Compare file transfer speed to adaptive transfer speed"""
     n = 10
     interval = datetime.timedelta(seconds=1)
@@ -151,7 +151,7 @@ def test_etas(monkeypatch):
     #         assert a['elapsed'] > b['elapsed']
 
 
-def test_non_changing_eta():
+def test_non_changing_eta() -> None:
     """Testing (Adaptive)ETA when the value doesn't actually change"""
     widgets = [
         progressbar.AdaptiveETA(),

@@ -13,7 +13,7 @@ import progressbar
         None,
     ],
 )
-def test_status(status):
+def test_status(status) -> None:
     with progressbar.ProgressBar(
         widgets=[progressbar.widgets.JobStatusBar('status')],
     ) as bar:

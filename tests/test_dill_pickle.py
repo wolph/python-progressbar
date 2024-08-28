@@ -3,7 +3,7 @@ import dill  # type: ignore
 import progressbar
 
 
-def test_dill():
+def test_dill() -> None:
     bar = progressbar.ProgressBar()
     assert bar._started is False
     assert bar._finished is False

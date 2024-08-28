@@ -17,7 +17,7 @@ from . import algorithms, base, terminal, utils
 from .terminal import colors
 
 if types.TYPE_CHECKING:
-    from .bar import ProgressBarMixinBase
+    from .bar import NumberT, ProgressBarMixinBase
 
 logger = logging.getLogger(__name__)
 
@@ -930,7 +930,11 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
     """Returns progress as a count of the total (e.g.: "5 of 47")."""
 
     max_width_cache: dict[
-        types.Union[str, tuple[float, float | types.Type[base.UnknownLength]]],
+        str
+        | tuple[
+            NumberT | types.Type[base.UnknownLength] | None,
+            NumberT | types.Type[base.UnknownLength] | None,
+        ],
         types.Optional[int],
     ]
 

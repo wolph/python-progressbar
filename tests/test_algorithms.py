@@ -5,7 +5,7 @@ import pytest
 from progressbar import algorithms
 
 
-def test_ema_initialization():
+def test_ema_initialization() -> None:
     ema = algorithms.ExponentialMovingAverage()
     assert ema.alpha == 0.5
     assert ema.value == 0
@@ -24,13 +24,13 @@ def test_ema_initialization():
         (0.8, 50, 40),
     ],
 )
-def test_ema_update(alpha, new_value, expected):
+def test_ema_update(alpha, new_value: float, expected) -> None:
     ema = algorithms.ExponentialMovingAverage(alpha)
     result = ema.update(new_value, timedelta(seconds=1))
     assert result == expected
 
 
-def test_dema_initialization():
+def test_dema_initialization() -> None:
     dema = algorithms.DoubleExponentialMovingAverage()
     assert dema.alpha == 0.5
     assert dema.ema1 == 0
@@ -49,7 +49,7 @@ def test_dema_initialization():
         (0.8, 50, 48.0),
     ],
 )
-def test_dema_update(alpha, new_value, expected):
+def test_dema_update(alpha, new_value: float, expected) -> None:
     dema = algorithms.DoubleExponentialMovingAverage(alpha)
     result = dema.update(new_value, timedelta(seconds=1))
     assert result == expected

@@ -22,7 +22,7 @@ ENVIRONMENT_VARIABLES = [
 
 
 @pytest.fixture(autouse=True)
-def clear_env(monkeypatch: pytest.MonkeyPatch):
+def clear_env(monkeypatch: pytest.MonkeyPatch) -> None:
     # Clear all environment variables that might affect the tests
     for variable in ENVIRONMENT_VARIABLES:
         monkeypatch.delenv(variable, raising=False)
@@ -39,8 +39,8 @@ def clear_env(monkeypatch: pytest.MonkeyPatch):
 )
 def test_color_environment_variables(
     monkeypatch: pytest.MonkeyPatch,
-    variable,
-):
+    variable: str,
+) -> None:
     if os.name == 'nt':
         # Windows has special handling so we need to disable that to make the
         # tests work properly
@@ -87,7 +87,7 @@ def test_color_environment_variables(
         'xterm',
     ],
 )
-def test_color_support_from_env(monkeypatch, variable, value):
+def test_color_support_from_env(monkeypatch, variable, value) -> None:
     if os.name == 'nt':
         # Windows has special handling so we need to disable that to make the
         # tests work properly
@@ -104,7 +104,7 @@ def test_color_support_from_env(monkeypatch, variable, value):
         'JUPYTER_LINES',
     ],
 )
-def test_color_support_from_env_jupyter(monkeypatch, variable):
+def test_color_support_from_env_jupyter(monkeypatch, variable) -> None:
     monkeypatch.setattr(env, 'JUPYTER', True)
     assert env.ColorSupport.from_env() == env.ColorSupport.XTERM_TRUECOLOR
 
@@ -116,7 +116,7 @@ def test_color_support_from_env_jupyter(monkeypatch, variable):
         assert env.ColorSupport.from_env() == env.ColorSupport.NONE
 
 
-def test_enable_colors_flags():
+def test_enable_colors_flags() -> None:
     bar = progressbar.ProgressBar(enable_colors=True)
     assert bar.enable_colors
 
@@ -138,7 +138,7 @@ class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
         bg_none=None,
     )
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> None:
         pass
 
 
@@ -150,7 +150,7 @@ class _TestFixedGradientSupport(progressbar.widgets.WidgetBase):
         )
     )
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> None:
         pass
 
 
@@ -163,12 +163,12 @@ class _TestFixedGradientSupport(progressbar.widgets.WidgetBase):
         _TestFixedGradientSupport,
     ],
 )
-def test_color_widgets(widget):
+def test_color_widgets(widget) -> None:
     assert widget().uses_colors
     print(f'{widget} has colors? {widget.uses_colors}')
 
 
-def test_color_gradient():
+def test_color_gradient() -> None:
     gradient = terminal.ColorGradient(colors.red)
     assert gradient.get_color(0) == gradient.get_color(-1)
     assert gradient.get_color(1) == gradient.get_color(2)
@@ -197,7 +197,7 @@ def test_color_gradient():
         progressbar.Counter,
     ],
 )
-def test_no_color_widgets(widget):
+def test_no_color_widgets(widget) -> None:
     assert not widget().uses_colors
     print(f'{widget} has colors? {widget.uses_colors}')
 
@@ -209,7 +209,7 @@ def test_no_color_widgets(widget):
     ).uses_colors
 
 
-def test_colors(monkeypatch):
+def test_colors(monkeypatch) -> None:
     for colors_ in Colors.by_rgb.values():
         for color in colors_:
             rgb = color.rgb
@@ -232,7 +232,7 @@ def test_colors(monkeypatch):
             assert color('test')
 
 
-def test_color():
+def test_color() -> None:
     color = colors.red
     if os.name != 'nt':
         assert color('x') == color.fg('x') != 'x'
@@ -264,7 +264,7 @@ def test_color():
         (terminal.RGB(192, 192, 192), terminal.HSL(0, 0, 75)),
     ],
 )
-def test_rgb_to_hls(rgb, hls):
+def test_rgb_to_hls(rgb, hls) -> None:
     assert terminal.HSL.from_rgb(rgb) == hls
 
 
@@ -335,8 +335,15 @@ def test_rgb_to_hls(rgb, hls):
     ],
 )
 def test_apply_colors(
-    text, fg, bg, fg_none, bg_none, percentage, expected, monkeypatch
-):
+    text: str,
+    fg,
+    bg,
+    fg_none,
+    bg_none,
+    percentage: float | None,
+    expected,
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(
         env,
         'COLOR_SUPPORT',
@@ -355,7 +362,7 @@ def test_apply_colors(
     )
 
 
-def test_windows_colors(monkeypatch):
+def test_windows_colors(monkeypatch) -> None:
     monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.WINDOWS)
     assert (
         apply_colors(
@@ -371,7 +378,7 @@ def test_windows_colors(monkeypatch):
     colors.red.underline('test')
 
 
-def test_ansi_color(monkeypatch):
+def test_ansi_color(monkeypatch) -> None:
     color = progressbar.terminal.Color(
         colors.red.rgb,
         colors.red.hls,
@@ -393,5 +400,5 @@ def test_ansi_color(monkeypatch):
         assert color.ansi is not None or color_support == env.ColorSupport.NONE
 
 
-def test_sgr_call():
+def test_sgr_call() -> None:
     assert progressbar.terminal.encircled('test') == '\x1b[52mtest\x1b[54m'

@@ -1,13 +1,19 @@
+from __future__ import annotations
+
 import time
 
 import pytest
 
 import progressbar
 
-max_values = [None, 10, progressbar.UnknownLength]
+max_values: list[None | type[progressbar.base.UnknownLength] | int] = [
+    None,
+    10,
+    progressbar.UnknownLength,
+]
 
 
-def test_create_wrapper():
+def test_create_wrapper() -> None:
     with pytest.raises(AssertionError):
         progressbar.widgets.create_wrapper('ab')
 
@@ -15,7 +21,7 @@ def test_create_wrapper():
         progressbar.widgets.create_wrapper(123)
 
 
-def test_widgets_small_values():
+def test_widgets_small_values() -> None:
     widgets = [
         'Test: ',
         progressbar.Percentage(),
@@ -37,7 +43,7 @@ def test_widgets_small_values():
 
 
 @pytest.mark.parametrize('max_value', [10**6, 10**8])
-def test_widgets_large_values(max_value):
+def test_widgets_large_values(max_value) -> None:
     widgets = [
         'Test: ',
         progressbar.Percentage(),
@@ -57,7 +63,7 @@ def test_widgets_large_values(max_value):
     p.finish()
 
 
-def test_format_widget():
+def test_format_widget() -> None:
     widgets = [
         progressbar.FormatLabel(f'%({mapping})r')
         for mapping in progressbar.FormatLabel.mapping
@@ -68,7 +74,7 @@ def test_format_widget():
 
 
 @pytest.mark.parametrize('max_value', [None, 10])
-def test_all_widgets_small_values(max_value):
+def test_all_widgets_small_values(max_value) -> None:
     widgets = [
         progressbar.Timer(),
         progressbar.ETA(),
@@ -97,7 +103,7 @@ def test_all_widgets_small_values(max_value):
 
 
 @pytest.mark.parametrize('max_value', [10**6, 10**7])
-def test_all_widgets_large_values(max_value):
+def test_all_widgets_large_values(max_value) -> None:
     widgets = [
         progressbar.Timer(),
         progressbar.ETA(),
@@ -128,7 +134,7 @@ def test_all_widgets_large_values(max_value):
 
 @pytest.mark.parametrize('min_width', [None, 1, 2, 80, 120])
 @pytest.mark.parametrize('term_width', [1, 2, 80, 120])
-def test_all_widgets_min_width(min_width, term_width):
+def test_all_widgets_min_width(min_width, term_width) -> None:
     widgets = [
         progressbar.Timer(min_width=min_width),
         progressbar.ETA(min_width=min_width),
@@ -165,7 +171,7 @@ def test_all_widgets_min_width(min_width, term_width):
 
 @pytest.mark.parametrize('max_width', [None, 1, 2, 80, 120])
 @pytest.mark.parametrize('term_width', [1, 2, 80, 120])
-def test_all_widgets_max_width(max_width, term_width):
+def test_all_widgets_max_width(max_width, term_width) -> None:
     widgets = [
         progressbar.Timer(max_width=max_width),
         progressbar.ETA(max_width=max_width),

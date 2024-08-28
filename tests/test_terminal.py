@@ -7,7 +7,7 @@ import progressbar
 from progressbar import terminal
 
 
-def test_left_justify():
+def test_left_justify() -> None:
     """Left justify using the terminal width"""
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
@@ -21,7 +21,7 @@ def test_left_justify():
         p.update(i)
 
 
-def test_right_justify():
+def test_right_justify() -> None:
     """Right justify using the terminal width"""
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(marker=progressbar.RotatingMarker())],
@@ -35,7 +35,7 @@ def test_right_justify():
         p.update(i)
 
 
-def test_auto_width(monkeypatch):
+def test_auto_width(monkeypatch) -> None:
     """Right justify using the terminal width"""
 
     def ioctl(*args):
@@ -65,7 +65,7 @@ def test_auto_width(monkeypatch):
         pass  # Skip on Windows
 
 
-def test_fill_right():
+def test_fill_right() -> None:
     """Right justify using the terminal width"""
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(fill_left=False)],
@@ -78,7 +78,7 @@ def test_fill_right():
         p.update(i)
 
 
-def test_fill_left():
+def test_fill_left() -> None:
     """Right justify using the terminal width"""
     p = progressbar.ProgressBar(
         widgets=[progressbar.BouncingBar(fill_left=True)],
@@ -91,7 +91,7 @@ def test_fill_left():
         p.update(i)
 
 
-def test_no_fill(monkeypatch):
+def test_no_fill(monkeypatch) -> None:
     """Simply bounce within the terminal width"""
     bar = progressbar.BouncingBar()
     bar.INTERVAL = timedelta(seconds=1)
@@ -108,7 +108,7 @@ def test_no_fill(monkeypatch):
         p.start_time = p.start_time - timedelta(seconds=i)
 
 
-def test_stdout_redirection():
+def test_stdout_redirection() -> None:
     p = progressbar.ProgressBar(
         fd=sys.stdout,
         max_value=10,
@@ -120,7 +120,7 @@ def test_stdout_redirection():
         p.update(i)
 
 
-def test_double_stdout_redirection():
+def test_double_stdout_redirection() -> None:
     p = progressbar.ProgressBar(max_value=10, redirect_stdout=True)
     p2 = progressbar.ProgressBar(max_value=10, redirect_stdout=True)
 
@@ -130,7 +130,7 @@ def test_double_stdout_redirection():
         p2.update(i)
 
 
-def test_stderr_redirection():
+def test_stderr_redirection() -> None:
     p = progressbar.ProgressBar(max_value=10, redirect_stderr=True)
 
     for i in range(10):
@@ -138,7 +138,7 @@ def test_stderr_redirection():
         p.update(i)
 
 
-def test_stdout_stderr_redirection():
+def test_stdout_stderr_redirection() -> None:
     p = progressbar.ProgressBar(
         max_value=10,
         redirect_stdout=True,
@@ -155,7 +155,7 @@ def test_stdout_stderr_redirection():
     p.finish()
 
 
-def test_resize(monkeypatch):
+def test_resize(monkeypatch) -> None:
     def ioctl(*args):
         return '\xbf\x00\xeb\x00\x00\x00\x00\x00'
 
@@ -180,7 +180,7 @@ def test_resize(monkeypatch):
         pass  # Skip on Windows
 
 
-def test_base():
+def test_base() -> None:
     assert str(terminal.CUP)
     assert str(terminal.CLEAR_SCREEN_ALL_AND_HISTORY)
 

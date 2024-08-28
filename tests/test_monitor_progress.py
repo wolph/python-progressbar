@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # fmt: off
 import os
 import pprint
@@ -30,11 +32,11 @@ def _non_empty_lines(lines):
 
 def _create_script(
     widgets=None,
-    items=None,
-    loop_code='fake_time.tick(1)',
-    term_width=60,
+    items: list[int] | None=None,
+    loop_code: str='fake_time.tick(1)',
+    term_width: int=60,
     **kwargs,
-):
+) -> str:
     if items is None:
         items = list(range(9))
     kwargs['term_width'] = term_width
@@ -63,7 +65,7 @@ def _create_script(
     return script
 
 
-def test_list_example(testdir):
+def test_list_example(testdir) -> None:
     """Run the simple example code in a python subprocess and then compare its
     stderr to what we expect to see from it.  We run it in a subprocess to
     best capture its stderr. We expect to see match_lines in order in the
@@ -95,7 +97,7 @@ def test_list_example(testdir):
     ])
 
 
-def test_generator_example(testdir):
+def test_generator_example(testdir) -> None:
     """Run the simple example code in a python subprocess and then compare its
     stderr to what we expect to see from it.  We run it in a subprocess to
     best capture its stderr. We expect to see match_lines in order in the
@@ -118,7 +120,7 @@ def test_generator_example(testdir):
     result.stderr.re_match_lines(lines)
 
 
-def test_rapid_updates(testdir):
+def test_rapid_updates(testdir) -> None:
     """Run some example code that updates 10 times, then sleeps .1 seconds,
     this is meant to test that the progressbar progresses normally with
     this sample code, since there were issues with it in the past"""
@@ -156,7 +158,7 @@ def test_rapid_updates(testdir):
     )
 
 
-def test_non_timed(testdir):
+def test_non_timed(testdir) -> None:
     result = testdir.runpython(
         testdir.makepyfile(
             _create_script(
@@ -179,7 +181,7 @@ def test_non_timed(testdir):
     )
 
 
-def test_line_breaks(testdir):
+def test_line_breaks(testdir) -> None:
     result = testdir.runpython(
         testdir.makepyfile(
             _create_script(
@@ -203,7 +205,7 @@ def test_line_breaks(testdir):
     )
 
 
-def test_no_line_breaks(testdir):
+def test_no_line_breaks(testdir) -> None:
     result = testdir.runpython(
         testdir.makepyfile(
             _create_script(
@@ -227,7 +229,7 @@ def test_no_line_breaks(testdir):
     ]
 
 
-def test_percentage_label_bar(testdir):
+def test_percentage_label_bar(testdir) -> None:
     result = testdir.runpython(
         testdir.makepyfile(
             _create_script(
@@ -251,7 +253,7 @@ def test_percentage_label_bar(testdir):
     ]
 
 
-def test_granular_bar(testdir):
+def test_granular_bar(testdir) -> None:
     result = testdir.runpython(
         testdir.makepyfile(
             _create_script(
@@ -275,7 +277,7 @@ def test_granular_bar(testdir):
     ]
 
 
-def test_colors(testdir):
+def test_colors(testdir) -> None:
     kwargs = dict(
         items=range(1),
         widgets=['\033[92mgreen\033[0m'],

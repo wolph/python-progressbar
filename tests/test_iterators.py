@@ -5,21 +5,21 @@ import pytest
 import progressbar
 
 
-def test_list():
+def test_list() -> None:
     """Progressbar can guess max_value automatically."""
     p = progressbar.ProgressBar()
     for _i in p(range(10)):
         time.sleep(0.001)
 
 
-def test_iterator_with_max_value():
+def test_iterator_with_max_value() -> None:
     """Progressbar can't guess max_value."""
     p = progressbar.ProgressBar(max_value=10)
     for _i in p(iter(range(10))):
         time.sleep(0.001)
 
 
-def test_iterator_without_max_value_error():
+def test_iterator_without_max_value_error() -> None:
     """Progressbar can't guess max_value."""
     p = progressbar.ProgressBar()
 
@@ -29,7 +29,7 @@ def test_iterator_without_max_value_error():
     assert p.max_value is progressbar.UnknownLength
 
 
-def test_iterator_without_max_value():
+def test_iterator_without_max_value() -> None:
     """Progressbar can't guess max_value."""
     p = progressbar.ProgressBar(
         widgets=[
@@ -43,7 +43,7 @@ def test_iterator_without_max_value():
         time.sleep(0.001)
 
 
-def test_iterator_with_incorrect_max_value():
+def test_iterator_with_incorrect_max_value() -> None:
     """Progressbar can't guess max_value."""
     p = progressbar.ProgressBar(max_value=10)
     with pytest.raises(ValueError):
@@ -51,7 +51,7 @@ def test_iterator_with_incorrect_max_value():
             time.sleep(0.001)
 
 
-def test_adding_value():
+def test_adding_value() -> None:
     p = progressbar.ProgressBar(max_value=10)
     p.start()
     p.update(5)

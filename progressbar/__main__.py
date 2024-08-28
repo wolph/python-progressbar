@@ -272,7 +272,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None):  # noqa: C901
+def main(argv: list[str] | None = None) -> None:  # noqa: C901
     """
     Main function for the `progressbar` command.
 

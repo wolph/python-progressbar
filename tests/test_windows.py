@@ -21,7 +21,7 @@ _WIDGETS = [
     ' ',
     progressbar.ETA(),
 ]
-_MB = 1024 * 1024
+_MB: int = 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ def scrape_console(line_count):
 
 
 # ---------------------------------------------------------------------------
-def runprogress():
+def runprogress() -> int:
     print('***BEGIN***')
     b = progressbar.ProgressBar(
         widgets=['example.m4v: ', *_WIDGETS],
@@ -70,7 +70,7 @@ def test_windows(testdir: pytest.Testdir) -> None:
     )
 
 
-def main():
+def main() -> int:
     runprogress()
 
     scraped_lines = scrape_console(100)

@@ -6,7 +6,7 @@ import pytest
 from progressbar import utils
 
 
-def test_wrappingio():
+def test_wrappingio() -> None:
     # Test the wrapping of our version of sys.stdout`   `   q
     fd = utils.WrappingIO(sys.stdout)
     assert fd.fileno()
@@ -32,7 +32,7 @@ def test_wrappingio():
         next(iter(fd))
 
 
-def test_wrapping_stringio():
+def test_wrapping_stringio() -> None:
     # Test the wrapping of our version of sys.stdout`   `   q
     string_io = io.StringIO()
     fd = utils.WrappingIO(string_io)

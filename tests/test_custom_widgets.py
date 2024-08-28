@@ -16,7 +16,7 @@ class CrazyFileTransferSpeed(progressbar.FileTransferSpeed):
             return progressbar.FileTransferSpeed.update(self, pbar)
 
 
-def test_crazy_file_transfer_speed_widget():
+def test_crazy_file_transfer_speed_widget() -> None:
     widgets = [
         # CrazyFileTransferSpeed(),
         ' <<<',
@@ -37,7 +37,7 @@ def test_crazy_file_transfer_speed_widget():
     p.finish()
 
 
-def test_variable_widget_widget():
+def test_variable_widget_widget() -> None:
     widgets = [
         ' [',
         progressbar.Timer(),
@@ -75,7 +75,7 @@ def test_variable_widget_widget():
     p.finish()
 
 
-def test_format_custom_text_widget():
+def test_format_custom_text_widget() -> None:
     widget = progressbar.FormatCustomText(
         'Spam: %(spam).1f kg, eggs: %(eggs)d',
         dict(

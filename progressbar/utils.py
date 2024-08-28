@@ -32,7 +32,7 @@ StringT = types.TypeVar('StringT', bound=types.StringTypes)
 
 
 def deltas_to_seconds(
-    *deltas,
+    *deltas: None | datetime.timedelta | float,
     default: types.Optional[types.Type[ValueError]] = ValueError,
 ) -> int | float | None:
     """
@@ -243,7 +243,7 @@ class StreamWrapper:
     capturing: int = 0
     listeners: set
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.stdout = self.original_stdout = sys.stdout
         self.stderr = self.original_stderr = sys.stderr
         self.original_excepthook = sys.excepthook
@@ -373,7 +373,12 @@ class StreamWrapper:
                     sys.stderr,
                 )
 
-    def excepthook(self, exc_type, exc_value, exc_traceback):
+    def excepthook(
+        self,
+        exc_type: type[BaseException],
+        exc_value: BaseException,
+        exc_traceback: types.TracebackType | None,
+    ) -> None:
         self.original_excepthook(exc_type, exc_value, exc_traceback)
         self.flush()
 
@@ -440,6 +445,6 @@ class AttributeDict(dict):
             raise AttributeError(f'No such attribute: {name}')
 
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 streams = StreamWrapper()
 atexit.register(streams.flush)

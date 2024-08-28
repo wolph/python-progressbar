@@ -1,7 +1,7 @@
 from progressbar import __about__
 
 
-def test_about():
+def test_about() -> None:
     assert __about__.__title__
     assert __about__.__package_name__
     assert __about__.__author__

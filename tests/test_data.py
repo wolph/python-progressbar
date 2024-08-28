@@ -20,6 +20,6 @@ import progressbar
         (2**90, '1024.0 YiB'),
     ],
 )
-def test_data_size(value, expected):
+def test_data_size(value, expected) -> None:
     widget = progressbar.DataSize()
     assert widget(None, dict(value=value)) == expected
