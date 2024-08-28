@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # Based on: https://www.ditig.com/256-colors-cheat-sheet
 import os
 
@@ -1035,7 +1037,7 @@ grey85 = Colors.register(RGB(218, 218, 218), HSL(0, 0, 85), 'Grey85', 253)
 grey89 = Colors.register(RGB(228, 228, 228), HSL(0, 0, 89), 'Grey89', 254)
 grey93 = Colors.register(RGB(238, 238, 238), HSL(0, 0, 93), 'Grey93', 255)
 
-dark_gradient = ColorGradient(
+dark_gradient: ColorGradient = ColorGradient(
     red1,
     orange_red1,
     dark_orange,
@@ -1045,7 +1047,7 @@ dark_gradient = ColorGradient(
     green_yellow,
     green1,
 )
-light_gradient = ColorGradient(
+light_gradient: ColorGradient = ColorGradient(
     red1,
     orange_red1,
     dark_orange,
@@ -1055,16 +1057,16 @@ light_gradient = ColorGradient(
     yellow4,
     green3,
 )
-bg_gradient = ColorGradient(black)
+bg_gradient: ColorGradient = ColorGradient(black)
 
 # Check if the background is light or dark. This is by no means a foolproof
 # method, but there is no reliable way to detect this.
-_colorfgbg = os.environ.get('COLORFGBG', '15;0').split(';')
+_colorfgbg: list[str] = os.environ.get('COLORFGBG', '15;0').split(';')
 if _colorfgbg[-1] == str(white.xterm):  # pragma: no cover
     # Light background
-    gradient = light_gradient
+    gradient: ColorGradient = light_gradient
     primary = black
 else:
     # Default, expect a dark background
-    gradient = dark_gradient
+    gradient: ColorGradient = dark_gradient
     primary = white

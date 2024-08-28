@@ -3,7 +3,7 @@ import time
 import progressbar
 
 
-def test_progressbar_1_widgets():
+def test_progressbar_1_widgets() -> None:
     widgets = [
         progressbar.AdaptiveETA(format='Time left: %s'),
         progressbar.Timer(format='Time passed: %s'),

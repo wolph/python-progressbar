@@ -1,5 +1,6 @@
-import progressbar
 import pytest
+
+import progressbar
 
 
 @pytest.mark.parametrize(
@@ -21,7 +22,7 @@ import pytest
         (1, 2**90, '1024.0 YiB/s'),
     ],
 )
-def test_file_transfer_speed(total_seconds_elapsed, value, expected):
+def test_file_transfer_speed(total_seconds_elapsed, value, expected) -> None:
     widget = progressbar.FileTransferSpeed()
     assert (
         widget(

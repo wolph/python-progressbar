@@ -6,13 +6,13 @@ import pathlib
 import sys
 import typing
 from pathlib import Path
-from typing import BinaryIO, TextIO
+from typing import IO, BinaryIO, TextIO
 
 import progressbar
 
 
 def size_to_bytes(size_str: str) -> int:
-    '''
+    """
     Convert a size string with suffixes 'k', 'm', etc., to bytes.
 
     Note: This function also supports '@' as a prefix to a file path to get the
@@ -28,7 +28,7 @@ def size_to_bytes(size_str: str) -> int:
     1024
     >>> size_to_bytes('1024p')
     1125899906842624
-    '''
+    """
 
     # Define conversion rates
     suffix_exponent = {
@@ -58,17 +58,17 @@ def size_to_bytes(size_str: str) -> int:
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
-    '''
+    """
     Create the argument parser for the `progressbar` command.
-    '''
+    """
 
     parser = argparse.ArgumentParser(
-        description='''
+        description="""
         Monitor the progress of data through a pipe.
 
         Note that this is a Python implementation of the original `pv` command
         that is functional but not yet feature complete.
-    '''
+    """
     )
 
     # Display switches
@@ -133,7 +133,10 @@ def create_argument_parser() -> argparse.ArgumentParser:
         '-n', '--numeric', action='store_true', help='Numeric output.'
     )
     parser.add_argument(
-        '-q', '--quiet', action='store_true', help='No output.'
+        '-q',
+        '--quiet',
+        action='store_true',
+        help='No output.',
     )
 
     # Output modifiers
@@ -269,8 +272,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None):  # noqa: C901
-    '''
+def main(argv: list[str] | None = None) -> None:  # noqa: C901
+    """
     Main function for the `progressbar` command.
 
     Args:
@@ -278,7 +281,7 @@ def main(argv: list[str] | None = None):  # noqa: C901
 
     Returns:
         None
-    '''
+    """
     parser: argparse.ArgumentParser = create_argument_parser()
     args: argparse.Namespace = parser.parse_args(argv)
 
@@ -287,7 +290,7 @@ def main(argv: list[str] | None = None):  # noqa: C901
             args.output, args.line_mode, stack
         )
 
-        input_paths: list[BinaryIO | TextIO | Path] = []
+        input_paths: list[BinaryIO | TextIO | Path | IO[typing.Any]] = []
         total_size: int = 0
         filesize_available: bool = True
         for filename in args.input:

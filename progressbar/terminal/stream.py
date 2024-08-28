@@ -9,7 +9,7 @@ from progressbar import base
 
 
 class TextIOOutputWrapper(base.TextIO):  # pragma: no cover
-    def __init__(self, stream: base.TextIO):
+    def __init__(self, stream: base.TextIO) -> None:
         self.stream = stream
 
     def close(self) -> None:
@@ -76,21 +76,25 @@ class LineOffsetStreamWrapper(TextIOOutputWrapper):
     UP = '\033[F'
     DOWN = '\033[B'
 
-    def __init__(self, lines=0, stream=sys.stderr):
+    def __init__(
+        self, lines: int = 0, stream: typing.TextIO = sys.stderr
+    ) -> None:
         self.lines = lines
         super().__init__(stream)
 
-    def write(self, data):
+    def write(self, data: str) -> int:
+        data = data.rstrip('\n')
         # Move the cursor up
         self.stream.write(self.UP * self.lines)
         # Print a carriage return to reset the cursor position
         self.stream.write('\r')
         # Print the data without newlines so we don't change the position
-        self.stream.write(data.rstrip('\n'))
+        self.stream.write(data)
         # Move the cursor down
         self.stream.write(self.DOWN * self.lines)
 
         self.flush()
+        return len(data)
 
 
 class LastLineStream(TextIOOutputWrapper):

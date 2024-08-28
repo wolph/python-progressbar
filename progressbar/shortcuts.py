@@ -3,7 +3,7 @@ from . import bar
 
 def progressbar(
     iterator,
-    min_value=0,
+    min_value: int = 0,
     max_value=None,
     widgets=None,
     prefix=None,

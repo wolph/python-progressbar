@@ -6,8 +6,6 @@ import os
 import re
 import typing
 
-from . import base
-
 
 @typing.overload
 def env_flag(name: str, default: bool) -> bool: ...
@@ -17,14 +15,14 @@ def env_flag(name: str, default: bool) -> bool: ...
 def env_flag(name: str, default: bool | None = None) -> bool | None: ...
 
 
-def env_flag(name, default=None):
-    '''
+def env_flag(name: str, default: bool | None = None) -> bool | None:
+    """
     Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
     on/off, and returns it as a boolean.
 
     If the environment variable is not defined, or has an unknown value,
     returns `default`
-    '''
+    """
     v = os.getenv(name)
     if v and v.lower() in ('y', 'yes', 't', 'true', 'on', '1'):
         return True
@@ -34,7 +32,7 @@ def env_flag(name, default=None):
 
 
 class ColorSupport(enum.IntEnum):
-    '''Color support for the terminal.'''
+    """Color support for the terminal."""
 
     NONE = 0
     XTERM = 16
@@ -43,8 +41,8 @@ class ColorSupport(enum.IntEnum):
     WINDOWS = 8
 
     @classmethod
-    def from_env(cls):
-        '''Get the color support from the environment.
+    def from_env(cls) -> ColorSupport:
+        """Get the color support from the environment.
 
         If any of the environment variables contain `24bit` or `truecolor`,
         we will enable true color/24 bit support. If they contain `256`, we
@@ -56,7 +54,7 @@ class ColorSupport(enum.IntEnum):
 
         Note that the highest available value will be used! Having
         `COLORTERM=truecolor` will override `TERM=xterm-256color`.
-        '''
+        """
         variables = (
             'FORCE_COLOR',
             'PROGRESSBAR_ENABLE_COLORS',
@@ -99,7 +97,7 @@ class ColorSupport(enum.IntEnum):
 
 
 def is_ansi_terminal(
-    fd: base.IO,
+    fd: typing.IO[typing.Any],
     is_terminal: bool | None = None,
 ) -> bool | None:  # pragma: no cover
     if is_terminal is None:
@@ -120,7 +118,7 @@ def is_ansi_terminal(
         # use ansi.  ansi terminals will typically define one of the 2
         # environment variables.
         with contextlib.suppress(Exception):
-            is_tty = fd.isatty()
+            is_tty: bool = fd.isatty()
             # Try and match any of the huge amount of Linux/Unix ANSI consoles
             if is_tty and ANSI_TERM_RE.match(os.environ.get('TERM', '')):
                 is_terminal = True
@@ -140,7 +138,10 @@ def is_ansi_terminal(
     return is_terminal
 
 
-def is_terminal(fd: base.IO, is_terminal: bool | None = None) -> bool | None:
+def is_terminal(
+    fd: typing.IO[typing.Any],
+    is_terminal: bool | None = None,
+) -> bool | None:
     if is_terminal is None:
         # Full ansi support encompasses what we expect from a terminal
         is_terminal = is_ansi_terminal(fd) or None
@@ -183,4 +184,6 @@ ANSI_TERMS = (
     'tmux',
     'vt(10[02]|220|320)',
 )
-ANSI_TERM_RE = re.compile(f"^({'|'.join(ANSI_TERMS)})", re.IGNORECASE)
+ANSI_TERM_RE: re.Pattern[str] = re.compile(
+    f"^({'|'.join(ANSI_TERMS)})", re.IGNORECASE
+)

@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import time
 
-import progressbar
 import pytest
 from python_utils import converters
+
+import progressbar
 
 
 @pytest.mark.parametrize(
@@ -14,7 +17,7 @@ from python_utils import converters
     ],
 )
 @pytest.mark.parametrize('as_unicode', [True, False])
-def test_markers(name, markers, as_unicode):
+def test_markers(name, markers: bytes | str, as_unicode) -> None:
     if as_unicode:
         markers = converters.to_unicode(markers)
     else:

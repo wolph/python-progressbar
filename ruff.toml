@@ -3,7 +3,12 @@
 
 target-version = 'py38'
 
-src = ['progressbar']
+#src = ['progressbar']
+exclude = [
+    '.venv',
+    '.tox',
+    'test.py',
+]
 
 lint.ignore = [
     'A001', # Variable {name} is shadowing a Python builtin
@@ -27,7 +32,7 @@ lint.ignore = [
     'ISC001', # String concatenation with implicit str conversion
     'SIM108', # Ternary operators are not always more readable
 ]
-line-length = 80
+line-length = 79
 lint.select = [
     'A', # flake8-builtins
     'ASYNC', # flake8 async checker

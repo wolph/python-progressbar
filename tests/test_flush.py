@@ -3,8 +3,8 @@ import time
 import progressbar
 
 
-def test_flush():
-    '''Left justify using the terminal width'''
+def test_flush() -> None:
+    """Left justify using the terminal width"""
     p = progressbar.ProgressBar(poll_interval=0.001)
     p.print('hello')
 

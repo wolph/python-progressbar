@@ -19,14 +19,14 @@ from .. import (
 )
 from .os_specific import getch
 
-ESC = '\x1B'
+ESC = '\x1b'
 
 
 class CSI:
     _code: str
     _template = ESC + '[{args}{code}'
 
-    def __init__(self, code, *default_args):
+    def __init__(self, code: str, *default_args) -> None:
         self._code = code
         self._default_args = default_args
 
@@ -46,72 +46,72 @@ class CSINoArg(CSI):
 
 
 #: Cursor Position [row;column] (default = [1,1])
-CUP = CSI('H', 1, 1)
+CUP: CSI = CSI('H', 1, 1)
 
 #: Cursor Up Ps Times (default = 1) (CUU)
-UP = CSI('A', 1)
+UP: CSI = CSI('A', 1)
 
 #: Cursor Down Ps Times (default = 1) (CUD)
-DOWN = CSI('B', 1)
+DOWN: CSI = CSI('B', 1)
 
 #: Cursor Forward Ps Times (default = 1) (CUF)
-RIGHT = CSI('C', 1)
+RIGHT: CSI = CSI('C', 1)
 
 #: Cursor Backward Ps Times (default = 1) (CUB)
-LEFT = CSI('D', 1)
+LEFT: CSI = CSI('D', 1)
 
 #: Cursor Next Line Ps Times (default = 1) (CNL)
 #: Same as Cursor Down Ps Times
-NEXT_LINE = CSI('E', 1)
+NEXT_LINE: CSI = CSI('E', 1)
 
 #: Cursor Preceding Line Ps Times (default = 1) (CPL)
 #: Same as Cursor Up Ps Times
-PREVIOUS_LINE = CSI('F', 1)
+PREVIOUS_LINE: CSI = CSI('F', 1)
 
 #: Cursor Character Absolute  [column] (default = [row,1]) (CHA)
-COLUMN = CSI('G', 1)
+COLUMN: CSI = CSI('G', 1)
 
 #: Erase in Display (ED)
-CLEAR_SCREEN = CSI('J', 0)
+CLEAR_SCREEN: CSI = CSI('J', 0)
 
 #: Erase till end of screen
-CLEAR_SCREEN_TILL_END = CSINoArg('0J')
+CLEAR_SCREEN_TILL_END: CSINoArg = CSINoArg('0J')
 
 #: Erase till start of screen
-CLEAR_SCREEN_TILL_START = CSINoArg('1J')
+CLEAR_SCREEN_TILL_START: CSINoArg = CSINoArg('1J')
 
 #: Erase whole screen
-CLEAR_SCREEN_ALL = CSINoArg('2J')
+CLEAR_SCREEN_ALL: CSINoArg = CSINoArg('2J')
 
 #: Erase whole screen and history
-CLEAR_SCREEN_ALL_AND_HISTORY = CSINoArg('3J')
+CLEAR_SCREEN_ALL_AND_HISTORY: CSINoArg = CSINoArg('3J')
 
 #: Erase in Line (EL)
-CLEAR_LINE_ALL = CSI('K')
+CLEAR_LINE_ALL: CSI = CSI('K')
 
 #: Erase in Line from Cursor to End of Line (default)
-CLEAR_LINE_RIGHT = CSINoArg('0K')
+CLEAR_LINE_RIGHT: CSINoArg = CSINoArg('0K')
 
 #: Erase in Line from Cursor to Beginning of Line
-CLEAR_LINE_LEFT = CSINoArg('1K')
+CLEAR_LINE_LEFT: CSINoArg = CSINoArg('1K')
 
 #: Erase Line containing Cursor
-CLEAR_LINE = CSINoArg('2K')
+CLEAR_LINE: CSINoArg = CSINoArg('2K')
 
 #: Scroll up Ps lines (default = 1) (SU)
 #: Scroll down Ps lines (default = 1) (SD)
-SCROLL_UP = CSI('S')
-SCROLL_DOWN = CSI('T')
+SCROLL_UP: CSI = CSI('S')
+SCROLL_DOWN: CSI = CSI('T')
 
 #: Save Cursor Position (SCP)
-SAVE_CURSOR = CSINoArg('s')
+SAVE_CURSOR: CSINoArg = CSINoArg('s')
 
 #: Restore Cursor Position (RCP)
-RESTORE_CURSOR = CSINoArg('u')
+RESTORE_CURSOR: CSINoArg = CSINoArg('u')
 
 #: Cursor Visibility (DECTCEM)
-HIDE_CURSOR = CSINoArg('?25l')
-SHOW_CURSOR = CSINoArg('?25h')
+HIDE_CURSOR: CSINoArg = CSINoArg('?25l')
+SHOW_CURSOR: CSINoArg = CSINoArg('?25h')
 
 
 #
@@ -170,11 +170,11 @@ class _CPR(str):  # pragma: no cover
 
             return types.cast(types.Tuple[int, int], tuple(res_list))
 
-    def row(self, stream):
+    def row(self, stream) -> int:
         row, _ = self(stream)
         return row
 
-    def column(self, stream):
+    def column(self, stream) -> int:
         _, column = self(stream)
         return column
 
@@ -198,8 +198,8 @@ class WindowsColors(enum.Enum):
     INTENSE_WHITE = 255, 255, 255
 
     @staticmethod
-    def from_rgb(rgb: types.Tuple[int, int, int]):
-        '''
+    def from_rgb(rgb: types.Tuple[int, int, int]) -> WindowsColors:
+        """
         Find the closest WindowsColors to the given RGB color.
 
         >>> WindowsColors.from_rgb((0, 0, 0))
@@ -216,7 +216,7 @@ class WindowsColors(enum.Enum):
 
         >>> WindowsColors.from_rgb((128, 0, 128))
         <WindowsColors.MAGENTA: (128, 0, 128)>
-        '''
+        """
 
         def color_distance(rgb1, rgb2):
             return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
@@ -228,17 +228,17 @@ class WindowsColors(enum.Enum):
 
 
 class WindowsColor:
-    '''
+    """
     Windows compatible color class for when ANSI is not supported.
     Currently a no-op because it is not possible to buffer these colors.
 
     >>> WindowsColor(WindowsColors.RED)('test')
     'test'
-    '''
+    """
 
     __slots__ = ('color',)
 
-    def __init__(self, color: Color):
+    def __init__(self, color: Color) -> None:
         self.color = color
 
     def __call__(self, text):
@@ -259,15 +259,15 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
         return self.rgb
 
     @property
-    def rgb(self):
+    def rgb(self) -> str:
         return f'rgb({self.red}, {self.green}, {self.blue})'
 
     @property
-    def hex(self):
+    def hex(self) -> str:
         return f'#{self.red:02x}{self.green:02x}{self.blue:02x}'
 
     @property
-    def to_ansi_16(self):
+    def to_ansi_16(self) -> int:
         # Using int instead of round because it maps slightly better
         red = int(self.red / 255)
         green = int(self.green / 255)
@@ -275,7 +275,7 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
         return (blue << 2) | (green << 1) | red
 
     @property
-    def to_ansi_256(self):
+    def to_ansi_256(self) -> int:
         red = round(self.red / 255 * 5)
         green = round(self.green / 255 * 5)
         blue = round(self.blue / 255 * 5)
@@ -283,10 +283,10 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
 
     @property
     def to_windows(self):
-        '''
+        """
         Convert an RGB color (0-255 per channel) to the closest color in the
         Windows 16 color scheme.
-        '''
+        """
         return WindowsColors.from_rgb((self.red, self.green, self.blue))
 
     def interpolate(self, end: RGB, step: float) -> RGB:
@@ -298,21 +298,21 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
 
 
 class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
-    '''
+    """
     Hue, Saturation, Lightness color.
 
     Hue is a value between 0 and 360, saturation and lightness are between 0(%)
     and 100(%).
 
-    '''
+    """
 
     __slots__ = ()
 
     @classmethod
     def from_rgb(cls, rgb: RGB) -> HSL:
-        '''
+        """
         Convert a 0-255 RGB color to a 0-255 HLS color.
-        '''
+        """
         hls = colorsys.rgb_to_hls(
             rgb.red / 255,
             rgb.green / 255,
@@ -349,7 +349,7 @@ class Color(
     ),
     ColorBase,
 ):
-    '''
+    """
     Color base class.
 
     This class contains the colors in RGB (Red, Green, Blue), HSL (Hue,
@@ -359,7 +359,7 @@ class Color(
     To make a custom color the only required arguments are the RGB values.
     The other values will be automatically interpolated from that if needed,
     but you can be more explicitly if you wish.
-    '''
+    """
 
     __slots__ = ()
 
@@ -367,21 +367,21 @@ class Color(
         return self.fg(value)
 
     @property
-    def fg(self):
+    def fg(self) -> SGRColor | WindowsColor:
         if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
             return WindowsColor(self)
         else:
             return SGRColor(self, 38, 39)
 
     @property
-    def bg(self):
+    def bg(self) -> DummyColor | SGRColor:
         if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
             return DummyColor()
         else:
             return SGRColor(self, 48, 49)
 
     @property
-    def underline(self):
+    def underline(self) -> DummyColor | SGRColor:
         if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
             return DummyColor()
         else:
@@ -418,10 +418,10 @@ class Color(
     def __str__(self):
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.name!r})'
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.rgb)
 
 
@@ -475,7 +475,7 @@ class Colors:
 
 
 class ColorGradient(ColorBase):
-    def __init__(self, *colors: Color, interpolate=Colors.interpolate):
+    def __init__(self, *colors: Color, interpolate=Colors.interpolate) -> None:
         assert colors
         self.colors = colors
         self.interpolate = interpolate
@@ -484,7 +484,7 @@ class ColorGradient(ColorBase):
         return self.get_color(value)
 
     def get_color(self, value: float) -> Color:
-        'Map a value from 0 to 1 to a color.'
+        "Map a value from 0 to 1 to a color."
         if (
             value == pbase.Undefined
             or value == pbase.UnknownLength
@@ -543,12 +543,12 @@ def apply_colors(
     bg_none: Color | None = None,
     **kwargs: types.Any,
 ) -> str:
-    '''Apply colors/gradients to a string depending on the given percentage.
+    """Apply colors/gradients to a string depending on the given percentage.
 
     When percentage is `None`, the `fg_none` and `bg_none` colors will be used.
     Otherwise, the `fg` and `bg` colors will be used. If the colors are
     gradients, the color will be interpolated depending on the percentage.
-    '''
+    """
     if percentage is None:
         if fg_none is not None:
             text = fg_none.fg(text)
@@ -570,7 +570,7 @@ class DummyColor:
     def __call__(self, text):
         return text
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'DummyColor()'
 
 
@@ -580,7 +580,7 @@ class SGR(CSI):
     _code = 'm'
     __slots__ = '_start_code', '_end_code'
 
-    def __init__(self, start_code: int, end_code: int):
+    def __init__(self, start_code: int, end_code: int) -> None:
         self._start_code = start_code
         self._end_code = end_code
 
@@ -599,7 +599,7 @@ class SGR(CSI):
 class SGRColor(SGR):
     __slots__ = '_color', '_start_code', '_end_code'
 
-    def __init__(self, color: Color, start_code: int, end_code: int):
+    def __init__(self, color: Color, start_code: int, end_code: int) -> None:
         self._color = color
         super().__init__(start_code, end_code)
 
@@ -608,16 +608,16 @@ class SGRColor(SGR):
         return CSI.__call__(self, self._start_code, self._color.ansi)
 
 
-encircled = SGR(52, 54)
-framed = SGR(51, 54)
-overline = SGR(53, 55)
-bold = SGR(1, 22)
-gothic = SGR(20, 10)
-italic = SGR(3, 23)
-strike_through = SGR(9, 29)
-fast_blink = SGR(6, 25)
-slow_blink = SGR(5, 25)
-underline = SGR(4, 24)
-double_underline = SGR(21, 24)
-faint = SGR(2, 22)
-inverse = SGR(7, 27)
+encircled: SGR = SGR(52, 54)
+framed: SGR = SGR(51, 54)
+overline: SGR = SGR(53, 55)
+bold: SGR = SGR(1, 22)
+gothic: SGR = SGR(20, 10)
+italic: SGR = SGR(3, 23)
+strike_through: SGR = SGR(9, 29)
+fast_blink: SGR = SGR(6, 25)
+slow_blink: SGR = SGR(5, 25)
+underline: SGR = SGR(4, 24)
+double_underline: SGR = SGR(21, 24)
+faint: SGR = SGR(2, 22)
+inverse: SGR = SGR(7, 27)

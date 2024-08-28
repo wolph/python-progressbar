@@ -188,5 +188,30 @@ exclude_lines = [
 include= ['progressbar']
 exclude= ['examples']
 ignore= ['docs']
+#strict = [
+#    'progressbar/algorithms.py',
+#    'progressbar/env.py',
+#    'progressbar/shortcuts.py',
+##    'progressbar/multi.py',
+##    'progressbar/__init__.py',
+#    'progressbar/terminal/__init__.py',
+##    'progressbar/terminal/stream.py',
+#    'progressbar/terminal/os_specific/__init__.py',
+#    'progressbar/terminal/os_specific/posix.py',
+##    'progressbar/terminal/os_specific/windows.py',
+##    'progressbar/terminal/base.py',
+##    'progressbar/terminal/colors.py',
+##    'progressbar/widgets.py',
+##    'progressbar/utils.py',
+#    'progressbar/__about__.py',
+##    'progressbar/bar.py',
+#    'progressbar/__main__.py',
+#    'progressbar/base.py',
+#]
 
 reportIncompatibleMethodOverride = false
+reportUnnecessaryIsInstance = false
+reportUnnecessaryCast = false
+reportUnnecessaryTypeAssertion = false
+reportUnnecessaryComparison = false
+reportUnnecessaryContains = false

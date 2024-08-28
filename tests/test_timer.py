@@ -1,7 +1,8 @@
 from datetime import timedelta
 
-import progressbar
 import pytest
+
+import progressbar
 
 
 @pytest.mark.parametrize(
@@ -20,7 +21,7 @@ import pytest
         'min_poll_interval',
     ],
 )
-def test_poll_interval(parameter, poll_interval, expected):
+def test_poll_interval(parameter, poll_interval, expected) -> None:
     # Test int, float and timedelta intervals
     bar = progressbar.ProgressBar(**{parameter: poll_interval})
     assert getattr(bar, parameter) == expected
@@ -33,7 +34,7 @@ def test_poll_interval(parameter, poll_interval, expected):
         timedelta(seconds=1),
     ],
 )
-def test_intervals(monkeypatch, interval):
+def test_intervals(monkeypatch, interval) -> None:
     monkeypatch.setattr(
         progressbar.ProgressBar,
         '_MINIMUM_UPDATE_INTERVAL',

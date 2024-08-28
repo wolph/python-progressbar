@@ -12,11 +12,16 @@ else:
 import progressbar
 
 pytest_plugins = 'pytester'
-_WIDGETS = [progressbar.Percentage(), ' ',
-            progressbar.Bar(), ' ',
-            progressbar.FileTransferSpeed(), ' ',
-            progressbar.ETA()]
-_MB = 1024 * 1024
+_WIDGETS = [
+    progressbar.Percentage(),
+    ' ',
+    progressbar.Bar(),
+    ' ',
+    progressbar.FileTransferSpeed(),
+    ' ',
+    progressbar.ETA(),
+]
+_MB: int = 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +41,7 @@ def scrape_console(line_count):
 
 
 # ---------------------------------------------------------------------------
-def runprogress():
+def runprogress() -> int:
     print('***BEGIN***')
     b = progressbar.ProgressBar(
         widgets=['example.m4v: ', *_WIDGETS],
@@ -60,11 +65,12 @@ def find(lines, x):
 
 # ---------------------------------------------------------------------------
 def test_windows(testdir: pytest.Testdir) -> None:
-    testdir.run(sys.executable, '-c',
-                'import progressbar; print(progressbar.__file__)')
+    testdir.run(
+        sys.executable, '-c', 'import progressbar; print(progressbar.__file__)'
+    )
 
 
-def main():
+def main() -> int:
     runprogress()
 
     scraped_lines = scrape_console(100)

@@ -1,12 +1,13 @@
 import time
 from datetime import datetime, timedelta
 
-import progressbar
-from progressbar import widgets
 from python_utils.containers import SliceableDeque
 
+import progressbar
+from progressbar import widgets
 
-def test_numeric_samples():
+
+def test_numeric_samples() -> None:
     samples = 5
     samples_widget = widgets.SamplesMixin(samples=samples)
     bar = progressbar.ProgressBar(widgets=[samples_widget])
@@ -42,7 +43,7 @@ def test_numeric_samples():
     )
 
 
-def test_timedelta_samples():
+def test_timedelta_samples() -> None:
     samples = timedelta(seconds=5)
     samples_widget = widgets.SamplesMixin(samples=samples)
     bar = progressbar.ProgressBar(widgets=[samples_widget])
@@ -81,7 +82,7 @@ def test_timedelta_samples():
     assert samples_widget(bar, None)[1] == [10, 20]
 
 
-def test_timedelta_no_update():
+def test_timedelta_no_update() -> None:
     samples = timedelta(seconds=0.1)
     samples_widget = widgets.SamplesMixin(samples=samples)
     bar = progressbar.ProgressBar(widgets=[samples_widget])

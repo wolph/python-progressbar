@@ -32,10 +32,10 @@ StringT = types.TypeVar('StringT', bound=types.StringTypes)
 
 
 def deltas_to_seconds(
-    *deltas,
+    *deltas: None | datetime.timedelta | float,
     default: types.Optional[types.Type[ValueError]] = ValueError,
 ) -> int | float | None:
-    '''
+    """
     Convert timedeltas and seconds as int to seconds as float while coalescing.
 
     >>> deltas_to_seconds(datetime.timedelta(seconds=1, milliseconds=234))
@@ -58,7 +58,7 @@ def deltas_to_seconds(
     ValueError: No valid deltas passed to `deltas_to_seconds`
     >>> deltas_to_seconds(default=0.0)
     0.0
-    '''
+    """
     for delta in deltas:
         if delta is None:
             continue
@@ -77,12 +77,12 @@ def deltas_to_seconds(
 
 
 def no_color(value: StringT) -> StringT:
-    '''
+    """
     Return the `value` without ANSI escape codes.
 
     >>> no_color(b'\u001b[1234]abc')
     b'abc'
-    >>> str(no_color(u'\u001b[1234]abc'))
+    >>> str(no_color('\u001b[1234]abc'))
     'abc'
     >>> str(no_color('\u001b[1234]abc'))
     'abc'
@@ -90,7 +90,7 @@ def no_color(value: StringT) -> StringT:
     Traceback (most recent call last):
     ...
     TypeError: `value` must be a string or bytes, got 123
-    '''
+    """
     if isinstance(value, bytes):
         pattern: bytes = bytes(terminal.ESC, 'ascii') + b'\\[.*?[@-~]'
         return re.sub(pattern, b'', value)  # type: ignore
@@ -101,16 +101,16 @@ def no_color(value: StringT) -> StringT:
 
 
 def len_color(value: types.StringTypes) -> int:
-    '''
+    """
     Return the length of `value` without ANSI escape codes.
 
     >>> len_color(b'\u001b[1234]abc')
     3
-    >>> len_color(u'\u001b[1234]abc')
+    >>> len_color('\u001b[1234]abc')
     3
     >>> len_color('\u001b[1234]abc')
     3
-    '''
+    """
     return len(no_color(value))
 
 
@@ -225,7 +225,7 @@ class WrappingIO:
 
 
 class StreamWrapper:
-    '''Wrap stdout and stderr globally.'''
+    """Wrap stdout and stderr globally."""
 
     stdout: base.TextIO | WrappingIO
     stderr: base.TextIO | WrappingIO
@@ -243,7 +243,7 @@ class StreamWrapper:
     capturing: int = 0
     listeners: set
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.stdout = self.original_stdout = sys.stdout
         self.stderr = self.original_stderr = sys.stderr
         self.original_excepthook = sys.excepthook
@@ -373,13 +373,18 @@ class StreamWrapper:
                     sys.stderr,
                 )
 
-    def excepthook(self, exc_type, exc_value, exc_traceback):
+    def excepthook(
+        self,
+        exc_type: type[BaseException],
+        exc_value: BaseException,
+        exc_traceback: types.TracebackType | None,
+    ) -> None:
         self.original_excepthook(exc_type, exc_value, exc_traceback)
         self.flush()
 
 
 class AttributeDict(dict):
-    '''
+    """
     A dict that can be accessed with .attribute.
 
     >>> attrs = AttributeDict(spam=123)
@@ -422,7 +427,7 @@ class AttributeDict(dict):
     Traceback (most recent call last):
     ...
     AttributeError: No such attribute: spam
-    '''
+    """
 
     def __getattr__(self, name: str) -> int:
         if name in self:
@@ -440,6 +445,6 @@ class AttributeDict(dict):
             raise AttributeError(f'No such attribute: {name}')
 
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 streams = StreamWrapper()
 atexit.register(streams.flush)
