@@ -34,7 +34,9 @@ logger = logging.getLogger(__name__)
 # float also accepts integers and longs but we don't want an explicit union
 # due to type checking complexity
 NumberT = float
-ValueT: typing.TypeAlias = NumberT | type[base.UnknownLength] | None
+ValueT: typing.TypeAlias = typing.Union[
+    NumberT, typing.Type[base.UnknownLength], None
+]
 
 T = types.TypeVar('T')
 
@@ -461,21 +463,21 @@ class StdRedirectMixin(DefaultFdMixin):
         utils.streams.start_capturing(self)
         DefaultFdMixin.start(self, *args, **kwargs)
 
-        def update(self, value: types.Optional[NumberT] = None):
-            if not self.line_breaks and utils.streams.needs_clear():
-                self.fd.write('\r' + ' ' * self.term_width + '\r')
+    def update(self, value: types.Optional[NumberT] = None):
+        if not self.line_breaks and utils.streams.needs_clear():
+            self.fd.write('\r' + ' ' * self.term_width + '\r')
 
-            utils.streams.flush()
-            DefaultFdMixin.update(self, value=value)
+        utils.streams.flush()
+        DefaultFdMixin.update(self, value=value)
 
-        def finish(self, end='\n'):
-            DefaultFdMixin.finish(self, end=end)
-            utils.streams.stop_capturing(self)
-            if self.redirect_stdout:
-                utils.streams.unwrap_stdout()
+    def finish(self, end='\n'):
+        DefaultFdMixin.finish(self, end=end)
+        utils.streams.stop_capturing(self)
+        if self.redirect_stdout:
+            utils.streams.unwrap_stdout()
 
-            if self.redirect_stderr:
-                utils.streams.unwrap_stderr()
+        if self.redirect_stderr:
+            utils.streams.unwrap_stderr()
 
 
 class ProgressBar(
