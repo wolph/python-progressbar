@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # float also accepts integers and longs but we don't want an explicit union
 # due to type checking complexity
 NumberT = float
-ValueT: typing.TypeAlias = typing.Union[
+ValueT = typing.Union[
     NumberT, typing.Type[base.UnknownLength], None
 ]
 
@@ -977,7 +977,7 @@ class ProgressBar(
         init: bool = True,
         *args: typing.Any,
         **kwargs: typing.Any,
-    ) -> typing.Self:
+    ) -> ProgressBar:
         """Starts measuring time, and prints the bar at 0%.
 
         It returns self so you can use it like this:
