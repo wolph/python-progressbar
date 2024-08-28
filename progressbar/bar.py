@@ -34,9 +34,7 @@ logger = logging.getLogger(__name__)
 # float also accepts integers and longs but we don't want an explicit union
 # due to type checking complexity
 NumberT = float
-ValueT = typing.Union[
-    NumberT, typing.Type[base.UnknownLength], None
-]
+ValueT = typing.Union[NumberT, typing.Type[base.UnknownLength], None]
 
 T = types.TypeVar('T')
 
