@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import abc
+import typing
 from datetime import timedelta
 
 
 class SmoothingAlgorithm(abc.ABC):
     @abc.abstractmethod
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: typing.Any):
         raise NotImplementedError
 
     @abc.abstractmethod

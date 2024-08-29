@@ -8,7 +8,7 @@ import pytest
 import progressbar
 import progressbar.terminal
 from progressbar import env, terminal, widgets
-from progressbar.terminal import Colors, apply_colors, colors
+from progressbar.terminal import Color, Colors, apply_colors, colors
 
 ENVIRONMENT_VARIABLES = [
     'PROGRESSBAR_ENABLE_COLORS',
@@ -227,9 +227,17 @@ def test_colors(monkeypatch) -> None:
 
             assert color.fg
             assert color.bg
-            assert str(color)
             assert str(rgb)
             assert color('test')
+
+            color_no_name = Color(
+                rgb=color.rgb,
+                hls=color.hls,
+                name=None,
+                xterm=color.xterm,
+            )
+            # Test without name
+            assert str(color_no_name) != str(color)
 
 
 def test_color() -> None:

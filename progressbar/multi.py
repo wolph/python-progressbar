@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 import timeit
+import types
 import typing
 from datetime import timedelta
 
@@ -17,6 +18,10 @@ from . import bar, terminal
 from .terminal import stream
 
 SortKeyFunc = typing.Callable[[bar.ProgressBar], typing.Any]
+
+
+class _Update(typing.Protocol):
+    def __call__(self, force: bool = True, write: bool = True) -> str: ...
 
 
 class SortKey(str, enum.Enum):
@@ -80,7 +85,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         fd: typing.TextIO = sys.stderr,
         prepend_label: bool = True,
         append_label: bool = False,
-        label_format='{label:20.20} ',
+        label_format: str = '{label:20.20} ',
         initial_format: str | None = '{label:20.20} Not yet started',
         finished_format: str | None = None,
         update_interval: float = 1 / 60.0,  # 60fps
@@ -90,7 +95,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         sort_key: str | SortKey = SortKey.CREATED,
         sort_reverse: bool = True,
         sort_keyfunc: SortKeyFunc | None = None,
-        **progressbar_kwargs,
+        **progressbar_kwargs: typing.Any,
     ):
         self.fd = fd
 
@@ -136,17 +141,19 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         # Just in case someone is using a progressbar with a custom
         # constructor and forgot to call the super constructor
         if bar.index == -1:
-            bar.index = next(bar._index_counter)
+            bar.index = next(
+                bar._index_counter  # pyright: ignore[reportPrivateUsage]
+            )
 
         super().__setitem__(key, bar)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         """Remove a progressbar from the multibar."""
-        super().__delitem__(key)
-        self._finished_at.pop(key, None)
-        self._labeled.discard(key)
+        bar_: bar.ProgressBar = self.pop(key)
+        self._finished_at.pop(bar_, None)
+        self._labeled.discard(bar_)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         """Get (and create if needed) a progressbar from the multibar."""
         try:
             return super().__getitem__(key)
@@ -155,7 +162,7 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             self[key] = progress
             return progress
 
-    def _label_bar(self, bar: bar.ProgressBar):
+    def _label_bar(self, bar: bar.ProgressBar) -> None:
         if bar in self._labeled:  # pragma: no branch
             return
 
@@ -169,10 +176,12 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             self._labeled.add(bar)
             bar.widgets.append(self.label_format.format(label=bar.label))
 
-    def render(self, flush: bool = True, force: bool = False):
+    def render(self, flush: bool = True, force: bool = False) -> None:
         """Render the multibar to the given stream."""
-        now = timeit.default_timer()
-        expired = now - self.remove_finished if self.remove_finished else None
+        now: float = timeit.default_timer()
+        expired: float | None = (
+            now - self.remove_finished if self.remove_finished else None
+        )
 
         # sourcery skip: list-comprehension
         output: list[str] = []
@@ -221,14 +230,18 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
     def _render_bar(
         self,
         bar_: bar.ProgressBar,
-        now,
-        expired,
+        now: float,
+        expired: float | None,
     ) -> typing.Iterable[str]:
-        def update(force=True, write=True):  # pragma: no cover
+        def update(
+            force: bool = True, write: bool = True
+        ) -> str:  # pragma: no cover
             self._label_bar(bar_)
             bar_.update(force=force)
             if write:
-                yield typing.cast(stream.LastLineStream, bar_.fd).line
+                return typing.cast(stream.LastLineStream, bar_.fd).line
+            else:
+                return ''
 
         if bar_.finished():
             yield from self._render_finished_bar(bar_, now, expired, update)
@@ -238,16 +251,16 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         else:
             if self.initial_format is None:
                 bar_.start()
-                update()
+                yield update()
             else:
                 yield self.initial_format.format(label=bar_.label)
 
     def _render_finished_bar(
         self,
         bar_: bar.ProgressBar,
-        now,
-        expired,
-        update,
+        now: float,
+        expired: float | None,
+        update: _Update,
     ) -> typing.Iterable[str]:
         if bar_ not in self._finished_at:
             self._finished_at[bar_] = now
@@ -273,12 +286,12 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
 
     def print(
         self,
-        *args,
-        end='\n',
-        offset=None,
-        flush=True,
-        clear=True,
-        **kwargs,
+        *args: typing.Any,
+        end: str = '\n',
+        offset: int | None = None,
+        flush: bool = True,
+        clear: bool = True,
+        **kwargs: typing.Any,
     ):
         """
         Print to the progressbar stream without overwriting the progressbars.
@@ -316,12 +329,12 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
             if flush:
                 self.flush()
 
-    def flush(self):
+    def flush(self) -> None:
         self.fd.write(self._buffer.getvalue())
         self._buffer.truncate(0)
         self.fd.flush()
 
-    def run(self, join=True):
+    def run(self, join: bool = True) -> None:
         """
         Start the multibar render loop and run the progressbars until they
         have force _thread_finished.
@@ -342,13 +355,13 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
                     self.render(force=True)
                     return
 
-    def start(self):
+    def start(self) -> None:
         assert not self._thread, 'Multibar already started'
         self._thread_closed.set()
         self._thread = threading.Thread(target=self.run, args=(False,))
         self._thread.start()
 
-    def join(self, timeout=None):
+    def join(self, timeout: float | None = None) -> None:
         if self._thread is not None:
             self._thread_closed.set()
             self._thread.join(timeout=timeout)
@@ -369,5 +382,10 @@ class MultiBar(typing.Dict[str, bar.ProgressBar]):
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: types.TracebackType | None,
+    ) -> bool | None:
         self.join()

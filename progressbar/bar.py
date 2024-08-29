@@ -845,6 +845,7 @@ class ProgressBar(
         return self
 
     def __next__(self):
+        value: typing.Any
         try:
             if self._iterable is None:  # pragma: no cover
                 value = self.value

@@ -5,6 +5,7 @@ import collections
 import colorsys
 import enum
 import threading
+import typing
 from collections import defaultdict
 
 # Ruff is being stupid and doesn't understand `ClassVar` if it comes from the
@@ -26,22 +27,24 @@ class CSI:
     _code: str
     _template = ESC + '[{args}{code}'
 
-    def __init__(self, code: str, *default_args) -> None:
+    def __init__(self, code: str, *default_args: typing.Any) -> None:
         self._code = code
         self._default_args = default_args
 
-    def __call__(self, *args):
+    def __call__(self, *args: typing.Any) -> str:
         return self._template.format(
             args=';'.join(map(str, args or self._default_args)),
             code=self._code,
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self()
 
 
 class CSINoArg(CSI):
-    def __call__(self):
+    def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> str:
         return super().__call__()
 
 
@@ -138,15 +141,15 @@ SHOW_CURSOR: CSINoArg = CSINoArg('?25h')
 # CLEAR_LINE_ALL = CLEAR_LINE.format(n=2)  # Clear Line
 
 
-def clear_line(n):
+def clear_line(n: int):
     return UP(n) + CLEAR_LINE_ALL() + DOWN(n)
 
 
 # Report Cursor Position (CPR), response = [row;column] as row;columnR
-class _CPR(str):  # pragma: no cover
+class _CPR(str):  # pragma: no cover  # pyright: ignore[reportUnusedClass]
     _response_lock = threading.Lock()
 
-    def __call__(self, stream) -> tuple[int, int]:
+    def __call__(self, stream: typing.IO[str]) -> tuple[int, int]:
         res: str = ''
 
         with self._response_lock:
@@ -156,7 +159,7 @@ class _CPR(str):  # pragma: no cover
             while not res.endswith('R'):
                 char = getch()
 
-                if char is not None:
+                if char:
                     res += char
 
             res_list = res[2:-1].split(';')
@@ -170,11 +173,11 @@ class _CPR(str):  # pragma: no cover
 
             return types.cast(types.Tuple[int, int], tuple(res_list))
 
-    def row(self, stream) -> int:
+    def row(self, stream: typing.IO[str]) -> int:
         row, _ = self(stream)
         return row
 
-    def column(self, stream) -> int:
+    def column(self, stream: typing.IO[str]) -> int:
         _, column = self(stream)
         return column
 
@@ -218,7 +221,10 @@ class WindowsColors(enum.Enum):
         <WindowsColors.MAGENTA: (128, 0, 128)>
         """
 
-        def color_distance(rgb1, rgb2):
+        def color_distance(
+            rgb1: tuple[int, int, int],
+            rgb2: tuple[int, int, int],
+        ):
             return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
 
         return min(
@@ -241,7 +247,7 @@ class WindowsColor:
     def __init__(self, color: Color) -> None:
         self.color = color
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> str:
         return text
         ## In the future we might want to use this, but it requires direct
         ## printing to stdout and all of our surrounding functions expect
@@ -252,8 +258,14 @@ class WindowsColor:
         # windows.print_color(text, WindowsColors.from_rgb(self.color.rgb))
 
 
-class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
-    __slots__ = ()
+class RGB(typing.NamedTuple):
+    """
+    Red, Green, Blue color.
+    """
+
+    red: int
+    green: int
+    blue: int
 
     def __str__(self):
         return self.rgb
@@ -297,7 +309,7 @@ class RGB(collections.namedtuple('RGB', ['red', 'green', 'blue'])):
         )
 
 
-class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
+class HSL(typing.NamedTuple):
     """
     Hue, Saturation, Lightness color.
 
@@ -306,7 +318,9 @@ class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
 
     """
 
-    __slots__ = ()
+    hue: float
+    saturation: float
+    lightness: float
 
     @classmethod
     def from_rgb(cls, rgb: RGB) -> HSL:
@@ -333,22 +347,16 @@ class HSL(collections.namedtuple('HSL', ['hue', 'saturation', 'lightness'])):
 
 
 class ColorBase(abc.ABC):
+    """
+    Deprecated, `typing.NamedTuple` does not allow for multiple inheritance so
+    this class cannot be used with type hints.
+    """
+
     def get_color(self, value: float) -> Color:
         raise NotImplementedError()
 
 
-class Color(
-    collections.namedtuple(
-        'Color',
-        [
-            'rgb',
-            'hls',
-            'name',
-            'xterm',
-        ],
-    ),
-    ColorBase,
-):
+class Color(typing.NamedTuple):
     """
     Color base class.
 
@@ -361,7 +369,10 @@ class Color(
     but you can be more explicitly if you wish.
     """
 
-    __slots__ = ()
+    rgb: RGB
+    hls: HSL
+    name: str | None
+    xterm: int | None
 
     def __call__(self, value: str) -> str:
         return self.fg(value)
@@ -415,8 +426,11 @@ class Color(
             self.xterm if step < 0.5 else end.xterm,
         )
 
-    def __str__(self):
-        return self.name
+    def __str__(self) -> str:
+        if self.name:
+            return self.name
+        else:
+            return str(self.rgb)
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.name!r})'
@@ -451,14 +465,14 @@ class Colors:
         name: types.Optional[str] = None,
         xterm: types.Optional[int] = None,
     ) -> Color:
+        if hls is None:
+            hls = HSL.from_rgb(rgb)
+
         color = Color(rgb, hls, name, xterm)
 
         if name:
             cls.by_name[name].append(color)
             cls.by_lowername[name.lower()].append(color)
-
-        if hls is None:
-            hls = HSL.from_rgb(rgb)
 
         cls.by_hex[rgb.hex].append(color)
         cls.by_rgb[rgb].append(color)
@@ -474,8 +488,17 @@ class Colors:
         return color_a.interpolate(color_b, step)
 
 
-class ColorGradient(ColorBase):
-    def __init__(self, *colors: Color, interpolate=Colors.interpolate) -> None:
+class ColorGradient:
+    interpolate: typing.Callable[[Color, Color, float], Color] | None
+    colors: tuple[Color, ...]
+
+    def __init__(
+        self,
+        *colors: Color,
+        interpolate: (
+            typing.Callable[[Color, Color, float], Color] | None
+        ) = Colors.interpolate,
+    ) -> None:
         assert colors
         self.colors = colors
         self.interpolate = interpolate
@@ -567,7 +590,7 @@ def apply_colors(
 
 
 class DummyColor:
-    def __call__(self, text):
+    def __call__(self, text: str):
         return text
 
     def __repr__(self) -> str:
@@ -592,7 +615,11 @@ class SGR(CSI):
     def _end_template(self):
         return super().__call__(self._end_code)
 
-    def __call__(self, text, *args):
+    def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        text: str,
+        *args: typing.Any,
+    ) -> str:
         return self._start_template + text + self._end_template
 
 

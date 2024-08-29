@@ -80,7 +80,7 @@ def wrapper(function, wrapper_):
         return function
 
     @functools.wraps(function)
-    def wrap(*args, **kwargs):
+    def wrap(*args: typing.Any, **kwargs: typing.Any):
         return wrapper_.format(function(*args, **kwargs))
 
     return wrap
@@ -123,7 +123,9 @@ class FormatWidgetMixin(abc.ABC):
      - percentage: Percentage as a float
     """
 
-    def __init__(self, format: str, new_style: bool = False, **kwargs):
+    def __init__(
+        self, format: str, new_style: bool = False, **kwargs: typing.Any
+    ):
         self.new_style = new_style
         self.format = format
 
@@ -182,7 +184,7 @@ class WidthWidgetMixin(abc.ABC):
     False
     """
 
-    def __init__(self, min_width=None, max_width=None, **kwargs):
+    def __init__(self, min_width=None, max_width=None, **kwargs: typing.Any):
         self.min_width = min_width
         self.max_width = max_width
 
@@ -350,7 +352,7 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
         value=('value', None),
     )
 
-    def __init__(self, format: str, **kwargs):
+    def __init__(self, format: str, **kwargs: typing.Any):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, **kwargs)
 
@@ -373,7 +375,9 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
 class Timer(FormatLabel, TimeSensitiveWidgetBase):
     """WidgetBase which displays the elapsed seconds."""
 
-    def __init__(self, format='Elapsed Time: %(elapsed)s', **kwargs):
+    def __init__(
+        self, format='Elapsed Time: %(elapsed)s', **kwargs: typing.Any
+    ):
         if '%s' in format and '%(elapsed)s' not in format:
             format = format.replace('%s', '%(elapsed)s')
 
@@ -793,7 +797,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
 class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
     """Widget for showing the transfer speed based on the last X samples."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: typing.Any):
         FileTransferSpeed.__init__(self, **kwargs)
         SamplesMixin.__init__(self, **kwargs)
 
@@ -873,7 +877,7 @@ RotatingMarker = AnimatedMarker
 class Counter(FormatWidgetMixin, WidgetBase):
     """Displays the current count."""
 
-    def __init__(self, format='%(value)d', **kwargs):
+    def __init__(self, format='%(value)d', **kwargs: typing.Any):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
 
@@ -905,7 +909,9 @@ class ColoredMixin:
 class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
     """Displays the current percentage as a number with a percent sign."""
 
-    def __init__(self, format='%(percentage)3d%%', na='N/A%%', **kwargs):
+    def __init__(
+        self, format='%(percentage)3d%%', na='N/A%%', **kwargs: typing.Any
+    ):
         self.na = na
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
@@ -940,7 +946,7 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
 
     DEFAULT_FORMAT = '%(value_s)s of %(max_value_s)s'
 
-    def __init__(self, format=DEFAULT_FORMAT, **kwargs):
+    def __init__(self, format=DEFAULT_FORMAT, **kwargs: typing.Any):
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, format=format, **kwargs)
         self.max_width_cache = dict()
@@ -1170,7 +1176,7 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
 class VariableMixin:
     """Mixin to display a custom user variable."""
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, **kwargs: typing.Any):
         if not isinstance(name, str):
             raise TypeError('Variable(): argument must be a string')
         if len(name.split()) > 1:
@@ -1189,7 +1195,7 @@ class MultiRangeBar(Bar, VariableMixin):
         [['Symbol1', amount1], ['Symbol2', amount2], ...]
     """
 
-    def __init__(self, name, markers, **kwargs):
+    def __init__(self, name, markers, **kwargs: typing.Any):
         VariableMixin.__init__(self, name)
         Bar.__init__(self, **kwargs)
         self.markers = [string_or_lambda(marker) for marker in markers]
@@ -1359,7 +1365,7 @@ class GranularBar(AutoWidthWidgetBase):
 class FormatLabelBar(FormatLabel, Bar):
     """A bar which has a formatted label in the center."""
 
-    def __init__(self, format, **kwargs):
+    def __init__(self, format, **kwargs: typing.Any):
         FormatLabel.__init__(self, format, **kwargs)
         Bar.__init__(self, **kwargs)
 
@@ -1399,7 +1405,9 @@ class PercentageLabelBar(Percentage, FormatLabelBar):
 
     # %3d adds an extra space that makes it look off-center
     # %2d keeps the label somewhat consistently in-place
-    def __init__(self, format='%(percentage)2d%%', na='N/A%%', **kwargs):
+    def __init__(
+        self, format='%(percentage)2d%%', na='N/A%%', **kwargs: typing.Any
+    ):
         Percentage.__init__(self, format, na=na, **kwargs)
         FormatLabelBar.__init__(self, format, **kwargs)
 
