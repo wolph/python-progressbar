@@ -1,7 +1,14 @@
+[build-system]
+build-backend = 'setuptools.build_meta'
+requires = ['setuptools', 'setuptools-scm']
 
 [project]
-authors = [{ name = 'Rick van Hattem (Wolph)', email = 'wolph@wol.ph' }]
+name = 'progressbar2'
+description = 'A Python Progressbar library to provide visual (yet text based) progress to long running operations.'
 dynamic = ['version']
+authors = [{ name = 'Rick van Hattem (Wolph)', email = 'wolph@wol.ph' }]
+license = { text = 'BSD-3-Clause' }
+readme = 'README.rst'
 keywords = [
     'REPL',
     'animated',
@@ -33,10 +40,6 @@ keywords = [
     'time',
     'visual',
 ]
-license = { text = 'BSD-3-Clause' }
-name = 'progressbar2'
-requires-python = '>=3.8'
-
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'Development Status :: 6 - Mature',
@@ -67,11 +70,12 @@ classifiers = [
     'Operating System :: Unix',
     'Programming Language :: Python :: 3 :: Only',
     'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
-    'Programming Language :: Python :: 3.8',
-    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.13',
     'Programming Language :: Python :: Implementation :: IronPython',
     'Programming Language :: Python :: Implementation :: PyPy',
     'Programming Language :: Python :: Implementation',
@@ -83,8 +87,8 @@ classifiers = [
     'Topic :: Office/Business',
     'Topic :: Other/Nonlisted Topic',
     'Topic :: Software Development :: Build Tools',
-    'Topic :: Software Development :: Libraries :: Python Modules',
     'Topic :: Software Development :: Libraries',
+    'Topic :: Software Development :: Libraries :: Python Modules',
     'Topic :: Software Development :: Pre-processors',
     'Topic :: Software Development :: User Interfaces',
     'Topic :: System :: Installation/Setup',
@@ -93,26 +97,25 @@ classifiers = [
     'Topic :: System :: Shells',
     'Topic :: Terminals',
     'Topic :: Utilities',
+    'Typing :: Typed',
 ]
-description = 'A Python Progressbar library to provide visual (yet text based) progress to long running operations.'
-readme = 'README.rst'
 
+requires-python = '>3.8'
 dependencies = ['python-utils >= 3.8.1']
 
-[tool.setuptools.dynamic]
-version = { attr = 'progressbar.__about__.__version__' }
-
-[tool.setuptools.packages.find]
-exclude = ['docs*', 'tests*']
-
-[tool.setuptools]
-include-package-data = true
+[project.urls]
+bugs = 'https://github.com/wolph/python-progressbar/issues'
+documentation = 'https://progressbar-2.readthedocs.io/en/latest/'
+repository = 'https://github.com/wolph/python-progressbar/'
 
 [project.scripts]
 progressbar = 'progressbar.__main__:main'
 
 [project.optional-dependencies]
-docs = ['sphinx>=1.8.5', 'sphinx-autodoc-typehints>=1.6.0']
+docs = [
+    'sphinx>=1.8.5',
+    'sphinx-autodoc-typehints>=1.6.0',
+]
 tests = [
     'dill>=0.3.6',
     'flake8>=3.7.7',
@@ -124,48 +127,29 @@ tests = [
     'pywin32; sys_platform == "win32"',
 ]
 
-[project.urls]
-bugs = 'https://github.com/wolph/python-progressbar/issues'
-documentation = 'https://progressbar-2.readthedocs.io/en/latest/'
-repository = 'https://github.com/wolph/python-progressbar/'
-
-[build-system]
-build-backend = 'setuptools.build_meta'
-requires = ['setuptools', 'setuptools-scm']
-
-[tool.codespell]
-skip = '*/htmlcov,./docs/_build,*.asc'
-
-ignore-words-list = 'datas,numbert'
+[dependency-groups]
+dev = ['progressbar2[docs,tests]']
 
 [tool.black]
 line-length = 79
 skip-string-normalization = true
 
-[tool.mypy]
-packages = ['progressbar', 'tests']
-exclude = [
-    '^docs$',
-    '^tests/original_examples.py$',
-    '^examples.py$',
-]
+[tool.codespell]
+skip = '*/htmlcov,./docs/_build,*.asc'
+ignore-words-list = 'datas,numbert'
 
 [tool.coverage.run]
 branch = true
-source = [
-    'progressbar',
-    'tests',
-]
+source = ['progressbar', 'tests']
 omit = [
     '*/mock/*',
     '*/nose/*',
     '.tox/*',
     '*/os_specific/*',
 ]
+
 [tool.coverage.paths]
-source = [
-    'progressbar',
-]
+source = ['progressbar']
 
 [tool.coverage.report]
 fail_under = 100
@@ -185,10 +169,20 @@ exclude_lines = [
     'typing.Protocol',
 ]
 
+
+[tool.mypy]
+packages = ['progressbar', 'tests']
+exclude = [
+    '^docs$',
+    '^tests/original_examples.py$',
+    '^examples.py$',
+]
+
+
 [tool.pyright]
-include= ['progressbar']
-exclude= ['examples', '.tox']
-ignore= ['docs']
+include = ['progressbar']
+exclude = ['examples', '.tox']
+ignore = ['docs']
 strict = [
     'progressbar/algorithms.py',
     'progressbar/env.py',
@@ -216,3 +210,13 @@ reportUnnecessaryCast = false
 reportUnnecessaryTypeAssertion = false
 reportUnnecessaryComparison = false
 reportUnnecessaryContains = false
+
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { attr = 'progressbar.__about__.__version__' }
+
+[tool.setuptools.packages.find]
+exclude = ['docs*', 'tests*']
