@@ -62,11 +62,10 @@ Ready to contribute? Here's how to set up `python-progressbar` for local develop
 
     $ git clone --branch develop git@github.com:your_name_here/python-progressbar.git
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
+3. Install your local copy into a virtualenv. Assuming you have `uv` installed, this is how you set up your fork for local development::
 
-    $ mkvirtualenv progressbar
     $ cd progressbar/
-    $ pip install -e .
+    $ uv sync
 
 4. Create a branch for local development with `git-flow-avh`_::
 
@@ -123,4 +122,3 @@ To run a subset of tests::
 	$ py.test tests/some_test.py
 
 .. _git-flow-avh: https://github.com/petervanderdoes/gitflow
-
