@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import sys
 import typing
+from collections.abc import Iterable, Iterator
 from types import TracebackType
-from typing import Iterable, Iterator
 
 from progressbar import base
 

@@ -8,8 +8,8 @@ import logging
 import os
 import re
 import sys
+from collections.abc import Iterable, Iterator
 from types import TracebackType
-from typing import Iterable, Iterator
 
 from python_utils import types
 from python_utils.converters import scale_1024
