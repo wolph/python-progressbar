@@ -72,7 +72,8 @@ def test_dirty() -> None:
 
 
 def test_negative_maximum() -> None:
-    with pytest.raises(ValueError), progressbar.ProgressBar(
-        max_value=-1
-    ) as progress:
+    with (
+        pytest.raises(ValueError),
+        progressbar.ProgressBar(max_value=-1) as progress,
+    ):
         progress.start()

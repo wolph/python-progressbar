@@ -1,16 +1,21 @@
 # We keep the ruff configuration separate so it can easily be shared across
 # all projects
 
-target-version = 'py38'
+target-version = 'py39'
 
 #src = ['progressbar']
 exclude = [
     '.venv',
     '.tox',
+    # Ignore local test files/directories/old-stuff
     'test.py',
+    '*_old.py',
 ]
 
-lint.ignore = [
+line-length = 79
+
+[lint]
+ignore = [
     'A001', # Variable {name} is shadowing a Python builtin
     'A002', # Argument {name} is shadowing a Python builtin
     'A003', # Class attribute {name} is shadowing a Python builtin
@@ -28,12 +33,14 @@ lint.ignore = [
     'RET506', # Unnecessary `else` after `raise` statement
     'Q001', # Remove bad quotes
     'Q002', # Remove bad quotes
+    'FA100', # Missing `from __future__ import annotations`, but uses `typing.Optional`
     'COM812', # Missing trailing comma in a list
     'ISC001', # String concatenation with implicit str conversion
     'SIM108', # Ternary operators are not always more readable
+    'RUF100', # Unused noqa directives. Due to multiple Python versions, we need to keep them
 ]
-line-length = 79
-lint.select = [
+
+select = [
     'A', # flake8-builtins
     'ASYNC', # flake8 async checker
     'B', # flake8-bugbear

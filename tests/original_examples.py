@@ -26,7 +26,7 @@ examples = []
 
 def example(fn):
     try:
-        name = 'Example %d' % int(fn.__name__[7:])
+        name = f'Example {int(fn.__name__[7:]):d}'
     except Exception:
         name = fn.__name__
 
