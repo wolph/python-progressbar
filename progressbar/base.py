@@ -28,9 +28,9 @@ assert IO is not None
 assert TextIO is not None
 
 __all__ = (
-    'FalseMeta',
-    'UnknownLength',
-    'Undefined',
     'IO',
+    'FalseMeta',
     'TextIO',
+    'Undefined',
+    'UnknownLength',
 )

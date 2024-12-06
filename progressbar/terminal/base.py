@@ -601,7 +601,7 @@ class SGR(CSI):
     _start_code: int
     _end_code: int
     _code = 'm'
-    __slots__ = '_start_code', '_end_code'
+    __slots__ = '_end_code', '_start_code'
 
     def __init__(self, start_code: int, end_code: int) -> None:
         self._start_code = start_code
@@ -624,7 +624,7 @@ class SGR(CSI):
 
 
 class SGRColor(SGR):
-    __slots__ = '_color', '_start_code', '_end_code'
+    __slots__ = '_color', '_end_code', '_start_code'
 
     def __init__(self, color: Color, start_code: int, end_code: int) -> None:
         self._color = color

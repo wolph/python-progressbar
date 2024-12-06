@@ -73,9 +73,9 @@ def parallel_bars_multibar_example() -> None:
         bar_labels = []
         for i in range(BARS):
             # Get a progressbar
-            bar_label = 'Bar #%d' % i
+            bar_label = f'Bar #{i:d}'
             bar_labels.append(bar_label)
-            multibar[bar_label]
+            assert multibar[bar_label] is not None
 
         for _ in range(N * BARS):
             time.sleep(0.005)
@@ -148,7 +148,7 @@ def with_example_stdout_redirection() -> None:
     with progressbar.ProgressBar(max_value=10, redirect_stdout=True) as p:
         for i in range(10):
             if i % 3 == 0:
-                print('Some print statement %i' % i)
+                print(f'Some print statement {i:d}')
             # do something
             p.update(i)
             time.sleep(0.1)
@@ -544,8 +544,9 @@ def with_right_justify() -> None:
 
 @example
 def exceeding_maximum() -> None:
-    with progressbar.ProgressBar(max_value=1) as progress, contextlib.suppress(
-        ValueError
+    with (
+        progressbar.ProgressBar(max_value=1) as progress,
+        contextlib.suppress(ValueError),
     ):
         progress.update(2)
 

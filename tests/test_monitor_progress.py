@@ -114,7 +114,7 @@ def test_generator_example(testdir) -> None:
     pprint.pprint(result.stderr.lines, width=70)
 
     lines = [
-        r'[/\\|\-]\s+\|\s*#\s*\| %(i)d Elapsed Time: \d:00:%(i)02d' % dict(i=i)
+        fr'[/\\|\-]\s+\|\s*#\s*\| {i:d} Elapsed Time: \d:00:{i:02d}'
         for i in range(9)
     ]
     result.stderr.re_match_lines(lines)
