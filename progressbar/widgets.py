@@ -682,7 +682,7 @@ class SmoothingETA(ETA):
         if elapsed is None:  # pragma: no branch
             elapsed = data['time_elapsed']
 
-        self.smoothing_algorithm.update(value, elapsed)
+        value = self.smoothing_algorithm.update(value, elapsed)
         return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
 
 
