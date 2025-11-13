@@ -665,7 +665,7 @@ class SmoothingETA(ETA):
     ):
         self.smoothing_parameters = smoothing_parameters or {}
         self.smoothing_algorithm = smoothing_algorithm(
-            **(self.smoothing_parameters or {}),
+            **self.smoothing_parameters,
         )
         ETA.__init__(self, **kwargs)
 
