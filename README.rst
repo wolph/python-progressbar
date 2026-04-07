@@ -66,6 +66,7 @@ of widgets:
  - `ReverseBar <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#ReverseBar>`_
  - `RotatingMarker <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#RotatingMarker>`_
  - `SimpleProgress <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#SimpleProgress>`_
+ - `SmoothingETA <https://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#SmoothingETA>`_
  - `Timer <http://progressbar-2.readthedocs.io/en/latest/_modules/progressbar/widgets.html#Timer>`_
 
 The progressbar module is very easy to use, yet very powerful. It will also
