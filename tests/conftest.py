@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import timeit
-from datetime import datetime
+from datetime import datetime, timezone
 
 import freezegun
 import pytest
@@ -37,10 +37,11 @@ def small_interval(monkeypatch) -> None:
 
 @pytest.fixture(autouse=True)
 def sleep_faster(monkeypatch):
-    # The timezone offset in seconds, add 10 seconds to make sure we don't
-    # accidentally get the wrong hour
-    offset_seconds = (datetime.now() - datetime.utcnow()).seconds + 10
-    offset_hours = int(offset_seconds / 3600)
+    # Compute the local UTC offset so freezegun uses the same timezone as
+    # the local system. Using datetime.now(timezone.utc).astimezone() avoids
+    # the deprecated datetime.utcnow() which was removed in Python 3.12+.
+    local_offset = datetime.now(timezone.utc).astimezone().utcoffset()
+    offset_hours = local_offset.total_seconds() / 3600
 
     freeze_time = freezegun.freeze_time(tz_offset=offset_hours)
     with freeze_time as fake_time:
