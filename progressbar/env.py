@@ -185,5 +185,5 @@ ANSI_TERMS = (
     'vt(10[02]|220|320)',
 )
 ANSI_TERM_RE: re.Pattern[str] = re.compile(
-    f"^({'|'.join(ANSI_TERMS)})", re.IGNORECASE
+    f'^({"|".join(ANSI_TERMS)})', re.IGNORECASE
 )
