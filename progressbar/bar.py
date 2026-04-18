@@ -1095,8 +1095,7 @@ class ProgressBar(
         progressbar package.
         """
         warnings.warn(
-            'The usage of `currval` is deprecated, please use '
-            '`value` instead',
+            'The usage of `currval` is deprecated, please use `value` instead',
             DeprecationWarning,
             stacklevel=1,
         )
