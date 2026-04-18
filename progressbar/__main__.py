@@ -62,14 +62,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
     Create the argument parser for the `progressbar` command.
     """
 
-    parser = argparse.ArgumentParser(
-        description="""
+    description = """
         Monitor the progress of data through a pipe.
 
         Note that this is a Python implementation of the original `pv` command
         that is functional but not yet feature complete.
     """
-    )
+    parser = argparse.ArgumentParser(description=description)
 
     # Display switches
     parser.add_argument(
