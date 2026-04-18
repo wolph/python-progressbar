@@ -207,7 +207,6 @@ strict = [
 reportIncompatibleMethodOverride = false
 reportUnnecessaryIsInstance = false
 reportUnnecessaryCast = false
-reportUnnecessaryTypeAssertion = false
 reportUnnecessaryComparison = false
 reportUnnecessaryContains = false
 

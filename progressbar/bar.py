@@ -368,7 +368,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
         count = len(expanding)
         while expanding:
-            portion = max(int(math.ceil(width * 1.0 / count)), 0)
+            portion = max(math.ceil(width / count), 0)
             index = expanding.pop()
             widget = result[index]
             count -= 1
@@ -410,7 +410,7 @@ class ResizableMixin(ProgressBarMixinBase):
         self, signum: int | None = None, frame: None | FrameType = None
     ):
         "Tries to catch resize signals sent from the terminal."
-        w, h = utils.get_terminal_size()
+        w, _h = utils.get_terminal_size()
         self.term_width = w
 
     def finish(self):  # pragma: no cover

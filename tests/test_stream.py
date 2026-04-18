@@ -99,6 +99,19 @@ def test_no_newlines() -> None:
             bar.update(i)
 
 
+def test_update_keeps_colors_when_enabled() -> None:
+    stream = io.StringIO()
+    with progressbar.ProgressBar(
+        fd=stream,
+        widgets=['\033[92mgreen\033[0m'],
+        max_value=1,
+        enable_colors=True,
+    ) as bar:
+        bar.update(1)
+
+    assert '\033[92mgreen\033[0m' in stream.getvalue()
+
+
 @pytest.mark.parametrize('stream', [sys.__stdout__, sys.__stderr__])
 @pytest.mark.skipif(os.name == 'nt', reason='Windows does not support this')
 def test_fd_as_standard_streams(stream) -> None:
