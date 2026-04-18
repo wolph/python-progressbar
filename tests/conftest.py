@@ -39,7 +39,7 @@ def small_interval(monkeypatch) -> None:
 def sleep_faster(monkeypatch):
     # Compute the local UTC offset so freezegun uses the same timezone as
     # the local system. Using datetime.now(timezone.utc).astimezone() avoids
-    # the deprecated datetime.utcnow() which was removed in Python 3.12+.
+    # the deprecated datetime.utcnow() (deprecated since Python 3.12).
     local_offset = datetime.now(timezone.utc).astimezone().utcoffset()
     offset_hours = local_offset.total_seconds() / 3600
 
