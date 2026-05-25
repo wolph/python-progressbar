@@ -429,13 +429,13 @@ class AttributeDict(dict):
     AttributeError: No such attribute: spam
     """
 
-    def __getattr__(self, name: str) -> int:
+    def __getattr__(self, name: str) -> types.Any:
         if name in self:
             return self[name]
         else:
             raise AttributeError(f'No such attribute: {name}')
 
-    def __setattr__(self, name: str, value: int) -> None:
+    def __setattr__(self, name: str, value: types.Any) -> None:
         self[name] = value
 
     def __delattr__(self, name: str) -> None:
