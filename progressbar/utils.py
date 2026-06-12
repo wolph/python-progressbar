@@ -340,7 +340,9 @@ class StreamWrapper:
         if self.wrapped_stdout > 1:
             self.wrapped_stdout -= 1
         else:
-            sys.stdout = self.original_stdout
+            # Also reset our own reference so needs_clear() and
+            # update_capturing() don't act on a stale wrapper
+            self.stdout = sys.stdout = self.original_stdout
             self.wrapped_stdout = 0
             if not self.wrapped_stderr:
                 self.unwrap_excepthook()
@@ -349,7 +351,9 @@ class StreamWrapper:
         if self.wrapped_stderr > 1:
             self.wrapped_stderr -= 1
         else:
-            sys.stderr = self.original_stderr
+            # Also reset our own reference so needs_clear() and
+            # update_capturing() don't act on a stale wrapper
+            self.stderr = sys.stderr = self.original_stderr
             self.wrapped_stderr = 0
             if not self.wrapped_stdout:
                 self.unwrap_excepthook()

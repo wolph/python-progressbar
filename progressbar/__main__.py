@@ -357,9 +357,17 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
         with contextlib.suppress(KeyboardInterrupt, BrokenPipeError):
             for input_path in input_paths:
                 if isinstance(input_path, pathlib.Path):
-                    input_stream = stack.enter_context(
-                        input_path.open('r' if args.line_mode else 'rb')
-                    )
+                    if args.line_mode:
+                        # newline='' disables universal-newline
+                        # translation so the byte count matches the file
+                        # size for CRLF files as well
+                        input_stream = stack.enter_context(
+                            input_path.open('r', newline=''),
+                        )
+                    else:
+                        input_stream = stack.enter_context(
+                            input_path.open('rb'),
+                        )
                 else:
                     input_stream = input_path
 
@@ -397,8 +405,14 @@ def _get_output_stream(
     stack: contextlib.ExitStack,
 ) -> typing.IO[typing.Any]:
     if output and output != '-':
-        mode = 'w' if line_mode else 'wb'
-        return stack.enter_context(open(output, mode))  # noqa: SIM115
+        if line_mode:
+            # newline='' passes the data through without newline
+            # translation, mirroring the input handling
+            return stack.enter_context(
+                open(output, 'w', newline=''),  # noqa: SIM115
+            )
+
+        return stack.enter_context(open(output, 'wb'))  # noqa: SIM115
     elif line_mode:
         return sys.stdout
     else:

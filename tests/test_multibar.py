@@ -329,7 +329,7 @@ def test_multibar_join_timeout_keeps_thread_reference() -> None:
     # Regression: D8 - join(timeout) dropped the thread reference even
     # when the thread was still running.
     multibar = progressbar.MultiBar(fd=io.StringIO())
-    multibar['unfinished']  # noqa: B018
+    assert multibar['unfinished'] is not None  # creates an unfinished bar
     multibar.start()
     try:
         multibar.join(timeout=0.01)
@@ -377,11 +377,11 @@ def test_multibar_concurrent_mutation() -> None:
     # Pre-fix the event is shared class state which other tests may have
     # set; post-fix this only touches this instance.
     multibar._thread_finished.clear()
-    multibar['keep']  # noqa: B018
+    assert multibar['keep'] is not None  # creates an unfinished bar
     multibar.start()
     try:
         for i in range(300):
-            multibar[f'bar {i}']  # noqa: B018
+            assert multibar[f'bar {i}'] is not None
             del multibar[f'bar {i}']
     finally:
         multibar.stop(timeout=5)

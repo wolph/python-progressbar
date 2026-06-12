@@ -178,5 +178,6 @@ def test_line_offset_stream_wrapper_write_length_and_flush() -> None:
     target = CountingIO()
     wrapper = progressbar.LineOffsetStreamWrapper(lines=2, stream=target)
 
-    assert wrapper.write('hello\n') == 6
+    written = wrapper.write('hello\n')
+    assert written == 6
     assert target.flushes >= 1

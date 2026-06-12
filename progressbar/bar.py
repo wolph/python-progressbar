@@ -405,6 +405,10 @@ class _ResizeRegistry:
     def install(cls, bar: ResizableMixin) -> None:
         import signal
 
+        if not hasattr(signal, 'SIGWINCH'):  # pragma: no cover
+            # Not available on Windows
+            return
+
         if not cls.bars:
             cls.previous_handler = signal.getsignal(
                 signal.SIGWINCH  # type: ignore[attr-defined]
@@ -419,6 +423,10 @@ class _ResizeRegistry:
     @classmethod
     def uninstall(cls, bar: ResizableMixin) -> None:
         import signal
+
+        if not hasattr(signal, 'SIGWINCH'):  # pragma: no cover
+            # Not available on Windows
+            return
 
         cls.bars.discard(bar)
         if not cls.bars:

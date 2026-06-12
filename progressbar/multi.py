@@ -334,13 +334,14 @@ class MultiBar(dict[str, bar.ProgressBar]):
                 self.flush()
 
     def flush(self) -> None:
+        # The fd write happens under the lock as well so concurrent
+        # print()/render() calls cannot interleave their output
         with self._print_lock:
             value = self._buffer.getvalue()
             self._buffer.seek(0)
             self._buffer.truncate(0)
-
-        self.fd.write(value)
-        self.fd.flush()
+            self.fd.write(value)
+            self.fd.flush()
 
     def run(self, join: bool = True) -> None:
         """
@@ -386,13 +387,10 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self.join(timeout=timeout)
 
     def get_sorted_bars(self):
-        # sorted() materializes the values in a single pass, so other
-        # threads can add or remove bars while we are rendering
-        return sorted(
-            self.values(),
-            key=self.sort_keyfunc,
-            reverse=self.sort_reverse,
-        )
+        # Materialize the values into a list first so other threads can
+        # add or remove bars while we are sorting and rendering
+        bars = list(self.values())
+        return sorted(bars, key=self.sort_keyfunc, reverse=self.sort_reverse)
 
     def __enter__(self):
         self.start()

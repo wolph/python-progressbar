@@ -28,10 +28,15 @@ _STD_OUTPUT_HANDLE = _DWORD(-11)
 # GetStdHandle returns INVALID_HANDLE_VALUE (-1) when no console is
 # attached (piped output, pythonw, services)
 _INVALID_HANDLE_VALUE = _HANDLE(-1).value
+# The EventType of a KEY_EVENT_RECORD in an INPUT_RECORD
+_KEY_EVENT = 0x0001
 
 
 def _valid_handle(handle) -> bool:
-    return handle is not None and handle != _INVALID_HANDLE_VALUE
+    # Handles may be plain ints (from a HANDLE restype) or ctypes
+    # instances; normalize before comparing
+    value = getattr(handle, 'value', handle)
+    return value is not None and value != _INVALID_HANDLE_VALUE
 
 
 class WindowsConsoleModeFlags(enum.IntFlag):
@@ -204,13 +209,20 @@ def getch():
     ):
         return None
 
-    # Only the records that were actually read contain valid data, and
-    # non-ASCII keys must not crash the decode
+    # Only the records that were actually read contain valid data. The
+    # Event field is a union, so the KeyEvent member may only be read
+    # for KEY_EVENT records, and non-ASCII keys must not crash the
+    # decode.
     for i in range(min(lp_number_of_events_read.value, len(lp_buffer))):
-        char = lp_buffer[i].Event.KeyEvent.uChar.AsciiChar.decode(
-            'ascii',
-            errors='replace',
-        )
+        record = lp_buffer[i]
+        if record.EventType != _KEY_EVENT:
+            continue
+
+        key_event = record.Event.KeyEvent
+        if not key_event.bKeyDown:
+            continue
+
+        char = key_event.uChar.AsciiChar.decode('ascii', errors='replace')
         if char != '\x00':
             return char
 

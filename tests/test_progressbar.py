@@ -1,7 +1,9 @@
 import contextlib
+import gc
 import io
 import os
 import signal
+import sys
 import time
 from datetime import timedelta
 
@@ -133,20 +135,24 @@ def test_repeated_finish_keeps_capturing_balanced() -> None:
         utils.streams.capturing = baseline
 
 
-def test_del_suppresses_finish_errors() -> None:
+def test_del_suppresses_finish_errors(monkeypatch) -> None:
     # Regression: A4 - __del__ only suppressed AttributeError; any other
-    # exception from finish() leaked out of the finalizer.
+    # exception from finish() leaked out of the finalizer (reported via
+    # sys.unraisablehook during garbage collection).
     class ExplodingIO(io.StringIO):
         def write(self, value: str) -> int:
             raise ValueError('I/O operation on closed file')
 
+    unraisable: list[object] = []
+    monkeypatch.setattr(sys, 'unraisablehook', unraisable.append)
+
     bar = progressbar.ProgressBar(max_value=5, fd=io.StringIO(), term_width=60)
     bar.start()
     bar.fd = ExplodingIO()
-    try:
-        bar.__del__()  # must not raise
-    finally:
-        bar._finished = True
+    del bar
+    gc.collect()
+
+    assert not unraisable
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='SIGWINCH is POSIX-only')

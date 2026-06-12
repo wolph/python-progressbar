@@ -93,11 +93,16 @@ def create_marker(marker, wrap=None):
             and progress.max_value > 0
         ):
             # The fill length is based on the progress relative to
-            # min_value; the max() guards against a zero range
-            length = int(
-                (progress.value - progress.min_value)
-                / max(progress.max_value - progress.min_value, 1e-6)
-                * width,
+            # min_value; the max() guards against a zero range and the
+            # min() keeps the marker within the allotted width when the
+            # value exceeds max_value (with max_error=False)
+            length = min(
+                width,
+                int(
+                    (progress.value - progress.min_value)
+                    / max(progress.max_value - progress.min_value, 1e-6)
+                    * width,
+                ),
             )
             return marker * length
         else:

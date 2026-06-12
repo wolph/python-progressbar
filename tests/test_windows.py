@@ -107,6 +107,8 @@ def test_getch_reads_first_event(monkeypatch) -> None:
     from progressbar.terminal.os_specific import windows
 
     def fake_read_console_input(handle, buffer, length, events_read):
+        buffer[0].EventType = 1  # KEY_EVENT
+        buffer[0].Event.KeyEvent.bKeyDown = True
         buffer[0].Event.KeyEvent.uChar.AsciiChar = b'a'
         events_read._obj.value = 1
         return 1
