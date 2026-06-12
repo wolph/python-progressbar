@@ -92,6 +92,12 @@ class ColorSupport(enum.IntEnum):
                 support = max(cls.XTERM_256, support)
             elif value == 'xterm':
                 support = max(cls.XTERM, support)
+            elif env_flag(variable, default=False):
+                # Generic truthy flags such as `FORCE_COLOR=1` enable
+                # color support but don't specify the depth; assume full
+                # color support analogous to the Jupyter handling above.
+                support = cls.XTERM_TRUECOLOR
+                break
 
         return support
 

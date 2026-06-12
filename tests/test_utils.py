@@ -126,9 +126,21 @@ def test_stream_wrapper_unwrap_restores_excepthook() -> None:
     try:
         wrapper.unwrap_stdout()
         assert sys.excepthook is hook_before
+
+        # With both streams wrapped, the hook is only restored once the
+        # last stream is unwrapped
+        wrapper.wrap_stdout()
+        wrapper.wrap_stderr()
+        wrapper.unwrap_stdout()
+        # Bound methods are recreated on attribute access, so compare
+        # with == instead of `is`
+        assert sys.excepthook == wrapper.excepthook
+        wrapper.unwrap_stderr()
+        assert sys.excepthook is hook_before
     finally:
         sys.excepthook = wrapper.original_excepthook
         sys.stdout = wrapper.original_stdout
+        sys.stderr = wrapper.original_stderr
 
 
 def test_stream_wrapper_flush_unsupported_keeps_int_counter() -> None:
