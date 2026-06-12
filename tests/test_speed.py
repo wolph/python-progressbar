@@ -6,7 +6,9 @@ import progressbar
 @pytest.mark.parametrize(
     'total_seconds_elapsed,value,expected',
     [
-        (1, 0, '  0.0 s/B'),
+        # Zero progress means no data yet, so the regular format is used
+        # instead of the inverse (seconds per unit) format
+        (1, 0, '  0.0 B/s'),
         (1, 0.01, '100.0 s/B'),
         (1, 0.1, '  0.1 B/s'),
         (1, 1, '  1.0 B/s'),

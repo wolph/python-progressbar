@@ -111,7 +111,5 @@ def test_getch_reads_first_event(monkeypatch) -> None:
         events_read._obj.value = 1
         return 1
 
-    monkeypatch.setattr(
-        windows, '_ReadConsoleInput', fake_read_console_input
-    )
+    monkeypatch.setattr(windows, '_ReadConsoleInput', fake_read_console_input)
     assert windows.getch() == 'a'

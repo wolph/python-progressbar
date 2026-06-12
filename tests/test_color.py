@@ -418,9 +418,7 @@ def test_hsl_interpolate_preserves_components() -> None:
     start_color = terminal.HSL(0, 100, 25)
     end_color = terminal.HSL(0, 100, 75)
 
-    assert start_color.interpolate(end_color, 0.5) == terminal.HSL(
-        0, 100, 50
-    )
+    assert start_color.interpolate(end_color, 0.5) == terminal.HSL(0, 100, 50)
 
 
 @pytest.mark.parametrize('value', ['1', 'true', 'on'])

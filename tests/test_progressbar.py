@@ -160,6 +160,11 @@ def test_sigwinch_restored_with_overlapping_bars() -> None:
         bar2 = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
         bar2.start()
 
+        # A resize signal is dispatched to all live bars
+        signal.raise_signal(signal.SIGWINCH)
+        assert isinstance(bar1.term_width, int)
+        assert isinstance(bar2.term_width, int)
+
         bar1.update(5)
         bar1.finish()
         bar2.update(5)

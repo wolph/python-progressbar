@@ -137,6 +137,14 @@ def test_stream_wrapper_unwrap_restores_excepthook() -> None:
         assert sys.excepthook == wrapper.excepthook
         wrapper.unwrap_stderr()
         assert sys.excepthook is hook_before
+
+        # Same in reverse order: stderr first, then stdout
+        wrapper.wrap_stdout()
+        wrapper.wrap_stderr()
+        wrapper.unwrap_stderr()
+        assert sys.excepthook == wrapper.excepthook
+        wrapper.unwrap_stdout()
+        assert sys.excepthook is hook_before
     finally:
         sys.excepthook = wrapper.original_excepthook
         sys.stdout = wrapper.original_stdout

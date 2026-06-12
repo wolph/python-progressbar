@@ -85,6 +85,11 @@ def parallel_bars_multibar_example() -> None:
             # Increment one of the progress bars at random
             multibar[bar_label].increment()
 
+        # The multibar context manager waits for all bars to finish on
+        # exit, so finish them explicitly
+        for bar_label in bar_labels:
+            multibar[bar_label].finish()
+
 
 @example
 def multiple_bars_line_offset_example() -> None:

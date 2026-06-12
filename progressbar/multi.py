@@ -386,10 +386,10 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self.join(timeout=timeout)
 
     def get_sorted_bars(self):
-        # Snapshot the values so other threads can add or remove bars
-        # while we are sorting/rendering
+        # sorted() materializes the values in a single pass, so other
+        # threads can add or remove bars while we are rendering
         return sorted(
-            list(self.values()),
+            self.values(),
             key=self.sort_keyfunc,
             reverse=self.sort_reverse,
         )
