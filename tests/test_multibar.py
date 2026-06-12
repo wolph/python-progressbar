@@ -139,6 +139,9 @@ def test_multibar_show_finished() -> None:
                 bar.update(i)
                 time.sleep(SLEEP)
 
+            # The context manager waits for all bars to finish
+            bar.finish()
+
         multibar.render(force=True)
 
 
@@ -187,8 +190,10 @@ def test_multibar_print() -> None:
         for i in range(5):
             multibar.print(f'{i}', flush=False)
 
-        multibar.update(force=True, flush=False)
-        multibar.update(force=True, flush=True)
+        # Note: MultiBar inherits from dict, so update() would be
+        # dict.update and insert bogus entries; render() is intended here
+        multibar.render(force=True, flush=False)
+        multibar.render(force=True, flush=True)
 
 
 def test_multibar_no_format() -> None:
@@ -245,8 +250,9 @@ def test_multibar_threads() -> None:
     time.sleep(0.1)
     bar.update(3)
     time.sleep(0.1)
-    multibar.join()
+    # join() waits until all bars have finished, so finish first
     bar.finish()
+    multibar.join()
     multibar.join()
     multibar.render(force=True)
 

@@ -74,10 +74,10 @@ class MultiBar(dict[str, bar.ProgressBar]):
     _previous_output: list[str]
     _finished_at: dict[bar.ProgressBar, float]
     _labeled: set[bar.ProgressBar]
-    _print_lock: threading.RLock = threading.RLock()
-    _thread: threading.Thread | None = None
-    _thread_finished: threading.Event = threading.Event()
-    _thread_closed: threading.Event = threading.Event()
+    _print_lock: threading.RLock
+    _thread: threading.Thread | None
+    _thread_finished: threading.Event
+    _thread_closed: threading.Event
 
     def __init__(
         self,
@@ -125,6 +125,10 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self._finished_at = {}
         self._previous_output = []
         self._buffer = io.StringIO()
+        self._print_lock = threading.RLock()
+        self._thread = None
+        self._thread_finished = threading.Event()
+        self._thread_closed = threading.Event()
 
         super().__init__(bars or {})
 
@@ -172,7 +176,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
             self._labeled.add(bar)
             bar.widgets.insert(0, self.label_format.format(label=bar.label))
 
-        if self.append_label and bar not in self._labeled:  # pragma: no branch
+        if self.append_label:  # pragma: no branch
             self._labeled.add(bar)
             bar.widgets.append(self.label_format.format(label=bar.label))
 
@@ -330,8 +334,12 @@ class MultiBar(dict[str, bar.ProgressBar]):
                 self.flush()
 
     def flush(self) -> None:
-        self.fd.write(self._buffer.getvalue())
-        self._buffer.truncate(0)
+        with self._print_lock:
+            value = self._buffer.getvalue()
+            self._buffer.seek(0)
+            self._buffer.truncate(0)
+
+        self.fd.write(value)
         self.fd.flush()
 
     def run(self, join: bool = True) -> None:
@@ -346,7 +354,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
             if join or self._thread_closed.is_set():
                 # If the thread is closed, we need to check if the progressbars
                 # have finished. If they have, we can exit the loop
-                for bar_ in self.values():  # pragma: no cover
+                for bar_ in list(self.values()):  # pragma: no cover
                     if not bar_.finished():
                         break
                 else:
@@ -357,23 +365,31 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
     def start(self) -> None:
         assert not self._thread, 'Multibar already started'
-        self._thread_closed.set()
-        self._thread = threading.Thread(target=self.run, args=(False,))
+        self._thread_finished.clear()
+        self._thread_closed.clear()
+        self._thread = threading.Thread(
+            target=self.run,
+            args=(False,),
+            daemon=True,
+        )
         self._thread.start()
 
     def join(self, timeout: float | None = None) -> None:
         if self._thread is not None:
             self._thread_closed.set()
             self._thread.join(timeout=timeout)
-            self._thread = None
+            if not self._thread.is_alive():
+                self._thread = None
 
     def stop(self, timeout: float | None = None):
         self._thread_finished.set()
         self.join(timeout=timeout)
 
     def get_sorted_bars(self):
+        # Snapshot the values so other threads can add or remove bars
+        # while we are sorting/rendering
         return sorted(
-            self.values(),
+            list(self.values()),
             key=self.sort_keyfunc,
             reverse=self.sort_reverse,
         )
@@ -388,4 +404,9 @@ class MultiBar(dict[str, bar.ProgressBar]):
         exc_value: BaseException | None,
         traceback: types.TracebackType | None,
     ) -> bool | None:
-        self.join()
+        if exc_type is None:
+            self.join()
+        else:
+            # Don't wait for unfinished progressbars when an exception is
+            # propagating; that would block forever
+            self.stop()

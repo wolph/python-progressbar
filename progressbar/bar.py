@@ -11,6 +11,7 @@ import time
 import timeit
 import typing
 import warnings
+import weakref
 from copy import deepcopy
 from datetime import datetime
 from types import FrameType
@@ -132,10 +133,12 @@ class ProgressBarMixinBase(abc.ABC):
     def __del__(self):
         if not self._finished and self._started:  # pragma: no cover
             # We're not using contextlib.suppress here because during teardown
-            # contextlib is not available anymore.
+            # contextlib is not available anymore. Any exception can occur
+            # here during interpreter shutdown (closed streams, partially
+            # torn down modules), so we suppress all of them.
             try:  # noqa: SIM105
                 self.finish()
-            except AttributeError:
+            except Exception:  # noqa: BLE001, S110
                 pass
 
     def __getstate__(self):
@@ -385,6 +388,54 @@ class DefaultFdMixin(ProgressBarMixinBase):
             yield converters.to_unicode(arg)
 
 
+class _ResizeRegistry:
+    """
+    Shared SIGWINCH handling for all resizable progressbars.
+
+    A single signal handler dispatches to every live bar. The original
+    handler is saved when the first bar registers and restored when the
+    last one unregisters, so overlapping bars can finish in any order
+    without leaving a dangling handler installed.
+    """
+
+    bars: typing.ClassVar[weakref.WeakSet[ResizableMixin]] = weakref.WeakSet()
+    previous_handler: typing.ClassVar[typing.Any] = None
+
+    @classmethod
+    def install(cls, bar: ResizableMixin) -> None:
+        import signal
+
+        if not cls.bars:
+            cls.previous_handler = signal.getsignal(
+                signal.SIGWINCH  # type: ignore[attr-defined]
+            )
+            signal.signal(
+                signal.SIGWINCH,  # type: ignore[attr-defined]
+                cls.handle_resize,
+            )
+
+        cls.bars.add(bar)
+
+    @classmethod
+    def uninstall(cls, bar: ResizableMixin) -> None:
+        import signal
+
+        cls.bars.discard(bar)
+        if not cls.bars:
+            signal.signal(
+                signal.SIGWINCH,  # type: ignore[attr-defined]
+                cls.previous_handler,
+            )
+            cls.previous_handler = None
+
+    @classmethod
+    def handle_resize(
+        cls, signum: int | None = None, frame: None | FrameType = None
+    ) -> None:
+        for bar in list(cls.bars):
+            bar._handle_resize(signum, frame)
+
+
 class ResizableMixin(ProgressBarMixinBase):
     def __init__(self, term_width: int | None = None, **kwargs: typing.Any):
         ProgressBarMixinBase.__init__(self, **kwargs)
@@ -395,15 +446,7 @@ class ResizableMixin(ProgressBarMixinBase):
         else:  # pragma: no cover
             with contextlib.suppress(Exception):
                 self._handle_resize()
-                import signal
-
-                self._prev_handle = signal.getsignal(
-                    signal.SIGWINCH  # type: ignore
-                )
-                signal.signal(
-                    signal.SIGWINCH,
-                    self._handle_resize,  # type: ignore
-                )
+                _ResizeRegistry.install(self)
                 self.signal_set = True
 
     def _handle_resize(
@@ -417,12 +460,8 @@ class ResizableMixin(ProgressBarMixinBase):
         ProgressBarMixinBase.finish(self)
         if self.signal_set:
             with contextlib.suppress(Exception):
-                import signal
-
-                signal.signal(
-                    signal.SIGWINCH,
-                    self._prev_handle,  # type: ignore
-                )
+                _ResizeRegistry.uninstall(self)
+                self.signal_set = False
 
 
 class StdRedirectMixin(DefaultFdMixin):
@@ -686,6 +725,8 @@ class ProgressBar(
         self.end_time = None
         self.extra = dict()
         self._last_update_timer = timeit.default_timer()
+        self._started = False
+        self._finished = False
 
     @property
     def percentage(self) -> float | None:
@@ -749,7 +790,7 @@ class ProgressBar(
                 - `minutes_elapsed`: The minutes since the bar started modulo
                   60
                 - `hours_elapsed`: The hours since the bar started modulo 24
-                - `days_elapsed`: The hours since the bar started
+                - `days_elapsed`: The days since the bar started
                 - `time_elapsed`: The raw elapsed `datetime.timedelta` object
                 - `percentage`: Percentage as a float or `None` if no max_value
                   is available
@@ -788,8 +829,8 @@ class ProgressBar(
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24
             hours_elapsed=(elapsed.seconds / (60 * 60)) % 24,
-            # The hours since the bar started
-            days_elapsed=(elapsed.seconds / (60 * 60 * 24)),
+            # The days since the bar started
+            days_elapsed=(elapsed.total_seconds() / (60 * 60 * 24)),
             # The raw elapsed `datetime.timedelta` object
             time_elapsed=elapsed,
             # Percentage as a float or `None` if no max_value is available
@@ -954,7 +995,7 @@ class ProgressBar(
             if key not in self.variables:
                 raise TypeError(
                     'update() got an unexpected variable name as argument '
-                    '{key!r}',
+                    f'{key!r}',
                 )
             elif self.variables[key] != value_:
                 self.variables[key] = kwargs[key]
@@ -1080,6 +1121,11 @@ class ProgressBar(
             dirty (bool): When True the progressbar kept the current state and
                 won't be set to 100 percent
         """
+        if self._finished:
+            # Finishing twice would corrupt the global stream-wrapping
+            # state, so extra calls are no-ops
+            return
+
         if not dirty:
             self.end_time = datetime.now()
             self.update(self.max_value, force=True)
