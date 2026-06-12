@@ -4,6 +4,10 @@ import tty
 
 
 def getch() -> str:
+    if not sys.stdin.isatty():
+        # Raw mode is unavailable (and unnecessary) without a tty
+        return sys.stdin.read(1)
+
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)  # type: ignore
     try:
