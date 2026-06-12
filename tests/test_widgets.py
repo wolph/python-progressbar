@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import time
+from datetime import timedelta
 
 import pytest
 
@@ -204,3 +206,44 @@ def test_all_widgets_max_width(max_width, term_width) -> None:
             assert widget == ''
         else:
             assert widget != ''
+
+
+def test_eta_respects_min_value() -> None:
+    # Regression: B3 - the items/second rate divided by the raw value
+    # instead of the progress relative to min_value.
+    bar = progressbar.ProgressBar(
+        min_value=50, max_value=100, fd=io.StringIO(), term_width=60
+    )
+    bar.start()
+    bar.update(75)
+    bar.start_time -= timedelta(seconds=30)
+    data = bar.data()
+    progressbar.ETA()(bar, data)
+
+    # 25 of 50 items done in 30 seconds -> 30 seconds remaining
+    assert data['eta_seconds'] == pytest.approx(30, rel=0.05)
+
+
+def test_multi_progress_bar_zero_total() -> None:
+    # Regression: B5 - a (value, 0) tuple raised ZeroDivisionError.
+    widget = progressbar.MultiProgressBar('jobs')
+    bar = progressbar.ProgressBar(
+        widgets=[widget], max_value=10, fd=io.StringIO(), term_width=60
+    )
+    ranges = widget.get_values(bar, {'variables': {'jobs': [(3, 0)]}})
+    assert sum(ranges) > 0
+
+
+def test_bar_widget_respects_min_value() -> None:
+    # Regression: B9 - the fill width was computed from the raw value, so
+    # a bar at 0% progress with min_value > 0 rendered partially full.
+    bar = progressbar.ProgressBar(
+        min_value=50,
+        max_value=100,
+        widgets=[progressbar.Bar()],
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    assert '#' not in bar.fd.getvalue()
+    bar.finish(dirty=True)

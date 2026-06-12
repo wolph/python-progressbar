@@ -138,3 +138,11 @@ def test_increment() -> None:
     bar = progressbar.ProgressBar(max_value=10)
     bar.increment()
     del bar
+
+
+def test_unexpected_update_keyword_arg_message() -> None:
+    # Regression: A3 - the error message contained the literal text
+    # '{key!r}' because the string was not an f-string.
+    bar = progressbar.ProgressBar(max_value=10)
+    with pytest.raises(TypeError, match='foo'):
+        bar.update(1, foo=10)

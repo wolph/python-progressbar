@@ -88,3 +88,30 @@ def main() -> int:
 
 if __name__ == '__main__':
     main()
+
+
+def test_kernel32_argtypes() -> None:
+    # Regression: E4 - missing argtypes silently truncated 64-bit HANDLE
+    # values to 32-bit C ints.
+    from progressbar.terminal.os_specific import windows
+
+    assert windows._GetConsoleMode.argtypes is not None
+    assert windows._SetConsoleMode.argtypes is not None
+    assert windows._GetStdHandle.argtypes is not None
+    assert windows._ReadConsoleInput.argtypes is not None
+
+
+def test_getch_reads_first_event(monkeypatch) -> None:
+    # Regression: E5 - getch() unconditionally decoded the second buffer
+    # entry, ignoring how many events were actually read.
+    from progressbar.terminal.os_specific import windows
+
+    def fake_read_console_input(handle, buffer, length, events_read):
+        buffer[0].Event.KeyEvent.uChar.AsciiChar = b'a'
+        events_read._obj.value = 1
+        return 1
+
+    monkeypatch.setattr(
+        windows, '_ReadConsoleInput', fake_read_console_input
+    )
+    assert windows.getch() == 'a'

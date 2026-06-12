@@ -56,3 +56,18 @@ def test_dema_update(alpha, new_value: float, expected) -> None:
 
 
 # Additional test functions can be added here as needed.
+
+
+def test_ema_seeds_from_first_value() -> None:
+    # Regression: B8 - the average started at 0, biasing early values
+    # toward zero instead of the first observation.
+    ema = algorithms.ExponentialMovingAverage(0.5)
+    assert ema.update(100, timedelta(seconds=1)) == 100
+    assert ema.update(50, timedelta(seconds=1)) == 75
+
+
+def test_dema_seeds_from_first_value() -> None:
+    # Regression: B8 - same zero bias for the double EMA.
+    dema = algorithms.DoubleExponentialMovingAverage(0.5)
+    assert dema.update(100, timedelta(seconds=1)) == 100
+    assert dema.update(50, timedelta(seconds=1)) == 62.5

@@ -410,3 +410,25 @@ def test_ansi_color(monkeypatch) -> None:
 
 def test_sgr_call() -> None:
     assert progressbar.terminal.encircled('test') == '\x1b[52mtest\x1b[54m'
+
+
+def test_hsl_interpolate_preserves_components() -> None:
+    # Regression: C1 - interpolate() swapped the saturation and lightness
+    # arguments, corrupting every HSL gradient blend.
+    start_color = terminal.HSL(0, 100, 25)
+    end_color = terminal.HSL(0, 100, 75)
+
+    assert start_color.interpolate(end_color, 0.5) == terminal.HSL(
+        0, 100, 50
+    )
+
+
+@pytest.mark.parametrize('value', ['1', 'true', 'on'])
+def test_color_support_force_color_flag(monkeypatch, value) -> None:
+    # Regression: C8 - the conventional FORCE_COLOR=1 left color support
+    # at NONE because only depth-style values were recognised.
+    if os.name == 'nt':
+        monkeypatch.setattr(os, 'name', 'posix')
+
+    monkeypatch.setenv('FORCE_COLOR', value)
+    assert env.ColorSupport.from_env() == env.ColorSupport.XTERM_TRUECOLOR
