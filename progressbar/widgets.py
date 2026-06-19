@@ -854,6 +854,11 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         finished.
         """
         if progress.end_time:
+            # When finished, keep a filling marker full instead of
+            # collapsing to a single character; a plain marker has no fill
+            # so it falls back to its default character.
+            if self.fill:
+                return self.fill(progress, data, width)
             return self.default
 
         marker = self.markers[data['updates'] % len(self.markers)]

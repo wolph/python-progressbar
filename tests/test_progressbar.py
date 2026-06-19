@@ -159,12 +159,27 @@ def test_del_suppresses_finish_errors(monkeypatch) -> None:
 def test_sigwinch_restored_with_overlapping_bars() -> None:
     # Regression: A5 - with two live bars, finishing them in creation
     # order left a dangling handler installed.
-    original = signal.getsignal(signal.SIGWINCH)
+    from progressbar.bar import _ResizeRegistry
+
+    saved_handler = signal.getsignal(signal.SIGWINCH)
+    # Isolate the global registry so the assertions don't depend on bars
+    # left registered (and a handler left installed) by other tests
+    saved_bars = list(_ResizeRegistry.bars)
+    saved_prev = _ResizeRegistry.previous_handler
+    _ResizeRegistry.bars.clear()
+    _ResizeRegistry.previous_handler = None
+
+    # Start from a known sentinel handler so we can tell apart "still
+    # installed" from "restored" without depending on global state
+    signal.signal(signal.SIGWINCH, signal.SIG_IGN)
     try:
         bar1 = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
         bar1.start()
         bar2 = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
         bar2.start()
+
+        # The first bar installs the shared handler
+        assert signal.getsignal(signal.SIGWINCH) is not signal.SIG_IGN
 
         # A resize signal is dispatched to all live bars
         signal.raise_signal(signal.SIGWINCH)
@@ -173,9 +188,15 @@ def test_sigwinch_restored_with_overlapping_bars() -> None:
 
         bar1.update(5)
         bar1.finish()
+        # The handler must stay installed while bar2 is still live
+        assert signal.getsignal(signal.SIGWINCH) is not signal.SIG_IGN
+
         bar2.update(5)
         bar2.finish()
-
-        assert signal.getsignal(signal.SIGWINCH) is original
+        # The last bar to finish restores the previous handler
+        assert signal.getsignal(signal.SIGWINCH) is signal.SIG_IGN
     finally:
-        signal.signal(signal.SIGWINCH, original)
+        for restored_bar in saved_bars:
+            _ResizeRegistry.bars.add(restored_bar)
+        _ResizeRegistry.previous_handler = saved_prev
+        signal.signal(signal.SIGWINCH, saved_handler)

@@ -946,6 +946,11 @@ class ProgressBar(
         elif self.poll_interval and delta > self.poll_interval:
             # Needs to redraw timers and animations
             return True
+        elif self.max_value is base.UnknownLength:
+            # There's no terminal-width threshold to compute for an unknown
+            # length, so redraw whenever the value advanced (still rate
+            # limited by the min_poll_interval check above)
+            return self.value != self.previous_value
 
         # Update if value increment is not large enough to
         # add more bars to progressbar (according to current

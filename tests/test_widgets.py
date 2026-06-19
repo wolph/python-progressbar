@@ -247,3 +247,26 @@ def test_bar_widget_respects_min_value() -> None:
     bar.start()
     assert '#' not in bar.fd.getvalue()
     bar.finish(dirty=True)
+
+
+def test_animated_marker_fill_stays_full_when_finished() -> None:
+    # Regression: a Bar filled by an AnimatedMarker(fill=...) collapsed to a
+    # single marker character at finish() because the end_time branch
+    # short-circuited before applying the fill. The finished bar must stay
+    # full instead of emptying out at 100%.
+    bar = progressbar.ProgressBar(
+        widgets=[progressbar.Bar(marker=progressbar.AnimatedMarker(fill='#'))],
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    for i in range(11):
+        bar.update(i)
+    bar.finish()
+
+    last_line = [
+        line for line in bar.fd.getvalue().split('\n') if line.strip()
+    ][-1]
+    # term_width 60 leaves ~58 fill characters; the collapse bug left ~1
+    assert last_line.count('#') > 40, repr(last_line)
