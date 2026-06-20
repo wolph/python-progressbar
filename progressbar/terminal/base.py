@@ -341,8 +341,8 @@ class HSL(typing.NamedTuple):
     def interpolate(self, end: HSL, step: float) -> HSL:
         return HSL(
             self.hue + (end.hue - self.hue) * step,
-            self.lightness + (end.lightness - self.lightness) * step,
             self.saturation + (end.saturation - self.saturation) * step,
+            self.lightness + (end.lightness - self.lightness) * step,
         )
 
 

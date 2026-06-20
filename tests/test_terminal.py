@@ -1,3 +1,4 @@
+import io
 import signal
 import sys
 import time
@@ -186,3 +187,38 @@ def test_base() -> None:
 
     terminal.clear_line(0)
     terminal.clear_line(1)
+
+
+def _redirect_update_output(*, redirect_blank_line: bool) -> str:
+    # Return only what a single update() writes while redirected output is
+    # pending a clear (the bar otherwise uses '\r', never '\n').
+    fd = io.StringIO()
+    bar = progressbar.ProgressBar(
+        max_value=10,
+        fd=fd,
+        redirect_blank_line=redirect_blank_line,
+        is_terminal=True,
+        term_width=40,
+    )
+    bar.start()
+    fd.seek(0)
+    fd.truncate(0)  # drop the start frame
+    bar.update(5, force=True)
+    return fd.getvalue()
+
+
+def test_redirect_blank_line_separator(monkeypatch) -> None:
+    # #295: opt-in blank line between redirected output and the bar. Force
+    # `needs_clear` so the test does not depend on global stream state.
+    from progressbar import utils
+
+    monkeypatch.setattr(utils.streams, 'needs_clear', lambda: True)
+    assert '\n' in _redirect_update_output(redirect_blank_line=True)
+
+
+def test_redirect_blank_line_off_by_default(monkeypatch) -> None:
+    # Default behaviour is unchanged: no separator even with output pending.
+    from progressbar import utils
+
+    monkeypatch.setattr(utils.streams, 'needs_clear', lambda: True)
+    assert '\n' not in _redirect_update_output(redirect_blank_line=False)

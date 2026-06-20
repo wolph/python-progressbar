@@ -154,10 +154,13 @@ class WrappingIO:
     def _flush(self) -> None:
         if value := self.buffer.getvalue():
             self.flush()
-            self.target.write(value)
+            # Clear the buffer before writing so a failed write cannot
+            # cause the same data to be written again by the next flush
             self.buffer.seek(0)
             self.buffer.truncate(0)
             self.needs_clear = False
+            if not self.target.closed:
+                self.target.write(value)
 
         # when explicitly flushing, always flush the target as well
         self.flush_target()
@@ -337,15 +340,23 @@ class StreamWrapper:
         if self.wrapped_stdout > 1:
             self.wrapped_stdout -= 1
         else:
-            sys.stdout = self.original_stdout
+            # Also reset our own reference so needs_clear() and
+            # update_capturing() don't act on a stale wrapper
+            self.stdout = sys.stdout = self.original_stdout
             self.wrapped_stdout = 0
+            if not self.wrapped_stderr:
+                self.unwrap_excepthook()
 
     def unwrap_stderr(self) -> None:
         if self.wrapped_stderr > 1:
             self.wrapped_stderr -= 1
         else:
-            sys.stderr = self.original_stderr
+            # Also reset our own reference so needs_clear() and
+            # update_capturing() don't act on a stale wrapper
+            self.stderr = sys.stderr = self.original_stderr
             self.wrapped_stderr = 0
+            if not self.wrapped_stdout:
+                self.unwrap_excepthook()
 
     def needs_clear(self) -> bool:  # pragma: no cover
         stdout_needs_clear = getattr(self.stdout, 'needs_clear', False)
@@ -356,8 +367,8 @@ class StreamWrapper:
         if self.wrapped_stdout and isinstance(self.stdout, WrappingIO):
             try:
                 self.stdout._flush()
-            except io.UnsupportedOperation:  # pragma: no cover
-                self.wrapped_stdout = False
+            except io.UnsupportedOperation:
+                self.wrapped_stdout = 0
                 logger.warning(
                     'Disabling stdout redirection, %r is not seekable',
                     sys.stdout,
@@ -367,7 +378,7 @@ class StreamWrapper:
             try:
                 self.stderr._flush()
             except io.UnsupportedOperation:  # pragma: no cover
-                self.wrapped_stderr = False
+                self.wrapped_stderr = 0
                 logger.warning(
                     'Disabling stderr redirection, %r is not seekable',
                     sys.stderr,

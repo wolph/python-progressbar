@@ -110,3 +110,20 @@ def test_timedelta_no_update() -> None:
     bar.update(3)
     assert samples_widget(bar, None, True) == (timedelta(0, 1), 1)
     assert samples_widget(bar, None, False)[1] == [1, 2]
+
+
+def test_timedelta_samples_evicted_when_value_stalls() -> None:
+    # Regression: B7 - eviction of expired samples additionally required
+    # the value to increase, so a stalled bar grew its window unboundedly.
+    samples_widget = widgets.SamplesMixin(samples=timedelta(seconds=2))
+    bar = progressbar.ProgressBar(widgets=[samples_widget])
+    samples_widget.INTERVAL = timedelta(0)
+    start = datetime(2000, 1, 1)
+
+    bar.value = 1
+    for i in range(10):
+        bar.last_update_time = start + timedelta(seconds=i)
+        samples_widget(bar, None)
+
+    sample_times = samples_widget.get_sample_times(bar, None)
+    assert sample_times[-1] - sample_times[0] <= timedelta(seconds=3)

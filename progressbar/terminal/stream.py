@@ -19,7 +19,7 @@ class TextIOOutputWrapper(base.TextIO):  # pragma: no cover
         return self.stream.fileno()
 
     def flush(self) -> None:
-        pass
+        self.stream.flush()
 
     def isatty(self) -> bool:
         return self.stream.isatty()
@@ -83,6 +83,7 @@ class LineOffsetStreamWrapper(TextIOOutputWrapper):
         super().__init__(stream)
 
     def write(self, data: str) -> int:
+        written = len(data)
         data = data.rstrip('\n')
         # Move the cursor up
         self.stream.write(self.UP * self.lines)
@@ -94,7 +95,9 @@ class LineOffsetStreamWrapper(TextIOOutputWrapper):
         self.stream.write(self.DOWN * self.lines)
 
         self.flush()
-        return len(data)
+        # Return the length of the original data; callers use this to
+        # detect short writes
+        return written
 
 
 class LastLineStream(TextIOOutputWrapper):

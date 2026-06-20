@@ -342,8 +342,8 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
 
         # Initialize the progress bar
         bar = progressbar.ProgressBar(
-            # widgets=widgets,
-            max_value=total_size or None,
+            widgets=widgets,
+            max_value=total_size if filesize_available else None,
             max_error=False,
         )
 
@@ -354,12 +354,20 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
         total_transferred = 0
 
         bar.start()
-        with contextlib.suppress(KeyboardInterrupt):
+        with contextlib.suppress(KeyboardInterrupt, BrokenPipeError):
             for input_path in input_paths:
                 if isinstance(input_path, pathlib.Path):
-                    input_stream = stack.enter_context(
-                        input_path.open('r' if args.line_mode else 'rb')
-                    )
+                    if args.line_mode:
+                        # newline='' disables universal-newline
+                        # translation so the byte count matches the file
+                        # size for CRLF files as well
+                        input_stream = stack.enter_context(
+                            input_path.open('r', newline=''),
+                        )
+                    else:
+                        input_stream = stack.enter_context(
+                            input_path.open('rb'),
+                        )
                 else:
                     input_stream = input_path
 
@@ -374,7 +382,18 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
                         break
 
                     output_stream.write(data)
-                    total_transferred += len(data)
+                    if isinstance(data, str):
+                        # The total size is measured in bytes, so progress
+                        # must be tracked in bytes as well
+                        encoding = (
+                            getattr(input_stream, 'encoding', None) or 'utf-8'
+                        )
+                        total_transferred += len(
+                            data.encode(encoding, errors='replace'),
+                        )
+                    else:
+                        total_transferred += len(data)
+
                     bar.update(total_transferred)
 
         bar.finish(dirty=True)
@@ -386,8 +405,14 @@ def _get_output_stream(
     stack: contextlib.ExitStack,
 ) -> typing.IO[typing.Any]:
     if output and output != '-':
-        mode = 'w' if line_mode else 'wb'
-        return stack.enter_context(open(output, mode))  # noqa: SIM115
+        if line_mode:
+            # newline='' passes the data through without newline
+            # translation, mirroring the input handling
+            return stack.enter_context(
+                open(output, 'w', newline=''),  # noqa: SIM115
+            )
+
+        return stack.enter_context(open(output, 'wb'))  # noqa: SIM115
     elif line_mode:
         return sys.stdout
     else:

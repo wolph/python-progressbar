@@ -1,3 +1,5 @@
+import contextlib
+import io
 import random
 import threading
 import time
@@ -137,6 +139,9 @@ def test_multibar_show_finished() -> None:
                 bar.update(i)
                 time.sleep(SLEEP)
 
+            # The context manager waits for all bars to finish
+            bar.finish()
+
         multibar.render(force=True)
 
 
@@ -185,8 +190,10 @@ def test_multibar_print() -> None:
         for i in range(5):
             multibar.print(f'{i}', flush=False)
 
-        multibar.update(force=True, flush=False)
-        multibar.update(force=True, flush=True)
+        # Note: MultiBar inherits from dict, so update() would be
+        # dict.update and insert bogus entries; render() is intended here
+        multibar.render(force=True, flush=False)
+        multibar.render(force=True, flush=True)
 
 
 def test_multibar_no_format() -> None:
@@ -243,7 +250,142 @@ def test_multibar_threads() -> None:
     time.sleep(0.1)
     bar.update(3)
     time.sleep(0.1)
-    multibar.join()
+    # join() waits until all bars have finished, so finish first
     bar.finish()
     multibar.join()
+    multibar.join()
     multibar.render(force=True)
+
+
+def test_multibar_instances_do_not_share_thread_state() -> None:
+    # Regression: D1 - thread primitives were class attributes shared
+    # between all MultiBar instances.
+    multibar_a = progressbar.MultiBar(fd=io.StringIO())
+    multibar_b = progressbar.MultiBar(fd=io.StringIO())
+
+    assert multibar_a._thread_finished is not multibar_b._thread_finished
+    assert multibar_a._thread_closed is not multibar_b._thread_closed
+    assert multibar_a._print_lock is not multibar_b._print_lock
+
+
+def test_multibar_stop_does_not_poison_new_instances() -> None:
+    # Regression: D1 - stop() set a class-level Event, killing the render
+    # loop of every MultiBar created afterwards.
+    multibar = progressbar.MultiBar(fd=io.StringIO())
+    multibar.start()
+    multibar.stop(timeout=5)
+
+    fresh = progressbar.MultiBar(fd=io.StringIO())
+    assert not fresh._thread_finished.is_set()
+
+
+def test_multibar_start_keeps_render_thread_alive() -> None:
+    # Regression: D6 - start() called _thread_closed.set() instead of
+    # clearing it, so an empty multibar's render thread exited before
+    # any bars could be added.
+    multibar = progressbar.MultiBar(fd=io.StringIO())
+    multibar.start()
+    try:
+        assert not multibar._thread_closed.is_set()
+        assert multibar._thread is not None
+        multibar._thread.join(timeout=0.5)
+        assert multibar._thread.is_alive()
+    finally:
+        multibar.stop(timeout=5)
+
+
+def test_multibar_flush_does_not_emit_nul_bytes() -> None:
+    # Regression: D3 - flush() truncated the buffer without seeking back,
+    # so later writes padded the gap with NUL characters.
+    fd = io.StringIO()
+    multibar = progressbar.MultiBar(fd=fd)
+    multibar.print('hello')
+    multibar.print('world')
+
+    assert '\x00' not in fd.getvalue()
+
+
+def test_multibar_prepend_and_append_label() -> None:
+    # Regression: D7 - the append_label branch was unreachable when
+    # prepend_label was enabled as well.
+    multibar = progressbar.MultiBar(
+        prepend_label=True,
+        append_label=True,
+        fd=io.StringIO(),
+    )
+    bar = progressbar.ProgressBar(
+        max_value=N,
+        widgets=['x'],
+        fd=io.StringIO(),
+    )
+    multibar['job'] = bar
+    multibar._label_bar(bar)
+
+    assert str(bar.widgets[0]).startswith('job')
+    assert str(bar.widgets[-1]).startswith('job')
+
+
+def test_multibar_join_timeout_keeps_thread_reference() -> None:
+    # Regression: D8 - join(timeout) dropped the thread reference even
+    # when the thread was still running.
+    multibar = progressbar.MultiBar(fd=io.StringIO())
+    assert multibar['unfinished'] is not None  # creates an unfinished bar
+    multibar.start()
+    try:
+        multibar.join(timeout=0.01)
+        assert multibar._thread is not None
+        assert multibar._thread.is_alive()
+    finally:
+        multibar.stop(timeout=5)
+
+
+def test_multibar_exception_in_context_exits_promptly() -> None:
+    # Regression: D4 - an exception inside `with MultiBar()` hung forever
+    # in __exit__ because join() waited for bars that never finish.
+    holder: dict[str, progressbar.MultiBar] = {}
+
+    def scenario() -> None:
+        multibar = holder['multibar'] = progressbar.MultiBar(
+            fd=io.StringIO(),
+        )
+        # Pre-fix the event is shared class state which other tests may
+        # have set; post-fix this only touches this instance.
+        multibar._thread_finished.clear()
+        # The bar must exist before the render thread starts so the
+        # thread observes an unfinished bar.
+        multibar['a'].update(0)
+        with contextlib.suppress(RuntimeError), multibar:
+            raise RuntimeError('boom')
+
+    worker = threading.Thread(target=scenario, daemon=True)
+    worker.start()
+    worker.join(timeout=5)
+    try:
+        assert not worker.is_alive(), '__exit__ hung on unfinished bars'
+    finally:
+        # Unstick the render thread regardless of the outcome
+        holder['multibar']._thread_finished.set()
+
+
+def test_multibar_concurrent_mutation() -> None:
+    # Regression: D2 - the render thread iterated self.values() without a
+    # snapshot while other threads add/remove bars.
+    errors: list[threading.ExceptHookArgs] = []
+    original_excepthook = threading.excepthook
+    threading.excepthook = errors.append
+    multibar = progressbar.MultiBar(fd=io.StringIO())
+    # Pre-fix the event is shared class state which other tests may have
+    # set; post-fix this only touches this instance.
+    multibar._thread_finished.clear()
+    assert multibar['keep'] is not None  # creates an unfinished bar
+    multibar.start()
+    try:
+        for i in range(300):
+            assert multibar[f'bar {i}'] is not None
+            del multibar[f'bar {i}']
+    finally:
+        multibar.stop(timeout=5)
+        threading.excepthook = original_excepthook
+
+    assert not errors
+    assert not multibar._thread or not multibar._thread.is_alive()

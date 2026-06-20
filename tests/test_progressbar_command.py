@@ -2,6 +2,7 @@ import io
 
 import pytest
 
+import progressbar
 import progressbar.__main__ as main
 
 
@@ -142,3 +143,66 @@ def test_main_bytes_output(monkeypatch, tmp_path) -> None:
 def test_missing_input(tmp_path) -> None:
     with pytest.raises(SystemExit):
         main.main([str(tmp_path / 'output')])
+
+
+@pytest.fixture
+def recorded_bars(monkeypatch):
+    created = []
+
+    class RecordingProgressBar(progressbar.ProgressBar):
+        def __init__(self, **kwargs) -> None:
+            created.append(self)
+            self.init_kwargs = kwargs
+            super().__init__(**kwargs)
+
+    monkeypatch.setattr(main.progressbar, 'ProgressBar', RecordingProgressBar)
+    return created
+
+
+def test_main_passes_widgets(tmp_path, recorded_bars) -> None:
+    # Regression: E2 - the configured widgets were built but never passed
+    # to the progress bar.
+    file = tmp_path / 'data.bin'
+    file.write_bytes(b'x' * 1024)
+    main.main([str(file), '-o', str(tmp_path / 'out.bin')])
+
+    assert recorded_bars
+    assert recorded_bars[0].init_kwargs.get('widgets')
+
+
+def test_main_line_mode_counts_bytes(tmp_path, recorded_bars) -> None:
+    # Regression: E1 - line mode counted characters while the maximum was
+    # measured in bytes, so multi-byte content never reached 100%.
+    file = tmp_path / 'data.txt'
+    file.write_text(('é' * 99 + '\n') * 5, encoding='utf-8')
+    size = file.stat().st_size
+
+    main.main(['-l', str(file), '-o', str(tmp_path / 'out.txt')])
+
+    assert recorded_bars[0].value == size
+
+
+def test_main_broken_pipe(tmp_path, monkeypatch) -> None:
+    # Regression: E3 - an early-closing downstream pipe raised an
+    # unhandled BrokenPipeError.
+    file = tmp_path / 'data.bin'
+    file.write_bytes(b'x' * 1024)
+
+    class BrokenPipeIO(io.BytesIO):
+        def write(self, data) -> int:
+            raise BrokenPipeError
+
+    monkeypatch.setattr(
+        main, '_get_output_stream', lambda *args: BrokenPipeIO()
+    )
+    main.main([str(file)])  # must not raise
+
+
+def test_main_empty_file_has_known_size(tmp_path, recorded_bars) -> None:
+    # Regression: E8 - a zero-byte input flipped the bar into
+    # unknown-length mode although the file size was known.
+    file = tmp_path / 'empty.bin'
+    file.write_bytes(b'')
+    main.main([str(file), '-o', str(tmp_path / 'out.bin')])
+
+    assert recorded_bars[0].init_kwargs.get('max_value') == 0

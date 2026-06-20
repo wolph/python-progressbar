@@ -161,3 +161,23 @@ def test_last_line_stream_methods() -> None:
 
     # Test close method
     stream.close()
+
+
+def test_line_offset_stream_wrapper_write_length_and_flush() -> None:
+    # Regression: C5/C6 - write() returned the newline-stripped length
+    # and flush() never reached the wrapped stream.
+    class CountingIO(io.StringIO):
+        def __init__(self) -> None:
+            super().__init__()
+            self.flushes = 0
+
+        def flush(self) -> None:
+            self.flushes += 1
+            super().flush()
+
+    target = CountingIO()
+    wrapper = progressbar.LineOffsetStreamWrapper(lines=2, stream=target)
+
+    written = wrapper.write('hello\n')
+    assert written == 6
+    assert target.flushes >= 1

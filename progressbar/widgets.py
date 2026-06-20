@@ -92,7 +92,18 @@ def create_marker(marker, wrap=None):
             progress.max_value is not base.UnknownLength
             and progress.max_value > 0
         ):
-            length = int(progress.value / progress.max_value * width)
+            # The fill length is based on the progress relative to
+            # min_value; the max() guards against a zero range and the
+            # min() keeps the marker within the allotted width when the
+            # value exceeds max_value (with max_error=False)
+            length = min(
+                width,
+                int(
+                    (progress.value - progress.min_value)
+                    / max(progress.max_value - progress.min_value, 1e-6)
+                    * width,
+                ),
+            )
             return marker * length
         else:
             return marker
@@ -463,12 +474,7 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
 
             if isinstance(self.samples, datetime.timedelta):
                 minimum_time = progress.last_update_time - self.samples
-                minimum_value = sample_values[-1]
-                while (
-                    sample_times[2:]
-                    and minimum_time > sample_times[1]
-                    and minimum_value > sample_values[1]
-                ):
+                while sample_times[2:] and minimum_time > sample_times[1]:
                     sample_times.pop(0)
                     sample_values.pop(0)
             elif len(sample_times) > self.samples:
@@ -532,7 +538,9 @@ class ETA(Timer):
     ):
         """Updates the widget to show the ETA or total time when finished."""
         if value is None:
-            value = data['value']
+            # The per-item rate must be based on the progress relative to
+            # min_value, not the raw value
+            value = data['value'] - progress.min_value
 
         if elapsed is None:
             elapsed = data['time_elapsed']
@@ -677,7 +685,9 @@ class SmoothingETA(ETA):
         elapsed=None,
     ):
         if value is None:  # pragma: no branch
-            value = data['value']
+            # The per-item rate must be based on the progress relative to
+            # min_value, not the raw value
+            value = data['value'] - progress.min_value
 
         if elapsed is None:  # pragma: no branch
             elapsed = data['time_elapsed']
@@ -777,10 +787,11 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
             scaled = power = 0
 
         data['unit'] = self.unit
-        if power == 0 and scaled < 0.1:
-            if scaled > 0:
-                scaled = 1 / scaled
-            data['scaled'] = scaled
+        if power == 0 and 0 < scaled < 0.1:
+            # Slow transfers are shown as seconds per unit instead. Note
+            # that this is only done when there is actual data; before the
+            # first data arrives the regular format is used.
+            data['scaled'] = 1 / scaled
             data['prefix'] = self.prefixes[0]
             return FormatWidgetMixin.__call__(
                 self,
@@ -843,6 +854,11 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         finished.
         """
         if progress.end_time:
+            # When finished, keep a filling marker full instead of
+            # collapsing to a single character; a plain marker has no fill
+            # so it falls back to its default character.
+            if self.fill:
+                return self.fill(progress, data, width)
             return self.default
 
         marker = self.markers[data['updates'] % len(self.markers)]
@@ -1258,9 +1274,13 @@ class MultiProgressBar(MultiRangeBar):
         ranges = [0.0] * len(self.markers)
         for value in data['variables'][self.name] or []:
             if not isinstance(value, (int, float)):
-                # Progress is (value, max)
+                # Progress is (value, max). A zero maximum means the total
+                # is not known (yet), so no progress can be shown.
                 progress_value, progress_max = value
-                value = float(progress_value) / float(progress_max)
+                if progress_max:
+                    value = float(progress_value) / float(progress_max)
+                else:
+                    value = 0.0
 
             if not 0 <= value <= 1:
                 raise ValueError(
@@ -1611,11 +1631,19 @@ class JobStatusBar(Bar, VariableMixin):
                 marker = bg_color.bg(marker)
 
             self.job_markers.append(marker)
+            # Drop the oldest markers when they no longer fit the
+            # available width
+            while (
+                len(self.job_markers) > 1
+                and progress.custom_len(''.join(self.job_markers)) > width
+            ):
+                self.job_markers.pop(0)
+
             marker = ''.join(self.job_markers)
             width -= progress.custom_len(marker)
 
             fill = converters.to_unicode(self.fill(progress, data, width))
-            fill = self._apply_colors(fill * width, data)
+            fill = self._apply_colors(fill * max(width, 0), data)
 
             if self.fill_left:  # pragma: no branch
                 marker += fill

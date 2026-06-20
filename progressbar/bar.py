@@ -11,6 +11,7 @@ import time
 import timeit
 import typing
 import warnings
+import weakref
 from copy import deepcopy
 from datetime import datetime
 from types import FrameType
@@ -132,10 +133,12 @@ class ProgressBarMixinBase(abc.ABC):
     def __del__(self):
         if not self._finished and self._started:  # pragma: no cover
             # We're not using contextlib.suppress here because during teardown
-            # contextlib is not available anymore.
+            # contextlib is not available anymore. Any exception can occur
+            # here during interpreter shutdown (closed streams, partially
+            # torn down modules), so we suppress all of them.
             try:  # noqa: SIM105
                 self.finish()
-            except AttributeError:
+            except Exception:  # noqa: BLE001, S110
                 pass
 
     def __getstate__(self):
@@ -385,6 +388,62 @@ class DefaultFdMixin(ProgressBarMixinBase):
             yield converters.to_unicode(arg)
 
 
+class _ResizeRegistry:
+    """
+    Shared SIGWINCH handling for all resizable progressbars.
+
+    A single signal handler dispatches to every live bar. The original
+    handler is saved when the first bar registers and restored when the
+    last one unregisters, so overlapping bars can finish in any order
+    without leaving a dangling handler installed.
+    """
+
+    bars: typing.ClassVar[weakref.WeakSet[ResizableMixin]] = weakref.WeakSet()
+    previous_handler: typing.ClassVar[typing.Any] = None
+
+    @classmethod
+    def install(cls, bar: ResizableMixin) -> None:
+        import signal
+
+        if not hasattr(signal, 'SIGWINCH'):  # pragma: no cover
+            # Not available on Windows
+            return
+
+        if not cls.bars:
+            cls.previous_handler = signal.getsignal(
+                signal.SIGWINCH  # type: ignore[attr-defined]
+            )
+            signal.signal(
+                signal.SIGWINCH,  # type: ignore[attr-defined]
+                cls.handle_resize,
+            )
+
+        cls.bars.add(bar)
+
+    @classmethod
+    def uninstall(cls, bar: ResizableMixin) -> None:
+        import signal
+
+        if not hasattr(signal, 'SIGWINCH'):  # pragma: no cover
+            # Not available on Windows
+            return
+
+        cls.bars.discard(bar)
+        if not cls.bars:
+            signal.signal(
+                signal.SIGWINCH,  # type: ignore[attr-defined]
+                cls.previous_handler,
+            )
+            cls.previous_handler = None
+
+    @classmethod
+    def handle_resize(
+        cls, signum: int | None = None, frame: None | FrameType = None
+    ) -> None:
+        for bar in list(cls.bars):
+            bar._handle_resize(signum, frame)
+
+
 class ResizableMixin(ProgressBarMixinBase):
     def __init__(self, term_width: int | None = None, **kwargs: typing.Any):
         ProgressBarMixinBase.__init__(self, **kwargs)
@@ -395,15 +454,7 @@ class ResizableMixin(ProgressBarMixinBase):
         else:  # pragma: no cover
             with contextlib.suppress(Exception):
                 self._handle_resize()
-                import signal
-
-                self._prev_handle = signal.getsignal(
-                    signal.SIGWINCH  # type: ignore
-                )
-                signal.signal(
-                    signal.SIGWINCH,
-                    self._handle_resize,  # type: ignore
-                )
+                _ResizeRegistry.install(self)
                 self.signal_set = True
 
     def _handle_resize(
@@ -417,17 +468,25 @@ class ResizableMixin(ProgressBarMixinBase):
         ProgressBarMixinBase.finish(self)
         if self.signal_set:
             with contextlib.suppress(Exception):
-                import signal
-
-                signal.signal(
-                    signal.SIGWINCH,
-                    self._prev_handle,  # type: ignore
-                )
+                _ResizeRegistry.uninstall(self)
+                self.signal_set = False
 
 
 class StdRedirectMixin(DefaultFdMixin):
+    """Redirect ``stdout``/``stderr`` so prints appear above the bar.
+
+    Args:
+        redirect_stderr (bool): Capture ``sys.stderr`` and print it above the
+            bar instead of letting it corrupt the bar.
+        redirect_stdout (bool): Capture ``sys.stdout`` and print it above the
+            bar instead of letting it corrupt the bar.
+        redirect_blank_line (bool): When redirecting, keep a blank line
+            between the redirected output and the bar. Defaults to ``False``.
+    """
+
     redirect_stderr: bool = False
     redirect_stdout: bool = False
+    redirect_blank_line: bool = False
     stdout: utils.WrappingIO | base.IO[typing.Any]
     stderr: utils.WrappingIO | base.IO[typing.Any]
     _stdout: base.IO[typing.Any]
@@ -437,11 +496,14 @@ class StdRedirectMixin(DefaultFdMixin):
         self,
         redirect_stderr: bool = False,
         redirect_stdout: bool = False,
+        redirect_blank_line: bool = False,
         **kwargs,
     ):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
+        # Separate redirected output from the bar with a blank line
+        self.redirect_blank_line = redirect_blank_line
         self._stdout = self.stdout = sys.stdout
         self._stderr = self.stderr = sys.stderr
 
@@ -462,10 +524,14 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value: types.Optional[NumberT] = None):
-        if not self.line_breaks and utils.streams.needs_clear():
+        cleared = not self.line_breaks and utils.streams.needs_clear()
+        if cleared:
             self.fd.write('\r' + ' ' * self.term_width + '\r')
 
         utils.streams.flush()
+        if cleared and self.redirect_blank_line:
+            # Keep a blank line between the redirected output and the bar
+            self.fd.write('\n')
         DefaultFdMixin.update(self, value=value)
 
     def finish(self, end='\n'):
@@ -686,6 +752,8 @@ class ProgressBar(
         self.end_time = None
         self.extra = dict()
         self._last_update_timer = timeit.default_timer()
+        self._started = False
+        self._finished = False
 
     @property
     def percentage(self) -> float | None:
@@ -749,7 +817,7 @@ class ProgressBar(
                 - `minutes_elapsed`: The minutes since the bar started modulo
                   60
                 - `hours_elapsed`: The hours since the bar started modulo 24
-                - `days_elapsed`: The hours since the bar started
+                - `days_elapsed`: The days since the bar started
                 - `time_elapsed`: The raw elapsed `datetime.timedelta` object
                 - `percentage`: Percentage as a float or `None` if no max_value
                   is available
@@ -788,8 +856,8 @@ class ProgressBar(
             minutes_elapsed=(elapsed.seconds / 60) % 60,
             # The hours since the bar started modulo 24
             hours_elapsed=(elapsed.seconds / (60 * 60)) % 24,
-            # The hours since the bar started
-            days_elapsed=(elapsed.seconds / (60 * 60 * 24)),
+            # The days since the bar started
+            days_elapsed=(elapsed.total_seconds() / (60 * 60 * 24)),
             # The raw elapsed `datetime.timedelta` object
             time_elapsed=elapsed,
             # Percentage as a float or `None` if no max_value is available
@@ -842,7 +910,20 @@ class ProgressBar(
         return self
 
     def __iter__(self):
-        return self
+        # A generator (rather than returning ``self``) so that abandoning the
+        # loop early - a `break` or an exception in the loop body - triggers
+        # `GeneratorExit` on garbage collection, letting us finish the bar and
+        # restore any redirected streams. See issue #212.
+        try:
+            while True:
+                try:
+                    value = next(self)
+                except StopIteration:
+                    return
+                yield value
+        except GeneratorExit:
+            self.finish(dirty=True)
+            raise
 
     def __next__(self):
         value: typing.Any
@@ -859,9 +940,6 @@ class ProgressBar(
 
         except StopIteration:
             self.finish()
-            raise
-        except GeneratorExit:  # pragma: no cover
-            self.finish(dirty=True)
             raise
         else:
             return value
@@ -897,6 +975,11 @@ class ProgressBar(
         elif self.poll_interval and delta > self.poll_interval:
             # Needs to redraw timers and animations
             return True
+        elif self.max_value is base.UnknownLength:
+            # There's no terminal-width threshold to compute for an unknown
+            # length, so redraw whenever the value advanced (still rate
+            # limited by the min_poll_interval check above)
+            return self.value != self.previous_value
 
         # Update if value increment is not large enough to
         # add more bars to progressbar (according to current
@@ -954,7 +1037,7 @@ class ProgressBar(
             if key not in self.variables:
                 raise TypeError(
                     'update() got an unexpected variable name as argument '
-                    '{key!r}',
+                    f'{key!r}',
                 )
             elif self.variables[key] != value_:
                 self.variables[key] = kwargs[key]
@@ -1080,6 +1163,11 @@ class ProgressBar(
             dirty (bool): When True the progressbar kept the current state and
                 won't be set to 100 percent
         """
+        if self._finished:
+            # Finishing twice would corrupt the global stream-wrapping
+            # state, so extra calls are no-ops
+            return
+
         if not dirty:
             self.end_time = datetime.now()
             self.update(self.max_value, force=True)
