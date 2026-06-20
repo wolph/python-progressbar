@@ -473,8 +473,20 @@ class ResizableMixin(ProgressBarMixinBase):
 
 
 class StdRedirectMixin(DefaultFdMixin):
+    """Redirect ``stdout``/``stderr`` so prints appear above the bar.
+
+    Args:
+        redirect_stderr (bool): Capture ``sys.stderr`` and print it above the
+            bar instead of letting it corrupt the bar.
+        redirect_stdout (bool): Capture ``sys.stdout`` and print it above the
+            bar instead of letting it corrupt the bar.
+        redirect_blank_line (bool): When redirecting, keep a blank line
+            between the redirected output and the bar. Defaults to ``False``.
+    """
+
     redirect_stderr: bool = False
     redirect_stdout: bool = False
+    redirect_blank_line: bool = False
     stdout: utils.WrappingIO | base.IO[typing.Any]
     stderr: utils.WrappingIO | base.IO[typing.Any]
     _stdout: base.IO[typing.Any]
@@ -484,11 +496,14 @@ class StdRedirectMixin(DefaultFdMixin):
         self,
         redirect_stderr: bool = False,
         redirect_stdout: bool = False,
+        redirect_blank_line: bool = False,
         **kwargs,
     ):
         DefaultFdMixin.__init__(self, **kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
+        # Separate redirected output from the bar with a blank line
+        self.redirect_blank_line = redirect_blank_line
         self._stdout = self.stdout = sys.stdout
         self._stderr = self.stderr = sys.stderr
 
@@ -509,10 +524,14 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value: types.Optional[NumberT] = None):
-        if not self.line_breaks and utils.streams.needs_clear():
+        cleared = not self.line_breaks and utils.streams.needs_clear()
+        if cleared:
             self.fd.write('\r' + ' ' * self.term_width + '\r')
 
         utils.streams.flush()
+        if cleared and self.redirect_blank_line:
+            # Keep a blank line between the redirected output and the bar
+            self.fd.write('\n')
         DefaultFdMixin.update(self, value=value)
 
     def finish(self, end='\n'):
@@ -891,7 +910,20 @@ class ProgressBar(
         return self
 
     def __iter__(self):
-        return self
+        # A generator (rather than returning ``self``) so that abandoning the
+        # loop early - a `break` or an exception in the loop body - triggers
+        # `GeneratorExit` on garbage collection, letting us finish the bar and
+        # restore any redirected streams. See issue #212.
+        try:
+            while True:
+                try:
+                    value = next(self)
+                except StopIteration:
+                    return
+                yield value
+        except GeneratorExit:
+            self.finish(dirty=True)
+            raise
 
     def __next__(self):
         value: typing.Any
@@ -908,9 +940,6 @@ class ProgressBar(
 
         except StopIteration:
             self.finish()
-            raise
-        except GeneratorExit:  # pragma: no cover
-            self.finish(dirty=True)
             raise
         else:
             return value

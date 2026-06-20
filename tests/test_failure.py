@@ -1,9 +1,13 @@
+import gc
+import io
 import logging
+import sys
 import time
 
 import pytest
 
 import progressbar
+from progressbar import utils
 
 
 def test_missing_format_values(caplog) -> None:
@@ -146,3 +150,41 @@ def test_unexpected_update_keyword_arg_message() -> None:
     bar = progressbar.ProgressBar(max_value=10)
     with pytest.raises(TypeError, match='foo'):
         bar.update(1, foo=10)
+
+
+def test_iterable_interrupt_unwraps_stdout() -> None:
+    # Regression #212: when an iterable-wrapped bar (no context manager) is
+    # interrupted by an exception in the loop body, the bar must still be
+    # finished and sys.stdout must be unwrapped.
+    original = sys.stdout
+    bar = progressbar.ProgressBar(redirect_stdout=True, fd=io.StringIO())
+    with pytest.raises(ValueError):
+        for i in bar(range(100)):
+            if i == 3:
+                raise ValueError('boom')
+    gc.collect()
+    assert bar._finished
+    assert sys.stdout is original
+    assert not isinstance(sys.stdout, utils.WrappingIO)
+
+
+def test_iterable_break_unwraps_stdout() -> None:
+    # Regression #212: breaking out of an iterable-wrapped bar must also
+    # finish the bar and unwrap sys.stdout.
+    original = sys.stdout
+    bar = progressbar.ProgressBar(redirect_stdout=True, fd=io.StringIO())
+    for i in bar(range(100)):
+        if i == 3:
+            break
+    gc.collect()
+    assert bar._finished
+    assert sys.stdout is original
+    assert not isinstance(sys.stdout, utils.WrappingIO)
+
+
+def test_iterable_direct_next_still_works() -> None:
+    # The generator-based __iter__ must not break direct iterator usage.
+    bar = progressbar.ProgressBar(max_value=10, fd=io.StringIO())
+    it = bar(range(3))
+    assert next(it) == 0
+    assert next(it) == 1
