@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import contextlib
+import importlib
 import itertools
 import logging
 import math
@@ -29,6 +30,18 @@ from . import (
     widgets as widgets_module,  # Avoid name collision
 )
 from .terminal import os_specific
+
+try:
+    # Optional native accelerator, shipped as the ``progressbar2[fast]`` extra
+    # (the separate ``speedups`` package). When importable, the iterator path
+    # uses it automatically; otherwise we fall back to the pure-Python gate.
+    # Loaded via importlib so type checkers don't try to resolve the optional
+    # compiled module when it is absent.
+    _FastBarIterator = importlib.import_module(
+        'speedups.progressbar',
+    ).FastBarIterator
+except Exception:  # pragma: no cover - environmental (absent / ABI mismatch)
+    _FastBarIterator = None
 
 logger = logging.getLogger(__name__)
 
@@ -928,6 +941,20 @@ class ProgressBar(
         return self
 
     def __iter__(self):
+        # Dispatch to the optional native iterator when available, else the
+        # pure-Python generator. The native path counts in C and syncs
+        # `value`/`previous_value` only at redraw crossings (so they lag
+        # mid-loop, like `tqdm.n`), beating the per-iteration attribute writes
+        # the pure-Python path pays to keep them live every iteration.
+        if (
+            _FastBarIterator is not None
+            and self._iterable is not None
+            and not os.environ.get('PROGRESSBAR_DISABLE_FASTPATH')
+        ):
+            return _FastBarIterator(self, self._iterable)
+        return self._iter_python()
+
+    def _iter_python(self):
         # Single generator (see issue #212): a `break`/exception in the loop
         # body triggers `GeneratorExit`, letting us finish and restore any
         # redirected streams. The integer gate keeps the common iteration to
@@ -953,6 +980,10 @@ class ProgressBar(
             value = self.value
             next_update = value
             update = self.update
+            # `_gate_enabled` is set once in `start()` and never mutated during
+            # iteration, so hoist it to a local and drop the per-iteration
+            # attribute load on the hot path.
+            gate_enabled = self._gate_enabled
             for item in iterator:
                 value += 1
                 # When the gate is disabled, call `update()` every iteration so
@@ -964,7 +995,7 @@ class ProgressBar(
                 # `update()` (rather than pre-setting `self.value`) lets it
                 # record the prior value in the public `previous_value`,
                 # preserving its original semantics.
-                if not self._gate_enabled or value >= next_update:
+                if not gate_enabled or value >= next_update:
                     update(value)
                     next_update = self._next_update
                 else:
@@ -980,6 +1011,28 @@ class ProgressBar(
         except GeneratorExit:
             self.finish(dirty=True)
             raise
+
+    # --- Native accelerator protocol (used by speedups.FastBarIterator) ------
+    # The C iterator counts items itself and calls back here only at gate
+    # crossings, reusing the existing gate/redraw/calibration machinery so the
+    # redraw cadence is identical to `_iter_python`.
+
+    def _fast_begin(self) -> None:
+        """Start the bar (draws 0%, sets `_next_update`/`_gate_enabled`)."""
+        if self.start_time is None:
+            self.start()
+
+    def _fast_tick(self, value: int) -> None:
+        """Handle a redraw crossing: redraw-if-due and recompute the gate."""
+        self.update(value)
+
+    def _fast_end(self) -> None:
+        """Finish normally (draws 100%, restores streams) on exhaustion."""
+        self.finish()
+
+    def _fast_end_dirty(self) -> None:
+        """Finish dirty on early break/exception (restores streams)."""
+        self.finish(dirty=True)
 
     def __next__(self):
         value: typing.Any

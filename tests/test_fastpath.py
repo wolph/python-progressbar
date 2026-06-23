@@ -525,9 +525,11 @@ def test_shortcut_has_single_generator_layer():
 
     gen = progressbar.progressbar(range(3), fd=RecordingTTY())
     assert isinstance(gen, types.GeneratorType)
-    # It is the bar's own __iter__ generator, not a wrapper: compare the
-    # generator's code object to ProgressBar.__iter__ (robust across versions).
-    assert gen.gi_code is progressbar.ProgressBar.__iter__.__code__
+    # It is the bar's own iterator generator, not a wrapper: compare the
+    # generator's code object to ProgressBar._iter_python (the pure-Python
+    # path `__iter__` dispatches to; robust across versions). The autouse
+    # `disable_native_accelerator` fixture forces this path here.
+    assert gen.gi_code is progressbar.ProgressBar._iter_python.__code__
 
 
 def test_env_disables_fastpath(monkeypatch):

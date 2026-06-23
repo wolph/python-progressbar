@@ -20,53 +20,53 @@
     "term": "80x24"
   },
   "scenario_a_default_overhead": {
-    "baseline_min_s": 0.00558699993416667,
-    "baseline_median_s": 0.005599833093583584,
+    "baseline_min_s": 0.005596625152975321,
+    "baseline_median_s": 0.005600166041404009,
     "libs": {
       "progressbar2": {
-        "total_min_s": 0.03611662518233061,
-        "total_median_s": 0.037002416793257,
-        "overhead_ns_per_iter": 30.52962524816394
+        "total_min_s": 0.010199083015322685,
+        "total_median_s": 0.010545624885708094,
+        "overhead_ns_per_iter": 4.602457862347364
       },
       "tqdm": {
-        "total_min_s": 0.061426167376339436,
-        "total_median_s": 0.06293316604569554,
-        "overhead_ns_per_iter": 55.839167442172766
+        "total_min_s": 0.06143912486732006,
+        "total_median_s": 0.0625292919576168,
+        "overhead_ns_per_iter": 55.84249971434474
       },
       "rich": {
-        "total_min_s": 0.024669166654348373,
-        "total_median_s": 0.02482037479057908,
-        "overhead_ns_per_iter": 19.082166720181704
+        "total_min_s": 0.024625582620501518,
+        "total_median_s": 0.024751500226557255,
+        "overhead_ns_per_iter": 19.028957467526197
       },
       "alive-progress": {
-        "total_min_s": 0.2512250836007297,
-        "total_median_s": 0.2683616247959435,
-        "overhead_ns_per_iter": 245.63808366656306
+        "total_min_s": 0.2545189158990979,
+        "total_median_s": 0.27155320905148983,
+        "overhead_ns_per_iter": 248.9222907461226
       },
       "click": {
-        "total_min_s": 1.9241157919168472,
-        "total_median_s": 1.9306053328327835,
-        "overhead_ns_per_iter": 1918.5287919826806
+        "total_min_s": 1.9112452920526266,
+        "total_median_s": 1.92735629202798,
+        "overhead_ns_per_iter": 1905.6486668996513
       }
     }
   },
   "scenario_b_forced_render": {
-    "baseline_min_s": 0.0001589590683579445,
+    "baseline_min_s": 0.00016700010746717453,
     "libs": {
       "progressbar2": {
-        "total_min_s": 0.7693966659717262,
-        "total_median_s": 0.7766300840303302,
-        "per_update_us": 25.64125689677894
+        "total_min_s": 0.7238296247087419,
+        "total_median_s": 0.7332709580659866,
+        "per_update_us": 24.12208748670916
       },
       "tqdm": {
-        "total_min_s": 0.33136308286339045,
-        "total_median_s": 0.3320189160294831,
-        "per_update_us": 11.040137459834416
+        "total_min_s": 0.32305875001475215,
+        "total_median_s": 0.3234979580156505,
+        "per_update_us": 10.763058330242833
       },
       "rich": {
-        "total_min_s": 5.17360516730696,
-        "total_median_s": 5.191705749835819,
-        "per_update_us": 172.4482069412867
+        "total_min_s": 5.169679875019938,
+        "total_median_s": 5.221574124880135,
+        "per_update_us": 172.3170958304157
       }
     },
     "excluded": {
@@ -75,27 +75,27 @@
     }
   },
   "scenario_c_import_time": {
-    "interpreter_baseline_s": 0.016710625030100346,
+    "interpreter_baseline_s": 0.01611029077321291,
     "libs": {
       "progressbar2": {
-        "total_min_s": 0.06196920806542039,
-        "net_ms": 45.258583035320044
+        "total_min_s": 0.06409437488764524,
+        "net_ms": 47.984084114432335
       },
       "tqdm": {
-        "total_min_s": 0.04024833394214511,
-        "net_ms": 23.537708912044764
+        "total_min_s": 0.039818957913666964,
+        "net_ms": 23.708667140454054
       },
       "rich": {
-        "total_min_s": 0.06633466714993119,
-        "net_ms": 49.62404211983085
+        "total_min_s": 0.0644346671178937,
+        "net_ms": 48.324376344680786
       },
       "alive-progress": {
-        "total_min_s": 0.025270250160247087,
-        "net_ms": 8.559625130146742
+        "total_min_s": 0.025128041859716177,
+        "net_ms": 9.017751086503267
       },
       "click": {
-        "total_min_s": 0.04085325030609965,
-        "net_ms": 24.142625275999308
+        "total_min_s": 0.04065508395433426,
+        "net_ms": 24.54479318112135
       }
     }
   }

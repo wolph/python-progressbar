@@ -25,6 +25,18 @@ def pytest_configure(config) -> None:
 
 
 @pytest.fixture(autouse=True)
+def disable_native_accelerator(monkeypatch):
+    # The optional native accelerator (speedups.FastBarIterator) is exercised
+    # explicitly in test_native_accelerator.py. Every other test targets the
+    # pure-Python iterator (`_iter_python`), so force that path by default when
+    # the compiled `speedups` package happens to be installed in the dev/bench
+    # environment. Native tests restore it via their own monkeypatch.
+    import progressbar.bar as bar_module
+
+    monkeypatch.setattr(bar_module, '_FastBarIterator', None)
+
+
+@pytest.fixture(autouse=True)
 def small_interval(monkeypatch, request) -> None:
     # Tests marked `no_freezegun` need real timing conditions (e.g. the perf
     # budget test), so preserve the default _MINIMUM_UPDATE_INTERVAL so the

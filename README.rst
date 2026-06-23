@@ -76,27 +76,37 @@ automatically enable features like auto-resizing when the system supports it.
 Performance
 ******************************************************************************
 
-Wrapping a loop with ``progressbar2`` is cheap. On the benchmark machine
-(CPython 3.13, macOS arm64) it adds only about **31 nanoseconds per
-iteration** over a bare loop -- roughly **1.8x faster than tqdm** and second
-only to ``rich``, while being far ahead of the rest:
+Wrapping a loop with ``progressbar2`` is cheap -- and with the optional native
+accelerator it is the **fastest** progress bar available. On the benchmark
+machine (CPython 3.13, macOS arm64) the per-iteration overhead over a bare loop
+is:
 
-================  ==================
-Library           Overhead per iter
-================  ==================
-rich              19 ns
-progressbar2      31 ns
-tqdm              56 ns
-alive-progress    246 ns
-click             1919 ns
-================  ==================
+================  ==================  ==================
+Library           Overhead per iter  vs progressbar2
+================  ==================  ==================
+**progressbar2**  **5 ns** *(fast)*  baseline
+rich              19 ns               ~4x slower
+tqdm              56 ns               ~12x slower
+alive-progress    249 ns              ~54x slower
+click             1906 ns             ~410x slower
+================  ==================  ==================
 
-The per-iteration cost is dominated by deciding *whether* to redraw, not by
-drawing: ``progressbar2`` keeps an integer "next update" gate so the common
-iteration is just an increment and a couple of cheap stores, only entering the
-(rate-limited) redraw machinery a few times per second. Behaviour is unchanged
--- the same widgets, the same redraw cadence, and ``value``/``previous_value``
-stay byte-identical to the pre-gate implementation on every iteration.
+Two tiers, same API:
+
+- **Pure Python (default):** ~30 ns/iter -- roughly **1.8x faster than tqdm**,
+  second only to ``rich``, with **no native build required**. An integer "next
+  update" gate keeps the common iteration to an increment, a compare and a
+  couple of cheap stores, only entering the (rate-limited) redraw machinery a
+  few times per second. Behaviour is unchanged: same widgets, same redraw
+  cadence, and ``value``/``previous_value`` stay byte-identical to the
+  pre-gate implementation on every iteration.
+- **Native accelerator (**\ ``pip install progressbar2[fast]``\ **):** ~5 ns/iter,
+  **~4x faster than rich**. A small compiled (Cython) iterator counts in a C
+  field and only calls back into Python at redraw crossings. It engages
+  automatically when installed; the only behavioural difference is that
+  ``bar.value`` is synced at redraw crossings rather than every iteration, so
+  reads between redraws lag slightly (like ``tqdm.n``). Set
+  ``PROGRESSBAR_DISABLE_FASTPATH=1`` to force the pure-Python path.
 
 The benchmark is fully reproducible and pits ``progressbar2`` against ``tqdm``,
 ``rich``, ``alive-progress`` and ``click`` across iteration overhead, forced
