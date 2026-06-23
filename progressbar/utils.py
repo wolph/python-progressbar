@@ -342,7 +342,7 @@ class StreamWrapper:
 
         seen: set[int] = set()
         for logger_ in self._iter_loggers():
-            for handler in logger_.handlers:
+            for handler in tuple(logger_.handlers):
                 if id(handler) in seen:
                     continue
                 seen.add(id(handler))

@@ -101,6 +101,26 @@ def test_postfix_widget_renders_other_values() -> None:
     assert output == ' 3'
 
 
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        (0, ' 0'),
+        (0.0, ' 0.0'),
+        (False, ' False'),
+    ],
+)
+def test_postfix_widget_renders_falsy_values(value, expected) -> None:
+    bar = progressbar.ProgressBar(
+        widgets=[progressbar.Postfix()],
+        variables={'postfix': value},
+        fd=io.StringIO(),
+        term_width=80,
+    )
+    bar.start()
+    output = ''.join(bar._format_widgets())
+    assert output == expected
+
+
 def test_postfix_widget_omits_empty_values() -> None:
     bar = progressbar.ProgressBar(
         widgets=[progressbar.Postfix()],

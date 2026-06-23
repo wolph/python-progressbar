@@ -240,6 +240,48 @@ def test_wrap_logging_ignores_handlers_that_reject_streams(
         logger.handlers = []
 
 
+def test_wrap_logging_uses_handler_snapshot(monkeypatch) -> None:
+    reset_wrapped_streams()
+
+    stream = io.StringIO()
+    monkeypatch.setattr(sys, 'stderr', stream)
+    monkeypatch.setattr(progressbar.streams, 'original_stderr', stream)
+    monkeypatch.setattr(progressbar.streams, 'stderr', stream)
+
+    logger = logging.getLogger('progressbar-test-mutating-handlers')
+    logger.handlers = []
+    logger.propagate = False
+    first_handler = logging.StreamHandler(sys.stderr)
+    late_handler = logging.StreamHandler(sys.stderr)
+    logger.addHandler(first_handler)
+
+    wrapped_handlers: list[logging.StreamHandler] = []
+    original_wrap_handler = progressbar.streams._wrap_logging_handler
+
+    def mutating_wrap_handler(handler, wrapped_streams, restore_streams):
+        wrapped_handlers.append(handler)
+        if handler is first_handler:
+            logger.addHandler(late_handler)
+        original_wrap_handler(handler, wrapped_streams, restore_streams)
+
+    monkeypatch.setattr(
+        progressbar.streams,
+        '_wrap_logging_handler',
+        mutating_wrap_handler,
+    )
+
+    progressbar.streams.wrap_stderr()
+    try:
+        progressbar.streams.wrap_logging()
+        assert first_handler in wrapped_handlers
+        assert late_handler not in wrapped_handlers
+        assert late_handler.stream is stream
+    finally:
+        progressbar.streams.unwrap_logging()
+        progressbar.streams.unwrap(stderr=True)
+        logger.handlers = []
+
+
 def test_unwrap_logging_ignores_dynamic_stderr_handler(monkeypatch) -> None:
     reset_wrapped_streams()
 

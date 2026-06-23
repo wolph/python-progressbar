@@ -1266,7 +1266,9 @@ class Postfix(VariableMixin, WidgetBase):
 
     def __call__(self, progress: ProgressBarMixinBase, data: Data) -> str:
         value = data['variables'].get(self.name)
-        if not value:
+        if value is None or (
+            isinstance(value, (str, dict, list, set, tuple)) and not value
+        ):
             return ''
         if isinstance(value, str):
             rendered = value

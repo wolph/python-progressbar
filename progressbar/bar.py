@@ -1166,7 +1166,8 @@ class ProgressBar(
                 StdRedirectMixin.finish(self, end='')
             with contextlib.suppress(Exception):
                 ResizableMixin.finish(self)
-            ProgressBarBase.finish(self)
+            with contextlib.suppress(Exception):
+                ProgressBarBase.finish(self)
             raise
 
         return self

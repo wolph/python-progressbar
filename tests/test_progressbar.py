@@ -11,7 +11,10 @@ import original_examples  # type: ignore
 import pytest
 
 import progressbar
-from progressbar import utils
+from progressbar import (
+    bar as bar_module,
+    utils,
+)
 
 # Import hack to allow for parallel Tox
 try:
@@ -260,6 +263,23 @@ def test_start_cleans_stream_listener_when_validation_fails() -> None:
         bar.update(-1)
 
     assert bar not in utils.streams.listeners
+
+
+def test_start_preserves_original_error_when_base_cleanup_fails(
+    monkeypatch,
+) -> None:
+    def fail_start(self, max_value=None):
+        raise ValueError('resize start failed')
+
+    def fail_finish(self):
+        raise RuntimeError('base cleanup failed')
+
+    monkeypatch.setattr(bar_module.ResizableMixin, 'start', fail_start)
+    monkeypatch.setattr(bar_module.ProgressBarBase, 'finish', fail_finish)
+
+    bar = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
+    with pytest.raises(ValueError, match='resize start failed'):
+        bar.start()
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='SIGWINCH is POSIX-only')
