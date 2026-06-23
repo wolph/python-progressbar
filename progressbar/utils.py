@@ -8,7 +8,7 @@ import logging
 import os
 import re
 import sys
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from types import TracebackType
 
 from python_utils import types
@@ -242,7 +242,9 @@ class StreamWrapper:
     ]
     wrapped_stdout: int = 0
     wrapped_stderr: int = 0
+    wrapped_logging: int = 0
     wrapped_excepthook: int = 0
+    logging_handlers: list[tuple[logging.StreamHandler[base.IO], base.IO]]
     capturing: int = 0
     listeners: set
 
@@ -252,7 +254,9 @@ class StreamWrapper:
         self.original_excepthook = sys.excepthook
         self.wrapped_stdout = 0
         self.wrapped_stderr = 0
+        self.wrapped_logging = 0
         self.wrapped_excepthook = 0
+        self.logging_handlers = []
         self.capturing = 0
         self.listeners = set()
 
@@ -317,6 +321,80 @@ class StreamWrapper:
         self.wrapped_stderr += 1
 
         return sys.stderr  # type: ignore
+
+    def wrap_logging(self) -> None:
+        """Retarget stdout/stderr logging handlers to wrapped streams."""
+        self.wrapped_logging += 1
+        if self.wrapped_logging > 1:
+            return
+
+        wrapped_streams = {
+            self.original_stdout: self.stdout,
+            self.original_stderr: self.stderr,
+            sys.stdout: self.stdout,
+            sys.stderr: self.stderr,
+        }
+        restore_streams: dict[object, base.IO] = {}
+        if isinstance(self.stdout, WrappingIO):
+            restore_streams[self.stdout] = self.original_stdout
+        if isinstance(self.stderr, WrappingIO):
+            restore_streams[self.stderr] = self.original_stderr
+
+        seen: set[int] = set()
+        for logger_ in self._iter_loggers():
+            for handler in logger_.handlers:
+                if id(handler) in seen:
+                    continue
+                seen.add(id(handler))
+                if not isinstance(handler, logging.StreamHandler):
+                    continue
+                self._wrap_logging_handler(
+                    handler,
+                    wrapped_streams,
+                    restore_streams,
+                )
+
+    def _wrap_logging_handler(
+        self,
+        handler: logging.StreamHandler[base.IO],
+        wrapped_streams: Mapping[types.Any, types.Any],
+        restore_streams: Mapping[types.Any, base.IO],
+    ) -> None:
+        stream = handler.stream
+        replacement = wrapped_streams.get(stream)
+        if replacement is not None and replacement is not stream:
+            if self._set_handler_stream(handler, replacement):
+                self.logging_handlers.append((handler, stream))
+        elif (restore_stream := restore_streams.get(stream)) is not None:
+            self.logging_handlers.append((handler, restore_stream))
+
+    def unwrap_logging(self) -> None:
+        if self.wrapped_logging > 1:
+            self.wrapped_logging -= 1
+            return
+        if not self.wrapped_logging:
+            return
+
+        while self.logging_handlers:
+            handler, stream = self.logging_handlers.pop()
+            self._set_handler_stream(handler, stream)
+        self.wrapped_logging = 0
+
+    def _set_handler_stream(
+        self,
+        handler: logging.StreamHandler[base.IO],
+        stream: types.Any,
+    ) -> bool:
+        with contextlib.suppress(AttributeError, ValueError):
+            handler.setStream(stream)
+            return True
+        return False
+
+    def _iter_loggers(self) -> types.Iterator[logging.Logger]:
+        yield logging.getLogger()
+        for logger_ in tuple(logging.Logger.manager.loggerDict.values()):
+            if isinstance(logger_, logging.Logger):
+                yield logger_
 
     def unwrap_excepthook(self) -> None:
         if self.wrapped_excepthook:

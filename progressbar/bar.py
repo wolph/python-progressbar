@@ -40,6 +40,49 @@ ValueT = typing.Union[NumberT, type[base.UnknownLength], None]
 T = types.TypeVar('T')
 
 
+def _resolve_max_value(
+    max_value: ValueT,
+    total: types.Optional[NumberT],
+    kwargs: dict[str, types.Any],
+) -> ValueT:
+    if not max_value and kwargs.get('maxval') is not None:
+        warnings.warn(
+            'The usage of `maxval` is deprecated, please use '
+            '`max_value` instead',
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        max_value = types.cast(ValueT, kwargs.get('maxval'))
+
+    if max_value is None and total is not None:
+        return total
+    return max_value
+
+
+def _resolve_poll_interval(
+    poll_interval: types.Optional[float],
+    kwargs: dict[str, types.Any],
+) -> types.Optional[float]:
+    if not poll_interval and kwargs.get('poll'):
+        warnings.warn(
+            'The usage of `poll` is deprecated, please use '
+            '`poll_interval` instead',
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return types.cast(types.Optional[float], kwargs.get('poll'))
+    return poll_interval
+
+
+def _resolve_prefix(
+    prefix: types.Optional[str],
+    desc: types.Optional[str],
+) -> types.Optional[str]:
+    if prefix is None and desc is not None:
+        return f'{desc}: '
+    return prefix
+
+
 class ProgressBarMixinBase(abc.ABC):
     _started = False
     _finished = False
@@ -524,7 +567,8 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.start(self, *args, **kwargs)
 
     def update(self, value: types.Optional[NumberT] = None):
-        cleared = not self.line_breaks and utils.streams.needs_clear()
+        needs_clear = utils.streams.needs_clear()
+        cleared = not self.line_breaks and needs_clear
         if cleared:
             self.fd.write('\r' + ' ' * self.term_width + '\r')
 
@@ -535,13 +579,15 @@ class StdRedirectMixin(DefaultFdMixin):
         DefaultFdMixin.update(self, value=value)
 
     def finish(self, end='\n'):
-        DefaultFdMixin.finish(self, end=end)
-        utils.streams.stop_capturing(self)
-        if self.redirect_stdout:
-            utils.streams.unwrap_stdout()
+        try:
+            DefaultFdMixin.finish(self, end=end)
+        finally:
+            utils.streams.stop_capturing(self)
+            if self.redirect_stdout:
+                utils.streams.unwrap_stdout()
 
-        if self.redirect_stderr:
-            utils.streams.unwrap_stderr()
+            if self.redirect_stderr:
+                utils.streams.unwrap_stderr()
 
 
 class ProgressBar(
@@ -645,29 +691,20 @@ class ProgressBar(
         suffix=None,
         variables=None,
         min_poll_interval=None,
+        desc=None,
+        total=None,
+        unit='it',
+        unit_scale=False,
+        postfix=None,
         **kwargs,
     ):  # sourcery skip: low-code-quality
         """Initializes a progress bar with sane defaults."""
         StdRedirectMixin.__init__(self, **kwargs)
         ResizableMixin.__init__(self, **kwargs)
         ProgressBarBase.__init__(self, **kwargs)
-        if not max_value and kwargs.get('maxval') is not None:
-            warnings.warn(
-                'The usage of `maxval` is deprecated, please use '
-                '`max_value` instead',
-                DeprecationWarning,
-                stacklevel=1,
-            )
-            max_value = kwargs.get('maxval')
-
-        if not poll_interval and kwargs.get('poll'):
-            warnings.warn(
-                'The usage of `poll` is deprecated, please use '
-                '`poll_interval` instead',
-                DeprecationWarning,
-                stacklevel=1,
-            )
-            poll_interval = kwargs.get('poll')
+        max_value = _resolve_max_value(max_value, total, kwargs)
+        prefix = _resolve_prefix(prefix, desc)
+        poll_interval = _resolve_poll_interval(poll_interval, kwargs)
 
         if max_value and min_value > types.cast(NumberT, max_value):
             raise ValueError(
@@ -678,6 +715,15 @@ class ProgressBar(
         # that it either has a value or is `UnknownLength`
         self.max_value = max_value  # type: ignore
         self.max_error = max_error
+
+        explicit_widgets = widgets is not None
+        self.unit = unit
+        self.unit_scale = unit_scale
+        self._auto_postfix = not explicit_widgets and postfix is not None
+        self._auto_postfix_added = False
+        normalized_variables = utils.AttributeDict(variables or {})
+        if postfix is not None:
+            normalized_variables['postfix'] = postfix
 
         # Only copy the widget if it's safe to copy. Most widgets are so we
         # assume this to be true
@@ -724,7 +770,7 @@ class ProgressBar(
         )  # type: ignore
 
         # A dictionary of names that can be used by Variable and FormatWidget
-        self.variables = utils.AttributeDict(variables or {})
+        self.variables = normalized_variables
         for widget in self.widgets:
             if (
                 isinstance(widget, widgets_module.VariableMixin)
@@ -862,6 +908,8 @@ class ProgressBar(
             time_elapsed=elapsed,
             # Percentage as a float or `None` if no max_value is available
             percentage=self.percentage,
+            unit=self.unit,
+            unit_scale=self.unit_scale,
             # Dictionary of user-defined
             # :py:class:`progressbar.widgets.Variable`'s
             variables=self.variables,
@@ -1089,24 +1137,37 @@ class ProgressBar(
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
-        StdRedirectMixin.start(self, max_value=max_value)
-        ResizableMixin.start(self, max_value=max_value)
-        ProgressBarBase.start(self, max_value=max_value)
-
-        # Constructing the default widgets is only done when we know max_value
-        if not self.widgets:
-            self.widgets = self.default_widgets()
-
-        self._init_prefix()
-        self._init_suffix()
-        self._calculate_poll_interval()
         self._verify_max_value()
 
-        now = datetime.now()
-        self.start_time = self.initial_start_time or now
-        self.last_update_time = now
-        self._last_update_timer = timeit.default_timer()
-        self.update(self.min_value, force=True)
+        try:
+            StdRedirectMixin.start(self, max_value=max_value)
+            ResizableMixin.start(self, max_value=max_value)
+            ProgressBarBase.start(self, max_value=max_value)
+
+            # Constructing the default widgets is only done when we know
+            # max_value
+            if not self.widgets:
+                self.widgets = self.default_widgets()
+            if self._auto_postfix and not self._auto_postfix_added:
+                self.widgets.append(widgets_module.Postfix())
+                self._auto_postfix_added = True
+
+            self._init_prefix()
+            self._init_suffix()
+            self._calculate_poll_interval()
+
+            now = datetime.now()
+            self.start_time = self.initial_start_time or now
+            self.last_update_time = now
+            self._last_update_timer = timeit.default_timer()
+            self.update(self.min_value, force=True)
+        except Exception:
+            with contextlib.suppress(Exception):
+                StdRedirectMixin.finish(self, end='')
+            with contextlib.suppress(Exception):
+                ResizableMixin.finish(self)
+            ProgressBarBase.finish(self)
+            raise
 
         return self
 
@@ -1168,13 +1229,16 @@ class ProgressBar(
             # state, so extra calls are no-ops
             return
 
-        if not dirty:
-            self.end_time = datetime.now()
-            self.update(self.max_value, force=True)
-
-        StdRedirectMixin.finish(self, end=end)
-        ResizableMixin.finish(self)
-        ProgressBarBase.finish(self)
+        try:
+            try:
+                if not dirty:
+                    self.end_time = datetime.now()
+                    self.update(self.max_value, force=True)
+            finally:
+                StdRedirectMixin.finish(self, end=end)
+        finally:
+            ResizableMixin.finish(self)
+            ProgressBarBase.finish(self)
 
     @property
     def currval(self):

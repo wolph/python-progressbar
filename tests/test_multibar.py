@@ -221,6 +221,100 @@ def test_multibar_finished() -> None:
     multibar.render(force=True)
 
 
+def test_multibar_render_writes_started_bar_text() -> None:
+    fd = io.StringIO()
+    multibar = progressbar.MultiBar(
+        fd=fd,
+        initial_format=None,
+        finished_format=None,
+        remove_finished=None,
+        sort_reverse=False,
+        total=3,
+        term_width=64,
+    )
+    build = multibar['build']
+    test = multibar['test']
+    multibar.render(force=True, flush=True)
+    fd.seek(0)
+    fd.truncate(0)
+
+    build.update(1, force=True)
+    test.update(1, force=True)
+    multibar.render(force=True, flush=True)
+
+    output = fd.getvalue()
+    assert 'build' in output
+    assert 'test' in output
+    assert '(1 of 3)' in output
+
+
+def test_multibar_wraps_pre_labeled_bar_stream() -> None:
+    fd = io.StringIO()
+    multibar = progressbar.MultiBar(
+        fd=fd,
+        initial_format=None,
+        finished_format=None,
+        remove_finished=None,
+        sort_reverse=False,
+        total=3,
+        term_width=64,
+    )
+    bar = progressbar.ProgressBar(max_value=3)
+    bar.label = 'build'
+    multibar['build'] = bar
+
+    bar.update(1, force=True)
+    multibar.render(force=True, flush=True)
+
+    output = fd.getvalue()
+    assert 'build' in output
+    assert '(1 of 3)' in output
+
+
+def test_multibar_constructor_wraps_external_bar_stream() -> None:
+    fd = io.StringIO()
+    bar = progressbar.ProgressBar(max_value=3)
+    multibar = progressbar.MultiBar(
+        [('build', bar)],
+        fd=fd,
+        initial_format=None,
+        finished_format=None,
+        remove_finished=None,
+        sort_reverse=False,
+        total=3,
+        term_width=64,
+    )
+
+    bar.update(1, force=True)
+    multibar.render(force=True, flush=True)
+
+    output = fd.getvalue()
+    assert 'build' in output
+    assert '(1 of 3)' in output
+
+
+def test_multibar_constructor_accepts_mapping() -> None:
+    fd = io.StringIO()
+    bar = progressbar.ProgressBar(max_value=3)
+    multibar = progressbar.MultiBar(
+        {'build': bar},
+        fd=fd,
+        initial_format=None,
+        finished_format=None,
+        remove_finished=None,
+        sort_reverse=False,
+        total=3,
+        term_width=64,
+    )
+
+    bar.update(1, force=True)
+    multibar.render(force=True, flush=True)
+
+    output = fd.getvalue()
+    assert 'build' in output
+    assert '(1 of 3)' in output
+
+
 def test_multibar_finished_format() -> None:
     multibar = progressbar.MultiBar(
         finished_format='Finished {label}', show_finished=True

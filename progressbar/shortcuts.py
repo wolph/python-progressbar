@@ -17,6 +17,11 @@ def progressbar(
     widgets: typing.Sequence[widgets_module.WidgetBase | str] | None = None,
     prefix: str | None = None,
     suffix: str | None = None,
+    desc: str | None = None,
+    total: bar.ValueT = None,
+    unit: str = 'it',
+    unit_scale: bool = False,
+    postfix: typing.Any = None,
     **kwargs: typing.Any,
 ) -> typing.Generator[T, None, None]:
     progressbar_ = bar.ProgressBar(
@@ -25,6 +30,11 @@ def progressbar(
         widgets=widgets,
         prefix=prefix,
         suffix=suffix,
+        desc=desc,
+        total=total,
+        unit=unit,
+        unit_scale=unit_scale,
+        postfix=postfix,
         **kwargs,
     )
     yield from progressbar_(iterator)

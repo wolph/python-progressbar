@@ -65,6 +65,92 @@ def test_widgets_large_values(max_value) -> None:
     p.finish()
 
 
+def test_postfix_widget_renders_mapping_sorted() -> None:
+    bar = progressbar.ProgressBar(
+        widgets=[progressbar.Postfix()],
+        variables={'postfix': {'z': 2, 'a': 1}},
+        fd=io.StringIO(),
+        term_width=80,
+    )
+    bar.start()
+    output = ''.join(bar._format_widgets())
+    assert output == ' a=1, z=2'
+
+
+def test_postfix_widget_renders_string() -> None:
+    bar = progressbar.ProgressBar(
+        widgets=[progressbar.Postfix()],
+        variables={'postfix': 'loss=0.25'},
+        fd=io.StringIO(),
+        term_width=80,
+    )
+    bar.start()
+    output = ''.join(bar._format_widgets())
+    assert output == ' loss=0.25'
+
+
+def test_postfix_widget_renders_other_values() -> None:
+    bar = progressbar.ProgressBar(
+        widgets=[progressbar.Postfix()],
+        variables={'postfix': 3},
+        fd=io.StringIO(),
+        term_width=80,
+    )
+    bar.start()
+    output = ''.join(bar._format_widgets())
+    assert output == ' 3'
+
+
+def test_postfix_widget_omits_empty_values() -> None:
+    bar = progressbar.ProgressBar(
+        widgets=[progressbar.Postfix()],
+        variables={'postfix': None},
+        fd=io.StringIO(),
+        term_width=80,
+    )
+    bar.start()
+    output = ''.join(bar._format_widgets())
+    assert output == ''
+
+
+def test_format_unit_value_special_cases() -> None:
+    assert progressbar.widgets.format_unit_value(None) == 'N/A'
+    unknown_value = progressbar.widgets.format_unit_value(
+        progressbar.UnknownLength,
+    )
+    assert unknown_value == 'N/A'
+    assert progressbar.widgets.format_unit_value(1.5, unit='B') == '1.5 B'
+    assert progressbar.widgets.format_unit_value(2, unit='B') == '2 B'
+
+
+def test_unit_progress_scales_values() -> None:
+    bar = progressbar.ProgressBar(
+        max_value=2048,
+        widgets=[progressbar.UnitProgress(unit='B', unit_scale=True)],
+        fd=io.StringIO(),
+        term_width=80,
+    )
+    bar.start()
+    bar.update(1024, force=True)
+    output = ''.join(bar._format_widgets())
+    assert output == '1.0 KiB of 2.0 KiB'
+
+
+def test_unit_progress_uses_progress_units_by_default() -> None:
+    bar = progressbar.ProgressBar(
+        max_value=2048,
+        widgets=[progressbar.UnitProgress()],
+        unit='B',
+        unit_scale=True,
+        fd=io.StringIO(),
+        term_width=80,
+    )
+    bar.start()
+    bar.update(1024, force=True)
+    output = ''.join(bar._format_widgets())
+    assert output == '1.0 KiB of 2.0 KiB'
+
+
 def test_format_widget() -> None:
     widgets = [
         progressbar.FormatLabel(f'%({mapping})r')

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import enum
 import io
 import itertools
@@ -81,7 +82,11 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
     def __init__(
         self,
-        bars: typing.Iterable[tuple[str, bar.ProgressBar]] | None = None,
+        bars: (
+            collections.abc.Mapping[str, bar.ProgressBar]
+            | typing.Iterable[tuple[str, bar.ProgressBar]]
+            | None
+        ) = None,
         fd: typing.TextIO = sys.stderr,
         prepend_label: bool = True,
         append_label: bool = False,
@@ -130,17 +135,36 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self._thread_finished = threading.Event()
         self._thread_closed = threading.Event()
 
-        super().__init__(bars or {})
+        super().__init__()
+
+        bar_items: typing.Iterable[tuple[str, bar.ProgressBar]]
+        if bars is None:
+            bar_items = ()
+        elif isinstance(bars, collections.abc.Mapping):
+            bar_items = typing.cast(
+                typing.Iterable[tuple[str, bar.ProgressBar]],
+                bars.items(),
+            )
+        else:
+            bar_items = bars
+
+        for key, progress in bar_items:
+            self[key] = progress
 
     def __setitem__(self, key: str, bar: bar.ProgressBar):
         """Add a progressbar to the multibar."""
         if bar.label != key or not key:  # pragma: no branch
             bar.label = key
+
+        if not (
+            isinstance(bar.fd, stream.LastLineStream)
+            and bar.fd.stream is self.fd
+        ):
             bar.fd = stream.LastLineStream(self.fd)
-            bar.paused = True
-            # Essentially `bar.print = self.print`, but `mypy` doesn't
-            # like that
-            bar.print = self.print  # type: ignore
+
+        bar.paused = True
+        # Essentially `bar.print = self.print`, but `mypy` doesn't like that
+        bar.print = self.print  # type: ignore
 
         # Just in case someone is using a progressbar with a custom
         # constructor and forgot to call the super constructor
@@ -251,7 +275,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
             yield from self._render_finished_bar(bar_, now, expired, update)
 
         elif bar_.started():
-            update()
+            yield update()
         else:
             if self.initial_format is None:
                 bar_.start()
@@ -284,7 +308,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
         if bar_.finished():  # pragma: no branch
             if self.finished_format is None:
-                update(force=False)
+                yield update(force=False)
             else:  # pragma: no cover
                 yield self.finished_format.format(label=bar_.label)
 

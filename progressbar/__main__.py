@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import pathlib
 import sys
+import time
 import typing
 from pathlib import Path
 from typing import IO, BinaryIO, TextIO
@@ -271,6 +272,81 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _default_widgets(
+    filesize_available: bool,
+) -> list[progressbar.widgets.WidgetBase | str]:
+    if filesize_available:
+        return [
+            progressbar.Percentage(),
+            ' ',
+            progressbar.Bar(),
+            ' ',
+            progressbar.Timer(),
+            ' ',
+            progressbar.FileTransferSpeed(),
+        ]
+    return [
+        progressbar.SimpleProgress(),
+        ' ',
+        progressbar.DataSize(),
+        ' ',
+        progressbar.Timer(),
+    ]
+
+
+def _append_widget_group(
+    widgets: list[progressbar.widgets.WidgetBase | str],
+    group: typing.Sequence[progressbar.widgets.WidgetBase | str],
+) -> None:
+    if widgets:
+        widgets.append(' ')
+    widgets.extend(group)
+
+
+def _build_widgets(
+    args: argparse.Namespace,
+    filesize_available: bool,
+) -> list[progressbar.widgets.WidgetBase | str]:
+    if args.quiet:
+        return []
+
+    requested_widgets = [
+        (args.progress, [progressbar.Percentage(), ' ', progressbar.Bar()]),
+        (args.bytes, [progressbar.DataSize()]),
+        (args.timer, [progressbar.Timer()]),
+        (args.eta, [progressbar.AdaptiveETA()]),
+        (args.fineta, [progressbar.AbsoluteETA()]),
+        (args.rate or args.average_rate, [progressbar.FileTransferSpeed()]),
+    ]
+    selected_widgets = [
+        group for selected, group in requested_widgets if selected
+    ]
+    if not selected_widgets:
+        return _default_widgets(filesize_available)
+
+    widgets: list[progressbar.widgets.WidgetBase | str] = []
+    for group in selected_widgets:
+        _append_widget_group(widgets, group)
+
+    return widgets
+
+
+def _sleep_for_rate_limit(
+    rate_limit: int | None,
+    transferred: int,
+    started_at: float,
+    now: float | None = None,
+) -> None:
+    if not rate_limit:
+        return
+    now = time.monotonic() if now is None else now
+    expected_elapsed = transferred / rate_limit
+    actual_elapsed = now - started_at
+    delay = expected_elapsed - actual_elapsed
+    if delay > 0:
+        time.sleep(delay)
+
+
 def main(argv: list[str] | None = None) -> None:  # noqa: C901
     """
     Main function for the `progressbar` command.
@@ -316,41 +392,27 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
             total_size = size_to_bytes(args.size)
             filesize_available = True
 
-        if filesize_available:
-            # Create the progress bar components
-            widgets = [
-                progressbar.Percentage(),
-                ' ',
-                progressbar.Bar(),
-                ' ',
-                progressbar.Timer(),
-                ' ',
-                progressbar.FileTransferSpeed(),
-            ]
-        else:
-            widgets = [
-                progressbar.SimpleProgress(),
-                ' ',
-                progressbar.DataSize(),
-                ' ',
-                progressbar.Timer(),
-            ]
-
-        if args.eta:
-            widgets.append(' ')
-            widgets.append(progressbar.AdaptiveETA())
+        widgets = _build_widgets(args, filesize_available)
+        progress_bar_class: type[progressbar.ProgressBar] = (
+            progressbar.NullBar if args.quiet else progressbar.ProgressBar
+        )
 
         # Initialize the progress bar
-        bar = progressbar.ProgressBar(
+        bar = progress_bar_class(
             widgets=widgets,
             max_value=total_size if filesize_available else None,
             max_error=False,
+            line_breaks=True if args.numeric else None,
         )
 
         # Data processing and updating the progress bar
         buffer_size = (
             size_to_bytes(args.buffer_size) if args.buffer_size else 1024
         )
+        rate_limit = (
+            size_to_bytes(args.rate_limit) if args.rate_limit else None
+        )
+        started_at = time.monotonic()
         total_transferred = 0
 
         bar.start()
@@ -395,6 +457,11 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
                         total_transferred += len(data)
 
                     bar.update(total_transferred)
+                    _sleep_for_rate_limit(
+                        rate_limit,
+                        total_transferred,
+                        started_at,
+                    )
 
         bar.finish(dirty=True)
 
