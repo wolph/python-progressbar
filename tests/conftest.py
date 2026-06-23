@@ -25,7 +25,12 @@ def pytest_configure(config) -> None:
 
 
 @pytest.fixture(autouse=True)
-def small_interval(monkeypatch) -> None:
+def small_interval(monkeypatch, request) -> None:
+    # Tests marked `no_freezegun` need real timing conditions (e.g. the perf
+    # budget test), so preserve the default _MINIMUM_UPDATE_INTERVAL so the
+    # fast-path gate can calibrate and activate correctly.
+    if request.node.get_closest_marker('no_freezegun'):
+        return
     # Remove the update limit for tests by default
     monkeypatch.setattr(
         progressbar.ProgressBar,
@@ -36,7 +41,14 @@ def small_interval(monkeypatch) -> None:
 
 
 @pytest.fixture(autouse=True)
-def sleep_faster(monkeypatch):
+def sleep_faster(monkeypatch, request):
+    # Tests marked `no_freezegun` need a real, advancing clock (e.g. the
+    # gate's perf test, which only activates after a real timing measurement).
+    # For those, skip the freezegun wrapping entirely.
+    if request.node.get_closest_marker('no_freezegun'):
+        yield None
+        return
+
     # Compute the local UTC offset so freezegun uses the same timezone as
     # the local system. Using datetime.now(timezone.utc).astimezone() avoids
     # the deprecated datetime.utcnow() (deprecated since Python 3.12).

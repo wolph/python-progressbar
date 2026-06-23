@@ -1,0 +1,102 @@
+{
+  "meta": {
+    "python": "3.13.12",
+    "implementation": "CPython",
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "cpu_count": 18,
+    "versions": {
+      "progressbar2": "4.5.0",
+      "tqdm": "4.68.3",
+      "rich": "15.0.0",
+      "alive-progress": "3.3.0",
+      "click": "8.4.1"
+    },
+    "n_iter": 1000000,
+    "iter_repeats": 7,
+    "n_render": 30000,
+    "render_repeats": 5,
+    "import_runs": 9,
+    "term": "80x24"
+  },
+  "scenario_a_default_overhead": {
+    "baseline_min_s": 0.00558699993416667,
+    "baseline_median_s": 0.005599833093583584,
+    "libs": {
+      "progressbar2": {
+        "total_min_s": 0.03611662518233061,
+        "total_median_s": 0.037002416793257,
+        "overhead_ns_per_iter": 30.52962524816394
+      },
+      "tqdm": {
+        "total_min_s": 0.061426167376339436,
+        "total_median_s": 0.06293316604569554,
+        "overhead_ns_per_iter": 55.839167442172766
+      },
+      "rich": {
+        "total_min_s": 0.024669166654348373,
+        "total_median_s": 0.02482037479057908,
+        "overhead_ns_per_iter": 19.082166720181704
+      },
+      "alive-progress": {
+        "total_min_s": 0.2512250836007297,
+        "total_median_s": 0.2683616247959435,
+        "overhead_ns_per_iter": 245.63808366656306
+      },
+      "click": {
+        "total_min_s": 1.9241157919168472,
+        "total_median_s": 1.9306053328327835,
+        "overhead_ns_per_iter": 1918.5287919826806
+      }
+    }
+  },
+  "scenario_b_forced_render": {
+    "baseline_min_s": 0.0001589590683579445,
+    "libs": {
+      "progressbar2": {
+        "total_min_s": 0.7693966659717262,
+        "total_median_s": 0.7766300840303302,
+        "per_update_us": 25.64125689677894
+      },
+      "tqdm": {
+        "total_min_s": 0.33136308286339045,
+        "total_median_s": 0.3320189160294831,
+        "per_update_us": 11.040137459834416
+      },
+      "rich": {
+        "total_min_s": 5.17360516730696,
+        "total_median_s": 5.191705749835819,
+        "per_update_us": 172.4482069412867
+      }
+    },
+    "excluded": {
+      "alive-progress": "renders on a background timer thread; no per-update render API",
+      "click": "self-throttles writes (renders only when the drawn line changes); no force-every-update API"
+    }
+  },
+  "scenario_c_import_time": {
+    "interpreter_baseline_s": 0.016710625030100346,
+    "libs": {
+      "progressbar2": {
+        "total_min_s": 0.06196920806542039,
+        "net_ms": 45.258583035320044
+      },
+      "tqdm": {
+        "total_min_s": 0.04024833394214511,
+        "net_ms": 23.537708912044764
+      },
+      "rich": {
+        "total_min_s": 0.06633466714993119,
+        "net_ms": 49.62404211983085
+      },
+      "alive-progress": {
+        "total_min_s": 0.025270250160247087,
+        "net_ms": 8.559625130146742
+      },
+      "click": {
+        "total_min_s": 0.04085325030609965,
+        "net_ms": 24.142625275999308
+      }
+    }
+  }
+}

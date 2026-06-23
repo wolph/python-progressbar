@@ -73,6 +73,42 @@ The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
 
 ******************************************************************************
+Performance
+******************************************************************************
+
+Wrapping a loop with ``progressbar2`` is cheap. On the benchmark machine
+(CPython 3.13, macOS arm64) it adds only about **31 nanoseconds per
+iteration** over a bare loop -- roughly **1.8x faster than tqdm** and second
+only to ``rich``, while being far ahead of the rest:
+
+================  ==================
+Library           Overhead per iter
+================  ==================
+rich              19 ns
+progressbar2      31 ns
+tqdm              56 ns
+alive-progress    246 ns
+click             1919 ns
+================  ==================
+
+The per-iteration cost is dominated by deciding *whether* to redraw, not by
+drawing: ``progressbar2`` keeps an integer "next update" gate so the common
+iteration is just an increment and a couple of cheap stores, only entering the
+(rate-limited) redraw machinery a few times per second. Behaviour is unchanged
+-- the same widgets, the same redraw cadence, and ``value``/``previous_value``
+stay byte-identical to the pre-gate implementation on every iteration.
+
+The benchmark is fully reproducible and pits ``progressbar2`` against ``tqdm``,
+``rich``, ``alive-progress`` and ``click`` across iteration overhead, forced
+redraw cost, and import time -- all rendered to a real pseudo-terminal so the
+comparison is apples-to-apples::
+
+    python benchmarks/bench.py && python benchmarks/report.py
+
+.. image:: https://raw.githubusercontent.com/WoLpH/python-progressbar/master/benchmarks/chart.png
+   :alt: progressbar2 vs common Python progress-bar libraries
+
+******************************************************************************
 Known issues
 ******************************************************************************
 

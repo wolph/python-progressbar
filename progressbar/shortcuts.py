@@ -27,4 +27,4 @@ def progressbar(
         suffix=suffix,
         **kwargs,
     )
-    yield from progressbar_(iterator)
+    return iter(progressbar_(iterator))
