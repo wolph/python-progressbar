@@ -76,41 +76,39 @@ automatically enable features like auto-resizing when the system supports it.
 Performance
 ******************************************************************************
 
-Wrapping a loop with ``progressbar2`` is cheap -- and with the optional native
-accelerator it is the **fastest** progress bar available. On the benchmark
-machine (CPython 3.13, macOS arm64) the per-iteration overhead over a bare loop
-is:
+The default ``progressbar.progressbar(...)`` is the **fastest** progress bar
+available -- on iteration overhead, per-update render cost, *and* import time.
+On the benchmark machine (CPython 3.13, macOS arm64):
 
-================  ==================  ==================
-Library           Overhead per iter  vs progressbar2
-================  ==================  ==================
-**progressbar2**  **5 ns** *(fast)*  baseline
-rich              19 ns               ~4x slower
-tqdm              56 ns               ~12x slower
-alive-progress    249 ns              ~54x slower
-click             1906 ns             ~410x slower
-================  ==================  ==================
+============  ====================  ==============  ===========
+Metric        progressbar2          tqdm            rich
+============  ====================  ==============  ===========
+Per iter      **5 ns** *(fast)*     54 ns           19 ns
+Per render    **~5 us** *(fast)*    11 us           172 us
+Cold import   **~1.5 ms**           ~22 ms          ~47 ms
+============  ====================  ==============  ===========
 
-Two tiers, same API:
+How the default stays fast:
 
-- **Pure Python (default):** ~30 ns/iter -- roughly **1.8x faster than tqdm**,
-  second only to ``rich``, with **no native build required**. An integer "next
-  update" gate keeps the common iteration to an increment, a compare and a
-  couple of cheap stores, only entering the (rate-limited) redraw machinery a
-  few times per second. Behaviour is unchanged: same widgets, same redraw
-  cadence, and ``value``/``previous_value`` stay byte-identical to the
-  pre-gate implementation on every iteration.
-- **Native accelerator (**\ ``pip install progressbar2[fast]``\ **):** ~5 ns/iter,
-  **~4x faster than rich**. A small compiled (Cython) iterator counts in a C
-  field and only calls back into Python at redraw crossings. It engages
-  automatically when installed; the only behavioural difference is that
-  ``bar.value`` is synced at redraw crossings rather than every iteration, so
-  reads between redraws lag slightly (like ``tqdm.n``). Set
-  ``PROGRESSBAR_DISABLE_FASTPATH=1`` to force the pure-Python path.
+- **Iteration** -- an integer "next update" gate keeps the common iteration to
+  an increment and a compare, entering the (rate-limited) redraw machinery only
+  a few times per second. ~30 ns/iter in pure Python (already faster than
+  tqdm); ~5 ns with the optional native iterator
+  (``pip install progressbar2[fast]``), which counts in a C field.
+- **Render** -- the default bar uses a fixed formatter (percentage, count, bar,
+  elapsed/ETA) built directly each redraw, so it renders in ~5 us/update,
+  roughly **2x faster than tqdm**, without the per-widget overhead.
+- **Import** -- ``import progressbar`` is lazy (PEP 562): widgets, the
+  terminal/colour tables and multi-bar support load only when used, so a bare
+  import is ~1.5 ms and pulls in nothing heavy (no ``asyncio``).
 
-Importing ``progressbar`` is also light -- about **24 ms** (net of interpreter
-startup), on par with ``tqdm``/``click`` and roughly half of ``rich``. Nothing
-heavy is imported eagerly (no ``asyncio``, for example).
+The fast path stays close to the classic look but drops the gradient and
+per-iteration ``value`` liveness (``value`` is synced at redraw crossings, like
+``tqdm.n``). For the full widget set -- gradient ``Bar``, custom widgets,
+dynamic variables -- pass ``widgets=[...]`` or ``fast=False`` to
+``progressbar()``, or construct ``progressbar.ProgressBar(...)`` directly; that
+path is unchanged (and intentionally richer, so a touch slower). Set
+``PROGRESSBAR_DISABLE_FASTPATH=1`` to force the classic path everywhere.
 
 The benchmark is fully reproducible and pits ``progressbar2`` against ``tqdm``,
 ``rich``, ``alive-progress`` and ``click`` across iteration overhead, forced

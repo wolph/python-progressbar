@@ -20,53 +20,58 @@
     "term": "80x24"
   },
   "scenario_a_default_overhead": {
-    "baseline_min_s": 0.005551707930862904,
-    "baseline_median_s": 0.005564874969422817,
+    "baseline_min_s": 0.005465084221214056,
+    "baseline_median_s": 0.005537374876439571,
     "libs": {
       "progressbar2": {
-        "total_min_s": 0.01053600013256073,
-        "total_median_s": 0.010598040651530027,
-        "overhead_ns_per_iter": 4.984292201697826
+        "total_min_s": 0.01052025007084012,
+        "total_median_s": 0.010792375076562166,
+        "overhead_ns_per_iter": 5.055165849626064
       },
       "tqdm": {
-        "total_min_s": 0.06108024995774031,
-        "total_median_s": 0.061694042291492224,
-        "overhead_ns_per_iter": 55.5285420268774
+        "total_min_s": 0.05926787527278066,
+        "total_median_s": 0.06034625042229891,
+        "overhead_ns_per_iter": 53.8027910515666
       },
       "rich": {
-        "total_min_s": 0.024462583009153605,
-        "total_median_s": 0.024796999990940094,
-        "overhead_ns_per_iter": 18.9108750782907
+        "total_min_s": 0.024457333143800497,
+        "total_median_s": 0.024638874921947718,
+        "overhead_ns_per_iter": 18.99224892258644
       },
       "alive-progress": {
-        "total_min_s": 0.25641287537291646,
-        "total_median_s": 0.27711912523955107,
-        "overhead_ns_per_iter": 250.86116744205353
+        "total_min_s": 0.2534806248731911,
+        "total_median_s": 0.26495025027543306,
+        "overhead_ns_per_iter": 248.01554065197706
       },
       "click": {
-        "total_min_s": 1.8795803748071194,
-        "total_median_s": 1.8825672920793295,
-        "overhead_ns_per_iter": 1874.0286668762565
+        "total_min_s": 1.8613821249455214,
+        "total_median_s": 1.8722192500717938,
+        "overhead_ns_per_iter": 1855.9170407243073
       }
     }
   },
   "scenario_b_forced_render": {
-    "baseline_min_s": 0.00015616696327924728,
+    "baseline_min_s": 0.00015695812180638313,
     "libs": {
       "progressbar2": {
-        "total_min_s": 0.7422174997627735,
-        "total_median_s": 0.7541523338295519,
-        "per_update_us": 24.73537775998314
+        "total_min_s": 0.7645597076043487,
+        "total_median_s": 0.7665333333425224,
+        "per_update_us": 25.480091649418075
+      },
+      "progressbar2-fast": {
+        "total_min_s": 0.1489091250114143,
+        "total_median_s": 0.14924920815974474,
+        "per_update_us": 4.95840556298693
       },
       "tqdm": {
-        "total_min_s": 0.3516843752004206,
-        "total_median_s": 0.3523540422320366,
-        "per_update_us": 11.717606941238046
+        "total_min_s": 0.3326972499489784,
+        "total_median_s": 0.33332004211843014,
+        "per_update_us": 11.084676394239068
       },
       "rich": {
-        "total_min_s": 5.1124938749708235,
-        "total_median_s": 5.13117695832625,
-        "per_update_us": 170.4112569335848
+        "total_min_s": 5.156592667102814,
+        "total_median_s": 5.1774807083420455,
+        "per_update_us": 171.8811902993669
       }
     },
     "excluded": {
@@ -75,27 +80,27 @@
     }
   },
   "scenario_c_import_time": {
-    "interpreter_baseline_s": 0.015147834084928036,
+    "interpreter_baseline_s": 0.015367416199296713,
     "libs": {
       "progressbar2": {
-        "total_min_s": 0.03829349996522069,
-        "net_ms": 23.145665880292654
+        "total_min_s": 0.016899917274713516,
+        "net_ms": 1.5325010754168034
       },
       "tqdm": {
-        "total_min_s": 0.03621862502768636,
-        "net_ms": 21.07079094275832
+        "total_min_s": 0.03698108298704028,
+        "net_ms": 21.61366678774357
       },
       "rich": {
-        "total_min_s": 0.06165862502530217,
-        "net_ms": 46.510790940374136
+        "total_min_s": 0.06224083295091987,
+        "net_ms": 46.873416751623154
       },
       "alive-progress": {
-        "total_min_s": 0.02371108438819647,
-        "net_ms": 8.563250303268433
+        "total_min_s": 0.023891292046755552,
+        "net_ms": 8.52387584745884
       },
       "click": {
-        "total_min_s": 0.038142249919474125,
-        "net_ms": 22.99441583454609
+        "total_min_s": 0.0388890840113163,
+        "net_ms": 23.521667812019587
       }
     }
   }
