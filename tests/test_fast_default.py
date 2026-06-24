@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 
+import progressbar
 from progressbar import fast as fast_module
 
 
@@ -63,3 +64,17 @@ def test_fast_format_line_uses_native_hook(monkeypatch):
     fd = TTY()
     bar = fast_module.FastProgressBar(max_value=100, fd=fd)
     assert bar._format_line() == 'NATIVE_HOOK_OUTPUT'
+
+
+def test_fast_unknown_length_renders_count_and_elapsed():
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=progressbar.UnknownLength, fd=fd
+    )
+    out = list(bar(iter(range(40))))
+    assert out == list(range(40))
+    assert bar.value == 39
+    last = fd.repaints()[-1]
+    assert 'Elapsed Time:' in last
+    assert '40' in last  # the count is shown
+    assert ' of ' not in last  # no "(n of max)" when length unknown

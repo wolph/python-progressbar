@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from . import (
     bar as bar_module,
+    base,
 )
 
 #: Optional native line formatter, provided by the `speedups` package. When
@@ -23,28 +24,34 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
     min_value = bar.min_value
     max_value = bar.max_value
     width = bar.term_width
-
     elapsed = bar._fast_elapsed()
-    done = value - min_value
-    total = (max_value - min_value) if max_value else 0  # type: ignore[operator]
-
-    pct = 100.0 * done / total if total else 100.0
-    count = f'({value} of {max_value})'
-    if done > 0 and elapsed > 0:
-        eta = _format_seconds(elapsed * (total - done) / done)
-    else:
-        eta = '--:--:--'
     elapsed_text = _format_seconds(elapsed)
-
-    left = f'{pct:3.0f}% {count} '
-    right = f' Elapsed Time: {elapsed_text} ETA: {eta}'
-    inner = max(width - len(left) - len(right) - 2, 0)
-    filled = int(inner * done / total) if total else inner
-    barstr = '|' + '#' * filled + ' ' * (inner - filled) + '|'
-
     prefix = bar.prefix or ''
     suffix = bar.suffix or ''
-    return f'{prefix}{left}{barstr}{right}{suffix}'
+
+    known = max_value not in (None, base.UnknownLength)
+    if known:
+        done = value - min_value
+        total = max_value - min_value  # type: ignore[operator]
+        pct = 100.0 * done / total if total else 100.0
+        count = f'({value} of {max_value})'
+        if done > 0 and elapsed > 0:
+            eta = _format_seconds(elapsed * (total - done) / done)
+        else:
+            eta = '--:--:--'
+        left = f'{pct:3.0f}% {count} '
+        right = f' Elapsed Time: {elapsed_text} ETA: {eta}'
+        inner = max(width - len(left) - len(right) - 2, 0)
+        filled = int(inner * done / total) if total else inner
+        barstr = '|' + '#' * filled + ' ' * (inner - filled) + '|'
+        return f'{prefix}{left}{barstr}{right}{suffix}'
+
+    # Unknown length: spinner + count + elapsed (no bar/eta).
+    spinner = r'|/-\\'[int(elapsed * 4) % 4]
+    item_count = value - min_value + 1
+    return (
+        f'{prefix}{spinner} {item_count} Elapsed Time: {elapsed_text}{suffix}'
+    )
 
 
 class FastProgressBar(bar_module.ProgressBar):
