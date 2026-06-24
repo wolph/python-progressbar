@@ -31,8 +31,11 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
 
     known = max_value not in (None, base.UnknownLength)
     if known:
-        done = value - min_value
         total = max_value - min_value  # type: ignore[operator]
+        # Clamp progress to the total so an over-shooting value (e.g. a forced
+        # render past max_value with max_error=False) can't produce a negative
+        # ETA or a bar that overflows its width.
+        done = min(value - min_value, total)
         pct = 100.0 * done / total if total else 100.0
         count = f'({value} of {max_value})'
         if done > 0 and elapsed > 0:
