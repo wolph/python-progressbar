@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import gc
 import io
+import sys
 
 import progressbar
 from progressbar import fast as fast_module
@@ -90,3 +92,32 @@ def test_fast_prefix_suffix_in_line_not_widgets():
     last = fd.repaints()[-1]
     assert last.lstrip().startswith('load')
     assert 'done' in last
+
+
+def test_fast_empty_iterable():
+    fd = TTY()
+    bar = fast_module.FastProgressBar(max_value=0, fd=fd)
+    assert list(bar([])) == []
+    assert bar._finished
+
+
+def test_fast_break_restores_streams():
+    real_out = sys.stdout
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=1000, fd=fd, redirect_stdout=True
+    )
+    for i in bar(range(1000)):
+        if i == 5:
+            break
+    del bar
+    gc.collect()
+    assert sys.stdout is real_out
+
+
+def test_fast_with_statement():
+    fd = TTY()
+    with fast_module.FastProgressBar(max_value=10, fd=fd) as bar:
+        out = list(bar(range(10)))
+    assert out == list(range(10))
+    assert bar._finished
