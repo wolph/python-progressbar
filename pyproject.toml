@@ -170,6 +170,7 @@ exclude_lines = [
     'if 0:',
     'if __name__ == .__main__.:',
     'if types.TYPE_CHECKING:',
+    'if typing.TYPE_CHECKING:',
     '@typing.overload',
     'if os.name == .nt.:',
     'typing.Protocol',

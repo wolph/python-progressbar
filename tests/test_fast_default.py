@@ -121,3 +121,63 @@ def test_fast_with_statement():
         out = list(bar(range(10)))
     assert out == list(range(10))
     assert bar._finished
+
+
+def test_shortcut_dispatch(monkeypatch):
+    # Record which class the shortcut constructs for each input combination.
+    from progressbar import shortcuts
+
+    calls = {'fast': 0, 'full': 0}
+
+    class FastSpy(fast_module.FastProgressBar):
+        def __init__(self, *a, **k):
+            calls['fast'] += 1
+            super().__init__(*a, **k)
+
+    class FullSpy(progressbar.ProgressBar):
+        def __init__(self, *a, **k):
+            calls['full'] += 1
+            super().__init__(*a, **k)
+
+    monkeypatch.setattr(shortcuts.fast_module, 'FastProgressBar', FastSpy)
+    monkeypatch.setattr(shortcuts.bar, 'ProgressBar', FullSpy)
+
+    # Default (no widgets, no fast flag) -> fast.
+    assert list(shortcuts.progressbar(range(3), fd=TTY())) == [0, 1, 2]
+    assert calls == {'fast': 1, 'full': 0}
+
+    # Custom widgets -> full.
+    list(
+        shortcuts.progressbar(
+            range(3), fd=TTY(), widgets=[progressbar.Percentage()]
+        )
+    )
+    assert calls == {'fast': 1, 'full': 1}
+
+    # fast=False -> full even with no widgets.
+    list(shortcuts.progressbar(range(3), fd=TTY(), fast=False))
+    assert calls == {'fast': 1, 'full': 2}
+
+    # Env override forces full.
+    monkeypatch.setenv('PROGRESSBAR_DISABLE_FASTPATH', '1')
+    list(shortcuts.progressbar(range(3), fd=TTY()))
+    assert calls == {'fast': 1, 'full': 3}
+
+    # Dynamic variables force full (the fast formatter can't render them).
+    monkeypatch.delenv('PROGRESSBAR_DISABLE_FASTPATH', raising=False)
+    list(shortcuts.progressbar(range(3), fd=TTY(), variables={'x': 1}))
+    assert calls == {'fast': 1, 'full': 4}
+
+
+def test_full_bar_injects_prefix_suffix_widgets():
+    # The full ProgressBar (unlike the fast bar) injects prefix/suffix as
+    # FormatLabel widgets in start(); exercise that path directly.
+    fd = TTY()
+    bar_ = progressbar.ProgressBar(
+        max_value=10, fd=fd, prefix='pre ', suffix=' suf'
+    )
+    list(bar_(range(10)))
+    assert bar_.widgets  # widgets were built (not the fast empty list)
+    last = fd.repaints()[-1]
+    assert 'pre' in last
+    assert 'suf' in last
