@@ -1,6 +1,6 @@
 # Python progress-bar library benchmark
 
-_Generated 2026-06-24 01:41. Subject: **progressbar2** (version 4.5.0)._
+_Generated 2026-06-24 03:06. Subject: **progressbar2** (version 4.5.0)._
 
 Compares `progressbar2` against the most common alternatives across three independent dimensions. All rendered output is written to a real pseudo-terminal (pty) that is continuously drained, so every library believes it is attached to a TTY and actually draws — the comparison is apples-to-apples, not "is output suppressed when piped".
 
@@ -27,15 +27,15 @@ Compares `progressbar2` against the most common alternatives across three indepe
 
 Idiomatic "wrap my loop" call with each library's **default** settings, over **1,000,000** iterations with a trivial body. This is the real-world cost of dropping a progress bar around a fast loop. Overhead = (wrapped time − bare-loop time) / iterations. Lower is faster.
 
-Bare loop baseline: **5.60 ms** for 1,000,000 iterations.
+Bare loop baseline: **5.55 ms** for 1,000,000 iterations.
 
 | Library | Total time | Overhead/iter | vs progressbar2 |
 |---|--:|--:|--:|
-| **progressbar2** | 10.2 ms | 4.6 ns | baseline |
-| rich | 24.6 ms | 19.0 ns | 4.13x |
-| tqdm | 61.4 ms | 55.8 ns | 12.13x |
-| alive-progress | 254.5 ms | 248.9 ns | 54.08x |
-| click | 1911.2 ms | 1905.6 ns | 414.05x |
+| **progressbar2** | 10.5 ms | 5.0 ns | baseline |
+| rich | 24.5 ms | 18.9 ns | 3.79x |
+| tqdm | 61.1 ms | 55.5 ns | 11.14x |
+| alive-progress | 256.4 ms | 250.9 ns | 50.33x |
+| click | 1879.6 ms | 1874.0 ns | 375.99x |
 
 ## B. Forced per-update render cost
 
@@ -43,9 +43,9 @@ Rendering **forced on every single update** over **30,000** updates — i.e. the
 
 | Library | Total time | Per rendered update | vs progressbar2 |
 |---|--:|--:|--:|
-| tqdm | 323.1 ms | 10.76 us | 0.45x |
-| **progressbar2** | 723.8 ms | 24.12 us | baseline |
-| rich | 5169.7 ms | 172.32 us | 7.14x |
+| tqdm | 351.7 ms | 11.72 us | 0.47x |
+| **progressbar2** | 742.2 ms | 24.74 us | baseline |
+| rich | 5112.5 ms | 170.41 us | 6.89x |
 
 Excluded from this panel (no per-update force-render API):
 - **alive-progress** — renders on a background timer thread; no per-update render API
@@ -53,21 +53,21 @@ Excluded from this panel (no per-update force-render API):
 
 ## C. Cold import time
 
-Wall-clock cost of importing the library in a fresh interpreter (minimum of 9 runs), with bare-interpreter startup (16 ms) subtracted. Matters for short-lived CLIs. Lower is lighter.
+Wall-clock cost of importing the library in a fresh interpreter (minimum of 9 runs), with bare-interpreter startup (15 ms) subtracted. Matters for short-lived CLIs. Lower is lighter.
 
 | Library | Import time (net) |
 |---|--:|
-| alive-progress | 9.0 ms |
-| tqdm | 23.7 ms |
-| click | 24.5 ms |
-| **progressbar2** | 48.0 ms |
-| rich | 48.3 ms |
+| alive-progress | 8.6 ms |
+| tqdm | 21.1 ms |
+| click | 23.0 ms |
+| **progressbar2** | 23.1 ms |
+| rich | 46.5 ms |
 
 ## Takeaways
 
-- **Default per-iteration overhead:** `progressbar2` is 5 ns/iter, ranking #1 of 5. `progressbar2` is the lightest per iteration (5 ns), `click` the heaviest (1906 ns).
+- **Default per-iteration overhead:** `progressbar2` is 5 ns/iter, ranking #1 of 5. `progressbar2` is the lightest per iteration (5 ns), `click` the heaviest (1874 ns).
   - `progressbar2` and `tqdm` win here because their default settings do almost no per-iteration work (counter compare / background refresh thread); `progressbar2` calls a monotonic clock and evaluates its redraw predicate on every `update()`.
-- **Render cost:** when a redraw actually happens, `progressbar2` draws one update in 24.1 us — 2.24x the cheapest (`tqdm`) but 7.1x cheaper than rich's full-display re-render.
+- **Render cost:** when a redraw actually happens, `progressbar2` draws one update in 24.7 us — 2.11x the cheapest (`tqdm`) but 6.9x cheaper than rich's full-display re-render.
 - **Why both numbers matter:** `progressbar2` caps redraws at ~20/sec by default (50 ms floor), so in practice the cheap render in B fires rarely and the per-iteration cost in A dominates real workloads.
 - **Import weight:** `progressbar2` is mid-pack to import; `alive-progress` is the lightest, `rich` the heaviest.
 

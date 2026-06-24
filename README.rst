@@ -108,6 +108,10 @@ Two tiers, same API:
   reads between redraws lag slightly (like ``tqdm.n``). Set
   ``PROGRESSBAR_DISABLE_FASTPATH=1`` to force the pure-Python path.
 
+Importing ``progressbar`` is also light -- about **24 ms** (net of interpreter
+startup), on par with ``tqdm``/``click`` and roughly half of ``rich``. Nothing
+heavy is imported eagerly (no ``asyncio``, for example).
+
 The benchmark is fully reproducible and pits ``progressbar2`` against ``tqdm``,
 ``rich``, ``alive-progress`` and ``click`` across iteration overhead, forced
 redraw cost, and import time -- all rendered to a real pseudo-terminal so the
