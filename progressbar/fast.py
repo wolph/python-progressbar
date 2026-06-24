@@ -79,3 +79,11 @@ class FastProgressBar(bar_module.ProgressBar):
     def _format_line(self) -> str:
         formatter = _format_fast_line or _pure_format_fast_line
         return formatter(self)
+
+    def _init_prefix(self) -> None:
+        # Label is rendered inline by the formatter; don't inject a widget.
+        pass
+
+    def _init_suffix(self) -> None:
+        # Label is rendered inline by the formatter; don't inject a widget.
+        pass

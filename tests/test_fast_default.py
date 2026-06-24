@@ -78,3 +78,15 @@ def test_fast_unknown_length_renders_count_and_elapsed():
     assert 'Elapsed Time:' in last
     assert '40' in last  # the count is shown
     assert ' of ' not in last  # no "(n of max)" when length unknown
+
+
+def test_fast_prefix_suffix_in_line_not_widgets():
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=10, fd=fd, prefix='load ', suffix=' done'
+    )
+    list(bar(range(10)))
+    assert bar.widgets == []  # prefix/suffix not injected as widgets
+    last = fd.repaints()[-1]
+    assert last.lstrip().startswith('load')
+    assert 'done' in last
