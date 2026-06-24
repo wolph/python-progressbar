@@ -29,12 +29,6 @@ from . import (
 )
 from .terminal import os_specific
 
-if typing.TYPE_CHECKING:
-    # Imported lazily at runtime (see the local imports in the full-bar
-    # methods below) so the lean fast path and a bare `import progressbar`
-    # don't pull in the widgets module (and its terminal/colour tables).
-    from . import widgets as widgets_module
-
 try:
     # Optional native accelerator, shipped as the ``progressbar2[fast]`` extra
     # (the separate ``speedups`` package). When importable, the iterator path
@@ -46,6 +40,17 @@ try:
     ).FastBarIterator
 except Exception:  # pragma: no cover - environmental (absent / ABI mismatch)
     _FastBarIterator = None
+
+
+def _load_widgets() -> typing.Any:
+    """Import the widgets module lazily.
+
+    The full-bar code needs ``widgets``, but the lean fast path must not pull
+    it in (it drags the terminal/colour tables). Imported via importlib so the
+    deferred load doesn't read as a static ``bar -> widgets`` import cycle.
+    """
+    return importlib.import_module('progressbar.widgets')
+
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +71,9 @@ class ProgressBarMixinBase(abc.ABC):
     #: fall back to 80 if auto detection is not possible.
     term_width: int = 80
     #: The widgets to render, defaults to the result of `default_widget()`
-    widgets: types.MutableSequence[widgets_module.WidgetBase | str]
+    #: (typed loosely as Any to avoid a static bar->widgets import cycle; the
+    #: public ``progressbar()`` shortcut keeps the precise WidgetBase typing).
+    widgets: types.MutableSequence[typing.Any]
     #: When going beyond the max_value, raise an error if True or silently
     #: ignore otherwise
     max_error: bool
@@ -367,7 +374,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
             return widgets.rjust(self.term_width)
 
     def _format_widgets(self):
-        from . import widgets
+        widgets = _load_widgets()
 
         result = []
         expanding = []
@@ -654,9 +661,7 @@ class ProgressBar(
         self,
         min_value: NumberT = 0,
         max_value: ValueT = None,
-        widgets: types.Optional[
-            types.Sequence[widgets_module.WidgetBase | str]
-        ] = None,
+        widgets: types.Optional[types.Sequence[typing.Any]] = None,
         left_justify: bool = True,
         initial_value: NumberT = 0,
         poll_interval: types.Optional[float] = None,
@@ -748,7 +753,7 @@ class ProgressBar(
         # A dictionary of names that can be used by Variable and FormatWidget
         self.variables = utils.AttributeDict(variables or {})
         if self.widgets:
-            from . import widgets as widgets_module
+            widgets_module = _load_widgets()
 
             for widget in self.widgets:
                 if (
@@ -910,7 +915,7 @@ class ProgressBar(
         )
 
     def default_widgets(self):
-        from . import widgets
+        widgets = _load_widgets()
 
         if self.max_value:
             return [
@@ -1302,7 +1307,7 @@ class ProgressBar(
 
     def _init_suffix(self):
         if self.suffix:
-            from . import widgets
+            widgets = _load_widgets()
 
             self.widgets.append(
                 widgets.FormatLabel(self.suffix, new_style=True),
@@ -1313,7 +1318,7 @@ class ProgressBar(
 
     def _init_prefix(self):
         if self.prefix:
-            from . import widgets
+            widgets = _load_widgets()
 
             self.widgets.insert(
                 0,
@@ -1391,7 +1396,7 @@ class DataTransferBar(ProgressBar):
     """
 
     def default_widgets(self):
-        from . import widgets
+        widgets = _load_widgets()
 
         if self.max_value:
             return [

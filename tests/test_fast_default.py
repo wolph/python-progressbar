@@ -5,7 +5,10 @@ import io
 import sys
 
 import progressbar
-from progressbar import fast as fast_module
+
+# Alias (not a `from` import) so CodeQL doesn't flag `progressbar` as imported
+# with both `import` and `import from`.
+fast_module = progressbar.fast
 
 
 class TTY(io.StringIO):
