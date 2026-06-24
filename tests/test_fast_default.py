@@ -181,3 +181,21 @@ def test_full_bar_injects_prefix_suffix_widgets():
     last = fd.repaints()[-1]
     assert 'pre' in last
     assert 'suf' in last
+
+
+def test_import_progressbar_is_lazy():
+    # A fresh interpreter: `import progressbar` must not eagerly pull heavy
+    # submodules; FastProgressBar still resolves lazily.
+    import subprocess
+
+    check = (
+        'import sys, progressbar\n'
+        'assert "progressbar.multi" not in sys.modules\n'
+        'assert progressbar.FastProgressBar is not None\n'
+        'print("ok")\n'
+    )
+    out = subprocess.run(
+        [sys.executable, '-c', check], capture_output=True, text=True
+    )
+    assert out.returncode == 0, out.stderr
+    assert 'ok' in out.stdout
