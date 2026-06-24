@@ -199,3 +199,22 @@ def test_import_progressbar_is_lazy():
     )
     assert out.returncode == 0, out.stderr
     assert 'ok' in out.stdout
+
+
+def test_fast_path_does_not_import_widgets_or_colors():
+    # Running the fast default end-to-end must not pull in the widgets module
+    # or the terminal colour tables (the heaviest imports).
+    import subprocess
+
+    check = (
+        'import sys, progressbar\n'
+        'list(progressbar.progressbar(range(10)))\n'
+        'assert "progressbar.widgets" not in sys.modules\n'
+        'assert "progressbar.terminal.colors" not in sys.modules\n'
+        'print("ok")\n'
+    )
+    out = subprocess.run(
+        [sys.executable, '-c', check], capture_output=True, text=True
+    )
+    assert out.returncode == 0, out.stderr
+    assert 'ok' in out.stdout

@@ -26,10 +26,14 @@ import progressbar.terminal.stream
 from . import (
     base,
     utils,
-    widgets,
-    widgets as widgets_module,  # Avoid name collision
 )
 from .terminal import os_specific
+
+if typing.TYPE_CHECKING:
+    # Imported lazily at runtime (see the local imports in the full-bar
+    # methods below) so the lean fast path and a bare `import progressbar`
+    # don't pull in the widgets module (and its terminal/colour tables).
+    from . import widgets as widgets_module
 
 try:
     # Optional native accelerator, shipped as the ``progressbar2[fast]`` extra
@@ -363,6 +367,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
             return widgets.rjust(self.term_width)
 
     def _format_widgets(self):
+        from . import widgets
+
         result = []
         expanding = []
         width = self.term_width
@@ -741,12 +747,15 @@ class ProgressBar(
 
         # A dictionary of names that can be used by Variable and FormatWidget
         self.variables = utils.AttributeDict(variables or {})
-        for widget in self.widgets:
-            if (
-                isinstance(widget, widgets_module.VariableMixin)
-                and widget.name not in self.variables
-            ):
-                self.variables[widget.name] = None
+        if self.widgets:
+            from . import widgets as widgets_module
+
+            for widget in self.widgets:
+                if (
+                    isinstance(widget, widgets_module.VariableMixin)
+                    and widget.name not in self.variables
+                ):
+                    self.variables[widget.name] = None
 
     @property
     def dynamic_messages(self):  # pragma: no cover
@@ -901,6 +910,8 @@ class ProgressBar(
         )
 
     def default_widgets(self):
+        from . import widgets
+
         if self.max_value:
             return [
                 widgets.Percentage(**self.widget_kwargs),
@@ -1291,6 +1302,8 @@ class ProgressBar(
 
     def _init_suffix(self):
         if self.suffix:
+            from . import widgets
+
             self.widgets.append(
                 widgets.FormatLabel(self.suffix, new_style=True),
             )
@@ -1300,6 +1313,8 @@ class ProgressBar(
 
     def _init_prefix(self):
         if self.prefix:
+            from . import widgets
+
             self.widgets.insert(
                 0,
                 widgets.FormatLabel(self.prefix, new_style=True),
@@ -1376,6 +1391,8 @@ class DataTransferBar(ProgressBar):
     """
 
     def default_widgets(self):
+        from . import widgets
+
         if self.max_value:
             return [
                 widgets.Percentage(),
