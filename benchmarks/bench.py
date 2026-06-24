@@ -161,6 +161,15 @@ def render_progressbar2(f: typing.TextIO, n: int) -> None:
             bar.update(i + 1, force=True)
 
 
+def render_progressbar2_fast(f: typing.TextIO, n: int) -> None:
+    import progressbar
+
+    # The fast default path: fixed formatter, no widget machinery.
+    with progressbar.FastProgressBar(max_value=n, fd=f) as bar:
+        for i in range(n):
+            bar.update(i + 1, force=True)
+
+
 def render_tqdm(f: typing.TextIO, n: int) -> None:
     from tqdm import tqdm
 
@@ -216,6 +225,7 @@ ITER_LIBS: dict[str, typing.Callable[[typing.TextIO, int], None]] = {
 
 RENDER_LIBS: dict[str, typing.Callable[[typing.TextIO, int], None]] = {
     'progressbar2': render_progressbar2,
+    'progressbar2-fast': render_progressbar2_fast,
     'tqdm': render_tqdm,
     'rich': render_rich,
 }
