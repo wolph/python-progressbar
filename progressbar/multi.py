@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+import importlib
 import io
 import itertools
 import operator
@@ -16,6 +17,14 @@ import python_utils
 
 from . import bar, terminal
 from .terminal import stream
+
+# MultiBar renders full (widget) progress bars from background threads. Warm
+# the widgets module now -- single-threaded, at module load, which only happens
+# when MultiBar is actually used (this module is imported lazily), so the fast
+# path and a bare ``import progressbar`` stay widgets-free. Pre-warming here
+# means a child bar's first start() doesn't import widgets inside a render
+# thread and race MultiBar._label_bar's ``assert bar.widgets``.
+importlib.import_module('progressbar.widgets')
 
 SortKeyFunc = typing.Callable[[bar.ProgressBar], typing.Any]
 
