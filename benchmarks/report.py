@@ -11,11 +11,57 @@ import matplotlib
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib import font_manager  # noqa: E402
 
 HERE: str = os.path.dirname(os.path.abspath(__file__))
 SUBJECT: str = 'progressbar2'
-HIGHLIGHT: str = '#d62728'  # progressbar2 bars
-OTHER: str = '#7f8fa6'  # everyone else
+
+# Our two variants share one brand hue so they read as siblings: the fast
+# default pops at full saturation, the full (widget) mode is a muted shade.
+# Every other library is a flat neutral grey.
+FAST: str = 'fast'
+FULL: str = 'full'
+OTHER: str = 'other'
+THEME: dict[str, typing.Any] = {
+    'bg': '#ffffff',
+    'fast': '#4f46e5',  # bold indigo  -> progressbar2 (fast), the default
+    'full': '#c4b5fd',  # muted indigo -> progressbar2 (full), widgets mode
+    'other': '#d8dde6',  # neutral grey -> every other library
+    'text': '#1e2430',
+    'subtext': '#5b6472',
+    'grid': '#e7eaf0',
+    'title': '#11151c',
+    'bar_height': 0.6,
+}
+
+
+def _font() -> str:
+    """Prefer a clean sans; degrade gracefully where it is not installed."""
+    have = {f.name for f in font_manager.fontManager.ttflist}
+    for name in ('Helvetica Neue', 'Helvetica', 'Arial', 'DejaVu Sans'):
+        if name in have:
+            return name
+    return 'sans-serif'
+
+
+def _classify(panel: str, key: str) -> str:
+    """Tag a library as our fast default, our full mode, or another lib."""
+    if key == 'progressbar2-fast':
+        return FAST
+    if key == SUBJECT:
+        # Panels A/C only benchmark the fast default; B splits fast vs full.
+        return FAST if panel in ('A', 'C') else FULL
+    return OTHER
+
+
+def _relabel(panel: str, key: str) -> str:
+    """Display name: spell out fast/full for our bars, raw key otherwise."""
+    cls = _classify(panel, key)
+    if cls == FAST:
+        return 'progressbar2 (fast)'
+    if cls == FULL:
+        return 'progressbar2 (full)'
+    return key
 
 
 def load() -> dict[str, typing.Any]:
@@ -32,62 +78,103 @@ def make_chart(data: dict[str, typing.Any]) -> str:
     b = data['scenario_b_forced_render']['libs']
     c = data['scenario_c_import_time']['libs']
 
-    panels: list[tuple[str, str, list[tuple[str, float]], bool]] = [
+    panels: list[tuple[str, str, str, list[tuple[str, float]], bool]] = [
         (
-            'A. Default iterator-wrap overhead\n(lower is faster)',
+            'A',
+            'Default iterator-wrap overhead',
             'nanoseconds added per iteration',
             _sorted({k: v['overhead_ns_per_iter'] for k, v in a.items()}),
             True,
         ),
         (
-            'B. Forced per-update render cost\n(lower is faster)',
+            'B',
+            'Forced per-update render cost',
             'microseconds per rendered update',
             _sorted({k: v['per_update_us'] for k, v in b.items()}),
             True,
         ),
         (
-            'C. Cold import time\n(lower is lighter)',
-            'milliseconds (net of interpreter startup)',
+            'C',
+            'Cold import time',
+            'milliseconds (net of startup)',
             _sorted({k: v['net_ms'] for k, v in c.items()}),
             False,
         ),
     ]
 
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
-    for ax, (title, xlabel, pairs, logx) in zip(axes, panels):
-        labels = [k for k, _ in pairs]
+    color = {FAST: THEME['fast'], FULL: THEME['full'], OTHER: THEME['other']}
+
+    plt.rcParams['font.family'] = _font()
+    fig, axes = plt.subplots(1, 3, figsize=(15.5, 5.2))
+    fig.patch.set_facecolor(THEME['bg'])
+
+    for ax, (pid, ptitle, xlabel, pairs, logx) in zip(axes, panels):
+        ax.set_facecolor(THEME['bg'])
+        classes = [_classify(pid, k) for k, _ in pairs]
+        labels = [_relabel(pid, k) for k, _ in pairs]
         values = [v for _, v in pairs]
-        colors = [HIGHLIGHT if k == SUBJECT else OTHER for k in labels]
-        ypos = range(len(labels))
-        ax.barh(list(ypos), values, color=colors)
-        ax.set_yticks(list(ypos))
-        ax.set_yticklabels(labels)
+        ypos = list(range(len(labels)))
+
+        ax.barh(
+            ypos,
+            values,
+            height=THEME['bar_height'],
+            color=[color[cls] for cls in classes],
+        )
+        ax.set_yticks(ypos)
+        ax.set_yticklabels(labels, color=THEME['text'], fontsize=10)
         ax.invert_yaxis()  # fastest at top
-        ax.set_xlabel(xlabel)
-        ax.set_title(title, fontsize=11, fontweight='bold')
+        ax.set_xlabel(xlabel, color=THEME['subtext'], fontsize=9.5)
+        ax.set_title(
+            f'{pid}. {ptitle}',
+            loc='left',
+            fontsize=11.5,
+            fontweight='bold',
+            color=THEME['title'],
+            pad=12,
+        )
         if logx:
             ax.set_xscale('log')
-        ax.grid(axis='x', linestyle=':', alpha=0.4)
+        ax.grid(axis='x', color=THEME['grid'], linewidth=1)
+        ax.set_axisbelow(True)
+        for spine in ('top', 'right', 'left'):
+            ax.spines[spine].set_visible(False)
+        ax.spines['bottom'].set_color(THEME['grid'])
+        ax.tick_params(colors=THEME['subtext'], length=0)
+        ax.margins(x=0.2)
+
         xmax = max(values)
-        for y, val in zip(ypos, values):
+        for y, val, cls in zip(ypos, values, classes):
             label = f'{val:.1f}' if val >= 1 else f'{val:.2f}'
             ax.text(
-                val * 1.05 if logx else val + xmax * 0.01,
+                val * 1.08 if logx else val + xmax * 0.015,
                 y,
                 label,
                 va='center',
-                fontsize=9,
+                ha='left',
+                fontsize=9.5,
+                fontweight='normal' if cls == OTHER else 'bold',
+                color=THEME['text'] if cls == OTHER else color[cls],
             )
-        ax.margins(x=0.18)
 
     fig.suptitle(
         'progressbar2 vs common Python progress-bar libraries',
-        fontsize=14,
+        fontsize=15,
         fontweight='bold',
+        color=THEME['title'],
+        y=0.975,
     )
-    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    fig.text(
+        0.5,
+        0.915,
+        'lower is faster / lighter  —  fastest at top',
+        ha='center',
+        fontsize=9.5,
+        color=THEME['subtext'],
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.88))
     out = os.path.join(HERE, 'chart.png')
-    fig.savefig(out, dpi=130)
+    fig.savefig(out, dpi=140, facecolor=THEME['bg'])
     plt.close(fig)
     return out
 
@@ -172,7 +259,7 @@ def make_report(data: dict[str, typing.Any], chart_name: str) -> str:
         {k: vv['overhead_ns_per_iter'] for k, vv in a['libs'].items()}
     ):
         vv = a['libs'][name]
-        bold = '**' if name == SUBJECT else ''
+        bold = '**' if name in (SUBJECT, 'progressbar2-fast') else ''
         w(
             f'| {bold}{name}{bold} | {vv["total_min_s"] * 1e3:.1f} ms '
             f'| {vv["overhead_ns_per_iter"]:.1f} ns '
@@ -195,7 +282,7 @@ def make_report(data: dict[str, typing.Any], chart_name: str) -> str:
         {k: vv['per_update_us'] for k, vv in b['libs'].items()}
     ):
         vv = b['libs'][name]
-        bold = '**' if name == SUBJECT else ''
+        bold = '**' if name in (SUBJECT, 'progressbar2-fast') else ''
         w(
             f'| {bold}{name}{bold} | {vv["total_min_s"] * 1e3:.1f} ms '
             f'| {vv["per_update_us"]:.2f} us '
@@ -221,7 +308,7 @@ def make_report(data: dict[str, typing.Any], chart_name: str) -> str:
     w('|---|--:|')
     for name, v in _sorted({k: vv['net_ms'] for k, vv in c['libs'].items()}):
         vv = c['libs'][name]
-        bold = '**' if name == SUBJECT else ''
+        bold = '**' if name in (SUBJECT, 'progressbar2-fast') else ''
         w(f'| {bold}{name}{bold} | {vv["net_ms"]:.1f} ms |')
     w('')
 

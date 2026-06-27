@@ -1,6 +1,6 @@
 # Python progress-bar library benchmark
 
-_Generated 2026-06-24 19:25. Subject: **progressbar2** (version 4.5.0)._
+_Generated 2026-06-27 03:03. Subject: **progressbar2** (version 4.5.0)._
 
 Compares `progressbar2` against the most common alternatives across three independent dimensions. All rendered output is written to a real pseudo-terminal (pty) that is continuously drained, so every library believes it is attached to a TTY and actually draws — the comparison is apples-to-apples, not "is output suppressed when piped".
 
@@ -43,7 +43,7 @@ Rendering **forced on every single update** over **30,000** updates — i.e. the
 
 | Library | Total time | Per rendered update | vs progressbar2 |
 |---|--:|--:|--:|
-| progressbar2-fast | 148.9 ms | 4.96 us | 0.19x |
+| **progressbar2-fast** | 148.9 ms | 4.96 us | 0.19x |
 | tqdm | 332.7 ms | 11.08 us | 0.44x |
 | **progressbar2** | 764.6 ms | 25.48 us | baseline |
 | rich | 5156.6 ms | 171.88 us | 6.75x |
