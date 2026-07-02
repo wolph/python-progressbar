@@ -1584,6 +1584,13 @@ class JobStatusBar(Bar, VariableMixin):
     failure_bg_color: terminal.Color | None = None
     failure_marker: str = 'X'
     job_markers: list[str]
+    """Retained for backwards compatibility only.
+
+    Per-run marker state now lives in ``progress.extra`` (see
+    :py:meth:`get_job_markers`) so a single widget shared by multiple bars no
+    longer interleaves their markers. This attribute is no longer read or
+    updated during rendering.
+    """
 
     def __init__(
         self,
