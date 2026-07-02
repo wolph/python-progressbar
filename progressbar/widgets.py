@@ -1598,7 +1598,13 @@ class JobStatusBar(Bar, VariableMixin):
     ):
         VariableMixin.__init__(self, name)
         self.name = name
+        # Retained for backward compatibility only; render state now lives in
+        # ``progress.extra`` (see get_job_markers) so a single widget reused by
+        # multiple bars no longer interleaves their markers.
         self.job_markers = []
+        # Unique per-widget key so multiple JobStatusBars on the same bar do
+        # not share storage either.
+        self._markers_key = f'{type(self).__name__}_{id(self)}_job_markers'
         self.left = string_or_lambda(left)
         self.right = string_or_lambda(right)
         self.fill = string_or_lambda(fill)
@@ -1617,6 +1623,11 @@ class JobStatusBar(Bar, VariableMixin):
             fill_left=fill_left,
             **kwargs,
         )
+
+    def get_job_markers(self, progress: ProgressBarMixinBase) -> list[str]:
+        # Per-bar marker history, following SamplesMixin's ``progress.extra``
+        # pattern so the widget itself stays stateless and reusable.
+        return progress.extra.setdefault(self._markers_key, [])
 
     def __call__(
         self,
@@ -1650,16 +1661,17 @@ class JobStatusBar(Bar, VariableMixin):
             if bg_color:  # pragma: no cover
                 marker = bg_color.bg(marker)
 
-            self.job_markers.append(marker)
+            job_markers = self.get_job_markers(progress)
+            job_markers.append(marker)
             # Drop the oldest markers when they no longer fit the
             # available width
             while (
-                len(self.job_markers) > 1
-                and progress.custom_len(''.join(self.job_markers)) > width
+                len(job_markers) > 1
+                and progress.custom_len(''.join(job_markers)) > width
             ):
-                self.job_markers.pop(0)
+                job_markers.pop(0)
 
-            marker = ''.join(self.job_markers)
+            marker = ''.join(job_markers)
             width -= progress.custom_len(marker)
 
             fill = converters.to_unicode(self.fill(progress, data, width))
