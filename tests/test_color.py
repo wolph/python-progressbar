@@ -274,6 +274,26 @@ def test_rgb_to_hls(rgb, hls) -> None:
 
 
 @pytest.mark.parametrize(
+    'rgb, expected',
+    [
+        (terminal.RGB(255, 0, 0), 1),
+        (terminal.RGB(128, 0, 0), 1),
+        (terminal.RGB(0, 128, 0), 2),
+        (terminal.RGB(0, 0, 128), 4),
+        (terminal.RGB(128, 128, 0), 3),
+        (terminal.RGB(0, 0, 0), 0),
+        (terminal.RGB(255, 255, 255), 7),
+        (terminal.RGB(127, 127, 127), 0),
+    ],
+)
+def test_rgb_to_ansi_16(rgb, expected) -> None:
+    # Regression: ``int(c / 255)`` is 1 only when a channel is exactly 255, so
+    # every mid-intensity colour (e.g. maroon 128,0,0) collapsed to black. A
+    # per-channel threshold at 128 maps each channel to its own bit.
+    assert rgb.to_ansi_16 == expected
+
+
+@pytest.mark.parametrize(
     'text, fg, bg, fg_none, bg_none, percentage, expected',
     [
         ('test', None, None, None, None, None, 'test'),

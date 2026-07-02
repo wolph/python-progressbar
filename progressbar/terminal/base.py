@@ -280,10 +280,12 @@ class RGB(typing.NamedTuple):
 
     @property
     def to_ansi_16(self) -> int:
-        # Using int instead of round because it maps slightly better
-        red = int(self.red / 255)
-        green = int(self.green / 255)
-        blue = int(self.blue / 255)
+        # Threshold each channel at half intensity so a mid-range channel
+        # sets its bit. ``int(c / 255)`` was only ever 1 at exactly 255, which
+        # collapsed almost every colour (e.g. maroon 128,0,0) to black.
+        red = int(self.red >= 128)
+        green = int(self.green >= 128)
+        blue = int(self.blue >= 128)
         return (blue << 2) | (green << 1) | red
 
     @property
