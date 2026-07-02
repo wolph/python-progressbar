@@ -258,11 +258,14 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
         progress - a reference to the calling ProgressBar
         """
 
-    _fixed_colors: ClassVar[TFixedColors] = TFixedColors(
+    # Class-level defaults; instances may hold their own copy when a
+    # ``fixed_colors``/``gradient_colors`` override is passed (copy-on-write in
+    # ``__init__``), so these are not ``ClassVar``.
+    _fixed_colors: TFixedColors = TFixedColors(
         fg_none=None,
         bg_none=None,
     )
-    _gradient_colors: ClassVar[TGradientColors] = TGradientColors(
+    _gradient_colors: TGradientColors = TGradientColors(
         fg=None,
         bg=None,
     )
@@ -297,11 +300,18 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
         gradient_colors=None,
         **kwargs,
     ):
+        # Copy-on-write: merge overrides into a fresh per-instance dict so we
+        # never mutate the shared class-level mapping (which is inherited by
+        # every other instance and subclass).
         if fixed_colors is not None:
-            self._fixed_colors.update(fixed_colors)
+            merged_fixed = type(self)._fixed_colors.copy()
+            merged_fixed.update(fixed_colors)
+            self._fixed_colors = merged_fixed
 
         if gradient_colors is not None:
-            self._gradient_colors.update(gradient_colors)
+            merged_gradient = type(self)._gradient_colors.copy()
+            merged_gradient.update(gradient_colors)
+            self._gradient_colors = merged_gradient
 
         if self.uses_colors:
             self._len = utils.len_color
@@ -913,11 +923,12 @@ class Counter(FormatWidgetMixin, WidgetBase):
 
 
 class ColoredMixin:
-    _fixed_colors: ClassVar[TFixedColors] = TFixedColors(
+    # See ``WidgetBase``: class-level defaults, overridable per instance.
+    _fixed_colors: TFixedColors = TFixedColors(
         fg_none=colors.yellow,
         bg_none=None,
     )
-    _gradient_colors: ClassVar[TGradientColors] = TGradientColors(
+    _gradient_colors: TGradientColors = TGradientColors(
         fg=colors.gradient,
         bg=None,
     )
