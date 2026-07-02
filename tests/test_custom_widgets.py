@@ -93,3 +93,20 @@ def test_format_custom_text_widget() -> None:
     for i in bar(range(5)):
         widget.update_mapping(eggs=i * 2)
         assert widget.mapping['eggs'] == bar.widgets[0].mapping['eggs']
+
+
+def test_format_custom_text_mapping_is_per_instance() -> None:
+    # Regression: F2 - default-constructed FormatCustomText instances shared
+    # the mutable class-level ``mapping`` dict, so update_mapping on one bled
+    # into every other instance (and the class attribute).
+    class_default = dict(progressbar.FormatCustomText.mapping)
+
+    a = progressbar.FormatCustomText('%(spam)s')
+    b = progressbar.FormatCustomText('%(spam)s')
+
+    a.update_mapping(spam='eggs')
+
+    assert a.mapping == {'spam': 'eggs'}
+    assert b.mapping == {}
+    assert a.mapping is not b.mapping
+    assert progressbar.FormatCustomText.mapping == class_default
