@@ -407,7 +407,14 @@ class Color(typing.NamedTuple):
         ):  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
-        if self.xterm:  # pragma: no branch
+        # The registered xterm index is a 256-colour value, so only use it when
+        # the terminal actually supports 256 colours. ``is not None`` (not a
+        # truthiness test) so index 0 (Black) is honoured rather than falling
+        # through to the RGB fallback.
+        if (
+            self.xterm is not None
+            and env.COLOR_SUPPORT >= env.ColorSupport.XTERM_256
+        ):  # pragma: no branch
             color = self.xterm
         elif (
             env.COLOR_SUPPORT is env.ColorSupport.XTERM_256

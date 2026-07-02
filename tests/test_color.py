@@ -425,6 +425,39 @@ def test_ansi_color(monkeypatch) -> None:
         assert color.ansi is not None or color_support == env.ColorSupport.NONE
 
 
+def test_color_ansi_respects_support_level(monkeypatch) -> None:
+    # A registered colour with an xterm index and a non-black RGB.
+    color = terminal.Color(
+        terminal.RGB(128, 0, 0),
+        terminal.HSL(0, 100, 25),
+        'maroon-test',
+        52,
+    )
+
+    # 256-colour terminal: the registered xterm index is used verbatim.
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_256)
+    assert color.ansi == '5;52'
+
+    # 16-colour terminal: the 256-colour xterm index must NOT leak through;
+    # derive a 16-colour code from the RGB via to_ansi_16 instead.
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM)
+    assert color.ansi == f'5;{color.rgb.to_ansi_16}'
+    assert color.ansi != '5;52'
+
+
+def test_color_ansi_black_xterm_zero(monkeypatch) -> None:
+    # Regression: ``if self.xterm:`` is falsy for index 0 (Black), so Black
+    # fell through to the RGB fallback instead of using its xterm index.
+    black = terminal.Color(
+        terminal.RGB(0, 0, 0),
+        terminal.HSL(0, 0, 0),
+        'black-test',
+        0,
+    )
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_256)
+    assert black.ansi == '5;0'
+
+
 def test_sgr_call() -> None:
     assert progressbar.terminal.encircled('test') == '\x1b[52mtest\x1b[54m'
 
