@@ -1269,7 +1269,10 @@ class MultiRangeBar(Bar, VariableMixin):
                 middle += item_width * marker
         else:
             fill = converters.to_unicode(self.fill(progress, data, width))
-            assert progress.custom_len(fill) == 1
+            if progress.custom_len(fill) != 1:
+                raise ValueError(
+                    f'Fill is required to be 1 char, got {fill!r}'
+                )
             middle = fill * width
 
         return left + middle + right

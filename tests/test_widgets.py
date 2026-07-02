@@ -50,6 +50,29 @@ def test_multi_range_bar_rejects_multichar_marker() -> None:
     bar.finish(dirty=True)
 
 
+def test_multi_range_bar_rejects_multichar_fill() -> None:
+    # Item 4: the fill path validates the fill width; a 2-char fill must raise
+    # ValueError rather than a stripped-under-O assert. Non-empty amounts keep
+    # the initial render on the marker branch; emptying them forces the
+    # zero-sum ``else`` (fill) branch on the direct call.
+    widget = progressbar.MultiRangeBar(
+        'amounts', markers=[' ', '#'], fill='xx'
+    )
+    bar = progressbar.ProgressBar(
+        widgets=[widget],
+        variables={'amounts': [1, 0]},
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    data = bar.data()
+    data['variables'] = {'amounts': []}
+    with pytest.raises(ValueError):
+        widget(bar, data, width=20)
+    bar.finish(dirty=True)
+
+
 def test_widgets_small_values() -> None:
     widgets = [
         'Test: ',
