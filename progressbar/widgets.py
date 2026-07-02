@@ -374,10 +374,16 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
         format: types.Optional[str] = None,
     ):
         for name, (key, transform) in self.mapping.items():
-            with contextlib.suppress(KeyError, ValueError, IndexError):
-                if transform is None:
-                    data[name] = data[key]
-                else:
+            # Avoid a per-entry contextlib.suppress on the redraw hot path: a
+            # missing key is the only common "miss", so test membership
+            # directly and only guard the transform (which can raise on bad
+            # values) with try/except.
+            if key not in data:
+                continue
+            if transform is None:
+                data[name] = data[key]
+            else:
+                with contextlib.suppress(ValueError, IndexError):
                     data[name] = transform(data[key])
 
         return FormatWidgetMixin.__call__(self, progress, data, format)

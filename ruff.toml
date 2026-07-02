@@ -10,6 +10,8 @@ exclude = [
     # Ignore local test files/directories/old-stuff
     'test.py',
     '*_old.py',
+    # Benchmark/tooling scripts are not held to the package lint standard
+    'benchmarks',
 ]
 
 line-length = 79

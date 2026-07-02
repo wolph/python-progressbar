@@ -92,9 +92,17 @@ def no_color(value: StringT) -> StringT:
     TypeError: `value` must be a string or bytes, got 123
     """
     if isinstance(value, bytes):
+        # Fast path: with no ESC byte there is nothing to strip, so the regex
+        # would return the value unchanged anyway. Skipping it avoids a
+        # substitution on the common plain-text case, which dominates the
+        # per-redraw render cost (len_color is called for every widget).
+        if b'\x1b' not in value:
+            return value  # type: ignore
         pattern: bytes = bytes(terminal.ESC, 'ascii') + b'\\[.*?[@-~]'
         return re.sub(pattern, b'', value)  # type: ignore
     elif isinstance(value, str):
+        if '\x1b' not in value:
+            return value  # type: ignore
         return re.sub('\x1b\\[.*?[@-~]', '', value)  # type: ignore
     else:
         raise TypeError(f'`value` must be a string or bytes, got {value!r}')

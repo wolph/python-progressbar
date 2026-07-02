@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import contextlib
+import importlib
 import itertools
 import logging
 import math
@@ -25,10 +26,31 @@ import progressbar.terminal.stream
 from . import (
     base,
     utils,
-    widgets,
-    widgets as widgets_module,  # Avoid name collision
 )
 from .terminal import os_specific
+
+try:
+    # Optional native accelerator, shipped as the ``progressbar2[fast]`` extra
+    # (the separate ``speedups`` package). When importable, the iterator path
+    # uses it automatically; otherwise we fall back to the pure-Python gate.
+    # Loaded via importlib so type checkers don't try to resolve the optional
+    # compiled module when it is absent.
+    _FastBarIterator = importlib.import_module(
+        'speedups.progressbar',
+    ).FastBarIterator
+except Exception:  # pragma: no cover - environmental (absent / ABI mismatch)
+    _FastBarIterator = None
+
+
+def _load_widgets() -> typing.Any:
+    """Import the widgets module lazily.
+
+    The full-bar code needs ``widgets``, but the lean fast path must not pull
+    it in (it drags the terminal/colour tables). Imported via importlib so the
+    deferred load doesn't read as a static ``bar -> widgets`` import cycle.
+    """
+    return importlib.import_module('progressbar.widgets')
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +71,9 @@ class ProgressBarMixinBase(abc.ABC):
     #: fall back to 80 if auto detection is not possible.
     term_width: int = 80
     #: The widgets to render, defaults to the result of `default_widget()`
-    widgets: types.MutableSequence[widgets_module.WidgetBase | str]
+    #: (typed loosely as Any to avoid a static bar->widgets import cycle; the
+    #: public ``progressbar()`` shortcut keeps the precise WidgetBase typing).
+    widgets: types.MutableSequence[typing.Any]
     #: When going beyond the max_value, raise an error if True or silently
     #: ignore otherwise
     max_error: bool
@@ -86,6 +110,9 @@ class ProgressBarMixinBase(abc.ABC):
     value: NumberT
     #: Previous progress value
     previous_value: types.Optional[NumberT]
+    #: Value at the last actual redraw (internal; used by the update gate's
+    #: pixel check, kept separate from the public `previous_value`)
+    _last_drawn_value: types.Optional[NumberT]
     #: The minimum/start value for the progress bar
     min_value: NumberT
     #: Maximum (and final) value. Beyond this value an error will be raised
@@ -347,6 +374,8 @@ class DefaultFdMixin(ProgressBarMixinBase):
             return widgets.rjust(self.term_width)
 
     def _format_widgets(self):
+        widgets = _load_widgets()
+
         result = []
         expanding = []
         width = self.term_width
@@ -632,9 +661,7 @@ class ProgressBar(
         self,
         min_value: NumberT = 0,
         max_value: ValueT = None,
-        widgets: types.Optional[
-            types.Sequence[widgets_module.WidgetBase | str]
-        ] = None,
+        widgets: types.Optional[types.Sequence[typing.Any]] = None,
         left_justify: bool = True,
         initial_value: NumberT = 0,
         poll_interval: types.Optional[float] = None,
@@ -725,12 +752,15 @@ class ProgressBar(
 
         # A dictionary of names that can be used by Variable and FormatWidget
         self.variables = utils.AttributeDict(variables or {})
-        for widget in self.widgets:
-            if (
-                isinstance(widget, widgets_module.VariableMixin)
-                and widget.name not in self.variables
-            ):
-                self.variables[widget.name] = None
+        if self.widgets:
+            widgets_module = _load_widgets()
+
+            for widget in self.widgets:
+                if (
+                    isinstance(widget, widgets_module.VariableMixin)
+                    and widget.name not in self.variables
+                ):
+                    self.variables[widget.name] = None
 
     @property
     def dynamic_messages(self):  # pragma: no cover
@@ -746,12 +776,27 @@ class ProgressBar(
         used (again).
         """
         self.previous_value = None
+        # Value at the last actual redraw; used internally by the update gate's
+        # pixel check (distinct from the public `previous_value`).
+        self._last_drawn_value = None
         self.last_update_time = None
         self.start_time = None
         self.updates = 0
         self.end_time = None
         self.extra = dict()
         self._last_update_timer = timeit.default_timer()
+        # Fast-path "next update" gate. The common iteration only re-enters
+        # the redraw machinery when value reaches `_next_update`. `_gate_step`
+        # is a closed-loop estimate of iterations per `min_poll_interval`,
+        # calibrated in `update()` from the value/time elapsed between redraws
+        # (tracked by `_last_drawn_value`/`_last_update_timer`). It starts at 1
+        # so the gate forces an `update()` every iteration until a real timing
+        # measurement (or the back-off doubling) grows the step, so slow
+        # iterators (where time advances between calls) are never skipped
+        # before that.
+        self._next_update = 0
+        self._gate_step = 1
+        self._gate_enabled = True
         self._started = False
         self._finished = False
 
@@ -870,6 +915,8 @@ class ProgressBar(
         )
 
     def default_widgets(self):
+        widgets = _load_widgets()
+
         if self.max_value:
             return [
                 widgets.Percentage(**self.widget_kwargs),
@@ -910,20 +957,98 @@ class ProgressBar(
         return self
 
     def __iter__(self):
-        # A generator (rather than returning ``self``) so that abandoning the
-        # loop early - a `break` or an exception in the loop body - triggers
-        # `GeneratorExit` on garbage collection, letting us finish the bar and
-        # restore any redirected streams. See issue #212.
+        # Dispatch to the optional native iterator when available, else the
+        # pure-Python generator. The native path counts in C and syncs
+        # `value`/`previous_value` only at redraw crossings (so they lag
+        # mid-loop, like `tqdm.n`), beating the per-iteration attribute writes
+        # the pure-Python path pays to keep them live every iteration.
+        if (
+            _FastBarIterator is not None
+            and self._iterable is not None
+            and not os.environ.get('PROGRESSBAR_DISABLE_FASTPATH')
+        ):
+            return _FastBarIterator(self, self._iterable)
+        return self._iter_python()
+
+    def _iter_python(self):
+        # Single generator (see issue #212): a `break`/exception in the loop
+        # body triggers `GeneratorExit`, letting us finish and restore any
+        # redirected streams. The integer gate keeps the common iteration to
+        # an increment + compare + store; the slow path (`update`) makes the
+        # real redraw decision and recomputes the gate.
+        #
+        # Value semantics MUST match pre-change behavior: `start()` draws 0%
+        # and the FIRST item is yielded at `value == min_value` (no increment),
+        # so during the body for item i (0-indexed), `bar.value == i` — NOT
+        # i+1. Only subsequent items increment. The peek-first structure below
+        # reproduces this without a per-iteration branch.
+        iterable = self._iterable if self._iterable is not None else iter(())
         try:
-            while True:
-                try:
-                    value = next(self)
-                except StopIteration:
-                    return
-                yield value
+            if self.start_time is None:
+                self.start()
+            iterator = iter(iterable)
+            try:
+                item = next(iterator)
+            except StopIteration:
+                self.finish()
+                return
+            yield item  # first item at value == min_value (matches old code)
+            value = self.value
+            next_update = value
+            update = self.update
+            # `_gate_enabled` is set once in `start()` and never mutated during
+            # iteration, so hoist it to a local and drop the per-iteration
+            # attribute load on the hot path.
+            gate_enabled = self._gate_enabled
+            for item in iterator:
+                value += 1
+                # When the gate is disabled, call `update()` every iteration so
+                # behaviour is byte-identical to the ungated bar. When enabled,
+                # only re-enter `update()` once value reaches the threshold.
+                # The step starts at 1, so until a real measurement grows it
+                # this still calls `update()` every iteration and lets
+                # `_needs_update()` make the real redraw decision. Calling
+                # `update()` (rather than pre-setting `self.value`) lets it
+                # record the prior value in the public `previous_value`,
+                # preserving its original semantics.
+                if not gate_enabled or value >= next_update:
+                    update(value)
+                    next_update = self._next_update
+                else:
+                    # Gated out: advance bar.value AND previous_value (exactly
+                    # as update() would) without entering the redraw machinery,
+                    # so reads of bar.previous_value mid-loop stay identical to
+                    # the original every-iteration semantics. The gate's pixel
+                    # reference is the separate `_last_drawn_value`.
+                    self.previous_value = self.value
+                    self.value = value
+                yield item
+            self.finish()
         except GeneratorExit:
             self.finish(dirty=True)
             raise
+
+    # --- Native accelerator protocol (used by speedups.FastBarIterator) ------
+    # The C iterator counts items itself and calls back here only at gate
+    # crossings, reusing the existing gate/redraw/calibration machinery so the
+    # redraw cadence is identical to `_iter_python`.
+
+    def _fast_begin(self) -> None:
+        """Start the bar (draws 0%, sets `_next_update`/`_gate_enabled`)."""
+        if self.start_time is None:
+            self.start()
+
+    def _fast_tick(self, value: int) -> None:
+        """Handle a redraw crossing: redraw-if-due and recompute the gate."""
+        self.update(value)
+
+    def _fast_end(self) -> None:
+        """Finish normally (draws 100%, restores streams) on exhaustion."""
+        self.finish()
+
+    def _fast_end_dirty(self) -> None:
+        """Finish dirty on early break/exception (restores streams)."""
+        self.finish(dirty=True)
 
     def __next__(self):
         value: typing.Any
@@ -979,7 +1104,7 @@ class ProgressBar(
             # There's no terminal-width threshold to compute for an unknown
             # length, so redraw whenever the value advanced (still rate
             # limited by the min_poll_interval check above)
-            return self.value != self.previous_value
+            return self.value != self._last_drawn_value
 
         # Update if value increment is not large enough to
         # add more bars to progressbar (according to current
@@ -987,11 +1112,70 @@ class ProgressBar(
         with contextlib.suppress(Exception):
             divisor: float = self.max_value / self.term_width  # type: ignore
             value_divisor = self.value // divisor  # type: ignore
-            pvalue_divisor = self.previous_value // divisor  # type: ignore
+            pvalue_divisor = self._last_drawn_value // divisor  # type: ignore
             if value_divisor != pvalue_divisor:
                 return True
         # No need to redraw yet
         return False
+
+    def _gate_skips(
+        self, value: ValueT, force: bool, variables_changed: bool
+    ) -> bool:
+        """Whether the fast-path gate should skip this update() call entirely.
+
+        Only skips while enabled, never for forced draws, variable changes,
+        or a `None` (tick) value, and only while the value is still below the
+        `_next_update` threshold.
+        """
+        return (
+            self._gate_enabled
+            and not force
+            and not variables_changed
+            and value is not None
+            and self.value < self._next_update
+        )
+
+    def _draw_and_recalibrate(
+        self, value: ValueT, variables_changed: bool, force: bool
+    ) -> None:
+        """Redraw if due, then resize the gate's next-update threshold.
+
+        On a redraw, `_gate_step` is calibrated to ~one `min_poll_interval`
+        window of iterations, measured from the value/time elapsed since the
+        previous redraw (snapshotted here before the draw overwrites
+        `_last_drawn_value`/`_last_update_timer` — so the gate needs no extra
+        copies of those quantities). If we passed the threshold but no redraw
+        was due (the loop sped up), back off by doubling the step.
+        """
+        if self._needs_update() or variables_changed or force:
+            prev_value = self._last_drawn_value
+            prev_timer = self._last_update_timer
+            try:
+                self._update_parents(value)  # data() refreshes the timer
+            finally:
+                # `_last_drawn_value` is the value at the last *redraw* (the
+                # pixel reference for `_needs_update`); set in finally so it
+                # advances even if a draw raised.
+                self._last_drawn_value = self.value
+            if self._gate_enabled:
+                interval = self._last_update_timer - prev_timer
+                if (
+                    prev_value is not None
+                    and interval > 0
+                    and self.value > prev_value
+                ):
+                    self._gate_step = max(
+                        1,
+                        int(
+                            (self.value - prev_value)
+                            * self.min_poll_interval
+                            / interval
+                        ),
+                    )
+                self._next_update = self.value + self._gate_step
+        elif self._gate_enabled and value is not None:
+            self._gate_step = max(1, self._gate_step * 2)
+            self._next_update = self.value + self._gate_step
 
     def update(
         self, value: ValueT = None, force: bool = False, **kwargs: typing.Any
@@ -1022,14 +1206,20 @@ class ProgressBar(
                 else:
                     value = typing.cast(NumberT, self.max_value)
 
+            # `previous_value` keeps its original public meaning: the value
+            # before this update() call. The gate uses a separate private
+            # `_last_drawn_value` (set on redraw) for its pixel check.
             self.previous_value = self.value
             self.value = value
 
-        # Save the updated values for dynamic messages
-        variables_changed = self._update_variables(kwargs)
+        # Save the updated values for dynamic messages (skip the call and the
+        # empty-dict iteration on the common no-kwargs path).
+        variables_changed = self._update_variables(kwargs) if kwargs else False
 
-        if self._needs_update() or variables_changed or force:
-            self._update_parents(value)
+        if self._gate_skips(value, force, variables_changed):
+            return
+
+        self._draw_and_recalibrate(value, variables_changed, force)
 
     def _update_variables(self, kwargs):
         variables_changed = False
@@ -1100,6 +1290,11 @@ class ProgressBar(
         self._init_prefix()
         self._init_suffix()
         self._calculate_poll_interval()
+        if (
+            os.environ.get('PROGRESSBAR_DISABLE_FASTPATH')
+            or not self.min_poll_interval
+        ):
+            self._gate_enabled = False
         self._verify_max_value()
 
         now = datetime.now()
@@ -1112,6 +1307,8 @@ class ProgressBar(
 
     def _init_suffix(self):
         if self.suffix:
+            widgets = _load_widgets()
+
             self.widgets.append(
                 widgets.FormatLabel(self.suffix, new_style=True),
             )
@@ -1121,6 +1318,8 @@ class ProgressBar(
 
     def _init_prefix(self):
         if self.prefix:
+            widgets = _load_widgets()
+
             self.widgets.insert(
                 0,
                 widgets.FormatLabel(self.prefix, new_style=True),
@@ -1197,6 +1396,8 @@ class DataTransferBar(ProgressBar):
     """
 
     def default_widgets(self):
+        widgets = _load_widgets()
+
         if self.max_value:
             return [
                 widgets.Percentage(),

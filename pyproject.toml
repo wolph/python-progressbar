@@ -112,6 +112,12 @@ repository = 'https://github.com/wolph/python-progressbar/'
 progressbar = 'progressbar.__main__:main'
 
 [project.optional-dependencies]
+# Optional native iterator accelerator. When installed it is detected and used
+# automatically (the iterator path drops to ~5 ns/iter); otherwise progressbar2
+# falls back to the pure-Python gate. See the Performance section in README.
+fast = [
+    'speedups>=2.1.0',
+]
 docs = [
     'sphinx>=1.8.5',
     'sphinx-autodoc-typehints>=1.6.0',
@@ -164,6 +170,7 @@ exclude_lines = [
     'if 0:',
     'if __name__ == .__main__.:',
     'if types.TYPE_CHECKING:',
+    'if typing.TYPE_CHECKING:',
     '@typing.overload',
     'if os.name == .nt.:',
     'typing.Protocol',
