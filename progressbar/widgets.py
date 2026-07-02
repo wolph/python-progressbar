@@ -60,7 +60,8 @@ def create_wrapper(wrapper):
         return None
 
     if isinstance(wrapper, str):
-        assert '{}' in wrapper, 'Expected string with {} for formatting'
+        if '{}' not in wrapper:
+            raise ValueError('Expected string with {} for formatting')
     else:
         raise RuntimeError(  # noqa: TRY004
             'Pass either a begin/end string as a tuple or a template string '
@@ -110,9 +111,8 @@ def create_marker(marker, wrap=None):
 
     if isinstance(marker, str):
         marker = converters.to_unicode(marker)
-        # Ruff is silly at times... the format is not compatible with the check
-        marker_length_error = 'Markers are required to be 1 char'
-        assert utils.len_color(marker) == 1, marker_length_error
+        if utils.len_color(marker) != 1:
+            raise ValueError('Markers are required to be 1 char')
         return wrapper(_marker, wrap)
     else:
         return wrapper(marker, wrap)
@@ -1259,7 +1259,8 @@ class MultiRangeBar(Bar, VariableMixin):
             width_accumulated = 0
             for marker, value in zip(self.markers, values):
                 marker = converters.to_unicode(marker(progress, data, width))
-                assert progress.custom_len(marker) == 1
+                if progress.custom_len(marker) != 1:
+                    raise ValueError('Markers are required to be 1 char')
 
                 values_accumulated += value
                 item_width = int(values_accumulated / values_sum * width)
