@@ -90,7 +90,7 @@ class ColorSupport(enum.IntEnum):
                 break
             elif '256' in value:
                 support = max(cls.XTERM_256, support)
-            elif value == 'xterm':
+            elif 'xterm' in value:
                 support = max(cls.XTERM, support)
             elif env_flag(variable, default=False):
                 # Generic truthy flags such as `FORCE_COLOR=1` enable
