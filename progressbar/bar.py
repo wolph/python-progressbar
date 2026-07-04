@@ -1106,13 +1106,23 @@ class ProgressBar(
             # limited by the min_poll_interval check above)
             return self.value != self._last_drawn_value
 
-        # Update if value increment is not large enough to
-        # add more bars to progressbar (according to current
-        # terminal width)
-        with contextlib.suppress(Exception):
+        # Update if the value increment is large enough to add more bars
+        # to the progressbar (according to the current terminal width).
+        # While the state is incomplete -- nothing drawn yet, no usable
+        # terminal width, no (nonzero) max value -- there is no width
+        # threshold to compute and no redraw is due; those guards mirror
+        # what a `suppress(Exception)` used to swallow here. Anything else
+        # failing in this math is a real bug and should propagate instead
+        # of silently stopping redraws.
+        if (
+            self.value is not None
+            and self._last_drawn_value is not None
+            and self.term_width
+            and self.max_value
+        ):
             divisor: float = self.max_value / self.term_width  # type: ignore
-            value_divisor = self.value // divisor  # type: ignore
-            pvalue_divisor = self._last_drawn_value // divisor  # type: ignore
+            value_divisor = self.value // divisor
+            pvalue_divisor = self._last_drawn_value // divisor
             if value_divisor != pvalue_divisor:
                 return True
         # No need to redraw yet
