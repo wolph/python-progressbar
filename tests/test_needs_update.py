@@ -15,6 +15,20 @@ import typing
 import pytest
 
 import progressbar
+from progressbar import utils
+
+
+@pytest.fixture(autouse=True)
+def _deregister_started_bars() -> typing.Iterator[None]:
+    # start() registers each bar as a global capture listener (so writes to
+    # the wrapped stream redraw it). These tests deliberately drive bars into
+    # invalid states -- e.g. a non-numeric term_width -- and never finish()
+    # them. Deregister whatever this test started so a poisoned bar cannot be
+    # update()d when a *later* test writes a newline to the captured stream.
+    before = set(utils.streams.listeners)
+    yield
+    for bar in list(utils.streams.listeners - before):
+        utils.streams.stop_capturing(bar)
 
 
 def _bar(**kwargs: typing.Any) -> progressbar.ProgressBar:
