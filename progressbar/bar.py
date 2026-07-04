@@ -1194,11 +1194,11 @@ class ProgressBar(
         if self.start_time is None:
             self.start()
 
-        if (
-            value is not None
-            and value is not base.UnknownLength
-            and isinstance(value, (int, float))
-        ):
+        # `isinstance(value, (int, float))` already excludes both `None` and
+        # the `UnknownLength` sentinel (a class, not a numeric instance), so
+        # the earlier explicit `is not None`/`is not UnknownLength` clauses
+        # were redundant.
+        if isinstance(value, (int, float)):
             if self.max_value is base.UnknownLength:
                 # Can't compare against unknown lengths so just update
                 pass
