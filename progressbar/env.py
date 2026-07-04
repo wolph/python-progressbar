@@ -121,8 +121,11 @@ def is_ansi_terminal(
         # is going to return False if the instance has been overridden and
         # isatty has not been defined we have no way of knowing so we will not
         # use ansi.  ansi terminals will typically define one of the 2
-        # environment variables.
-        with contextlib.suppress(Exception):
+        # environment variables. Only the errors a stream legitimately
+        # produces are treated as "not a terminal": OSError (real I/O),
+        # ValueError (closed/detached file objects) and AttributeError
+        # (objects without isatty). Anything else is a bug and propagates.
+        with contextlib.suppress(OSError, ValueError, AttributeError):
             is_tty: bool = fd.isatty()
             # Try and match any of the huge amount of Linux/Unix ANSI consoles
             if is_tty and ANSI_TERM_RE.match(os.environ.get('TERM', '')):
@@ -155,12 +158,14 @@ def is_terminal(
         # Allow a environment variable override
         is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
 
-    if is_terminal is None:  # pragma: no cover
-        # Bare except because a lot can go wrong on different systems. If we do
-        # get a TTY we know this is a valid terminal
+    if is_terminal is None:
+        # If we do get a TTY we know this is a valid terminal. Streams can
+        # legitimately fail with OSError (real I/O), ValueError (closed or
+        # detached file objects) or AttributeError (no isatty at all);
+        # anything else is a bug and propagates.
         try:
             is_terminal = fd.isatty()
-        except Exception:
+        except (OSError, ValueError, AttributeError):
             is_terminal = False
 
     return is_terminal
