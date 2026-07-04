@@ -280,21 +280,26 @@ def test_multibar_threads() -> None:
 def test_multibar_join_timeout_abandons_unfinished_bar() -> None:
     # A never-finishing bar must not hang a clean context-manager exit when
     # join_timeout is set; the unfinished bar is abandoned once it elapses.
+    multibar = progressbar.MultiBar(fd=io.StringIO(), join_timeout=0.1)
+    bar = progressbar.ProgressBar(max_value=10)
+    multibar['stuck'] = bar
+
     def exit_context() -> None:
-        with progressbar.MultiBar(
-            fd=io.StringIO(), join_timeout=0.1
-        ) as multibar:
-            bar = progressbar.ProgressBar(max_value=10)
-            multibar['stuck'] = bar
+        with multibar:
             bar.start()
             bar.update(5)  # never reaches max_value / finish()
 
     thread = threading.Thread(target=exit_context, daemon=True)
     thread.start()
     thread.join(timeout=5)
-    assert not thread.is_alive(), (
-        'clean context exit blocked despite join_timeout'
-    )
+    exited = not thread.is_alive()
+
+    # join_timeout leaves the render thread (a daemon) running so the
+    # program can exit; stop it explicitly so it cannot leak into and
+    # pollute later tests in the same process.
+    multibar.stop()
+
+    assert exited, 'clean context exit blocked despite join_timeout'
 
 
 def test_multibar_instances_do_not_share_thread_state() -> None:
