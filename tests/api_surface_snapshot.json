@@ -22,7 +22,7 @@
     "GranularBar": "class(markers=?, left=?, right=?, **kwargs)",
     "JobStatusBar": "class(name, left=?, right=?, fill=?, fill_left=?, success_fg_color=?, success_bg_color=?, success_marker=?, failure_fg_color=?, failure_bg_color=?, failure_marker=?, **kwargs)",
     "LineOffsetStreamWrapper": "class(lines=?, stream=?)",
-    "MultiBar": "class(bars=?, fd=?, prepend_label=?, append_label=?, label_format=?, initial_format=?, finished_format=?, update_interval=?, show_initial=?, show_finished=?, remove_finished=?, sort_key=?, sort_reverse=?, sort_keyfunc=?, **progressbar_kwargs)",
+    "MultiBar": "class(bars=?, fd=?, prepend_label=?, append_label=?, label_format=?, initial_format=?, finished_format=?, update_interval=?, show_initial=?, show_finished=?, remove_finished=?, sort_key=?, sort_reverse=?, sort_keyfunc=?, *, join_timeout=?, **progressbar_kwargs)",
     "MultiProgressBar": "class(name, markers=?, **kwargs)",
     "MultiRangeBar": "class(name, markers, **kwargs)",
     "NullBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
@@ -95,7 +95,7 @@
     "timedelta": "classsignature-unavailable"
   },
   "progressbar.multi": {
-    "MultiBar": "class(bars=?, fd=?, prepend_label=?, append_label=?, label_format=?, initial_format=?, finished_format=?, update_interval=?, show_initial=?, show_finished=?, remove_finished=?, sort_key=?, sort_reverse=?, sort_keyfunc=?, **progressbar_kwargs)",
+    "MultiBar": "class(bars=?, fd=?, prepend_label=?, append_label=?, label_format=?, initial_format=?, finished_format=?, update_interval=?, show_initial=?, show_finished=?, remove_finished=?, sort_key=?, sort_reverse=?, sort_keyfunc=?, *, join_timeout=?, **progressbar_kwargs)",
     "SortKey": "class(*values)",
     "SortKeyFunc": "callable(*args, **kwargs)",
     "annotations": "_Feature",

@@ -53,6 +53,18 @@ class SortKey(str, enum.Enum):
 
 
 class MultiBar(dict[str, bar.ProgressBar]):
+    """Render and manage multiple progressbars from background threads.
+
+    On a clean context-manager exit the multibar waits for its render
+    thread via :meth:`join`. By default (``join_timeout=None``) that wait
+    is unbounded, so a bar that never finishes blocks the program forever.
+    Pass ``join_timeout`` (seconds, or a :class:`datetime.timedelta`) to
+    bound that wait: once it elapses any still-unfinished bars are
+    abandoned and the render thread -- a daemon -- is left running so the
+    program can exit. The default preserves the historical wait-forever
+    behavior.
+    """
+
     fd: typing.TextIO
     _buffer: io.StringIO
 
@@ -73,6 +85,9 @@ class MultiBar(dict[str, bar.ProgressBar]):
     # updates
     update_interval: float
     remove_finished: float | None
+    #: Seconds to wait for the render thread on a clean context-manager
+    # exit before abandoning unfinished bars. `None` waits forever.
+    join_timeout: float | None
 
     #: The kwargs passed to the progressbar constructor
     progressbar_kwargs: dict[str, typing.Any]
@@ -104,6 +119,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
         sort_key: str | SortKey = SortKey.CREATED,
         sort_reverse: bool = True,
         sort_keyfunc: SortKeyFunc | None = None,
+        *,
+        join_timeout: timedelta | float | None = None,
         **progressbar_kwargs: typing.Any,
     ):
         self.fd = fd
@@ -120,6 +137,9 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self.show_finished = show_finished
         self.remove_finished = python_utils.delta_to_seconds_or_none(
             remove_finished,
+        )
+        self.join_timeout = python_utils.delta_to_seconds_or_none(
+            join_timeout,
         )
 
         self.progressbar_kwargs = progressbar_kwargs
@@ -412,7 +432,9 @@ class MultiBar(dict[str, bar.ProgressBar]):
         traceback: types.TracebackType | None,
     ) -> bool | None:
         if exc_type is None:
-            self.join()
+            # Bound the wait so a never-finishing bar cannot hang a clean
+            # exit; `join_timeout=None` keeps the historical forever-wait.
+            self.join(timeout=self.join_timeout)
         else:
             # Don't wait for unfinished progressbars when an exception is
             # propagating; that would block forever
