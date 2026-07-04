@@ -167,28 +167,48 @@ def test_multibar_print() -> None:
     bars = 5
     n = 10
 
-    def print_sometimes(bar, probability):
+    def print_sometimes(bar, probability, seed):
+        # A per-thread seeded RNG keeps the interleaving jittery but fully
+        # reproducible: a thread only ever touches its own RNG, so thread
+        # scheduling cannot reorder its draws. Combined with the never/always
+        # threads below this makes the print-guard branch coverage
+        # deterministic instead of flakily depending on the global RNG.
+        rng = random.Random(seed)
         for i in bar(range(n)):
-            # Sleep up to 0.1 seconds
-            time.sleep(random.random() * 0.1)
+            # Sleep a small, deterministic fraction of a second
+            time.sleep(rng.random() * 0.01)
 
             # print messages at random intervals to show how extra output works
-            if random.random() < probability:
+            if rng.random() < probability:
                 bar.print('random message for bar', bar, i)
 
     with progressbar.MultiBar() as multibar:
+        seed = 0
+        threads: list[threading.Thread] = []
         for i in range(bars):
             # Get a progressbar
             bar = multibar[f'Thread label here {i}']
             bar.max_error = False
-            # Create a thread and pass the progressbar
-            # Print never, sometimes and always
-            threading.Thread(target=print_sometimes, args=(bar, 0)).start()
-            threading.Thread(target=print_sometimes, args=(bar, 0.5)).start()
-            threading.Thread(target=print_sometimes, args=(bar, 1)).start()
+            # Create a thread and pass the progressbar. Print never (0.0),
+            # sometimes (0.5) and always (1.0): the 0.0 and 1.0 threads
+            # deterministically exercise both sides of the print guard on
+            # every run, independent of the seeded middle thread.
+            for probability in (0.0, 0.5, 1.0):
+                thread = threading.Thread(
+                    target=print_sometimes, args=(bar, probability, seed)
+                )
+                thread.start()
+                threads.append(thread)
+                seed += 1
 
         for i in range(5):
             multibar.print(f'{i}', flush=False)
+
+        # Join the workers before leaving the context so none outlives the
+        # multibar (a stray thread writing to a torn-down fd raised
+        # "I/O operation on closed file") and every print branch has run.
+        for thread in threads:
+            thread.join()
 
         # Note: MultiBar inherits from dict, so update() would be
         # dict.update and insert bogus entries; render() is intended here
