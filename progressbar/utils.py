@@ -19,9 +19,6 @@ from python_utils.time import epoch, format_time, timedelta_to_seconds
 
 from progressbar import base, env, terminal
 
-if typing.TYPE_CHECKING:
-    from .bar import ProgressBarMixinBase
-
 # Make sure these are available for import
 assert timedelta_to_seconds is not None
 assert get_terminal_size is not None
@@ -31,6 +28,20 @@ assert epoch is not None
 
 StringT = typing.TypeVar('StringT', bound=types.StringTypes)
 T = typing.TypeVar('T')
+
+
+class _ProgressListener(typing.Protocol):
+    """Structural type for the bars the stream wrapper notifies.
+
+    Defined locally instead of importing ``ProgressBarMixinBase`` from
+    ``bar`` so ``utils`` has no dependency on ``bar`` — not even a
+    type-checking-only one, which CodeQL still reports as a ``bar`` <->
+    ``utils`` module-level import cycle.
+    """
+
+    def update(self) -> None:
+        """Redraw in response to redirected output being written."""
+
 
 # Precompiled ANSI CSI escape-sequence patterns (str and bytes). Compiled once
 # at import instead of per no_color() call, which runs for every widget on
@@ -43,20 +54,22 @@ _ANSI_COLOR_RE_BYTES: re.Pattern[bytes] = re.compile(
 
 @typing.overload
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float,
+    *deltas: None | datetime.timedelta | float | int,
     default: type[ValueError] = ...,
-) -> float: ...
+) -> float:
+    """Coalesce to seconds; raise ``ValueError`` if no delta is valid."""
 
 
 @typing.overload
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float,
+    *deltas: None | datetime.timedelta | float | int,
     default: T,
-) -> float | T: ...
+) -> float | T:
+    """Coalesce to seconds; return ``default`` if no delta is valid."""
 
 
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float,
+    *deltas: None | datetime.timedelta | float | int,
     default: typing.Any = ValueError,
 ) -> typing.Any:
     """
@@ -148,14 +161,14 @@ class WrappingIO:
     buffer: io.StringIO
     target: base.IO
     capturing: bool
-    listeners: set[ProgressBarMixinBase]
+    listeners: set[_ProgressListener]
     needs_clear: bool = False
 
     def __init__(
         self,
         target: base.IO,
         capturing: bool = False,
-        listeners: set[ProgressBarMixinBase] | None = None,
+        listeners: set[_ProgressListener] | None = None,
     ) -> None:
         self.buffer = io.StringIO()
         self.target = target
@@ -274,7 +287,7 @@ class StreamWrapper:
     wrapped_stderr: int = 0
     wrapped_excepthook: int = 0
     capturing: int = 0
-    listeners: set[ProgressBarMixinBase]
+    listeners: set[_ProgressListener]
 
     def __init__(self) -> None:
         self.stdout = self.original_stdout = sys.stdout
@@ -292,14 +305,14 @@ class StreamWrapper:
         if env.env_flag('WRAP_STDERR', default=False):  # pragma: no cover
             self.wrap_stderr()
 
-    def start_capturing(self, bar: ProgressBarMixinBase | None = None) -> None:
+    def start_capturing(self, bar: _ProgressListener | None = None) -> None:
         if bar:  # pragma: no branch
             self.listeners.add(bar)
 
         self.capturing += 1
         self.update_capturing()
 
-    def stop_capturing(self, bar: ProgressBarMixinBase | None = None) -> None:
+    def stop_capturing(self, bar: _ProgressListener | None = None) -> None:
         if bar:  # pragma: no branch
             with contextlib.suppress(KeyError):
                 self.listeners.remove(bar)
