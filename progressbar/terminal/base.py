@@ -407,21 +407,20 @@ class Color(typing.NamedTuple):
         ):  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
-        # The registered xterm index is a 256-colour value, so only use it when
-        # the terminal actually supports 256 colours. ``is not None`` (not a
-        # truthiness test) so index 0 (Black) is honoured rather than falling
-        # through to the RGB fallback.
-        if (
-            self.xterm is not None
-            and env.COLOR_SUPPORT >= env.ColorSupport.XTERM_256
-        ):  # pragma: no branch
+        # A true 16-colour terminal must not be handed a 256-colour index,
+        # so translate through to_ansi_16 there. Everywhere else prefer the
+        # registered xterm index (``is not None`` so index 0/Black counts):
+        # rendering an SGR at all means the caller decided colours are
+        # wanted (e.g. forced via ``enable_colors``), even when the global
+        # detection reported no support.
+        if env.COLOR_SUPPORT is env.ColorSupport.XTERM:
+            color = self.rgb.to_ansi_16
+        elif self.xterm is not None:
             color = self.xterm
         elif (
             env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
         ):  # pragma: no branch
             color = self.rgb.to_ansi_256
-        elif env.COLOR_SUPPORT is env.ColorSupport.XTERM:  # pragma: no branch
-            color = self.rgb.to_ansi_16
         else:  # pragma: no branch
             return None
 
@@ -639,7 +638,7 @@ class SGRColor(SGR):
         self._color = color
         super().__init__(start_code, end_code)
 
-    def __call__(
+    def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
         text: str,
         *args: typing.Any,

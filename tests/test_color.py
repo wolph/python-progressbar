@@ -518,13 +518,31 @@ def test_gradient_colors_override_is_per_instance() -> None:
 
 
 def test_sgr_color_without_ansi_leaves_text_unstyled(monkeypatch) -> None:
-    # Regression: with COLOR_SUPPORT NONE, Color.ansi is None and SGRColor
-    # rendered a malformed '\x1b[38;Nonem' escape whose tail leaked into
-    # visible output as 'onem'. Without a usable color representation the
-    # text must pass through completely unstyled.
+    # Regression: when Color.ansi is None (no registered xterm index and no
+    # support level to derive a code from), SGRColor rendered a malformed
+    # '\x1b[38;Nonem' escape whose tail leaked into visible output as
+    # 'onem'. Without a usable color representation the text must pass
+    # through completely unstyled.
     monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.NONE)
-    green = progressbar.terminal.colors.green
-    assert green.fg('X') == 'X'
-    assert green.bg('X') == 'X'
-    assert green.underline('X') == 'X'
-    assert 'None' not in green.fg('X')
+    unregistered = terminal.Color(
+        terminal.RGB(1, 2, 3),
+        terminal.HSL(0, 0, 1),
+        None,
+        None,
+    )
+    assert unregistered.ansi is None
+    assert unregistered.fg('X') == 'X'
+    assert unregistered.bg('X') == 'X'
+    assert unregistered.underline('X') == 'X'
+
+
+def test_registered_color_renders_when_forced_without_support(
+    monkeypatch,
+) -> None:
+    # Callers can force colors (enable_colors=True) on terminals whose
+    # support detection reports NONE; a registered color must still render
+    # its xterm index there instead of silently dropping the styling.
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.NONE)
+    green = colors.green
+    assert green.ansi == '5;2'
+    assert green.fg('X') == '\x1b[38;5;2mX\x1b[39m'
