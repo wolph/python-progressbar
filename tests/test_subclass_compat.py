@@ -136,12 +136,6 @@ def test_super_style_widget_sets_format() -> None:
     assert widget.format == '%(value)d?'
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason='FormatWidgetMixin.__init__ does not call super() yet, so a '
-    'single cooperative super().__init__ never reaches WidthWidgetMixin; '
-    'fixed by the cooperative-super() migration (PR 2).',
-)
 def test_super_style_widget_constructs_and_renders() -> None:
     widget = SuperStyleWidget(min_width=1)
     assert widget.min_width == 1
@@ -311,3 +305,68 @@ def _final_line(fd: io.StringIO) -> str:
 # under the deterministic test clock (frozen time -> zero elapsed).
 GOLDEN_KNOWN_LENGTH_FINAL: str = '100% 10 of 10 |########################|'
 GOLDEN_UNKNOWN_LENGTH_FINAL: str = '5 Elapsed Time: 0:00:00'
+
+
+# --- post-migration guarantees ----------------------------------------------
+
+
+def test_no_double_width_mixin_init(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A cooperative chain must init each base exactly once.
+
+    Pre-migration, ``Timer`` reached ``WidthWidgetMixin.__init__`` twice
+    (once via ``FormatLabel``/``WidgetBase`` and again via
+    ``TimeSensitiveWidgetBase``/``WidgetBase``). The single cooperative
+    chain must run it exactly once.
+    """
+    calls = 0
+    original = widgets.WidthWidgetMixin.__init__
+
+    def counting_init(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        nonlocal calls
+        calls += 1
+        original(self, *args, **kwargs)
+
+    monkeypatch.setattr(widgets.WidthWidgetMixin, '__init__', counting_init)
+    widgets.Timer()
+    assert calls == 1
+
+
+class OldStyleTwoPhaseColorWidget(
+    widgets.FormatWidgetMixin, widgets.WidgetBase
+):
+    """Old-style widget that reaches ``WidgetBase.__init__`` twice.
+
+    The first parent call carries no color kwargs; the second supplies
+    ``fixed_colors=``. ``uses_colors`` must reflect the *final* state, not
+    the stale ``False`` cached during the first pass.
+    """
+
+    def __init__(self, format: str = '%(value)d', **kwargs: typing.Any):
+        # First parent call: no color kwargs (would cache uses_colors=False).
+        widgets.FormatWidgetMixin.__init__(self, format=format)
+        # Second parent call: colors arrive now.
+        widgets.WidgetBase.__init__(
+            self,
+            fixed_colors=dict(fg_none=widgets.colors.red),
+            **kwargs,
+        )
+
+    def __call__(self, progress, data, format=None):
+        return widgets.FormatWidgetMixin.__call__(self, progress, data)
+
+
+def test_old_style_two_phase_color_kwargs() -> None:
+    # Regression: the cached ``uses_colors`` must be dropped between passes
+    # so late-arriving fixed_colors still enable color rendering.
+    widget = OldStyleTwoPhaseColorWidget()
+    assert widget.uses_colors is True
+    assert widget._len is widgets.utils.len_color
+
+
+def test_super_style_color_kwargs_reach_widget_base() -> None:
+    # The cooperative path must also route fixed_colors to WidgetBase.
+    widget = SuperStyleWidget(
+        fixed_colors=dict(fg_none=widgets.colors.red),
+    )
+    assert widget.uses_colors is True
+    assert widget._len is widgets.utils.len_color

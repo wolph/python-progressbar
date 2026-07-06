@@ -118,7 +118,7 @@ def create_marker(marker, wrap=None):
         return wrapper(marker, wrap)
 
 
-class FormatWidgetMixin(abc.ABC):
+class FormatWidgetMixin:
     """Mixin to format widgets using a formatstring.
 
     Variables available:
@@ -139,6 +139,9 @@ class FormatWidgetMixin(abc.ABC):
     ):
         self.new_style = new_style
         self.format = format
+        # Cooperative: forward remaining kwargs to the next base. ``format`` is
+        # consumed here and deliberately not forwarded onward.
+        super().__init__(**kwargs)
 
     def get_format(
         self,
@@ -170,7 +173,20 @@ class FormatWidgetMixin(abc.ABC):
             raise
 
 
-class WidthWidgetMixin(abc.ABC):
+class _WidgetKwargsSink:
+    """Terminates cooperative ``__init__`` chains for widgets.
+
+    Absorbs keyword arguments no widget class consumed so a cooperative
+    chain never reaches ``object.__init__`` with leftovers. Tolerated
+    silently for backwards compatibility: third-party widgets have passed
+    stray kwargs to their parents for years.
+    """
+
+    def __init__(self, **kwargs: typing.Any) -> None:
+        super().__init__()
+
+
+class WidthWidgetMixin(_WidgetKwargsSink):
     """Mixing to make sure widgets are only visible if the screen is within a
     specified size range so the progressbar fits on both large and small
     screens.
@@ -198,6 +214,7 @@ class WidthWidgetMixin(abc.ABC):
     def __init__(self, min_width=None, max_width=None, **kwargs: typing.Any):
         self.min_width = min_width
         self.max_width = max_width
+        super().__init__(**kwargs)
 
     def check_size(self, progress: ProgressBarMixinBase):
         max_width = self.max_width
@@ -313,6 +330,12 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
             merged_gradient.update(gradient_colors)
             self._gradient_colors = merged_gradient
 
+        # Drop any cached ``uses_colors``: old-style code that calls parents
+        # with different kwargs per pass would otherwise keep a stale
+        # ``uses_colors=False`` from the first pass (before ``fixed_colors``/
+        # ``gradient_colors`` were applied) and silently lose color rendering.
+        vars(self).pop('uses_colors', None)
+
         if self.uses_colors:
             self._len = utils.len_color
 
@@ -374,8 +397,7 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
     )
 
     def __init__(self, format: str, **kwargs: typing.Any):
-        FormatWidgetMixin.__init__(self, format=format, **kwargs)
-        WidgetBase.__init__(self, **kwargs)
+        super().__init__(format=format, **kwargs)
 
     def __call__(
         self,
@@ -408,8 +430,7 @@ class Timer(FormatLabel, TimeSensitiveWidgetBase):
         if '%s' in format and '%(elapsed)s' not in format:
             format = format.replace('%s', '%(elapsed)s')
 
-        FormatLabel.__init__(self, format=format, **kwargs)
-        TimeSensitiveWidgetBase.__init__(self, **kwargs)
+        super().__init__(format=format, **kwargs)
 
     # This is exposed as a static method for backwards compatibility
     format_time = staticmethod(utils.format_time)
@@ -455,7 +476,7 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
     ):
         self.samples = samples
         self.key_prefix = (key_prefix or self.__class__.__name__) + '_'
-        TimeSensitiveWidgetBase.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     def get_sample_times(self, progress: ProgressBarMixinBase, data: Data):
         return progress.extra.setdefault(
@@ -522,7 +543,10 @@ class ETA(Timer):
         if '%s' in format and '%(eta)s' not in format:
             format = format.replace('%s', '%(eta)s')
 
-        Timer.__init__(self, **kwargs)
+        # ``super().__init__`` (Timer) sets ``self.format`` to the
+        # elapsed-time default; the ETA-specific ``self.format*`` assignments
+        # below MUST stay after it or ETA renders 'Elapsed Time:' not 'ETA:'.
+        super().__init__(**kwargs)
         self.format_not_started = format_not_started
         self.format_finished = format_finished
         self.format = format
@@ -616,8 +640,7 @@ class AbsoluteETA(ETA):
         format='Estimated finish time: %(eta)s',
         **kwargs,
     ):
-        ETA.__init__(
-            self,
+        super().__init__(
             format_not_started=format_not_started,
             format_finished=format_finished,
             format=format,
@@ -643,8 +666,7 @@ class AdaptiveETA(ETA, SamplesMixin):
     ):
         self.exponential_smoothing = exponential_smoothing
         self.exponential_smoothing_factor = exponential_smoothing_factor
-        ETA.__init__(self, **kwargs)
-        SamplesMixin.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     def __call__(
         self,
@@ -691,7 +713,7 @@ class SmoothingETA(ETA):
         self.smoothing_algorithm = smoothing_algorithm(
             **self.smoothing_parameters,
         )
-        ETA.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     def __call__(
         self,
@@ -731,8 +753,7 @@ class DataSize(FormatWidgetMixin, WidgetBase):
         self.variable = variable
         self.unit = unit
         self.prefixes = prefixes
-        FormatWidgetMixin.__init__(self, format=format, **kwargs)
-        WidgetBase.__init__(self, **kwargs)
+        super().__init__(format=format, **kwargs)
 
     def __call__(
         self,
@@ -769,8 +790,7 @@ class FileTransferSpeed(FormatWidgetMixin, TimeSensitiveWidgetBase):
         self.unit = unit
         self.prefixes = prefixes
         self.inverse_format = inverse_format
-        FormatWidgetMixin.__init__(self, format=format, **kwargs)
-        TimeSensitiveWidgetBase.__init__(self, **kwargs)
+        super().__init__(format=format, **kwargs)
 
     def _speed(self, value, elapsed):
         speed = float(value) / elapsed
@@ -825,8 +845,7 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
     """Widget for showing the transfer speed based on the last X samples."""
 
     def __init__(self, **kwargs: typing.Any):
-        FileTransferSpeed.__init__(self, **kwargs)
-        SamplesMixin.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     def __call__(
         self,
@@ -863,7 +882,7 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         self.default = default or markers[0]
         self.fill_wrap = create_wrapper(fill_wrap)
         self.fill = create_marker(fill, self.fill_wrap) if fill else None
-        WidgetBase.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     def __call__(self, progress: ProgressBarMixinBase, data: Data, width=None):
         """Updates the widget to show the next marker or the first marker when
@@ -910,8 +929,9 @@ class Counter(FormatWidgetMixin, WidgetBase):
     """Displays the current count."""
 
     def __init__(self, format='%(value)d', **kwargs: typing.Any):
-        FormatWidgetMixin.__init__(self, format=format, **kwargs)
-        WidgetBase.__init__(self, format=format, **kwargs)
+        # ``format`` is consumed by ``FormatWidgetMixin``; do not leak it into
+        # the ``WidgetBase`` tail of the cooperative chain.
+        super().__init__(format=format, **kwargs)
 
     def __call__(
         self,
@@ -946,8 +966,7 @@ class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
         self, format='%(percentage)3d%%', na='N/A%%', **kwargs: typing.Any
     ):
         self.na = na
-        FormatWidgetMixin.__init__(self, format=format, **kwargs)
-        WidgetBase.__init__(self, format=format, **kwargs)
+        super().__init__(format=format, **kwargs)
 
     def get_format(
         self,
@@ -980,8 +999,8 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
     DEFAULT_FORMAT = '%(value_s)s of %(max_value_s)s'
 
     def __init__(self, format=DEFAULT_FORMAT, **kwargs: typing.Any):
-        FormatWidgetMixin.__init__(self, format=format, **kwargs)
-        WidgetBase.__init__(self, format=format, **kwargs)
+        super().__init__(format=format, **kwargs)
+        # ``max_width_cache`` reads ``self.max_width``; keep it after super().
         self.max_width_cache = dict()
         # Pyright isn't happy when we set the key in the initialiser
         self.max_width_cache['default'] = self.max_width or 0
@@ -1075,7 +1094,7 @@ class Bar(AutoWidthWidgetBase):
         self.fill = string_or_lambda(fill)
         self.fill_left = fill_left
 
-        AutoWidthWidgetBase.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     def __call__(
         self,
@@ -1125,8 +1144,7 @@ class ReverseBar(Bar):
         fill - character to use for the empty part of the progress bar
         fill_left - whether to fill from the left or the right
         """
-        Bar.__init__(
-            self,
+        super().__init__(
             marker=marker,
             left=left,
             right=right,
@@ -1191,8 +1209,7 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
         # the class-level `mapping` so subclasses that declare defaults keep
         # them when no mapping is passed.
         self.mapping = dict(self.mapping if mapping is None else mapping)
-        FormatWidgetMixin.__init__(self, format=format, **kwargs)
-        WidgetBase.__init__(self, **kwargs)
+        super().__init__(format=format, **kwargs)
 
     def update_mapping(self, **mapping: types.Any):
         self.mapping.update(mapping)
@@ -1211,7 +1228,7 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
         )
 
 
-class VariableMixin:
+class VariableMixin(_WidgetKwargsSink):
     """Mixin to display a custom user variable."""
 
     def __init__(self, name, **kwargs: typing.Any):
@@ -1220,6 +1237,7 @@ class VariableMixin:
         if len(name.split()) > 1:
             raise ValueError('Variable(): argument must be single word')
         self.name = name
+        super().__init__(**kwargs)
 
 
 class MultiRangeBar(Bar, VariableMixin):
@@ -1234,8 +1252,8 @@ class MultiRangeBar(Bar, VariableMixin):
     """
 
     def __init__(self, name, markers, **kwargs: typing.Any):
-        VariableMixin.__init__(self, name)
-        Bar.__init__(self, **kwargs)
+        # ``name`` rides through Bar's cooperative chain to VariableMixin.
+        super().__init__(name=name, **kwargs)
         self.markers = [string_or_lambda(marker) for marker in markers]
 
     def get_values(self, progress: ProgressBarMixinBase, data: Data):
@@ -1289,8 +1307,7 @@ class MultiProgressBar(MultiRangeBar):
         markers=' ▁▂▃▄▅▆▇█',
         **kwargs,
     ):
-        MultiRangeBar.__init__(
-            self,
+        super().__init__(
             name=name,
             markers=list(reversed(markers)),
             **kwargs,
@@ -1371,7 +1388,7 @@ class GranularBar(AutoWidthWidgetBase):
         self.left = string_or_lambda(left)
         self.right = string_or_lambda(right)
 
-        AutoWidthWidgetBase.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
     def __call__(
         self,
@@ -1412,8 +1429,7 @@ class FormatLabelBar(FormatLabel, Bar):
     """A bar which has a formatted label in the center."""
 
     def __init__(self, format, **kwargs: typing.Any):
-        FormatLabel.__init__(self, format, **kwargs)
-        Bar.__init__(self, **kwargs)
+        super().__init__(format=format, **kwargs)
 
     def __call__(  # type: ignore
         self,
@@ -1454,8 +1470,7 @@ class PercentageLabelBar(Percentage, FormatLabelBar):
     def __init__(
         self, format='%(percentage)2d%%', na='N/A%%', **kwargs: typing.Any
     ):
-        Percentage.__init__(self, format, na=na, **kwargs)
-        FormatLabelBar.__init__(self, format, **kwargs)
+        super().__init__(format=format, na=na, **kwargs)
 
     def __call__(  # type: ignore
         self,
@@ -1479,11 +1494,11 @@ class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
         **kwargs,
     ):
         """Creates a Variable associated with the given name."""
-        self.format = format
         self.width = width
         self.precision = precision
-        VariableMixin.__init__(self, name=name)
-        WidgetBase.__init__(self, **kwargs)
+        # FormatWidgetMixin (first in the MRO) now sets ``self.format``;
+        # ``name`` rides the cooperative chain to VariableMixin.
+        super().__init__(name=name, format=format, **kwargs)
 
     def __call__(
         self,
@@ -1531,8 +1546,7 @@ class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):
         **kwargs,
     ):
         self.microseconds = microseconds
-        FormatWidgetMixin.__init__(self, format=format, **kwargs)
-        TimeSensitiveWidgetBase.__init__(self, **kwargs)
+        super().__init__(format=format, **kwargs)
 
     def __call__(
         self,
@@ -1609,7 +1623,6 @@ class JobStatusBar(Bar, VariableMixin):
         failure_marker='X',
         **kwargs,
     ):
-        VariableMixin.__init__(self, name)
         self.name = name
         # Retained for backward compatibility only; render state now lives in
         # ``progress.extra`` (see get_job_markers) so a single widget reused by
@@ -1628,8 +1641,10 @@ class JobStatusBar(Bar, VariableMixin):
         self.failure_bg_color = failure_bg_color
         self.failure_marker = failure_marker
 
-        Bar.__init__(
-            self,
+        # ``name`` rides Bar's cooperative chain to VariableMixin (which also
+        # validates it); Bar re-sets left/right/fill from the same values.
+        super().__init__(
+            name=name,
             left=left,
             right=right,
             fill=fill,
