@@ -175,13 +175,6 @@ class ProgressBarMixinBase(abc.ABC):
             except Exception:  # noqa: BLE001, S110
                 pass
 
-        # Cooperatively chain to a superclass finalizer when one exists. This
-        # class's bases (abc.ABC, object) define no __del__, so the call is a
-        # no-op today; the guard keeps finalization cooperative — and avoids
-        # an AttributeError — should a base with __del__ ever be introduced.
-        if hasattr(super(), '__del__'):  # pragma: no cover
-            super().__del__()  # pyright: ignore[reportAttributeAccessIssue]
-
     def __getstate__(self):
         return self.__dict__
 
@@ -213,6 +206,15 @@ class ProgressBarBase(collections.abc.Iterable[NumberT], ProgressBarMixinBase):
     def __repr__(self):
         label = f': {self.label}' if self.label else ''
         return f'<{self.__class__.__name__}#{self.index}{label}>'
+
+    def __del__(self) -> None:
+        # ProgressBarBase mixes collections.abc.Iterable in alongside
+        # ProgressBarMixinBase (which defines the real finalizer). Define
+        # __del__ here so that finalizer is reached explicitly through the MRO
+        # instead of only by attribute inheritance — behaviourally identical
+        # (super() resolves to the same ProgressBarMixinBase.__del__), but it
+        # makes the multiple-inheritance finalizer chain unambiguous.
+        super().__del__()  # pragma: no cover
 
 
 class DefaultFdMixin(ProgressBarMixinBase):
