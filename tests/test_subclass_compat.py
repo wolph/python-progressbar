@@ -23,11 +23,13 @@ import typing
 import pytest
 
 import progressbar
+import progressbar.bar
 import progressbar.widgets
 
 # Alias (not a `from` import) so CodeQL doesn't flag `progressbar` as
 # imported with both `import` and `import from`.
 widgets = progressbar.widgets
+bar_module = progressbar.bar
 
 
 def _render(
@@ -136,12 +138,6 @@ def test_super_style_widget_sets_format() -> None:
     assert widget.format == '%(value)d?'
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason='FormatWidgetMixin.__init__ does not call super() yet, so a '
-    'single cooperative super().__init__ never reaches WidthWidgetMixin; '
-    'fixed by the cooperative-super() migration (PR 2).',
-)
 def test_super_style_widget_constructs_and_renders() -> None:
     widget = SuperStyleWidget(min_width=1)
     assert widget.min_width == 1
@@ -311,3 +307,188 @@ def _final_line(fd: io.StringIO) -> str:
 # under the deterministic test clock (frozen time -> zero elapsed).
 GOLDEN_KNOWN_LENGTH_FINAL: str = '100% 10 of 10 |########################|'
 GOLDEN_UNKNOWN_LENGTH_FINAL: str = '5 Elapsed Time: 0:00:00'
+
+
+# --- post-migration guarantees ----------------------------------------------
+
+
+def test_no_double_width_mixin_init(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A cooperative chain must init each base exactly once.
+
+    Pre-migration, ``Timer`` reached ``WidthWidgetMixin.__init__`` twice
+    (once via ``FormatLabel``/``WidgetBase`` and again via
+    ``TimeSensitiveWidgetBase``/``WidgetBase``). The single cooperative
+    chain must run it exactly once.
+    """
+    calls = 0
+    original = widgets.WidthWidgetMixin.__init__
+
+    def counting_init(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        nonlocal calls
+        calls += 1
+        original(self, *args, **kwargs)
+
+    monkeypatch.setattr(widgets.WidthWidgetMixin, '__init__', counting_init)
+    widgets.Timer()
+    assert calls == 1
+
+
+class OldStyleTwoPhaseColorWidget(
+    widgets.FormatWidgetMixin, widgets.WidgetBase
+):
+    """Old-style widget that reaches ``WidgetBase.__init__`` twice.
+
+    The first parent call carries no color kwargs; the second supplies
+    ``fixed_colors=``. ``uses_colors`` must reflect the *final* state, not
+    the stale ``False`` cached during the first pass.
+    """
+
+    def __init__(self, format: str = '%(value)d', **kwargs: typing.Any):
+        # First parent call: no color kwargs (would cache uses_colors=False).
+        widgets.FormatWidgetMixin.__init__(self, format=format)
+        # Second parent call: colors arrive now.
+        widgets.WidgetBase.__init__(
+            self,
+            fixed_colors=dict(fg_none=widgets.colors.red),
+            **kwargs,
+        )
+
+    def __call__(self, progress, data, format=None):
+        return widgets.FormatWidgetMixin.__call__(self, progress, data)
+
+
+def test_old_style_two_phase_color_kwargs() -> None:
+    # Regression: the cached ``uses_colors`` must be dropped between passes
+    # so late-arriving fixed_colors still enable color rendering.
+    widget = OldStyleTwoPhaseColorWidget()
+    assert widget.uses_colors is True
+    assert widget._len is widgets.utils.len_color
+
+
+def test_super_style_color_kwargs_reach_widget_base() -> None:
+    # The cooperative path must also route fixed_colors to WidgetBase.
+    widget = SuperStyleWidget(
+        fixed_colors=dict(fg_none=widgets.colors.red),
+    )
+    assert widget.uses_colors is True
+    assert widget._len is widgets.utils.len_color
+
+
+# --- bar.py __init__ chain: cooperative-super() guarantees ------------------
+
+
+def test_no_double_resizable_mixin_init(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The bar ``__init__`` tower must init each mixin exactly once.
+
+    Pre-migration ``ProgressBar.__init__`` reached
+    ``ResizableMixin.__init__`` twice: once via
+    ``StdRedirectMixin`` -> ``DefaultFdMixin.super()`` and again via an
+    explicit second call. The single cooperative chain must run it
+    exactly once.
+    """
+    calls = 0
+    original = bar_module.ResizableMixin.__init__
+
+    def counting_init(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        nonlocal calls
+        calls += 1
+        original(self, *args, **kwargs)
+
+    monkeypatch.setattr(bar_module.ResizableMixin, '__init__', counting_init)
+    progressbar.ProgressBar(fd=io.StringIO(), max_value=1, term_width=60)
+    assert calls == 1
+
+
+class TripleCallBar(progressbar.ProgressBar):
+    """Third-party old-style subclass: explicit unbound parent calls.
+
+    Mirrors ``ProgressBar.__init__``'s historic explicit-parent-call
+    pattern. After the cooperative migration each of these three calls
+    reaches ``ProgressBarBase.__init__``, so the guarded index
+    assignment must still consume exactly one index per instance.
+    """
+
+    def __init__(self, *args: typing.Any, **kwargs: typing.Any):
+        bar_module.StdRedirectMixin.__init__(self, *args, **kwargs)
+        bar_module.ResizableMixin.__init__(self, *args, **kwargs)
+        bar_module.ProgressBarBase.__init__(self, *args, **kwargs)
+
+
+def test_old_style_triple_call_bar_consumes_one_index() -> None:
+    first = TripleCallBar(fd=io.StringIO(), max_value=1, term_width=60)
+    second = TripleCallBar(fd=io.StringIO(), max_value=1, term_width=60)
+    # Each construction consumes exactly one index despite three explicit
+    # parent __init__ entry points reaching ProgressBarBase.
+    assert first.index >= 0
+    assert second.index == first.index + 1
+
+
+# --- update/start/finish chain: cooperative-super() guarantees --------------
+
+
+def test_super_style_update_override_dispatched_once() -> None:
+    """A super()-style ``update`` override runs exactly once per call.
+
+    The collapsed ``_update_parents`` chain dispatches to the *parent*
+    mixins via ``super().update(...)``, so it must never re-enter the
+    subclass's own ``update`` override. A double dispatch through the
+    chain would bump the counter twice.
+    """
+    calls = 0
+
+    class CountingBar(progressbar.ProgressBar):
+        def update(
+            self,
+            value: typing.Any = None,
+            force: bool = False,
+            **kwargs: typing.Any,
+        ) -> None:
+            nonlocal calls
+            calls += 1
+            super().update(value, force=force, **kwargs)
+
+    bar = CountingBar(fd=io.StringIO(), max_value=10, term_width=60)
+    # start() itself calls update(min_value); ignore those bootstrap calls.
+    bar.start()
+    calls = 0
+    bar.update(1, force=True)
+    assert calls == 1
+    bar.finish()
+
+
+def test_finish_end_kwarg_threads_through_chain() -> None:
+    """``finish(end='')`` still threads ``end`` through the collapsed chain.
+
+    ``end`` is popped inside ``DefaultFdMixin.finish`` after the migration;
+    an empty value must suppress the trailing newline while the default
+    still writes one.
+    """
+    fd_blank = io.StringIO()
+    bar = progressbar.ProgressBar(
+        fd=fd_blank,
+        max_value=10,
+        term_width=60,
+        enable_colors=False,
+        line_breaks=False,
+    )
+    bar.start()
+    bar.update(5, force=True)
+    bar.finish(end='')
+    assert bar.finished()
+    assert not fd_blank.getvalue().endswith('\n')
+
+    # Contrast: the default end='\n' still writes the trailing newline.
+    fd_newline = io.StringIO()
+    bar2 = progressbar.ProgressBar(
+        fd=fd_newline,
+        max_value=10,
+        term_width=60,
+        enable_colors=False,
+        line_breaks=False,
+    )
+    bar2.start()
+    bar2.update(5, force=True)
+    bar2.finish()
+    assert fd_newline.getvalue().endswith('\n')

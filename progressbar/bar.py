@@ -187,7 +187,13 @@ class ProgressBarBase(types.Iterable[NumberT], ProgressBarMixinBase):
     label: str = ''
 
     def __init__(self, **kwargs: typing.Any):
-        self.index = next(self._index_counter)
+        # Guard against the cooperative chain (or an old-style subclass
+        # making several explicit parent __init__ calls) reaching this
+        # method more than once per instance: `index` keeps its class
+        # default of -1 until the first construction, so each bar
+        # consumes exactly one counter value.
+        if self.index == -1:
+            self.index = next(self._index_counter)
         super().__init__(**kwargs)
 
     def __repr__(self):
@@ -330,10 +336,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
     def start(self, **kwargs: typing.Any):
         os_specific.set_console_mode()
-        super().start()
+        super().start(**kwargs)
 
     def update(self, *args: types.Any, **kwargs: types.Any) -> None:
-        ProgressBarMixinBase.update(self, *args, **kwargs)
+        super().update(*args, **kwargs)
 
         line: str = converters.to_unicode(self._format_line())
         if not self.enable_colors:
@@ -357,7 +363,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
             return
 
         end = kwargs.pop('end', '\n')
-        ProgressBarMixinBase.finish(self, *args, **kwargs)
+        super().finish(*args, **kwargs)
 
         if end and not self.line_breaks:
             self.fd.write(end)
@@ -475,7 +481,7 @@ class _ResizeRegistry:
 
 class ResizableMixin(ProgressBarMixinBase):
     def __init__(self, term_width: int | None = None, **kwargs: typing.Any):
-        ProgressBarMixinBase.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
         self.signal_set = False
         if term_width:
@@ -494,7 +500,7 @@ class ResizableMixin(ProgressBarMixinBase):
         self.term_width = w
 
     def finish(self):  # pragma: no cover
-        ProgressBarMixinBase.finish(self)
+        super().finish()
         if self.signal_set:
             with contextlib.suppress(Exception):
                 _ResizeRegistry.uninstall(self)
@@ -528,7 +534,7 @@ class StdRedirectMixin(DefaultFdMixin):
         redirect_blank_line: bool = False,
         **kwargs,
     ):
-        DefaultFdMixin.__init__(self, **kwargs)
+        super().__init__(**kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
         # Separate redirected output from the bar with a blank line
@@ -550,7 +556,7 @@ class StdRedirectMixin(DefaultFdMixin):
         self.stderr = utils.streams.stderr
 
         utils.streams.start_capturing(self)
-        DefaultFdMixin.start(self, *args, **kwargs)
+        super().start(*args, **kwargs)
 
     def update(self, value: types.Optional[NumberT] = None):
         cleared = not self.line_breaks and utils.streams.needs_clear()
@@ -561,10 +567,10 @@ class StdRedirectMixin(DefaultFdMixin):
         if cleared and self.redirect_blank_line:
             # Keep a blank line between the redirected output and the bar
             self.fd.write('\n')
-        DefaultFdMixin.update(self, value=value)
+        super().update(value=value)
 
     def finish(self, end='\n'):
-        DefaultFdMixin.finish(self, end=end)
+        super().finish(end=end)
         utils.streams.stop_capturing(self)
         if self.redirect_stdout:
             utils.streams.unwrap_stdout()
@@ -675,9 +681,7 @@ class ProgressBar(
         **kwargs,
     ):  # sourcery skip: low-code-quality
         """Initializes a progress bar with sane defaults."""
-        StdRedirectMixin.__init__(self, **kwargs)
-        ResizableMixin.__init__(self, **kwargs)
-        ProgressBarBase.__init__(self, **kwargs)
+        super().__init__(**kwargs)
         if not max_value and kwargs.get('maxval') is not None:
             warnings.warn(
                 'The usage of `maxval` is deprecated, please use '
@@ -1246,9 +1250,11 @@ class ProgressBar(
 
     def _update_parents(self, value: ValueT):
         self.updates += 1
-        ResizableMixin.update(self, value=value)
-        ProgressBarBase.update(self, value=value)
-        StdRedirectMixin.update(self, value=value)  # type: ignore
+        # Cooperative dispatch through the MRO
+        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase). The
+        # `value` is passed by keyword so the intermediate `*args, **kwargs`
+        # and `value=None` signatures interoperate.
+        super().update(value=value)  # type: ignore
 
         # Only flush if something was actually written
         self.fd.flush()
@@ -1289,9 +1295,10 @@ class ProgressBar(
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
-        StdRedirectMixin.start(self, max_value=max_value)
-        ResizableMixin.start(self, max_value=max_value)
-        ProgressBarBase.start(self, max_value=max_value)
+        # Cooperative dispatch through the MRO
+        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
+        # ResizableMixin/ProgressBarBase define no `start` and are skipped.
+        super().start(max_value=max_value)
 
         # Constructing the default widgets is only done when we know max_value
         if not self.widgets:
@@ -1381,9 +1388,13 @@ class ProgressBar(
             self.end_time = datetime.now()
             self.update(self.max_value, force=True)
 
-        StdRedirectMixin.finish(self, end=end)
-        ResizableMixin.finish(self)
-        ProgressBarBase.finish(self)
+        # Cooperative dispatch through the MRO
+        # (StdRedirectMixin -> DefaultFdMixin -> ResizableMixin ->
+        # ProgressBarMixinBase). Ordering note: the SIGWINCH uninstall in
+        # ResizableMixin.finish now runs *before* the stream unwrap in
+        # StdRedirectMixin.finish (previously it ran after). The two
+        # subsystems are independent, so the observable result is unchanged.
+        super().finish(end=end)
 
     @property
     def currval(self):
