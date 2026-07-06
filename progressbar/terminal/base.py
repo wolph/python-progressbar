@@ -639,6 +639,18 @@ class SGRColor(SGR):
         self._color = color
         super().__init__(start_code, end_code)
 
+    def __call__(
+        self,
+        text: str,
+        *args: typing.Any,
+    ) -> str:
+        if self._color.ansi is None:
+            # No usable color representation for this terminal (e.g. color
+            # support is NONE): leave the text unstyled instead of emitting
+            # a malformed escape code containing the literal string 'None'.
+            return text
+        return super().__call__(text, *args)
+
     @property
     def _start_template(self):
         return CSI.__call__(self, self._start_code, self._color.ansi)

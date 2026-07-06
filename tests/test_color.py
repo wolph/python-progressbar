@@ -515,3 +515,16 @@ def test_gradient_colors_override_is_per_instance() -> None:
     assert a._gradient_colors['fg'] == colors.gradient
     assert b._gradient_colors == class_default
     assert a._gradient_colors is not override
+
+
+def test_sgr_color_without_ansi_leaves_text_unstyled(monkeypatch) -> None:
+    # Regression: with COLOR_SUPPORT NONE, Color.ansi is None and SGRColor
+    # rendered a malformed '\x1b[38;Nonem' escape whose tail leaked into
+    # visible output as 'onem'. Without a usable color representation the
+    # text must pass through completely unstyled.
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.NONE)
+    green = progressbar.terminal.colors.green
+    assert green.fg('X') == 'X'
+    assert green.bg('X') == 'X'
+    assert green.underline('X') == 'X'
+    assert 'None' not in green.fg('X')
