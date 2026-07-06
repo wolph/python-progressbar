@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import os
 import typing
 
@@ -15,15 +16,16 @@ T = typing.TypeVar('T')
 
 
 def progressbar(
-    iterator: typing.Iterator[T],
+    iterator: collections.abc.Iterator[T],
     min_value: bar.NumberT = 0,
     max_value: bar.ValueT = None,
-    widgets: typing.Sequence[widgets_module.WidgetBase | str] | None = None,
+    widgets: collections.abc.Sequence[widgets_module.WidgetBase | str]
+    | None = None,
     prefix: str | None = None,
     suffix: str | None = None,
     fast: bool | None = None,
     **kwargs: typing.Any,
-) -> typing.Iterator[T]:
+) -> collections.abc.Iterator[T]:
     # Auto-dispatch to the lean FastProgressBar for the simple, common case;
     # anything that needs the full widget machinery uses ProgressBar.
     use_fast = (

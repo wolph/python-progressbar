@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import enum
 import importlib
 import io
@@ -26,7 +27,7 @@ from .terminal import stream
 # thread and race MultiBar._label_bar's ``assert bar.widgets``.
 importlib.import_module('progressbar.widgets')
 
-SortKeyFunc = typing.Callable[[bar.ProgressBar], typing.Any]
+SortKeyFunc = collections.abc.Callable[[bar.ProgressBar], typing.Any]
 
 
 class _Update(typing.Protocol):
@@ -105,7 +106,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
     def __init__(
         self,
-        bars: typing.Iterable[tuple[str, bar.ProgressBar]] | None = None,
+        bars: collections.abc.Iterable[tuple[str, bar.ProgressBar]]
+        | None = None,
         fd: typing.TextIO = sys.stderr,
         prepend_label: bool = True,
         append_label: bool = False,
@@ -265,7 +267,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         bar_: bar.ProgressBar,
         now: float,
         expired: float | None,
-    ) -> typing.Iterable[str]:
+    ) -> collections.abc.Iterable[str]:
         def update(
             force: bool = True, write: bool = True
         ) -> str:  # pragma: no cover
@@ -294,7 +296,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         now: float,
         expired: float | None,
         update: _Update,
-    ) -> typing.Iterable[str]:
+    ) -> collections.abc.Iterable[str]:
         if bar_ not in self._finished_at:
             self._finished_at[bar_] = now
             # Force update to get the finished format

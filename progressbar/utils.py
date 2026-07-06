@@ -8,7 +8,8 @@ import logging
 import os
 import re
 import sys
-from collections.abc import Iterable, Iterator
+import typing
+from collections.abc import Callable, Iterable, Iterator
 from types import TracebackType
 
 from python_utils import types
@@ -18,7 +19,7 @@ from python_utils.time import epoch, format_time, timedelta_to_seconds
 
 from progressbar import base, env, terminal
 
-if types.TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     from .bar import ProgressBar, ProgressBarMixinBase
 
 # Make sure these are available for import
@@ -28,7 +29,7 @@ assert format_time is not None
 assert scale_1024 is not None
 assert epoch is not None
 
-StringT = types.TypeVar('StringT', bound=types.StringTypes)
+StringT = typing.TypeVar('StringT', bound=types.StringTypes)
 
 # Precompiled ANSI CSI escape-sequence patterns (str and bytes). Compiled once
 # at import instead of per no_color() call, which runs for every widget on
@@ -140,7 +141,7 @@ class WrappingIO:
         self,
         target: base.IO,
         capturing: bool = False,
-        listeners: types.Optional[types.Set[ProgressBar]] = None,
+        listeners: set[ProgressBar] | None = None,
     ) -> None:
         self.buffer = io.StringIO()
         self.target = target
@@ -214,7 +215,7 @@ class WrappingIO:
     def tell(self) -> int:
         return self.target.tell()
 
-    def truncate(self, size: types.Optional[int] = None) -> int:
+    def truncate(self, size: int | None = None) -> int:
         return self.target.truncate(size)
 
     def writable(self) -> bool:
@@ -247,9 +248,9 @@ class StreamWrapper:
 
     stdout: base.TextIO | WrappingIO
     stderr: base.TextIO | WrappingIO
-    original_excepthook: types.Callable[
+    original_excepthook: Callable[
         [
-            types.Type[BaseException],
+            type[BaseException],
             BaseException,
             TracebackType | None,
         ],
@@ -403,7 +404,7 @@ class StreamWrapper:
         self,
         exc_type: type[BaseException],
         exc_value: BaseException,
-        exc_traceback: types.TracebackType | None,
+        exc_traceback: TracebackType | None,
     ) -> None:
         self.original_excepthook(exc_type, exc_value, exc_traceback)
         self.flush()

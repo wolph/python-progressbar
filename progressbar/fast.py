@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing
+from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from . import (
@@ -14,7 +15,7 @@ from . import (
 #: ``speedups`` package — or any caller — swap in a faster/custom formatter.
 #: This is a supported extension point, exercised by
 #: ``test_fast_format_line_uses_native_hook``.
-_format_fast_line: typing.Callable[[FastProgressBar], str] | None = None
+_format_fast_line: Callable[[FastProgressBar], str] | None = None
 
 #: Spinner frames cycled for unknown-length bars: bar, forward slash, dash,
 #: back slash. A plain (non-raw) literal so the escape is a single ``\`` and
