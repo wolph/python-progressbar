@@ -54,8 +54,6 @@ jobs:
           - python-version: '3.14'
             tox-env: docs
           - python-version: '3.14'
-            tox-env: black
-          - python-version: '3.14'
             tox-env: ruff
 
     steps:

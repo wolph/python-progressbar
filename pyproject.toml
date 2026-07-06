@@ -136,10 +136,6 @@ tests = [
 [dependency-groups]
 dev = ['progressbar2[docs,tests]']
 
-[tool.black]
-line-length = 79
-skip-string-normalization = true
-
 [tool.codespell]
 skip = '*/htmlcov,./docs/_build,*.asc'
 ignore-words-list = 'datas,numbert'
