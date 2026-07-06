@@ -29,6 +29,8 @@ assert epoch is not None
 StringT = typing.TypeVar('StringT', bound=types.StringTypes)
 T = typing.TypeVar('T')
 
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 class _ProgressListener(typing.Protocol):
     """Structural type for the bars the stream wrapper notifies.
@@ -499,6 +501,5 @@ class AttributeDict(dict):
             raise AttributeError(f'No such attribute: {name}')
 
 
-logger: logging.Logger = logging.getLogger(__name__)
 streams = StreamWrapper()
 atexit.register(streams.flush)
