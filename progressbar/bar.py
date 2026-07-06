@@ -336,7 +336,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
     def start(self, **kwargs: typing.Any):
         os_specific.set_console_mode()
-        super().start()
+        super().start(**kwargs)
 
     def update(self, *args: types.Any, **kwargs: types.Any) -> None:
         super().update(*args, **kwargs)
