@@ -685,9 +685,51 @@ class ProgressBar(
         variables=None,
         min_poll_interval=None,
         **kwargs,
-    ):  # sourcery skip: low-code-quality
+    ):
         """Initializes a progress bar with sane defaults."""
         super().__init__(**kwargs)
+
+        max_value, poll_interval = self._apply_deprecated_aliases(
+            max_value, poll_interval, kwargs
+        )
+
+        if max_value and min_value > types.cast(NumberT, max_value):
+            raise ValueError(
+                'Max value needs to be bigger than the min value',
+            )
+        self.min_value = min_value
+        # Legacy issue, `max_value` can be `None` before execution. After
+        # that it either has a value or is `UnknownLength`
+        self.max_value = max_value  # type: ignore
+        self.max_error = max_error
+
+        self.widgets = self._copy_widgets(widgets)
+
+        self.prefix = prefix
+        self.suffix = suffix
+        self.widget_kwargs = widget_kwargs or {}
+        self.left_justify = left_justify
+        self.value = initial_value
+        self._iterable = None
+        self.custom_len = custom_len  # type: ignore
+        self.initial_start_time = kwargs.get('start_time')
+        self.init()
+
+        self._setup_poll_intervals(poll_interval, min_poll_interval)
+        self._seed_variables(variables)
+
+    def _apply_deprecated_aliases(
+        self,
+        max_value: ValueT,
+        poll_interval: types.Optional[float],
+        kwargs: types.Dict[str, typing.Any],
+    ) -> tuple[ValueT, types.Optional[float]]:
+        """Resolve the deprecated ``maxval``/``poll`` keyword aliases.
+
+        Emits a :py:class:`DeprecationWarning` for each legacy name that is
+        used without its modern counterpart and returns the (possibly updated)
+        ``(max_value, poll_interval)`` pair.
+        """
         if not max_value and kwargs.get('maxval') is not None:
             warnings.warn(
                 'The usage of `maxval` is deprecated, please use '
@@ -706,41 +748,38 @@ class ProgressBar(
             )
             poll_interval = kwargs.get('poll')
 
-        if max_value and min_value > types.cast(NumberT, max_value):
-            raise ValueError(
-                'Max value needs to be bigger than the min value',
-            )
-        self.min_value = min_value
-        # Legacy issue, `max_value` can be `None` before execution. After
-        # that it either has a value or is `UnknownLength`
-        self.max_value = max_value  # type: ignore
-        self.max_error = max_error
+        return max_value, poll_interval
 
-        # Only copy the widget if it's safe to copy. Most widgets are so we
-        # assume this to be true
-        self.widgets = []
+    def _copy_widgets(
+        self, widgets: types.Optional[types.Sequence[typing.Any]]
+    ) -> list[typing.Any]:
+        """Return a fresh widget list, deep-copying the copy-safe widgets.
+
+        Only copy a widget if it's safe to copy. Most widgets are, so that is
+        assumed to be true unless a widget opts out with ``copy = False``.
+        """
+        result: list[typing.Any] = []
         for widget in widgets or []:
             if getattr(widget, 'copy', True):
                 widget = deepcopy(widget)
-            self.widgets.append(widget)
+            result.append(widget)
+        return result
 
-        self.prefix = prefix
-        self.suffix = suffix
-        self.widget_kwargs = widget_kwargs or {}
-        self.left_justify = left_justify
-        self.value = initial_value
-        self._iterable = None
-        self.custom_len = custom_len  # type: ignore
-        self.initial_start_time = kwargs.get('start_time')
-        self.init()
+    def _setup_poll_intervals(
+        self,
+        poll_interval: types.Optional[float],
+        min_poll_interval: types.Optional[float],
+    ) -> None:
+        """Convert the poll intervals to seconds and clamp the minimum.
 
-        # Convert a given timedelta to a floating point number as internal
-        # interval. We're not using timedelta's internally for two reasons:
-        # 1. Backwards compatibility (most important one)
-        # 2. Performance. Even though the amount of time it takes to compare a
-        # timedelta with a float versus a float directly is negligible, this
-        # comparison is run for _every_ update. With billions of updates
-        # (downloading a 1GiB file for example) this adds up.
+        Convert a given timedelta to a floating point number as the internal
+        interval. We're not using timedelta's internally for two reasons:
+        1. Backwards compatibility (most important one)
+        2. Performance. Even though the amount of time it takes to compare a
+        timedelta with a float versus a float directly is negligible, this
+        comparison is run for _every_ update. With billions of updates
+        (downloading a 1GiB file for example) this adds up.
+        """
         poll_interval = utils.deltas_to_seconds(poll_interval, default=None)
         min_poll_interval = utils.deltas_to_seconds(
             min_poll_interval,
@@ -760,7 +799,15 @@ class ProgressBar(
             float(os.environ.get('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', 0)),
         )  # type: ignore
 
-        # A dictionary of names that can be used by Variable and FormatWidget
+    def _seed_variables(
+        self, variables: types.Optional[types.Dict[str, typing.Any]]
+    ) -> None:
+        """Seed the user-defined variables dict and scan widgets for names.
+
+        Builds the ``variables`` mapping used by ``Variable``/``FormatWidget``
+        and registers a ``None`` placeholder for every ``VariableMixin`` widget
+        whose name isn't already supplied.
+        """
         self.variables = utils.AttributeDict(variables or {})
         if self.widgets:
             widgets_module = _load_widgets()
