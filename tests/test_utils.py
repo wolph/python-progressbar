@@ -121,6 +121,60 @@ def test_is_ansi_terminal(monkeypatch) -> None:
     assert not progressbar.env.is_ansi_terminal(fd)
 
 
+@pytest.mark.parametrize(
+    'value,expected',
+    [
+        ('', ''),
+        (b'', b''),
+        ('\x1b[31m', ''),
+        (b'\x1b[31m', b''),
+        ('\x1b[1m\x1b[31mtext\x1b[0m', 'text'),
+        (b'\x1b[1m\x1b[31mtext\x1b[0m', b'text'),
+        ('\x1b[38;5;208mhello world\x1b[0m', 'hello world'),
+    ],
+)
+def test_no_color(value, expected) -> None:
+    assert progressbar.utils.no_color(value) == expected
+
+
+def test_no_color_type_error() -> None:
+    with pytest.raises(TypeError):
+        progressbar.utils.no_color(123)
+
+
+@pytest.mark.parametrize(
+    'value,expected',
+    [
+        ('', 0),
+        (b'', 0),
+        ('\x1b[31m', 0),
+        ('\x1b[1m\x1b[31mtext\x1b[0m', 4),
+        ('\x1b[38;5;208mhello world\x1b[0m', 11),
+    ],
+)
+def test_len_color(value, expected) -> None:
+    assert progressbar.utils.len_color(value) == expected
+
+
+def test_attribute_dict_empty() -> None:
+    attrs = progressbar.utils.AttributeDict()
+    assert len(attrs) == 0
+    with pytest.raises(AttributeError):
+        _ = attrs.missing
+
+
+def test_attribute_dict_set_get_del() -> None:
+    attrs = progressbar.utils.AttributeDict()
+    attrs.spam = 123
+    assert attrs['spam'] == 123
+    assert attrs.spam == 123
+    del attrs.spam
+    with pytest.raises(AttributeError):
+        _ = attrs.spam
+    with pytest.raises(AttributeError):
+        del attrs.spam
+
+
 def test_stream_wrapper_unwrap_restores_excepthook() -> None:
     # Regression: C7 - unwrap_stdout/unwrap_stderr left the custom
     # excepthook installed forever.
