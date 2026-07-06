@@ -1295,11 +1295,6 @@ class ProgressBar(
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
-        # Cooperative dispatch through the MRO
-        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
-        # ResizableMixin/ProgressBarBase define no `start` and are skipped.
-        super().start(max_value=max_value)
-
         # Constructing the default widgets is only done when we know max_value
         if not self.widgets:
             self.widgets = self.default_widgets()
@@ -1313,6 +1308,17 @@ class ProgressBar(
         ):
             self._gate_enabled = False
         self._verify_max_value()
+
+        # Cooperative dispatch through the MRO
+        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
+        # ResizableMixin/ProgressBarBase define no `start` and are skipped.
+        # This runs *after* all widget/state setup so that `_started` (set by
+        # ProgressBarMixinBase.start) only becomes observable once `widgets`
+        # is fully populated. Otherwise a concurrent reader (e.g. MultiBar's
+        # render thread) could see `started()` True with an empty widget list
+        # crash in `_label_bar`'s `assert bar.widgets`. The 0% draw below
+        # still happens at the same point, after stream/console setup.
+        super().start(max_value=max_value)
 
         now = datetime.now()
         self.start_time = self.initial_start_time or now

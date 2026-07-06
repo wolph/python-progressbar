@@ -163,6 +163,43 @@ def test_multibar_empty_key() -> None:
     multibar.render(force=True)
 
 
+def test_started_flag_not_observable_before_widgets(monkeypatch) -> None:
+    """Regression: ``_started`` must not flip True before widgets are built.
+
+    ``MultiBar.render()`` (potentially from a background thread) reads
+    ``bar.started()`` and then ``_label_bar`` asserts ``bar.widgets``. If
+    ``start()`` sets ``_started`` before populating ``default_widgets()`` there
+    is a window where a concurrent reader observes ``started() is True`` with
+    an empty ``widgets`` list and crashes on that assertion. Reproduced
+    deterministically by capturing the widget list at the exact ``_started``
+    flip.
+    """
+    import progressbar.bar as bar_module
+
+    original_start = bar_module.ProgressBarMixinBase.start
+    observed: dict[str, bool] = {}
+
+    def recording_start(self, **kwargs):
+        result = original_start(self, **kwargs)
+        # `_started` has just flipped True here; capture whether the widget
+        # list is already populated at this exact moment.
+        observed['widgets_at_flip'] = bool(self.widgets)
+        observed['started_at_flip'] = self.started()
+        return result
+
+    monkeypatch.setattr(
+        bar_module.ProgressBarMixinBase, 'start', recording_start
+    )
+
+    bar = progressbar.ProgressBar(max_value=N, fd=io.StringIO())
+    bar.start()
+
+    assert observed.get('started_at_flip') is True
+    assert observed.get('widgets_at_flip') is True, (
+        'widgets must be populated before started() can observe _started'
+    )
+
+
 def test_multibar_print() -> None:
     bars = 5
     n = 10
