@@ -2,4 +2,3 @@ Examples
 ===================
 
 .. literalinclude:: ../examples.py
-

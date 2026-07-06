@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 import typing
-from collections.abc import Iterable, Iterator
+from collections.abc import Generator, Iterable, Iterator
 from types import TracebackType
 
 from progressbar import base
@@ -19,7 +19,7 @@ class TextIOOutputWrapper(base.TextIO):  # pragma: no cover
         return self.stream.fileno()
 
     def flush(self) -> None:
-        pass
+        self.stream.flush()
 
     def isatty(self) -> bool:
         return self.stream.isatty()
@@ -83,6 +83,7 @@ class LineOffsetStreamWrapper(TextIOOutputWrapper):
         super().__init__(stream)
 
     def write(self, data: str) -> int:
+        written = len(data)
         data = data.rstrip('\n')
         # Move the cursor up
         self.stream.write(self.UP * self.lines)
@@ -94,7 +95,9 @@ class LineOffsetStreamWrapper(TextIOOutputWrapper):
         self.stream.write(self.DOWN * self.lines)
 
         self.flush()
-        return len(data)
+        # Return the length of the original data; callers use this to
+        # detect short writes
+        return written
 
 
 class LastLineStream(TextIOOutputWrapper):
@@ -130,7 +133,7 @@ class LastLineStream(TextIOOutputWrapper):
 
         return len(self.line)
 
-    def __iter__(self) -> typing.Generator[str, typing.Any, typing.Any]:
+    def __iter__(self) -> Generator[str, typing.Any, typing.Any]:
         yield self.line
 
     def writelines(self, __lines: Iterable[str]) -> None:

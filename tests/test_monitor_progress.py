@@ -200,7 +200,6 @@ def test_line_breaks(testdir) -> None:
             ' 60%|################################                      |',
             ' 80%|###########################################           |',
             '100%|######################################################|',
-            '100%|######################################################|',
         ),
     )
 
@@ -224,8 +223,6 @@ def test_no_line_breaks(testdir) -> None:
         ' 60%|################################                      |',
         ' 80%|###########################################           |',
         '100%|######################################################|',
-        '',
-        '100%|######################################################|',
     ]
 
 
@@ -247,8 +244,6 @@ def test_percentage_label_bar(testdir) -> None:
         '|#######################    40%                            |',
         '|###########################60%####                        |',
         '|###########################80%################            |',
-        '|###########################100%###########################|',
-        '',
         '|###########################100%###########################|',
     ]
 
@@ -272,8 +267,6 @@ def test_granular_bar(testdir) -> None:
         '|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOo                       |',
         '|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO.           |',
         '|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|',
-        '',
-        '|OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO|',
     ]
 
 
@@ -287,10 +280,10 @@ def test_colors(testdir) -> None:
         testdir.makepyfile(_create_script(enable_colors=True, **kwargs)),
     )
     pprint.pprint(result.stderr.lines, width=70)
-    assert result.stderr.lines == ['\x1b[92mgreen\x1b[0m'] * 3
+    assert result.stderr.lines == ['\x1b[92mgreen\x1b[0m'] * 2
 
     result = testdir.runpython(
         testdir.makepyfile(_create_script(enable_colors=False, **kwargs)),
     )
     pprint.pprint(result.stderr.lines, width=70)
-    assert result.stderr.lines == ['green'] * 3
+    assert result.stderr.lines == ['green'] * 2

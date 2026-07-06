@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import abc
-import collections
+import collections.abc
 import colorsys
 import enum
-import threading
 import typing
 from collections import defaultdict
 
@@ -12,13 +11,17 @@ from collections import defaultdict
 # `types` module
 from typing import ClassVar
 
-from python_utils import converters, types
+from python_utils import converters
 
 from .. import (
     base as pbase,
     env,
 )
-from .os_specific import getch
+
+# Re-exported for backwards compatibility (previously consumed by the removed
+# ``_CPR`` cursor-position helper; guarded by the API snapshot). The redundant
+# alias marks the re-export as intentional so it is not stripped as unused.
+from .os_specific import getch as getch
 
 ESC = '\x1b'
 
@@ -145,43 +148,6 @@ def clear_line(n: int):
     return UP(n) + CLEAR_LINE_ALL() + DOWN(n)
 
 
-# Report Cursor Position (CPR), response = [row;column] as row;columnR
-class _CPR(str):  # pragma: no cover  # pyright: ignore[reportUnusedClass]
-    _response_lock = threading.Lock()
-
-    def __call__(self, stream: typing.IO[str]) -> tuple[int, int]:
-        res: str = ''
-
-        with self._response_lock:
-            stream.write(str(self))
-            stream.flush()
-
-            while not res.endswith('R'):
-                char = getch()
-
-                if char:
-                    res += char
-
-            res_list = res[2:-1].split(';')
-
-            res_list = tuple(
-                int(item) if item.isdigit() else item for item in res_list
-            )
-
-            if len(res_list) == 1:
-                return types.cast(types.Tuple[int, int], res_list[0])
-
-            return types.cast(types.Tuple[int, int], tuple(res_list))
-
-    def row(self, stream: typing.IO[str]) -> int:
-        row, _ = self(stream)
-        return row
-
-    def column(self, stream: typing.IO[str]) -> int:
-        _, column = self(stream)
-        return column
-
-
 class WindowsColors(enum.Enum):
     BLACK = 0, 0, 0
     BLUE = 0, 0, 128
@@ -201,7 +167,7 @@ class WindowsColors(enum.Enum):
     INTENSE_WHITE = 255, 255, 255
 
     @staticmethod
-    def from_rgb(rgb: types.Tuple[int, int, int]) -> WindowsColors:
+    def from_rgb(rgb: tuple[int, int, int]) -> WindowsColors:
         """
         Find the closest WindowsColors to the given RGB color.
 
@@ -225,7 +191,9 @@ class WindowsColors(enum.Enum):
             rgb1: tuple[int, int, int],
             rgb2: tuple[int, int, int],
         ):
-            return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
+            return sum(
+                (c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2, strict=False)
+            )
 
         return min(
             WindowsColors,
@@ -280,10 +248,12 @@ class RGB(typing.NamedTuple):
 
     @property
     def to_ansi_16(self) -> int:
-        # Using int instead of round because it maps slightly better
-        red = int(self.red / 255)
-        green = int(self.green / 255)
-        blue = int(self.blue / 255)
+        # Threshold each channel at half intensity so a mid-range channel
+        # sets its bit. ``int(c / 255)`` was only ever 1 at exactly 255, which
+        # collapsed almost every colour (e.g. maroon 128,0,0) to black.
+        red = int(self.red >= 128)
+        green = int(self.green >= 128)
+        blue = int(self.blue >= 128)
         return (blue << 2) | (green << 1) | red
 
     @property
@@ -341,8 +311,8 @@ class HSL(typing.NamedTuple):
     def interpolate(self, end: HSL, step: float) -> HSL:
         return HSL(
             self.hue + (end.hue - self.hue) * step,
-            self.lightness + (end.lightness - self.lightness) * step,
             self.saturation + (end.saturation - self.saturation) * step,
+            self.lightness + (end.lightness - self.lightness) * step,
         )
 
 
@@ -399,20 +369,26 @@ class Color(typing.NamedTuple):
             return SGRColor(self, 58, 59)
 
     @property
-    def ansi(self) -> types.Optional[str]:
+    def ansi(self) -> str | None:
         if (
             env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR
         ):  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
-        if self.xterm:  # pragma: no branch
+        # A true 16-colour terminal must not be handed a 256-colour index,
+        # so translate through to_ansi_16 there. Everywhere else prefer the
+        # registered xterm index (``is not None`` so index 0/Black counts):
+        # rendering an SGR at all means the caller decided colours are
+        # wanted (e.g. forced via ``enable_colors``), even when the global
+        # detection reported no support.
+        if env.COLOR_SUPPORT is env.ColorSupport.XTERM:
+            color = self.rgb.to_ansi_16
+        elif self.xterm is not None:
             color = self.xterm
         elif (
             env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
         ):  # pragma: no branch
             color = self.rgb.to_ansi_256
-        elif env.COLOR_SUPPORT is env.ColorSupport.XTERM:  # pragma: no branch
-            color = self.rgb.to_ansi_16
         else:  # pragma: no branch
             return None
 
@@ -440,30 +416,20 @@ class Color(typing.NamedTuple):
 
 
 class Colors:
-    by_name: ClassVar[defaultdict[str, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_lowername: ClassVar[defaultdict[str, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_hex: ClassVar[defaultdict[str, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_rgb: ClassVar[defaultdict[RGB, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_hls: ClassVar[defaultdict[HSL, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
+    by_name: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_lowername: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_hex: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_rgb: ClassVar[defaultdict[RGB, list[Color]]] = defaultdict(list)
+    by_hls: ClassVar[defaultdict[HSL, list[Color]]] = defaultdict(list)
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
     @classmethod
     def register(
         cls,
         rgb: RGB,
-        hls: types.Optional[HSL] = None,
-        name: types.Optional[str] = None,
-        xterm: types.Optional[int] = None,
+        hls: HSL | None = None,
+        name: str | None = None,
+        xterm: int | None = None,
     ) -> Color:
         if hls is None:
             hls = HSL.from_rgb(rgb)
@@ -489,14 +455,14 @@ class Colors:
 
 
 class ColorGradient:
-    interpolate: typing.Callable[[Color, Color, float], Color] | None
+    interpolate: collections.abc.Callable[[Color, Color, float], Color] | None
     colors: tuple[Color, ...]
 
     def __init__(
         self,
         *colors: Color,
         interpolate: (
-            typing.Callable[[Color, Color, float], Color] | None
+            collections.abc.Callable[[Color, Color, float], Color] | None
         ) = Colors.interpolate,
     ) -> None:
         assert colors
@@ -547,7 +513,7 @@ class ColorGradient:
         return color
 
 
-OptionalColor = types.Union[Color, ColorGradient, None]
+OptionalColor = Color | ColorGradient | None
 
 
 def get_color(value: float, color: OptionalColor) -> Color | None:
@@ -564,7 +530,7 @@ def apply_colors(
     bg: OptionalColor = None,
     fg_none: Color | None = None,
     bg_none: Color | None = None,
-    **kwargs: types.Any,
+    **kwargs: typing.Any,
 ) -> str:
     """Apply colors/gradients to a string depending on the given percentage.
 
@@ -629,6 +595,18 @@ class SGRColor(SGR):
     def __init__(self, color: Color, start_code: int, end_code: int) -> None:
         self._color = color
         super().__init__(start_code, end_code)
+
+    def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        text: str,
+        *args: typing.Any,
+    ) -> str:
+        if self._color.ansi is None:
+            # No usable color representation for this terminal (e.g. color
+            # support is NONE): leave the text unstyled instead of emitting
+            # a malformed escape code containing the literal string 'None'.
+            return text
+        return super().__call__(text, *args)
 
     @property
     def _start_template(self):

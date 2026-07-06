@@ -5,7 +5,7 @@ Text progress bar library for Python.
 Build status:
 
 .. image:: https://github.com/WoLpH/python-progressbar/actions/workflows/main.yml/badge.svg
-    :alt: python-progressbar test status 
+    :alt: python-progressbar test status
     :target: https://github.com/WoLpH/python-progressbar/actions
 
 Coverage:
@@ -71,6 +71,54 @@ of widgets:
 
 The progressbar module is very easy to use, yet very powerful. It will also
 automatically enable features like auto-resizing when the system supports it.
+
+******************************************************************************
+Performance
+******************************************************************************
+
+The default ``progressbar.progressbar(...)`` is the **fastest** progress bar
+available -- on iteration overhead, per-update render cost, *and* import time.
+On the benchmark machine (CPython 3.13, macOS arm64):
+
+============  ====================  ==============  ===========
+Metric        progressbar2          tqdm            rich
+============  ====================  ==============  ===========
+Per iter      **5 ns** *(fast)*     54 ns           19 ns
+Per render    **~5 us** *(fast)*    11 us           172 us
+Cold import   **~1.5 ms**           ~22 ms          ~47 ms
+============  ====================  ==============  ===========
+
+How the default stays fast:
+
+- **Iteration** -- an integer "next update" gate keeps the common iteration to
+  an increment and a compare, entering the (rate-limited) redraw machinery only
+  a few times per second. ~30 ns/iter in pure Python (already faster than
+  tqdm); ~5 ns with the optional native iterator
+  (``pip install progressbar2[fast]``), which counts in a C field.
+- **Render** -- the default bar uses a fixed formatter (percentage, count, bar,
+  elapsed/ETA) built directly each redraw, so it renders in ~5 us/update,
+  roughly **2x faster than tqdm**, without the per-widget overhead.
+- **Import** -- ``import progressbar`` is lazy (PEP 562): widgets, the
+  terminal/colour tables and multi-bar support load only when used, so a bare
+  import is ~1.5 ms and pulls in nothing heavy (no ``asyncio``).
+
+The fast path stays close to the classic look but drops the gradient and
+per-iteration ``value`` liveness (``value`` is synced at redraw crossings, like
+``tqdm.n``). For the full widget set -- gradient ``Bar``, custom widgets,
+dynamic variables -- pass ``widgets=[...]`` or ``fast=False`` to
+``progressbar()``, or construct ``progressbar.ProgressBar(...)`` directly; that
+path is unchanged (and intentionally richer, so a touch slower). Set
+``PROGRESSBAR_DISABLE_FASTPATH=1`` to force the classic path everywhere.
+
+The benchmark is fully reproducible and pits ``progressbar2`` against ``tqdm``,
+``rich``, ``alive-progress`` and ``click`` across iteration overhead, forced
+redraw cost, and import time -- all rendered to a real pseudo-terminal so the
+comparison is apples-to-apples::
+
+    python benchmarks/bench.py && python benchmarks/report.py
+
+.. image:: https://raw.githubusercontent.com/WoLpH/python-progressbar/master/benchmarks/chart.png
+   :alt: progressbar2 vs common Python progress-bar libraries
 
 ******************************************************************************
 Known issues

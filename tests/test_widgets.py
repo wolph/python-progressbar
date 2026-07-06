@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import time
+from datetime import timedelta
 
 import pytest
 
@@ -14,11 +16,61 @@ max_values: list[None | type[progressbar.base.UnknownLength] | int] = [
 
 
 def test_create_wrapper() -> None:
-    with pytest.raises(AssertionError):
+    # F4: user-facing validation must raise ValueError (not a bare assert that
+    # vanishes under ``python -O``).
+    with pytest.raises(ValueError):
         progressbar.widgets.create_wrapper('ab')
 
     with pytest.raises(RuntimeError):
         progressbar.widgets.create_wrapper(123)
+
+
+def test_create_marker_rejects_multichar_marker() -> None:
+    # F4: markers must be a single visible character.
+    with pytest.raises(ValueError):
+        progressbar.widgets.create_marker('ab')
+
+
+def test_multi_range_bar_rejects_multichar_marker() -> None:
+    # F4: the render path validates marker width; a 2-char marker must raise
+    # ValueError rather than a stripped-under-O assert.
+    widget = progressbar.MultiRangeBar('amounts', markers=['ab', ' '])
+    bar = progressbar.ProgressBar(
+        widgets=[widget],
+        variables={'amounts': []},
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    data = bar.data()
+    data['variables'] = {'amounts': [1, 0]}
+    with pytest.raises(ValueError):
+        widget(bar, data, width=20)
+    bar.finish(dirty=True)
+
+
+def test_multi_range_bar_rejects_multichar_fill() -> None:
+    # Item 4: the fill path validates the fill width; a 2-char fill must raise
+    # ValueError rather than a stripped-under-O assert. Non-empty amounts keep
+    # the initial render on the marker branch; emptying them forces the
+    # zero-sum ``else`` (fill) branch on the direct call.
+    widget = progressbar.MultiRangeBar(
+        'amounts', markers=[' ', '#'], fill='xx'
+    )
+    bar = progressbar.ProgressBar(
+        widgets=[widget],
+        variables={'amounts': [1, 0]},
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    data = bar.data()
+    data['variables'] = {'amounts': []}
+    with pytest.raises(ValueError):
+        widget(bar, data, width=20)
+    bar.finish(dirty=True)
 
 
 def test_widgets_small_values() -> None:
@@ -204,3 +256,67 @@ def test_all_widgets_max_width(max_width, term_width) -> None:
             assert widget == ''
         else:
             assert widget != ''
+
+
+def test_eta_respects_min_value() -> None:
+    # Regression: B3 - the items/second rate divided by the raw value
+    # instead of the progress relative to min_value.
+    bar = progressbar.ProgressBar(
+        min_value=50, max_value=100, fd=io.StringIO(), term_width=60
+    )
+    bar.start()
+    bar.update(75)
+    bar.start_time -= timedelta(seconds=30)
+    data = bar.data()
+    progressbar.ETA()(bar, data)
+
+    # 25 of 50 items done in 30 seconds -> 30 seconds remaining
+    assert data['eta_seconds'] == pytest.approx(30, rel=0.05)
+
+
+def test_multi_progress_bar_zero_total() -> None:
+    # Regression: B5 - a (value, 0) tuple raised ZeroDivisionError.
+    widget = progressbar.MultiProgressBar('jobs')
+    bar = progressbar.ProgressBar(
+        widgets=[widget], max_value=10, fd=io.StringIO(), term_width=60
+    )
+    ranges = widget.get_values(bar, {'variables': {'jobs': [(3, 0)]}})
+    assert sum(ranges) > 0
+
+
+def test_bar_widget_respects_min_value() -> None:
+    # Regression: B9 - the fill width was computed from the raw value, so
+    # a bar at 0% progress with min_value > 0 rendered partially full.
+    bar = progressbar.ProgressBar(
+        min_value=50,
+        max_value=100,
+        widgets=[progressbar.Bar()],
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    assert '#' not in bar.fd.getvalue()
+    bar.finish(dirty=True)
+
+
+def test_animated_marker_fill_stays_full_when_finished() -> None:
+    # Regression: a Bar filled by an AnimatedMarker(fill=...) collapsed to a
+    # single marker character at finish() because the end_time branch
+    # short-circuited before applying the fill. The finished bar must stay
+    # full instead of emptying out at 100%.
+    bar = progressbar.ProgressBar(
+        widgets=[progressbar.Bar(marker=progressbar.AnimatedMarker(fill='#'))],
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    for i in range(11):
+        bar.update(i)
+    bar.finish()
+
+    last_line = [
+        line for line in bar.fd.getvalue().split('\n') if line.strip()
+    ][-1]
+    # term_width 60 leaves ~58 fill characters; the collapse bug left ~1
+    assert last_line.count('#') > 40, repr(last_line)

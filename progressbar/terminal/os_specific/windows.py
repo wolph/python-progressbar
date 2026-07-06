@@ -25,6 +25,18 @@ _kernel32 = ctypes.windll.Kernel32  # type: ignore
 
 _STD_INPUT_HANDLE = _DWORD(-10)
 _STD_OUTPUT_HANDLE = _DWORD(-11)
+# GetStdHandle returns INVALID_HANDLE_VALUE (-1) when no console is
+# attached (piped output, pythonw, services)
+_INVALID_HANDLE_VALUE = _HANDLE(-1).value
+# The EventType of a KEY_EVENT_RECORD in an INPUT_RECORD
+_KEY_EVENT = 0x0001
+
+
+def _valid_handle(handle) -> bool:
+    # Handles may be plain ints (from a HANDLE restype) or ctypes
+    # instances; normalize before comparing
+    value = getattr(handle, 'value', handle)
+    return value is not None and value != _INVALID_HANDLE_VALUE
 
 
 class WindowsConsoleModeFlags(enum.IntFlag):
@@ -48,25 +60,33 @@ class WindowsConsoleModeFlags(enum.IntFlag):
         return f'{self.name} (0x{self.value:04X})'
 
 
+# Explicit argtypes are required: without them ctypes passes arguments
+# as 32-bit C ints, silently truncating 64-bit HANDLE values
 _GetConsoleMode = _kernel32.GetConsoleMode
+_GetConsoleMode.argtypes = (_HANDLE, ctypes.POINTER(_DWORD))
 _GetConsoleMode.restype = _BOOL
 
 _SetConsoleMode = _kernel32.SetConsoleMode
+_SetConsoleMode.argtypes = (_HANDLE, _DWORD)
 _SetConsoleMode.restype = _BOOL
 
 _GetStdHandle = _kernel32.GetStdHandle
+_GetStdHandle.argtypes = (_DWORD,)
 _GetStdHandle.restype = _HANDLE
 
-_ReadConsoleInput = _kernel32.ReadConsoleInputA
-_ReadConsoleInput.restype = _BOOL
+_SetConsoleTextAttribute = _kernel32.SetConsoleTextAttribute
+_SetConsoleTextAttribute.argtypes = (_HANDLE, _WORD)
+_SetConsoleTextAttribute.restype = _BOOL
 
 _h_console_input = _GetStdHandle(_STD_INPUT_HANDLE)
 _input_mode = _DWORD()
-_GetConsoleMode(_HANDLE(_h_console_input), ctypes.byref(_input_mode))
+if _valid_handle(_h_console_input):
+    _GetConsoleMode(_HANDLE(_h_console_input), ctypes.byref(_input_mode))
 
 _h_console_output = _GetStdHandle(_STD_OUTPUT_HANDLE)
 _output_mode = _DWORD()
-_GetConsoleMode(_HANDLE(_h_console_output), ctypes.byref(_output_mode))
+if _valid_handle(_h_console_output):
+    _GetConsoleMode(_HANDLE(_h_console_output), ctypes.byref(_output_mode))
 
 
 class _COORD(ctypes.Structure):
@@ -121,17 +141,34 @@ class _INPUT_RECORD(ctypes.Structure):
     _fields_ = (('EventType', _WORD), ('Event', _Event))
 
 
+_ReadConsoleInput = _kernel32.ReadConsoleInputA
+_ReadConsoleInput.argtypes = (
+    _HANDLE,
+    ctypes.POINTER(_INPUT_RECORD),
+    _DWORD,
+    ctypes.POINTER(_DWORD),
+)
+_ReadConsoleInput.restype = _BOOL
+
+
 def reset_console_mode() -> None:
-    _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(_input_mode.value))
-    _SetConsoleMode(_HANDLE(_h_console_output), _DWORD(_output_mode.value))
+    if _valid_handle(_h_console_input):
+        _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(_input_mode.value))
+
+    if _valid_handle(_h_console_output):
+        _SetConsoleMode(_HANDLE(_h_console_output), _DWORD(_output_mode.value))
 
 
 def set_console_mode() -> bool:
-    mode = (
-        _input_mode.value
-        | WindowsConsoleModeFlags.ENABLE_VIRTUAL_TERMINAL_INPUT
-    )
-    _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(mode))
+    if not _valid_handle(_h_console_output):
+        return False
+
+    if _valid_handle(_h_console_input):
+        mode = (
+            _input_mode.value
+            | WindowsConsoleModeFlags.ENABLE_VIRTUAL_TERMINAL_INPUT
+        )
+        _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(mode))
 
     mode = (
         _output_mode.value
@@ -146,7 +183,8 @@ def get_console_mode() -> int:
 
 
 def set_text_color(color) -> None:
-    _kernel32.SetConsoleTextAttribute(_h_console_output, color)
+    if _valid_handle(_h_console_output):
+        _SetConsoleTextAttribute(_HANDLE(_h_console_output), _WORD(color))
 
 
 def print_color(text, color) -> None:
@@ -156,19 +194,36 @@ def print_color(text, color) -> None:
 
 
 def getch():
+    if not _valid_handle(_h_console_input):
+        return None
+
     lp_buffer = (_INPUT_RECORD * 2)()
     n_length = _DWORD(2)
     lp_number_of_events_read = _DWORD()
 
-    _ReadConsoleInput(
+    if not _ReadConsoleInput(
         _HANDLE(_h_console_input),
         lp_buffer,
         n_length,
         ctypes.byref(lp_number_of_events_read),
-    )
-
-    char = lp_buffer[1].Event.KeyEvent.uChar.AsciiChar.decode('ascii')
-    if char == '\x00':
+    ):
         return None
 
-    return char
+    # Only the records that were actually read contain valid data. The
+    # Event field is a union, so the KeyEvent member may only be read
+    # for KEY_EVENT records, and non-ASCII keys must not crash the
+    # decode.
+    for i in range(min(lp_number_of_events_read.value, len(lp_buffer))):
+        record = lp_buffer[i]
+        if record.EventType != _KEY_EVENT:
+            continue
+
+        key_event = record.Event.KeyEvent
+        if not key_event.bKeyDown:
+            continue
+
+        char = key_event.uChar.AsciiChar.decode('ascii', errors='replace')
+        if char != '\x00':
+            return char
+
+    return None

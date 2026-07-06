@@ -1,7 +1,7 @@
 # We keep the ruff configuration separate so it can easily be shared across
 # all projects
 
-target-version = 'py39'
+target-version = 'py310'
 
 #src = ['progressbar']
 exclude = [
@@ -10,6 +10,8 @@ exclude = [
     # Ignore local test files/directories/old-stuff
     'test.py',
     '*_old.py',
+    # Benchmark/tooling scripts are not held to the package lint standard
+    'benchmarks',
 ]
 
 line-length = 79
@@ -111,4 +113,3 @@ max-line-length = 79
 
 [lint.flake8-pytest-style]
 mark-parentheses = true
-

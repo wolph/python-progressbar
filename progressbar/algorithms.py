@@ -27,10 +27,15 @@ class ExponentialMovingAverage(SmoothingAlgorithm):
 
     def __init__(self, alpha: float = 0.5) -> None:
         self.alpha = alpha
-        self.value = 0
+        self.value: float | None = None
 
     def update(self, new_value: float, elapsed: timedelta) -> float:
-        self.value = self.alpha * new_value + (1 - self.alpha) * self.value
+        if self.value is None:
+            # Seed with the first observation instead of biasing towards 0
+            self.value = new_value
+        else:
+            self.value = self.alpha * new_value + (1 - self.alpha) * self.value
+
         return self.value
 
 
@@ -43,10 +48,15 @@ class DoubleExponentialMovingAverage(SmoothingAlgorithm):
 
     def __init__(self, alpha: float = 0.5) -> None:
         self.alpha = alpha
-        self.ema1 = 0
-        self.ema2 = 0
+        self.ema1: float | None = None
+        self.ema2: float | None = None
 
     def update(self, new_value: float, elapsed: timedelta) -> float:
-        self.ema1 = self.alpha * new_value + (1 - self.alpha) * self.ema1
-        self.ema2 = self.alpha * self.ema1 + (1 - self.alpha) * self.ema2
+        if self.ema1 is None or self.ema2 is None:
+            # Seed with the first observation instead of biasing towards 0
+            self.ema1 = self.ema2 = new_value
+        else:
+            self.ema1 = self.alpha * new_value + (1 - self.alpha) * self.ema1
+            self.ema2 = self.alpha * self.ema1 + (1 - self.alpha) * self.ema2
+
         return 2 * self.ema1 - self.ema2
