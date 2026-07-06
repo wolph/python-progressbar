@@ -23,7 +23,11 @@ import typing
 import pytest
 
 import progressbar
-from progressbar import widgets
+import progressbar.widgets
+
+# Alias (not a `from` import) so CodeQL doesn't flag `progressbar` as
+# imported with both `import` and `import from`.
+widgets = progressbar.widgets
 
 
 def _render(

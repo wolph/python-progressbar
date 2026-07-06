@@ -13,7 +13,11 @@ from __future__ import annotations
 import io
 
 import progressbar
-from progressbar import base
+import progressbar.base
+
+# Alias (not a `from` import) so CodeQL doesn't flag `progressbar` as
+# imported with both `import` and `import from`.
+base = progressbar.base
 
 
 def _bar() -> progressbar.ProgressBar:

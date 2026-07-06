@@ -18,6 +18,7 @@ Regenerate after a deliberate, reviewed API addition with:
 
 from __future__ import annotations
 
+import enum
 import importlib
 import inspect
 import json
@@ -78,7 +79,28 @@ def _describe_signature(obj: typing.Any) -> str:
 
 
 def _describe(obj: typing.Any) -> str:
+    # typing constructs (Union aliases, parameterized generics, TypeVars)
+    # change type/callability across Python versions (e.g. typing.Union
+    # aliases became instances of a Union class in 3.14), so they get one
+    # stable descriptor everywhere.
+    if (
+        typing.get_origin(obj) is not None
+        or getattr(type(obj), '__module__', '') == 'typing'
+    ):
+        return 'type-alias'
     if inspect.isclass(obj):
+        if issubclass(obj, enum.Enum):
+            # Enum constructor signatures are metaclass artifacts that vary
+            # across Python versions; the compatibility contract is the
+            # member list.
+            enum_class = typing.cast('type[enum.Enum]', obj)
+            members = ','.join(member.name for member in enum_class)
+            return f'enum({members})'
+        if not getattr(obj, '__module__', '').startswith('progressbar'):
+            # Stdlib/third-party re-exports (TracebackType, timedelta, ...)
+            # picked up by the no-__all__ fallback: their signatures are not
+            # part of this package's contract and vary across versions.
+            return 're-export'
         return f'class{_describe_signature(obj)}'
     if callable(obj):
         return f'callable{_describe_signature(obj)}'
