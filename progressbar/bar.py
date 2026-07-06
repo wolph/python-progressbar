@@ -175,6 +175,13 @@ class ProgressBarMixinBase(abc.ABC):
             except Exception:  # noqa: BLE001, S110
                 pass
 
+        # Cooperatively chain to a superclass finalizer when one exists. This
+        # class's bases (abc.ABC, object) define no __del__, so the call is a
+        # no-op today; the guard keeps finalization cooperative — and avoids
+        # an AttributeError — should a base with __del__ ever be introduced.
+        if hasattr(super(), '__del__'):  # pragma: no cover
+            super().__del__()  # pyright: ignore[reportAttributeAccessIssue]
+
     def __getstate__(self):
         return self.__dict__
 
