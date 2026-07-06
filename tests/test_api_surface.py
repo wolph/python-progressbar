@@ -111,7 +111,7 @@ def _describe(obj: typing.Any) -> str:
     return next(
         cls.__name__
         for cls in type(obj).__mro__
-        if 'freezegun' not in cls.__module__
+        if 'freezegun' not in (getattr(cls, '__module__', '') or '')
     )
 
 
