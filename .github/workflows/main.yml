@@ -55,6 +55,8 @@ jobs:
             tox-env: docs
           - python-version: '3.14'
             tox-env: ruff
+          - python-version: '3.14'
+            tox-env: codespell
 
     steps:
       - uses: actions/checkout@v6
