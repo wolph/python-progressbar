@@ -81,11 +81,10 @@ class OldStyleCounterClone(widgets.FormatWidgetMixin, widgets.WidgetBase):
 
 class OldStyleSamplesWidget(widgets.SamplesMixin):
     def __init__(self, **kwargs: typing.Any):
-        # samples accepts int per the class docstring/doctest; the
-        # timedelta-only annotation is a known typing gap (PR 4).
+        # samples accepts int per the class docstring/doctest.
         widgets.SamplesMixin.__init__(
             self,
-            samples=3,  # pyright: ignore[reportArgumentType]
+            samples=3,
             **kwargs,
         )
 

@@ -163,7 +163,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
         super().__init__(bars or {})
 
-    def __setitem__(self, key: str, bar: bar.ProgressBar):
+    def __setitem__(self, key: str, bar: bar.ProgressBar) -> None:
         """Add a progressbar to the multibar."""
         if bar.label != key or not key:  # pragma: no branch
             bar.label = key
@@ -188,7 +188,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self._finished_at.pop(bar_, None)
         self._labeled.discard(bar_)
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> bar.ProgressBar:
         """Get (and create if needed) a progressbar from the multibar."""
         try:
             return super().__getitem__(key)
@@ -413,17 +413,17 @@ class MultiBar(dict[str, bar.ProgressBar]):
             if not self._thread.is_alive():
                 self._thread = None
 
-    def stop(self, timeout: float | None = None):
+    def stop(self, timeout: float | None = None) -> None:
         self._thread_finished.set()
         self.join(timeout=timeout)
 
-    def get_sorted_bars(self):
+    def get_sorted_bars(self) -> list[bar.ProgressBar]:
         # Materialize the values into a list first so other threads can
         # add or remove bars while we are sorting and rendering
         bars = list(self.values())
         return sorted(bars, key=self.sort_keyfunc, reverse=self.sort_reverse)
 
-    def __enter__(self):
+    def __enter__(self) -> MultiBar:
         self.start()
         return self
 

@@ -20,7 +20,7 @@ from python_utils.time import epoch, format_time, timedelta_to_seconds
 from progressbar import base, env, terminal
 
 if typing.TYPE_CHECKING:
-    from .bar import ProgressBar, ProgressBarMixinBase
+    from .bar import ProgressBarMixinBase
 
 # Make sure these are available for import
 assert timedelta_to_seconds is not None
@@ -134,14 +134,14 @@ class WrappingIO:
     buffer: io.StringIO
     target: base.IO
     capturing: bool
-    listeners: set
+    listeners: set[ProgressBarMixinBase]
     needs_clear: bool = False
 
     def __init__(
         self,
         target: base.IO,
         capturing: bool = False,
-        listeners: set[ProgressBar] | None = None,
+        listeners: set[ProgressBarMixinBase] | None = None,
     ) -> None:
         self.buffer = io.StringIO()
         self.target = target
@@ -260,7 +260,7 @@ class StreamWrapper:
     wrapped_stderr: int = 0
     wrapped_excepthook: int = 0
     capturing: int = 0
-    listeners: set
+    listeners: set[ProgressBarMixinBase]
 
     def __init__(self) -> None:
         self.stdout = self.original_stdout = sys.stdout
@@ -456,13 +456,13 @@ class AttributeDict(dict):
     AttributeError: No such attribute: spam
     """
 
-    def __getattr__(self, name: str) -> int:
+    def __getattr__(self, name: str) -> typing.Any:
         if name in self:
             return self[name]
         else:
             raise AttributeError(f'No such attribute: {name}')
 
-    def __setattr__(self, name: str, value: int) -> None:
+    def __setattr__(self, name: str, value: typing.Any) -> None:
         self[name] = value
 
     def __delattr__(self, name: str) -> None:

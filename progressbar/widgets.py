@@ -32,7 +32,9 @@ FormatString = str | None
 T = typing.TypeVar('T')
 
 
-def string_or_lambda(input_):
+def string_or_lambda(
+    input_: str | collections.abc.Callable[..., str],
+) -> collections.abc.Callable[..., str]:
     if isinstance(input_, str):
 
         def render_input(progress, data, width):
@@ -43,7 +45,9 @@ def string_or_lambda(input_):
         return input_
 
 
-def create_wrapper(wrapper):
+def create_wrapper(
+    wrapper: str | tuple[str | None, str | None] | None,
+) -> str | None:
     """Convert a wrapper tuple or format string to a format string.
 
     >>> create_wrapper('')
@@ -88,8 +92,15 @@ def wrapper(function, wrapper_):
     return wrap
 
 
-def create_marker(marker, wrap=None):
+def create_marker(
+    marker: str | collections.abc.Callable[..., str],
+    wrap: str | tuple[str | None, str | None] | None = None,
+) -> collections.abc.Callable[..., str]:
     def _marker(progress, data, width):
+        # ``marker`` is narrowed to ``str`` by the caller below (``_marker`` is
+        # only wrapped when ``marker`` is a string); cast keeps the type
+        # checker honest without a runtime effect.
+        marker_str = typing.cast(str, marker)
         if (
             progress.max_value is not base.UnknownLength
             and progress.max_value > 0
@@ -106,9 +117,9 @@ def create_marker(marker, wrap=None):
                     * width,
                 ),
             )
-            return marker * length
+            return marker_str * length
         else:
-            return marker
+            return marker_str
 
     if isinstance(marker, str):
         marker = converters.to_unicode(marker)
@@ -471,7 +482,7 @@ class SamplesMixin(TimeSensitiveWidgetBase, metaclass=abc.ABCMeta):
 
     def __init__(
         self,
-        samples=datetime.timedelta(seconds=2),
+        samples: datetime.timedelta | int = datetime.timedelta(seconds=2),
         key_prefix=None,
         **kwargs,
     ):
@@ -558,13 +569,17 @@ class ETA(Timer):
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        value,
-        elapsed,
-    ):
+        value: float | None,
+        elapsed: datetime.timedelta | None,
+    ) -> float:
         """Updates the widget to show the ETA or total time when finished."""
         if elapsed:
-            # The max() prevents zero division errors
-            per_item = elapsed.total_seconds() / max(value, 1e-6)
+            # The max() prevents zero division errors. ``value`` is resolved
+            # to a number by ``_resolve_value_elapsed`` before it reaches
+            # here; the cast documents that without changing runtime behavior.
+            per_item = elapsed.total_seconds() / max(
+                typing.cast(float, value), 1e-6
+            )
             remaining = progress.max_value - data['value']
             return remaining * per_item
         else:
@@ -650,9 +665,9 @@ class AbsoluteETA(ETA):
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        value,
-        elapsed,
-    ):
+        value: float | None,
+        elapsed: datetime.timedelta | None,
+    ) -> datetime.datetime:
         eta_seconds = ETA._calculate_eta(self, progress, data, value, elapsed)
         now = datetime.datetime.now()
         try:
@@ -892,12 +907,12 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
 
     def __init__(
         self,
-        markers='|/-\\',
-        default=None,
-        fill='',
-        marker_wrap=None,
-        fill_wrap=None,
-        **kwargs,
+        markers: str = '|/-\\',
+        default: str | None = None,
+        fill: str = '',
+        marker_wrap: str | tuple[str | None, str | None] | None = None,
+        fill_wrap: str | tuple[str | None, str | None] | None = None,
+        **kwargs: typing.Any,
     ):
         self.markers = markers
         self.marker_wrap = create_wrapper(marker_wrap)
@@ -1140,7 +1155,7 @@ class Bar(AutoWidthWidgetBase):
         progress: ProgressBarMixinBase,
         data: Data,
         width: int = 0,
-        color=True,
+        color: bool = True,
     ):
         """Updates the progress bar and its subcomponents."""
         left, right, width = self._render_borders(progress, data, width)
@@ -1201,7 +1216,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
         progress: ProgressBarMixinBase,
         data: Data,
         width: int = 0,
-        color=True,
+        color: bool = True,
     ):
         """Updates the progress bar and its subcomponents."""
         left, right, width = self._render_borders(progress, data, width)
@@ -1299,7 +1314,7 @@ class MultiRangeBar(Bar, VariableMixin):
         progress: ProgressBarMixinBase,
         data: Data,
         width: int = 0,
-        color=True,
+        color: bool = True,
     ):
         """Updates the progress bar and its subcomponents."""
         left, right, width = self._render_borders(progress, data, width)
@@ -1699,7 +1714,7 @@ class JobStatusBar(Bar, VariableMixin):
         progress: ProgressBarMixinBase,
         data: Data,
         width: int = 0,
-        color=True,
+        color: bool = True,
     ):
         left, right, width = self._render_borders(progress, data, width)
 
