@@ -226,7 +226,9 @@ class WindowsColors(enum.Enum):
             rgb1: tuple[int, int, int],
             rgb2: tuple[int, int, int],
         ):
-            return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
+            return sum(
+                (c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2, strict=False)
+            )
 
         return min(
             WindowsColors,
@@ -449,20 +451,20 @@ class Color(typing.NamedTuple):
 
 
 class Colors:
-    by_name: ClassVar[defaultdict[str, list[Color]]] = (
-        collections.defaultdict(list)
+    by_name: ClassVar[defaultdict[str, list[Color]]] = collections.defaultdict(
+        list
     )
     by_lowername: ClassVar[defaultdict[str, list[Color]]] = (
         collections.defaultdict(list)
     )
-    by_hex: ClassVar[defaultdict[str, list[Color]]] = (
-        collections.defaultdict(list)
+    by_hex: ClassVar[defaultdict[str, list[Color]]] = collections.defaultdict(
+        list
     )
-    by_rgb: ClassVar[defaultdict[RGB, list[Color]]] = (
-        collections.defaultdict(list)
+    by_rgb: ClassVar[defaultdict[RGB, list[Color]]] = collections.defaultdict(
+        list
     )
-    by_hls: ClassVar[defaultdict[HSL, list[Color]]] = (
-        collections.defaultdict(list)
+    by_hls: ClassVar[defaultdict[HSL, list[Color]]] = collections.defaultdict(
+        list
     )
     by_xterm: ClassVar[dict[int, Color]] = dict()
 

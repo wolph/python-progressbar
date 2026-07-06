@@ -1325,7 +1325,7 @@ class MultiRangeBar(Bar, VariableMixin):
             middle = ''
             values_accumulated = 0
             width_accumulated = 0
-            for marker, value in zip(self.markers, values):
+            for marker, value in zip(self.markers, values, strict=False):
                 marker = converters.to_unicode(marker(progress, data, width))
                 if progress.custom_len(marker) != 1:
                     raise ValueError('Markers are required to be 1 char')
