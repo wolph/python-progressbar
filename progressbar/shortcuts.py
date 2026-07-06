@@ -16,7 +16,7 @@ T = typing.TypeVar('T')
 
 
 def progressbar(
-    iterator: collections.abc.Iterator[T],
+    iterator: collections.abc.Iterable[T],
     min_value: bar.NumberT = 0,
     max_value: bar.ValueT = None,
     widgets: collections.abc.Sequence[widgets_module.WidgetBase | str]
