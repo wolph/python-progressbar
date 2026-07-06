@@ -874,9 +874,10 @@ class ProgressBar(
                 - `variables`: Dictionary of user-defined variables for the
                   :py:class:`~progressbar.widgets.Variable`'s.
 
+        This is a pure snapshot of the current state: it performs no timing
+        side effects. The redraw path stamps the update timestamps via
+        :py:meth:`_mark_update` before the widgets read them.
         """
-        self._last_update_time = time.time()
-        self._last_update_timer = timeit.default_timer()
         elapsed = self.last_update_time - self.start_time  # type: ignore
         # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
         # want to support older versions as well
@@ -1165,7 +1166,7 @@ class ProgressBar(
             prev_value = self._last_drawn_value
             prev_timer = self._last_update_timer
             try:
-                self._update_parents(value)  # data() refreshes the timer
+                self._update_parents(value)  # _mark_update refreshes timer
             finally:
                 # `_last_drawn_value` is the value at the last *redraw* (the
                 # pixel reference for `_needs_update`); set in finally so it
@@ -1248,8 +1249,28 @@ class ProgressBar(
                 variables_changed = True
         return variables_changed
 
+    def _mark_update(self) -> None:
+        """Stamp the wall-clock and perf-counter time of the current redraw.
+
+        Called from the draw path (:py:meth:`_update_parents`) before the
+        widgets read ``last_update_time``. ``_last_update_timer`` feeds the
+        poll-interval gate in :py:meth:`_needs_update` and the cadence
+        calibration in :py:meth:`_draw_and_recalibrate`; ``_last_update_time``
+        backs the public ``last_update_time`` property used by
+        elapsed-time/ETA widgets. Kept out of :py:meth:`data` so that method is
+        a pure snapshot with no timing side effects.
+        """
+        self._last_update_time = time.time()
+        self._last_update_timer = timeit.default_timer()
+
     def _update_parents(self, value: ValueT):
         self.updates += 1
+        # Stamp the redraw timestamps before formatting widgets so that
+        # `data()`/`last_update_time` reflect this redraw and the gate
+        # calibration in `_draw_and_recalibrate` measures the interval up to
+        # this draw (it snapshots `_last_update_timer` before this call and
+        # reads it again afterwards).
+        self._mark_update()
         # Cooperative dispatch through the MRO
         # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase). The
         # `value` is passed by keyword so the intermediate `*args, **kwargs`
