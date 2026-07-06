@@ -11,7 +11,10 @@ import ast
 import pathlib
 
 import progressbar
-from progressbar import _NAME_TO_MODULE
+
+# Alias (not a `from` import) so CodeQL doesn't flag `progressbar` as imported
+# with both `import` and `import from`.
+_NAME_TO_MODULE = progressbar._NAME_TO_MODULE
 
 #: Dunders that are eagerly imported (not part of ``_NAME_TO_MODULE``) but are
 #: still part of the public ``__all__``.
