@@ -45,9 +45,12 @@ class ColorSupport(enum.IntEnum):
         """Get the color support from the environment.
 
         If any of the environment variables contain `24bit` or `truecolor`,
-        we will enable true color/24 bit support. If they contain `256`, we
-        will enable 256 color/8 bit support. If they contain `xterm`, we will
-        enable 16 color support. Otherwise, we will assume no color support.
+        we will enable true color/24 bit support. A `TERM` that is itself a
+        truecolor terminal (see `TRUECOLOR_TERMS`) also enables 24 bit
+        support. If they contain `256`, we will enable 256 color/8 bit
+        support. If they match a known ANSI terminal (see `ANSI_TERM_RE`,
+        e.g. `xterm-color`, `screen`, `tmux`, `konsole`, `rxvt`, `linux`), we
+        will enable 16 color support. Otherwise, we assume no color support.
 
         If `JUPYTER_COLUMNS` or `JUPYTER_LINES` or `JPY_PARENT_PID` is set, we
         will assume true color support.
@@ -115,9 +118,15 @@ class ColorSupport(enum.IntEnum):
                 # Truecolor support, we don't need to check anything else.
                 support = cls.XTERM_TRUECOLOR
                 break
+            elif value in TRUECOLOR_TERMS:
+                # A TERM name that itself guarantees a 24-bit terminal.
+                support = max(cls.XTERM_TRUECOLOR, support)
             elif '256' in value:
                 support = max(cls.XTERM_256, support)
-            elif value == 'xterm':
+            elif ANSI_TERM_RE.match(value):
+                # Any recognized ANSI terminal (xterm-color, screen, tmux,
+                # konsole, rxvt, linux, ...) advertises at least 16 colors,
+                # matching is_ansi_terminal()'s use of the same pattern.
                 support = max(cls.XTERM, support)
             elif env_flag(variable, default=False):
                 return cls.XTERM_TRUECOLOR
@@ -200,7 +209,6 @@ JUPYTER = bool(
     or os.environ.get('JUPYTER_LINES')
     or os.environ.get('JPY_PARENT_PID')
 )
-COLOR_SUPPORT = ColorSupport.from_env()
 ANSI_TERMS = (
     '([xe]|bv)term',
     '(sco)?ansi',
@@ -215,3 +223,12 @@ ANSI_TERMS = (
 ANSI_TERM_RE: re.Pattern[str] = re.compile(
     f'^({"|".join(ANSI_TERMS)})', re.IGNORECASE
 )
+
+#: TERM values that on their own guarantee a truecolor-capable terminal, so
+#: 24-bit color still engages when ``COLORTERM`` is stripped (e.g. over ssh
+#: or sudo). Limited to names that *are* the terminal; generic values such as
+#: ``xterm-256color`` are used by plenty of 256-only emulators.
+TRUECOLOR_TERMS: frozenset[str] = frozenset({'xterm-kitty', 'xterm-ghostty'})
+
+# Defined after ANSI_TERM_RE / TRUECOLOR_TERMS because from_env() reads them.
+COLOR_SUPPORT = ColorSupport.from_env()

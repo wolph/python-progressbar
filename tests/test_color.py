@@ -97,6 +97,42 @@ def test_color_support_from_env(monkeypatch, variable, value) -> None:
 
 
 @pytest.mark.parametrize(
+    ('term', 'expected'),
+    [
+        # Bare ``xterm`` and any ``xterm-*`` variant advertise (at least) 16
+        # color support, matching the documented "if they contain ``xterm``"
+        # behaviour and ``is_ansi_terminal``'s ``^xterm`` prefix match.
+        ('xterm', env.ColorSupport.XTERM),
+        ('xterm-color', env.ColorSupport.XTERM),
+        ('xterm-16color', env.ColorSupport.XTERM),
+        # Every other ANSI_TERM_RE terminal is 16-color too, not NONE.
+        ('screen', env.ColorSupport.XTERM),
+        ('tmux', env.ColorSupport.XTERM),
+        ('konsole', env.ColorSupport.XTERM),
+        ('rxvt-unicode', env.ColorSupport.XTERM),
+        ('linux', env.ColorSupport.XTERM),
+        # A ``256`` anywhere in the value still wins over plain xterm.
+        ('xterm-256color', env.ColorSupport.XTERM_256),
+        ('screen-256color', env.ColorSupport.XTERM_256),
+        # TERM names that are themselves truecolor terminals engage 24-bit
+        # color even when COLORTERM is stripped (ssh, sudo).
+        ('xterm-kitty', env.ColorSupport.XTERM_TRUECOLOR),
+        ('xterm-ghostty', env.ColorSupport.XTERM_TRUECOLOR),
+        # Unknown terminals still mean no detected support.
+        ('dumb', env.ColorSupport.NONE),
+    ],
+)
+def test_color_support_from_env_term(monkeypatch, term, expected) -> None:
+    if os.name == 'nt':
+        # Windows has special handling so we need to disable that to make the
+        # tests work properly
+        monkeypatch.setattr(os, 'name', 'posix')
+
+    monkeypatch.setenv('TERM', term)
+    assert env.ColorSupport.from_env() == expected
+
+
+@pytest.mark.parametrize(
     'variable',
     [
         'JUPYTER_COLUMNS',
