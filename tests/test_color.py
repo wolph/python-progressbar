@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from typing import ClassVar
 
 import pytest
 
@@ -133,7 +132,7 @@ def test_enable_colors_flags() -> None:
 
 
 class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
-    _fixed_colors: ClassVar[widgets.TFixedColors] = widgets.TFixedColors(
+    _fixed_colors: widgets.TFixedColors = widgets.TFixedColors(
         fg_none=progressbar.widgets.colors.yellow,
         bg_none=None,
     )
@@ -143,11 +142,9 @@ class _TestFixedColorSupport(progressbar.widgets.WidgetBase):
 
 
 class _TestFixedGradientSupport(progressbar.widgets.WidgetBase):
-    _gradient_colors: ClassVar[widgets.TGradientColors] = (
-        widgets.TGradientColors(
-            fg=progressbar.widgets.colors.gradient,
-            bg=None,
-        )
+    _gradient_colors: widgets.TGradientColors = widgets.TGradientColors(
+        fg=progressbar.widgets.colors.gradient,
+        bg=None,
     )
 
     def __call__(self, *args, **kwargs) -> None:
@@ -274,6 +271,26 @@ def test_color() -> None:
 )
 def test_rgb_to_hls(rgb, hls) -> None:
     assert terminal.HSL.from_rgb(rgb) == hls
+
+
+@pytest.mark.parametrize(
+    'rgb, expected',
+    [
+        (terminal.RGB(255, 0, 0), 1),
+        (terminal.RGB(128, 0, 0), 1),
+        (terminal.RGB(0, 128, 0), 2),
+        (terminal.RGB(0, 0, 128), 4),
+        (terminal.RGB(128, 128, 0), 3),
+        (terminal.RGB(0, 0, 0), 0),
+        (terminal.RGB(255, 255, 255), 7),
+        (terminal.RGB(127, 127, 127), 0),
+    ],
+)
+def test_rgb_to_ansi_16(rgb, expected) -> None:
+    # Regression: ``int(c / 255)`` is 1 only when a channel is exactly 255, so
+    # every mid-intensity colour (e.g. maroon 128,0,0) collapsed to black. A
+    # per-channel threshold at 128 maps each channel to its own bit.
+    assert rgb.to_ansi_16 == expected
 
 
 @pytest.mark.parametrize(
@@ -408,6 +425,39 @@ def test_ansi_color(monkeypatch) -> None:
         assert color.ansi is not None or color_support == env.ColorSupport.NONE
 
 
+def test_color_ansi_respects_support_level(monkeypatch) -> None:
+    # A registered colour with an xterm index and a non-black RGB.
+    color = terminal.Color(
+        terminal.RGB(128, 0, 0),
+        terminal.HSL(0, 100, 25),
+        'maroon-test',
+        52,
+    )
+
+    # 256-colour terminal: the registered xterm index is used verbatim.
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_256)
+    assert color.ansi == '5;52'
+
+    # 16-colour terminal: the 256-colour xterm index must NOT leak through;
+    # derive a 16-colour code from the RGB via to_ansi_16 instead.
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM)
+    assert color.ansi == f'5;{color.rgb.to_ansi_16}'
+    assert color.ansi != '5;52'
+
+
+def test_color_ansi_black_xterm_zero(monkeypatch) -> None:
+    # Regression: ``if self.xterm:`` is falsy for index 0 (Black), so Black
+    # fell through to the RGB fallback instead of using its xterm index.
+    black = terminal.Color(
+        terminal.RGB(0, 0, 0),
+        terminal.HSL(0, 0, 0),
+        'black-test',
+        0,
+    )
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_256)
+    assert black.ansi == '5;0'
+
+
 def test_sgr_call() -> None:
     assert progressbar.terminal.encircled('test') == '\x1b[52mtest\x1b[54m'
 
@@ -430,3 +480,69 @@ def test_color_support_force_color_flag(monkeypatch, value) -> None:
 
     monkeypatch.setenv('FORCE_COLOR', value)
     assert env.ColorSupport.from_env() == env.ColorSupport.XTERM_TRUECOLOR
+
+
+class _PerInstanceColorWidget(progressbar.widgets.WidgetBase):
+    def __call__(self, *args, **kwargs) -> None:  # pragma: no cover
+        pass
+
+
+def test_fixed_colors_override_is_per_instance() -> None:
+    # Regression: F1 - passing ``fixed_colors`` to one instance mutated the
+    # shared class-level dict, rewriting colors for every other instance and
+    # subclass. The override must be copy-on-write.
+    class_default = dict(_PerInstanceColorWidget._fixed_colors)
+    override = widgets.TFixedColors(fg_none=colors.yellow, bg_none=None)
+
+    a = _PerInstanceColorWidget(fixed_colors=override)
+    b = _PerInstanceColorWidget()
+
+    assert _PerInstanceColorWidget._fixed_colors == class_default
+    assert a._fixed_colors['fg_none'] == colors.yellow
+    assert b._fixed_colors == class_default
+    assert a._fixed_colors is not override
+
+
+def test_gradient_colors_override_is_per_instance() -> None:
+    # Regression: F1 - same copy-on-write requirement for ``gradient_colors``.
+    class_default = dict(_PerInstanceColorWidget._gradient_colors)
+    override = widgets.TGradientColors(fg=colors.gradient, bg=None)
+
+    a = _PerInstanceColorWidget(gradient_colors=override)
+    b = _PerInstanceColorWidget()
+
+    assert _PerInstanceColorWidget._gradient_colors == class_default
+    assert a._gradient_colors['fg'] == colors.gradient
+    assert b._gradient_colors == class_default
+    assert a._gradient_colors is not override
+
+
+def test_sgr_color_without_ansi_leaves_text_unstyled(monkeypatch) -> None:
+    # Regression: when Color.ansi is None (no registered xterm index and no
+    # support level to derive a code from), SGRColor rendered a malformed
+    # '\x1b[38;Nonem' escape whose tail leaked into visible output as
+    # 'onem'. Without a usable color representation the text must pass
+    # through completely unstyled.
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.NONE)
+    unregistered = terminal.Color(
+        terminal.RGB(1, 2, 3),
+        terminal.HSL(0, 0, 1),
+        None,
+        None,
+    )
+    assert unregistered.ansi is None
+    assert unregistered.fg('X') == 'X'
+    assert unregistered.bg('X') == 'X'
+    assert unregistered.underline('X') == 'X'
+
+
+def test_registered_color_renders_when_forced_without_support(
+    monkeypatch,
+) -> None:
+    # Callers can force colors (enable_colors=True) on terminals whose
+    # support detection reports NONE; a registered color must still render
+    # its xterm index there instead of silently dropping the styling.
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.NONE)
+    green = colors.green
+    assert green.ansi == '5;2'
+    assert green.fg('X') == '\x1b[38;5;2mX\x1b[39m'

@@ -167,28 +167,48 @@ def test_multibar_print() -> None:
     bars = 5
     n = 10
 
-    def print_sometimes(bar, probability):
+    def print_sometimes(bar, probability, seed):
+        # A per-thread seeded RNG keeps the interleaving jittery but fully
+        # reproducible: a thread only ever touches its own RNG, so thread
+        # scheduling cannot reorder its draws. Combined with the never/always
+        # threads below this makes the print-guard branch coverage
+        # deterministic instead of flakily depending on the global RNG.
+        rng = random.Random(seed)
         for i in bar(range(n)):
-            # Sleep up to 0.1 seconds
-            time.sleep(random.random() * 0.1)
+            # Sleep a small, deterministic fraction of a second
+            time.sleep(rng.random() * 0.01)
 
             # print messages at random intervals to show how extra output works
-            if random.random() < probability:
+            if rng.random() < probability:
                 bar.print('random message for bar', bar, i)
 
     with progressbar.MultiBar() as multibar:
+        seed = 0
+        threads: list[threading.Thread] = []
         for i in range(bars):
             # Get a progressbar
             bar = multibar[f'Thread label here {i}']
             bar.max_error = False
-            # Create a thread and pass the progressbar
-            # Print never, sometimes and always
-            threading.Thread(target=print_sometimes, args=(bar, 0)).start()
-            threading.Thread(target=print_sometimes, args=(bar, 0.5)).start()
-            threading.Thread(target=print_sometimes, args=(bar, 1)).start()
+            # Create a thread and pass the progressbar. Print never (0.0),
+            # sometimes (0.5) and always (1.0): the 0.0 and 1.0 threads
+            # deterministically exercise both sides of the print guard on
+            # every run, independent of the seeded middle thread.
+            for probability in (0.0, 0.5, 1.0):
+                thread = threading.Thread(
+                    target=print_sometimes, args=(bar, probability, seed)
+                )
+                thread.start()
+                threads.append(thread)
+                seed += 1
 
         for i in range(5):
             multibar.print(f'{i}', flush=False)
+
+        # Join the workers before leaving the context so none outlives the
+        # multibar (a stray thread writing to a torn-down fd raised
+        # "I/O operation on closed file") and every print branch has run.
+        for thread in threads:
+            thread.join()
 
         # Note: MultiBar inherits from dict, so update() would be
         # dict.update and insert bogus entries; render() is intended here
@@ -255,6 +275,37 @@ def test_multibar_threads() -> None:
     multibar.join()
     multibar.join()
     multibar.render(force=True)
+
+
+def test_multibar_join_timeout_abandons_unfinished_bar() -> None:
+    # A never-finishing bar must not hang a clean context-manager exit when
+    # join_timeout is set; the unfinished bar is abandoned once it elapses.
+    multibar = progressbar.MultiBar(fd=io.StringIO(), join_timeout=0.1)
+    bar = progressbar.ProgressBar(max_value=10)
+    multibar['stuck'] = bar
+    # Fully start the bar before the render thread exists: started() flips
+    # true before the widgets are populated, so a render tick during a
+    # concurrent bar.start() can crash the render thread on the
+    # empty-widgets assert -- join() then succeeds on a dead thread and the
+    # timeout path this test exists to exercise is never taken.
+    bar.start()
+    bar.update(5)  # never reaches max_value / finish()
+
+    def exit_context() -> None:
+        with multibar:
+            pass
+
+    thread = threading.Thread(target=exit_context, daemon=True)
+    thread.start()
+    thread.join(timeout=5)
+    exited = not thread.is_alive()
+
+    # join_timeout leaves the render thread (a daemon) running so the
+    # program can exit; stop it explicitly so it cannot leak into and
+    # pollute later tests in the same process.
+    multibar.stop()
+
+    assert exited, 'clean context exit blocked despite join_timeout'
 
 
 def test_multibar_instances_do_not_share_thread_state() -> None:

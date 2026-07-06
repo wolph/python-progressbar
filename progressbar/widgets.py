@@ -60,7 +60,8 @@ def create_wrapper(wrapper):
         return None
 
     if isinstance(wrapper, str):
-        assert '{}' in wrapper, 'Expected string with {} for formatting'
+        if '{}' not in wrapper:
+            raise ValueError('Expected string with {} for formatting')
     else:
         raise RuntimeError(  # noqa: TRY004
             'Pass either a begin/end string as a tuple or a template string '
@@ -110,9 +111,8 @@ def create_marker(marker, wrap=None):
 
     if isinstance(marker, str):
         marker = converters.to_unicode(marker)
-        # Ruff is silly at times... the format is not compatible with the check
-        marker_length_error = 'Markers are required to be 1 char'
-        assert utils.len_color(marker) == 1, marker_length_error
+        if utils.len_color(marker) != 1:
+            raise ValueError('Markers are required to be 1 char')
         return wrapper(_marker, wrap)
     else:
         return wrapper(marker, wrap)
@@ -258,11 +258,14 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
         progress - a reference to the calling ProgressBar
         """
 
-    _fixed_colors: ClassVar[TFixedColors] = TFixedColors(
+    # Class-level defaults; instances may hold their own copy when a
+    # ``fixed_colors``/``gradient_colors`` override is passed (copy-on-write in
+    # ``__init__``), so these are not ``ClassVar``.
+    _fixed_colors: TFixedColors = TFixedColors(
         fg_none=None,
         bg_none=None,
     )
-    _gradient_colors: ClassVar[TGradientColors] = TGradientColors(
+    _gradient_colors: TGradientColors = TGradientColors(
         fg=None,
         bg=None,
     )
@@ -297,11 +300,18 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
         gradient_colors=None,
         **kwargs,
     ):
+        # Copy-on-write: merge overrides into a fresh per-instance dict so we
+        # never mutate the shared class-level mapping (which is inherited by
+        # every other instance and subclass).
         if fixed_colors is not None:
-            self._fixed_colors.update(fixed_colors)
+            merged_fixed = type(self)._fixed_colors.copy()
+            merged_fixed.update(fixed_colors)
+            self._fixed_colors = merged_fixed
 
         if gradient_colors is not None:
-            self._gradient_colors.update(gradient_colors)
+            merged_gradient = type(self)._gradient_colors.copy()
+            merged_gradient.update(gradient_colors)
+            self._gradient_colors = merged_gradient
 
         if self.uses_colors:
             self._len = utils.len_color
@@ -913,11 +923,12 @@ class Counter(FormatWidgetMixin, WidgetBase):
 
 
 class ColoredMixin:
-    _fixed_colors: ClassVar[TFixedColors] = TFixedColors(
+    # See ``WidgetBase``: class-level defaults, overridable per instance.
+    _fixed_colors: TFixedColors = TFixedColors(
         fg_none=colors.yellow,
         bg_none=None,
     )
-    _gradient_colors: ClassVar[TGradientColors] = TGradientColors(
+    _gradient_colors: TGradientColors = TGradientColors(
         fg=colors.gradient,
         bg=None,
     )
@@ -1174,11 +1185,16 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
         **kwargs,
     ):
         self.format = format
-        self.mapping = mapping or self.mapping
+        # Always build a fresh per-instance dict so update_mapping() never
+        # mutates the shared class-level default (which every other
+        # default-constructed instance would otherwise alias). Fall back to
+        # the class-level `mapping` so subclasses that declare defaults keep
+        # them when no mapping is passed.
+        self.mapping = dict(self.mapping if mapping is None else mapping)
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, **kwargs)
 
-    def update_mapping(self, **mapping: types.Dict[str, types.Any]):
+    def update_mapping(self, **mapping: types.Any):
         self.mapping.update(mapping)
 
     def __call__(
@@ -1245,7 +1261,8 @@ class MultiRangeBar(Bar, VariableMixin):
             width_accumulated = 0
             for marker, value in zip(self.markers, values):
                 marker = converters.to_unicode(marker(progress, data, width))
-                assert progress.custom_len(marker) == 1
+                if progress.custom_len(marker) != 1:
+                    raise ValueError('Markers are required to be 1 char')
 
                 values_accumulated += value
                 item_width = int(values_accumulated / values_sum * width)
@@ -1254,7 +1271,10 @@ class MultiRangeBar(Bar, VariableMixin):
                 middle += item_width * marker
         else:
             fill = converters.to_unicode(self.fill(progress, data, width))
-            assert progress.custom_len(fill) == 1
+            if progress.custom_len(fill) != 1:
+                raise ValueError(
+                    f'Fill is required to be 1 char, got {fill!r}'
+                )
             middle = fill * width
 
         return left + middle + right
@@ -1566,6 +1586,13 @@ class JobStatusBar(Bar, VariableMixin):
     failure_bg_color: terminal.Color | None = None
     failure_marker: str = 'X'
     job_markers: list[str]
+    """Retained for backwards compatibility only.
+
+    Per-run marker state now lives in ``progress.extra`` (see
+    :py:meth:`get_job_markers`) so a single widget shared by multiple bars no
+    longer interleaves their markers. This attribute is no longer read or
+    updated during rendering.
+    """
 
     def __init__(
         self,
@@ -1584,7 +1611,13 @@ class JobStatusBar(Bar, VariableMixin):
     ):
         VariableMixin.__init__(self, name)
         self.name = name
+        # Retained for backward compatibility only; render state now lives in
+        # ``progress.extra`` (see get_job_markers) so a single widget reused by
+        # multiple bars no longer interleaves their markers.
         self.job_markers = []
+        # Unique per-widget key so multiple JobStatusBars on the same bar do
+        # not share storage either.
+        self._markers_key = f'{type(self).__name__}_{id(self)}_job_markers'
         self.left = string_or_lambda(left)
         self.right = string_or_lambda(right)
         self.fill = string_or_lambda(fill)
@@ -1603,6 +1636,11 @@ class JobStatusBar(Bar, VariableMixin):
             fill_left=fill_left,
             **kwargs,
         )
+
+    def get_job_markers(self, progress: ProgressBarMixinBase) -> list[str]:
+        # Per-bar marker history, following SamplesMixin's ``progress.extra``
+        # pattern so the widget itself stays stateless and reusable.
+        return progress.extra.setdefault(self._markers_key, [])
 
     def __call__(
         self,
@@ -1636,16 +1674,17 @@ class JobStatusBar(Bar, VariableMixin):
             if bg_color:  # pragma: no cover
                 marker = bg_color.bg(marker)
 
-            self.job_markers.append(marker)
+            job_markers = self.get_job_markers(progress)
+            job_markers.append(marker)
             # Drop the oldest markers when they no longer fit the
             # available width
             while (
-                len(self.job_markers) > 1
-                and progress.custom_len(''.join(self.job_markers)) > width
+                len(job_markers) > 1
+                and progress.custom_len(''.join(job_markers)) > width
             ):
-                self.job_markers.pop(0)
+                job_markers.pop(0)
 
-            marker = ''.join(self.job_markers)
+            marker = ''.join(job_markers)
             width -= progress.custom_len(marker)
 
             fill = converters.to_unicode(self.fill(progress, data, width))

@@ -12,6 +12,11 @@ from . import (
 #: present it replaces the pure-Python formatter below. Wired in a later task.
 _format_fast_line: typing.Callable[[FastProgressBar], str] | None = None
 
+#: Spinner frames cycled for unknown-length bars: bar, forward slash, dash,
+#: back slash. A plain (non-raw) literal so the escape is a single ``\`` and
+#: the string is exactly four characters.
+_SPINNER_FRAMES: str = '|/-\\'
+
 
 def _format_seconds(seconds: float) -> str:
     """Render elapsed/ETA seconds as H:MM:SS, matching the Timer widget."""
@@ -50,7 +55,7 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
         return f'{prefix}{left}{barstr}{right}{suffix}'
 
     # Unknown length: spinner + count + elapsed (no bar/eta).
-    spinner = r'|/-\\'[int(elapsed * 4) % 4]
+    spinner = _SPINNER_FRAMES[int(elapsed * 4) % len(_SPINNER_FRAMES)]
     item_count = value - min_value + 1
     return (
         f'{prefix}{spinner} {item_count} Elapsed Time: {elapsed_text}{suffix}'

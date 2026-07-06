@@ -30,6 +30,14 @@ assert epoch is not None
 
 StringT = types.TypeVar('StringT', bound=types.StringTypes)
 
+# Precompiled ANSI CSI escape-sequence patterns (str and bytes). Compiled once
+# at import instead of per no_color() call, which runs for every widget on
+# every redraw.
+_ANSI_COLOR_RE: re.Pattern[str] = re.compile('\x1b\\[.*?[@-~]')
+_ANSI_COLOR_RE_BYTES: re.Pattern[bytes] = re.compile(
+    bytes(terminal.ESC, 'ascii') + b'\\[.*?[@-~]',
+)
+
 
 def deltas_to_seconds(
     *deltas: None | datetime.timedelta | float,
@@ -98,12 +106,11 @@ def no_color(value: StringT) -> StringT:
         # per-redraw render cost (len_color is called for every widget).
         if b'\x1b' not in value:
             return value  # type: ignore
-        pattern: bytes = bytes(terminal.ESC, 'ascii') + b'\\[.*?[@-~]'
-        return re.sub(pattern, b'', value)  # type: ignore
+        return _ANSI_COLOR_RE_BYTES.sub(b'', value)  # type: ignore
     elif isinstance(value, str):
         if '\x1b' not in value:
             return value  # type: ignore
-        return re.sub('\x1b\\[.*?[@-~]', '', value)  # type: ignore
+        return _ANSI_COLOR_RE.sub('', value)  # type: ignore
     else:
         raise TypeError(f'`value` must be a string or bytes, got {value!r}')
 

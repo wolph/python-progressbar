@@ -593,6 +593,17 @@ def test_no_color_fast_path_and_ansi():
     assert utils.len_color('\x1b[1mbold\x1b[0m') == 4
 
 
+def test_no_color_patterns_are_precompiled():
+    # F5: the str and bytes ANSI patterns are compiled once at module import,
+    # not rebuilt on every no_color() call (which runs per widget per redraw).
+    utils = progressbar.utils
+    assert isinstance(utils._ANSI_COLOR_RE, re.Pattern)
+    assert isinstance(utils._ANSI_COLOR_RE_BYTES, re.Pattern)
+    # Both variants must still strip ANSI correctly.
+    assert utils.no_color('\x1b[32mgreen\x1b[0m') == 'green'
+    assert utils.no_color(b'\x1b[32mgreen\x1b[0m') == b'green'
+
+
 def test_render_output_stable(monkeypatch):
     # Guard the default-widget render path against the render-cost
     # optimization changing appearance: the final repaint must reach 100%.

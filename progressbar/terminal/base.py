@@ -280,10 +280,12 @@ class RGB(typing.NamedTuple):
 
     @property
     def to_ansi_16(self) -> int:
-        # Using int instead of round because it maps slightly better
-        red = int(self.red / 255)
-        green = int(self.green / 255)
-        blue = int(self.blue / 255)
+        # Threshold each channel at half intensity so a mid-range channel
+        # sets its bit. ``int(c / 255)`` was only ever 1 at exactly 255, which
+        # collapsed almost every colour (e.g. maroon 128,0,0) to black.
+        red = int(self.red >= 128)
+        green = int(self.green >= 128)
+        blue = int(self.blue >= 128)
         return (blue << 2) | (green << 1) | red
 
     @property
@@ -405,14 +407,20 @@ class Color(typing.NamedTuple):
         ):  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
-        if self.xterm:  # pragma: no branch
+        # A true 16-colour terminal must not be handed a 256-colour index,
+        # so translate through to_ansi_16 there. Everywhere else prefer the
+        # registered xterm index (``is not None`` so index 0/Black counts):
+        # rendering an SGR at all means the caller decided colours are
+        # wanted (e.g. forced via ``enable_colors``), even when the global
+        # detection reported no support.
+        if env.COLOR_SUPPORT is env.ColorSupport.XTERM:
+            color = self.rgb.to_ansi_16
+        elif self.xterm is not None:
             color = self.xterm
         elif (
             env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
         ):  # pragma: no branch
             color = self.rgb.to_ansi_256
-        elif env.COLOR_SUPPORT is env.ColorSupport.XTERM:  # pragma: no branch
-            color = self.rgb.to_ansi_16
         else:  # pragma: no branch
             return None
 
@@ -629,6 +637,18 @@ class SGRColor(SGR):
     def __init__(self, color: Color, start_code: int, end_code: int) -> None:
         self._color = color
         super().__init__(start_code, end_code)
+
+    def __call__(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        text: str,
+        *args: typing.Any,
+    ) -> str:
+        if self._color.ansi is None:
+            # No usable color representation for this terminal (e.g. color
+            # support is NONE): leave the text unstyled instead of emitting
+            # a malformed escape code containing the literal string 'None'.
+            return text
+        return super().__call__(text, *args)
 
     @property
     def _start_template(self):
