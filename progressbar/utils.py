@@ -30,6 +30,7 @@ assert scale_1024 is not None
 assert epoch is not None
 
 StringT = typing.TypeVar('StringT', bound=types.StringTypes)
+T = typing.TypeVar('T')
 
 # Precompiled ANSI CSI escape-sequence patterns (str and bytes). Compiled once
 # at import instead of per no_color() call, which runs for every widget on
@@ -40,10 +41,24 @@ _ANSI_COLOR_RE_BYTES: re.Pattern[bytes] = re.compile(
 )
 
 
+@typing.overload
 def deltas_to_seconds(
     *deltas: None | datetime.timedelta | float,
-    default: types.Optional[types.Type[ValueError]] = ValueError,
-) -> int | float | None:
+    default: type[ValueError] = ...,
+) -> float: ...
+
+
+@typing.overload
+def deltas_to_seconds(
+    *deltas: None | datetime.timedelta | float,
+    default: T,
+) -> float | T: ...
+
+
+def deltas_to_seconds(
+    *deltas: None | datetime.timedelta | float,
+    default: typing.Any = ValueError,
+) -> typing.Any:
     """
     Convert timedeltas and seconds as int to seconds as float while coalescing.
 
@@ -81,8 +96,7 @@ def deltas_to_seconds(
     if default is ValueError:
         raise ValueError('No valid deltas passed to `deltas_to_seconds`')
     else:
-        # mypy doesn't understand the `default is ValueError` check
-        return default  # type: ignore
+        return default
 
 
 def no_color(value: StringT) -> StringT:
