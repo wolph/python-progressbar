@@ -19,8 +19,8 @@ from .. import (
 )
 
 # Re-exported for backwards compatibility (previously consumed by the removed
-# ``_CPR`` cursor-position helper). The redundant alias marks it as a public
-# re-export so it is not stripped as an unused import.
+# ``_CPR`` cursor-position helper; guarded by the API snapshot). The redundant
+# alias marks the re-export as intentional so it is not stripped as unused.
 from .os_specific import getch as getch
 
 ESC = '\x1b'
