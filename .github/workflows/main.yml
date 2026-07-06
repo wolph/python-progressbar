@@ -2,8 +2,16 @@ name: tox
 
 on:
   push:
+    branches: [develop]
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   perf-budget:
@@ -54,9 +62,9 @@ jobs:
           - python-version: '3.14'
             tox-env: docs
           - python-version: '3.14'
-            tox-env: black
-          - python-version: '3.14'
             tox-env: ruff
+          - python-version: '3.14'
+            tox-env: codespell
 
     steps:
       - uses: actions/checkout@v6
@@ -74,3 +82,27 @@ jobs:
         # showing the failing step in the logs
         continue-on-error: ${{ matrix.experimental || false }}
         run: tox -e ${{ matrix.tox-env }}
+
+  windows:
+    name: tox (windows / py312)
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      # Force UTF-8 I/O so unicode-marker tests (e.g. test_unicode) don't
+      # hit UnicodeEncodeError against the legacy Windows code page under
+      # pytest's fd-level capture.
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip tox
+      - name: Test with tox
+        # The 100% coverage gate cannot be met on Windows: POSIX-only
+        # branches never execute there, so run without the coverage gate
+        # (`--no-cov` posarg). Linux jobs still enforce full coverage.
+        run: tox -e py312 -- --no-cov

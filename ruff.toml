@@ -113,4 +113,3 @@ max-line-length = 79
 
 [lint.flake8-pytest-style]
 mark-parentheses = true
-

@@ -456,8 +456,6 @@
     "annotations": "_Feature"
   },
   "progressbar.utils": {
-    "@py_assert1": "NoneType",
-    "@py_assert2": "NoneType",
     "AttributeDict": "classsignature-unavailable",
     "Iterable": "re-export",
     "Iterator": "re-export",
