@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import collections.abc
 import contextlib
 import datetime
 import functools
@@ -11,12 +12,12 @@ import typing
 # `types` module
 from typing import ClassVar
 
-from python_utils import containers, converters, types
+from python_utils import containers, converters
 
 from . import algorithms, base, terminal, utils
 from .terminal import colors
 
-if types.TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     from .bar import NumberT, ProgressBarMixinBase
 
 logger = logging.getLogger(__name__)
@@ -25,8 +26,8 @@ MAX_DATE = datetime.date.max
 MAX_TIME = datetime.time.max
 MAX_DATETIME = datetime.datetime.max
 
-Data = types.Dict[str, types.Any]
-FormatString = typing.Optional[str]
+Data = dict[str, typing.Any]
+FormatString = str | None
 
 T = typing.TypeVar('T')
 
@@ -147,7 +148,7 @@ class FormatWidgetMixin:
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        format: types.Optional[str] = None,
+        format: str | None = None,
     ) -> str:
         return format or self.format
 
@@ -155,7 +156,7 @@ class FormatWidgetMixin:
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        format: types.Optional[str] = None,
+        format: str | None = None,
     ) -> str:
         """Formats the widget into a string."""
         format_ = self.get_format(progress, data, format)
@@ -228,13 +229,13 @@ class WidthWidgetMixin(_WidgetKwargsSink):
 
 
 class TGradientColors(typing.TypedDict):
-    fg: types.Optional[terminal.OptionalColor | None]
-    bg: types.Optional[terminal.OptionalColor | None]
+    fg: terminal.OptionalColor | None
+    bg: terminal.OptionalColor | None
 
 
 class TFixedColors(typing.TypedDict):
-    fg_none: types.Optional[terminal.Color | None]
-    bg_none: types.Optional[terminal.Color | None]
+    fg_none: terminal.Color | None
+    bg_none: terminal.Color | None
 
 
 class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
@@ -289,7 +290,7 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
     # _fixed_colors: ClassVar[dict[str, terminal.Color | None]] = dict()
     # _gradient_colors: ClassVar[dict[str, terminal.OptionalColor | None]] = (
     #     dict())
-    _len: typing.Callable[[str | bytes], int] = len
+    _len: collections.abc.Callable[[str | bytes], int] = len
 
     @functools.cached_property
     def uses_colors(self):
@@ -386,7 +387,7 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
 
     """
 
-    mapping: ClassVar[types.Dict[str, types.Tuple[str, types.Any]]] = dict(
+    mapping: ClassVar[dict[str, tuple[str, typing.Any]]] = dict(
         finished=('end_time', None),
         last_update=('last_update_time', None),
         max=('max_value', None),
@@ -403,7 +404,7 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        format: types.Optional[str] = None,
+        format: str | None = None,
     ):
         for name, (key, transform) in self.mapping.items():
             # Avoid a per-entry contextlib.suppress on the redraw hot path: a
@@ -780,7 +781,7 @@ class DataSize(FormatWidgetMixin, WidgetBase):
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        format: types.Optional[str] = None,
+        format: str | None = None,
     ):
         value = data[self.variable]
         if value is not None:
@@ -1011,10 +1012,10 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
     max_width_cache: dict[
         str
         | tuple[
-            NumberT | types.Type[base.UnknownLength] | None,
-            NumberT | types.Type[base.UnknownLength] | None,
+            NumberT | type[base.UnknownLength] | None,
+            NumberT | type[base.UnknownLength] | None,
         ],
-        types.Optional[int],
+        int | None,
     ]
 
     DEFAULT_FORMAT = '%(value_s)s of %(max_value_s)s'
@@ -1053,7 +1054,7 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
 
         # Guess the maximum width from the min and max value
         key = progress.min_value, progress.max_value
-        max_width: types.Optional[int] = self.max_width_cache.get(
+        max_width: int | None = self.max_width_cache.get(
             key,
             self.max_width,
         )
@@ -1227,13 +1228,13 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
 
 class FormatCustomText(FormatWidgetMixin, WidgetBase):
-    mapping: types.Dict[str, types.Any] = dict()  # noqa: RUF012
+    mapping: dict[str, typing.Any] = dict()  # noqa: RUF012
     copy = False
 
     def __init__(
         self,
         format: str,
-        mapping: types.Optional[types.Dict[str, types.Any]] = None,
+        mapping: dict[str, typing.Any] | None = None,
         **kwargs,
     ):
         self.format = format
@@ -1245,14 +1246,14 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
         self.mapping = dict(self.mapping if mapping is None else mapping)
         super().__init__(format=format, **kwargs)
 
-    def update_mapping(self, **mapping: types.Any):
+    def update_mapping(self, **mapping: typing.Any):
         self.mapping.update(mapping)
 
     def __call__(
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        format: types.Optional[str] = None,
+        format: str | None = None,
     ):
         return FormatWidgetMixin.__call__(
             self,
@@ -1540,7 +1541,7 @@ class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        format: types.Optional[str] = None,
+        format: str | None = None,
     ):
         value = data['variables'][self.name]
         context = data.copy()
@@ -1588,7 +1589,7 @@ class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        format: types.Optional[str] = None,
+        format: str | None = None,
     ):
         data['current_time'] = self.current_time()
         data['current_datetime'] = self.current_datetime()
