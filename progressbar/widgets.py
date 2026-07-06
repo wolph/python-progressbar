@@ -569,6 +569,27 @@ class ETA(Timer):
         else:
             return 0
 
+    def _resolve_value_elapsed(
+        self,
+        progress: ProgressBarMixinBase,
+        data: Data,
+        value,
+        elapsed,
+    ):
+        """Fill in the value/elapsed defaults shared by the ETA variants.
+
+        When a caller does not supply them, the per-item rate is based on the
+        progress relative to ``min_value`` (not the raw value) and the elapsed
+        time is taken from the data snapshot.
+        """
+        if value is None:
+            value = data['value'] - progress.min_value
+
+        if elapsed is None:
+            elapsed = data['time_elapsed']
+
+        return value, elapsed
+
     def __call__(
         self,
         progress: ProgressBarMixinBase,
@@ -577,25 +598,30 @@ class ETA(Timer):
         elapsed=None,
     ):
         """Updates the widget to show the ETA or total time when finished."""
-        if value is None:
-            # The per-item rate must be based on the progress relative to
-            # min_value, not the raw value
-            value = data['value'] - progress.min_value
+        value, elapsed = self._resolve_value_elapsed(
+            progress, data, value, elapsed
+        )
 
-        if elapsed is None:
-            elapsed = data['time_elapsed']
-
+        # ``max_value`` is ``UnknownLength`` (or ``None``) for indeterminate
+        # bars. The remaining-count subtraction in ``_calculate_eta`` only
+        # runs (and only then fails) once ``elapsed`` is truthy, so guard on
+        # both to keep the ``elapsed == 0`` case rendering ``format_zero`` as
+        # before. Nothing else in the ETA math raises ``TypeError``, so the
+        # previous try/except-as-control-flow is intentionally removed.
         eta_na = False
-        try:
+        if elapsed and (
+            progress.max_value is None
+            or progress.max_value is base.UnknownLength
+        ):
+            data['eta_seconds'] = None
+            eta_na = True
+        else:
             data['eta_seconds'] = self._calculate_eta(
                 progress,
                 data,
                 value=value,
                 elapsed=elapsed,
             )
-        except TypeError:
-            data['eta_seconds'] = None
-            eta_na = True
 
         data['eta'] = None
         if data['eta_seconds']:
@@ -722,14 +748,9 @@ class SmoothingETA(ETA):
         value=None,
         elapsed=None,
     ):
-        if value is None:  # pragma: no branch
-            # The per-item rate must be based on the progress relative to
-            # min_value, not the raw value
-            value = data['value'] - progress.min_value
-
-        if elapsed is None:  # pragma: no branch
-            elapsed = data['time_elapsed']
-
+        value, elapsed = self._resolve_value_elapsed(
+            progress, data, value, elapsed
+        )
         value = self.smoothing_algorithm.update(value, elapsed)
         return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
 
@@ -1096,6 +1117,23 @@ class Bar(AutoWidthWidgetBase):
 
         super().__init__(**kwargs)
 
+    def _render_borders(
+        self,
+        progress: ProgressBarMixinBase,
+        data: Data,
+        width: int,
+    ) -> tuple[str, str, int]:
+        """Resolve the left/right borders and the width left for the body.
+
+        The borders may be callables, so they are resolved against
+        ``progress``/``data`` and their visible length subtracted from
+        ``width``. Shared by every :class:`Bar` subclass' ``__call__``.
+        """
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
+        width -= progress.custom_len(left) + progress.custom_len(right)
+        return left, right, width
+
     def __call__(
         self,
         progress: ProgressBarMixinBase,
@@ -1104,9 +1142,7 @@ class Bar(AutoWidthWidgetBase):
         color=True,
     ):
         """Updates the progress bar and its subcomponents."""
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
-        width -= progress.custom_len(left) + progress.custom_len(right)
+        left, right, width = self._render_borders(progress, data, width)
         marker = converters.to_unicode(self.marker(progress, data, width))
         fill = converters.to_unicode(self.fill(progress, data, width))
 
@@ -1167,9 +1203,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
         color=True,
     ):
         """Updates the progress bar and its subcomponents."""
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
-        width -= progress.custom_len(left) + progress.custom_len(right)
+        left, right, width = self._render_borders(progress, data, width)
         marker = converters.to_unicode(self.marker(progress, data, width))
 
         fill = converters.to_unicode(self.fill(progress, data, width))
@@ -1267,9 +1301,7 @@ class MultiRangeBar(Bar, VariableMixin):
         color=True,
     ):
         """Updates the progress bar and its subcomponents."""
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
-        width -= progress.custom_len(left) + progress.custom_len(right)
+        left, right, width = self._render_borders(progress, data, width)
         values = self.get_values(progress, data)
 
         values_sum = sum(values)
@@ -1396,6 +1428,10 @@ class GranularBar(AutoWidthWidgetBase):
         data: Data,
         width: int = 0,
     ):
+        # GranularBar descends from AutoWidthWidgetBase, not Bar, so it can't
+        # reach Bar._render_borders. The border preamble is intentionally
+        # duplicated here rather than hoisting the helper onto a shared base
+        # (which would put border concerns on width widgets that have none).
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
@@ -1664,9 +1700,7 @@ class JobStatusBar(Bar, VariableMixin):
         width: int = 0,
         color=True,
     ):
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
-        width -= progress.custom_len(left) + progress.custom_len(right)
+        left, right, width = self._render_borders(progress, data, width)
 
         status: str | bool | None = data['variables'].get(self.name)
 

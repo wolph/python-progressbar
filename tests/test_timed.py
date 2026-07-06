@@ -185,3 +185,26 @@ def test_eta_not_available():
     bar = progressbar.ProgressBar(widgets=widgets)
     for _i in bar(gen()):
         pass
+
+
+def test_eta_with_none_max_value() -> None:
+    # Regression (#321 review): the explicit UnknownLength guard replaced a
+    # broad try/except TypeError; ``max_value`` may also legitimately be
+    # ``None`` for indeterminate bars and must take the N/A path rather
+    # than crashing on the remaining-count subtraction.
+    import io
+
+    widget = progressbar.ETA()
+    bar = progressbar.ProgressBar(
+        widgets=[widget],
+        max_value=progressbar.UnknownLength,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    bar.update(1)
+    data = bar.data()
+    data['time_elapsed'] = datetime.timedelta(seconds=5)
+    bar.max_value = None
+    assert 'N/A' in widget(bar, data)
+    bar.finish(dirty=True)

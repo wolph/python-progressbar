@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import contextlib
+import functools
 import importlib
 import itertools
 import logging
@@ -42,12 +43,17 @@ except Exception:  # pragma: no cover - environmental (absent / ABI mismatch)
     _FastBarIterator = None
 
 
+@functools.cache
 def _load_widgets() -> typing.Any:
-    """Import the widgets module lazily.
+    """Import the widgets module lazily (and once).
 
     The full-bar code needs ``widgets``, but the lean fast path must not pull
     it in (it drags the terminal/colour tables). Imported via importlib so the
     deferred load doesn't read as a static ``bar -> widgets`` import cycle.
+
+    Cached with ``functools.cache`` so full-bar render sites don't pay the
+    ``import_module`` lookup on every call; the module object is resolved once
+    on first use and reused thereafter.
     """
     return importlib.import_module('progressbar.widgets')
 
@@ -679,9 +685,51 @@ class ProgressBar(
         variables=None,
         min_poll_interval=None,
         **kwargs,
-    ):  # sourcery skip: low-code-quality
+    ):
         """Initializes a progress bar with sane defaults."""
         super().__init__(**kwargs)
+
+        max_value, poll_interval = self._apply_deprecated_aliases(
+            max_value, poll_interval, kwargs
+        )
+
+        if max_value and min_value > types.cast(NumberT, max_value):
+            raise ValueError(
+                'Max value needs to be bigger than the min value',
+            )
+        self.min_value = min_value
+        # Legacy issue, `max_value` can be `None` before execution. After
+        # that it either has a value or is `UnknownLength`
+        self.max_value = max_value  # type: ignore
+        self.max_error = max_error
+
+        self.widgets = self._copy_widgets(widgets)
+
+        self.prefix = prefix
+        self.suffix = suffix
+        self.widget_kwargs = widget_kwargs or {}
+        self.left_justify = left_justify
+        self.value = initial_value
+        self._iterable = None
+        self.custom_len = custom_len  # type: ignore
+        self.initial_start_time = kwargs.get('start_time')
+        self.init()
+
+        self._setup_poll_intervals(poll_interval, min_poll_interval)
+        self._seed_variables(variables)
+
+    def _apply_deprecated_aliases(
+        self,
+        max_value: ValueT,
+        poll_interval: types.Optional[float],
+        kwargs: types.Dict[str, typing.Any],
+    ) -> tuple[ValueT, types.Optional[float]]:
+        """Resolve the deprecated ``maxval``/``poll`` keyword aliases.
+
+        Emits a :py:class:`DeprecationWarning` for each legacy name that is
+        used without its modern counterpart and returns the (possibly updated)
+        ``(max_value, poll_interval)`` pair.
+        """
         if not max_value and kwargs.get('maxval') is not None:
             warnings.warn(
                 'The usage of `maxval` is deprecated, please use '
@@ -700,41 +748,38 @@ class ProgressBar(
             )
             poll_interval = kwargs.get('poll')
 
-        if max_value and min_value > types.cast(NumberT, max_value):
-            raise ValueError(
-                'Max value needs to be bigger than the min value',
-            )
-        self.min_value = min_value
-        # Legacy issue, `max_value` can be `None` before execution. After
-        # that it either has a value or is `UnknownLength`
-        self.max_value = max_value  # type: ignore
-        self.max_error = max_error
+        return max_value, poll_interval
 
-        # Only copy the widget if it's safe to copy. Most widgets are so we
-        # assume this to be true
-        self.widgets = []
+    def _copy_widgets(
+        self, widgets: types.Optional[types.Sequence[typing.Any]]
+    ) -> list[typing.Any]:
+        """Return a fresh widget list, deep-copying the copy-safe widgets.
+
+        Only copy a widget if it's safe to copy. Most widgets are, so that is
+        assumed to be true unless a widget opts out with ``copy = False``.
+        """
+        result: list[typing.Any] = []
         for widget in widgets or []:
             if getattr(widget, 'copy', True):
                 widget = deepcopy(widget)
-            self.widgets.append(widget)
+            result.append(widget)
+        return result
 
-        self.prefix = prefix
-        self.suffix = suffix
-        self.widget_kwargs = widget_kwargs or {}
-        self.left_justify = left_justify
-        self.value = initial_value
-        self._iterable = None
-        self.custom_len = custom_len  # type: ignore
-        self.initial_start_time = kwargs.get('start_time')
-        self.init()
+    def _setup_poll_intervals(
+        self,
+        poll_interval: types.Optional[float],
+        min_poll_interval: types.Optional[float],
+    ) -> None:
+        """Convert the poll intervals to seconds and clamp the minimum.
 
-        # Convert a given timedelta to a floating point number as internal
-        # interval. We're not using timedelta's internally for two reasons:
-        # 1. Backwards compatibility (most important one)
-        # 2. Performance. Even though the amount of time it takes to compare a
-        # timedelta with a float versus a float directly is negligible, this
-        # comparison is run for _every_ update. With billions of updates
-        # (downloading a 1GiB file for example) this adds up.
+        Convert a given timedelta to a floating point number as the internal
+        interval. We're not using timedelta's internally for two reasons:
+        1. Backwards compatibility (most important one)
+        2. Performance. Even though the amount of time it takes to compare a
+        timedelta with a float versus a float directly is negligible, this
+        comparison is run for _every_ update. With billions of updates
+        (downloading a 1GiB file for example) this adds up.
+        """
         poll_interval = utils.deltas_to_seconds(poll_interval, default=None)
         min_poll_interval = utils.deltas_to_seconds(
             min_poll_interval,
@@ -754,7 +799,15 @@ class ProgressBar(
             float(os.environ.get('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', 0)),
         )  # type: ignore
 
-        # A dictionary of names that can be used by Variable and FormatWidget
+    def _seed_variables(
+        self, variables: types.Optional[types.Dict[str, typing.Any]]
+    ) -> None:
+        """Seed the user-defined variables dict and scan widgets for names.
+
+        Builds the ``variables`` mapping used by ``Variable``/``FormatWidget``
+        and registers a ``None`` placeholder for every ``VariableMixin`` widget
+        whose name isn't already supplied.
+        """
         self.variables = utils.AttributeDict(variables or {})
         if self.widgets:
             widgets_module = _load_widgets()
@@ -874,9 +927,10 @@ class ProgressBar(
                 - `variables`: Dictionary of user-defined variables for the
                   :py:class:`~progressbar.widgets.Variable`'s.
 
+        This is a pure snapshot of the current state: it performs no timing
+        side effects. The redraw path stamps the update timestamps via
+        :py:meth:`_mark_update` before the widgets read them.
         """
-        self._last_update_time = time.time()
-        self._last_update_timer = timeit.default_timer()
         elapsed = self.last_update_time - self.start_time  # type: ignore
         # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
         # want to support older versions as well
@@ -1165,7 +1219,7 @@ class ProgressBar(
             prev_value = self._last_drawn_value
             prev_timer = self._last_update_timer
             try:
-                self._update_parents(value)  # data() refreshes the timer
+                self._update_parents(value)  # _mark_update refreshes timer
             finally:
                 # `_last_drawn_value` is the value at the last *redraw* (the
                 # pixel reference for `_needs_update`); set in finally so it
@@ -1248,8 +1302,28 @@ class ProgressBar(
                 variables_changed = True
         return variables_changed
 
+    def _mark_update(self) -> None:
+        """Stamp the wall-clock and perf-counter time of the current redraw.
+
+        Called from the draw path (:py:meth:`_update_parents`) before the
+        widgets read ``last_update_time``. ``_last_update_timer`` feeds the
+        poll-interval gate in :py:meth:`_needs_update` and the cadence
+        calibration in :py:meth:`_draw_and_recalibrate`; ``_last_update_time``
+        backs the public ``last_update_time`` property used by
+        elapsed-time/ETA widgets. Kept out of :py:meth:`data` so that method is
+        a pure snapshot with no timing side effects.
+        """
+        self._last_update_time = time.time()
+        self._last_update_timer = timeit.default_timer()
+
     def _update_parents(self, value: ValueT):
         self.updates += 1
+        # Stamp the redraw timestamps before formatting widgets so that
+        # `data()`/`last_update_time` reflect this redraw and the gate
+        # calibration in `_draw_and_recalibrate` measures the interval up to
+        # this draw (it snapshots `_last_update_timer` before this call and
+        # reads it again afterwards).
+        self._mark_update()
         # Cooperative dispatch through the MRO
         # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase). The
         # `value` is passed by keyword so the intermediate `*args, **kwargs`
@@ -1295,11 +1369,6 @@ class ProgressBar(
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
-        # Cooperative dispatch through the MRO
-        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
-        # ResizableMixin/ProgressBarBase define no `start` and are skipped.
-        super().start(max_value=max_value)
-
         # Constructing the default widgets is only done when we know max_value
         if not self.widgets:
             self.widgets = self.default_widgets()
@@ -1314,10 +1383,27 @@ class ProgressBar(
             self._gate_enabled = False
         self._verify_max_value()
 
+        # Timing state must be populated before `_started` becomes
+        # observable: a concurrent reader (MultiBar's render thread) that
+        # sees `started()` True calls `update(force=True)`, and `update()`
+        # re-enters `start()` whenever `start_time` is still None -- running
+        # the stream-capturing path twice.
         now = datetime.now()
         self.start_time = self.initial_start_time or now
         self.last_update_time = now
         self._last_update_timer = timeit.default_timer()
+
+        # Cooperative dispatch through the MRO
+        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
+        # ResizableMixin/ProgressBarBase define no `start` and are skipped.
+        # This runs *after* all widget/state setup so that `_started` (set by
+        # ProgressBarMixinBase.start) only becomes observable once `widgets`
+        # is fully populated. Otherwise a concurrent reader (e.g. MultiBar's
+        # render thread) could see `started()` True with an empty widget list
+        # crash in `_label_bar`'s `assert bar.widgets`. The 0% draw below
+        # still happens at the same point, after stream/console setup.
+        super().start(max_value=max_value)
+
         self.update(self.min_value, force=True)
 
         return self
