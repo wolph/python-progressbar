@@ -141,6 +141,10 @@ def __dir__() -> list[str]:
 
 
 __date__ = str(date.today())
+#: Canonical export list, kept equal to ``sorted(_NAME_TO_MODULE)`` (the single
+#: source of truth for lazily re-exported names) plus the eagerly imported
+#: dunders. Held as a static literal so type checkers can see the re-exports;
+#: ``tests/test_init_exports.py`` asserts it stays in sync with the mapping.
 __all__ = [
     'ETA',
     'AbsoluteETA',
