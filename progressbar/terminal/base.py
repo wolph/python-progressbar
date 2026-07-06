@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import abc
-import collections
 import collections.abc
 import colorsys
 import enum
@@ -451,21 +450,11 @@ class Color(typing.NamedTuple):
 
 
 class Colors:
-    by_name: ClassVar[defaultdict[str, list[Color]]] = collections.defaultdict(
-        list
-    )
-    by_lowername: ClassVar[defaultdict[str, list[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_hex: ClassVar[defaultdict[str, list[Color]]] = collections.defaultdict(
-        list
-    )
-    by_rgb: ClassVar[defaultdict[RGB, list[Color]]] = collections.defaultdict(
-        list
-    )
-    by_hls: ClassVar[defaultdict[HSL, list[Color]]] = collections.defaultdict(
-        list
-    )
+    by_name: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_lowername: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_hex: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_rgb: ClassVar[defaultdict[RGB, list[Color]]] = defaultdict(list)
+    by_hls: ClassVar[defaultdict[HSL, list[Color]]] = defaultdict(list)
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
     @classmethod
