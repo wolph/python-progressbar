@@ -4,7 +4,6 @@ import abc
 import collections.abc
 import colorsys
 import enum
-import threading
 import typing
 from collections import defaultdict
 
@@ -18,7 +17,11 @@ from .. import (
     base as pbase,
     env,
 )
-from .os_specific import getch
+
+# Re-exported for backwards compatibility (previously consumed by the removed
+# ``_CPR`` cursor-position helper; guarded by the API snapshot). The redundant
+# alias marks the re-export as intentional so it is not stripped as unused.
+from .os_specific import getch as getch
 
 ESC = '\x1b'
 
@@ -143,43 +146,6 @@ SHOW_CURSOR: CSINoArg = CSINoArg('?25h')
 
 def clear_line(n: int):
     return UP(n) + CLEAR_LINE_ALL() + DOWN(n)
-
-
-# Report Cursor Position (CPR), response = [row;column] as row;columnR
-class _CPR(str):  # pragma: no cover  # pyright: ignore[reportUnusedClass]
-    _response_lock = threading.Lock()
-
-    def __call__(self, stream: typing.IO[str]) -> tuple[int, int]:
-        res: str = ''
-
-        with self._response_lock:
-            stream.write(str(self))
-            stream.flush()
-
-            while not res.endswith('R'):
-                char = getch()
-
-                if char:
-                    res += char
-
-            res_list = res[2:-1].split(';')
-
-            res_list = tuple(
-                int(item) if item.isdigit() else item for item in res_list
-            )
-
-            if len(res_list) == 1:
-                return typing.cast(tuple[int, int], res_list[0])
-
-            return typing.cast(tuple[int, int], tuple(res_list))
-
-    def row(self, stream: typing.IO[str]) -> int:
-        row, _ = self(stream)
-        return row
-
-    def column(self, stream: typing.IO[str]) -> int:
-        _, column = self(stream)
-        return column
 
 
 class WindowsColors(enum.Enum):
