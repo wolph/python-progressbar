@@ -435,6 +435,11 @@ class MultiBar(dict[str, bar.ProgressBar]):
             # Bound the wait so a never-finishing bar cannot hang a clean
             # exit; `join_timeout=None` keeps the historical forever-wait.
             self.join(timeout=self.join_timeout)
+            if self._thread is not None:
+                # The timeout elapsed with bars unfinished: signal the
+                # render thread to shut down instead of leaving the daemon
+                # looping (and writing) until interpreter exit.
+                self.stop(timeout=self.update_interval)
         else:
             # Don't wait for unfinished progressbars when an exception is
             # propagating; that would block forever
