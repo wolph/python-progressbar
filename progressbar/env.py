@@ -195,12 +195,6 @@ def is_terminal(
     return is_terminal
 
 
-# Enable Windows full color mode if possible
-if os.name == 'nt':
-    pass
-
-    # os_specific.set_console_mode()
-
 JUPYTER = bool(
     os.environ.get('JUPYTER_COLUMNS')
     or os.environ.get('JUPYTER_LINES')

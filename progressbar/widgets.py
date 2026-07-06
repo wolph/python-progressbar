@@ -298,9 +298,6 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
         fg=None,
         bg=None,
     )
-    # _fixed_colors: ClassVar[dict[str, terminal.Color | None]] = dict()
-    # _gradient_colors: ClassVar[dict[str, terminal.OptionalColor | None]] = (
-    #     dict())
     _len: collections.abc.Callable[[str | bytes], int] = len
 
     @functools.cached_property
@@ -986,11 +983,6 @@ class ColoredMixin:
         fg=colors.gradient,
         bg=None,
     )
-    # _fixed_colors: ClassVar[dict[str, terminal.Color | None]] = dict(
-    #     fg_none=colors.yellow, bg_none=None)
-    # _gradient_colors: ClassVar[dict[str, terminal.OptionalColor |
-    #                                      None]] = dict(fg=colors.gradient,
-    #                                                    bg=None)
 
 
 class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):

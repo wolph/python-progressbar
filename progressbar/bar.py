@@ -93,10 +93,9 @@ class ProgressBarMixinBase(abc.ABC):
     #: The default keyword arguments for the `default_widgets` if no widgets
     #: are configured
     widget_kwargs: dict[str, typing.Any]
-    #: Custom length function for multibyte characters such as CJK
-    # mypy and pyright can't agree on what the correct one is... so we'll
-    # need to use a helper function :(
-    # custom_len: types.Callable[['ProgressBarMixinBase', str], int]
+    #: Custom length function for multibyte characters such as CJK. A plain
+    #: ``Callable[[str], int]`` is used (rather than a bound-method signature)
+    #: because mypy and pyright disagree on the more precise form.
     custom_len: collections.abc.Callable[[str], int]
     #: The time the progress bar was started
     initial_start_time: datetime | None
@@ -206,6 +205,7 @@ class ProgressBarBase(collections.abc.Iterable[NumberT], ProgressBarMixinBase):
     def __repr__(self):
         label = f': {self.label}' if self.label else ''
         return f'<{self.__class__.__name__}#{self.index}{label}>'
+
 
 class DefaultFdMixin(ProgressBarMixinBase):
     # The file descriptor to write to. Defaults to `sys.stderr`
@@ -933,8 +933,6 @@ class ProgressBar(
         :py:meth:`_mark_update` before the widgets read them.
         """
         elapsed = self.last_update_time - self.start_time  # type: ignore
-        # For Python 2.7 and higher we have _`timedelta.total_seconds`, but we
-        # want to support older versions as well
         total_seconds_elapsed = utils.deltas_to_seconds(elapsed)
         return dict(
             # The maximum value (can be None with iterators)
