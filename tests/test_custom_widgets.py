@@ -110,3 +110,22 @@ def test_format_custom_text_mapping_is_per_instance() -> None:
     assert b.mapping == {}
     assert a.mapping is not b.mapping
     assert progressbar.FormatCustomText.mapping == class_default
+
+
+def test_format_custom_text_subclass_keeps_class_default_mapping() -> None:
+    # A subclass may declare a class-level mapping default; instances
+    # constructed without an explicit mapping must inherit it (per
+    # instance, without aliasing the class dict).
+    class Defaulted(progressbar.FormatCustomText):
+        # The mutable class attribute is the point of this test: it mirrors
+        # how third-party subclasses declare default mappings.
+        mapping = {'spam': 'ham'}  # noqa: RUF012
+
+    widget = Defaulted('%(spam)s')
+    assert widget.mapping == {'spam': 'ham'}
+
+    widget.update_mapping(spam='eggs')
+    assert widget.mapping == {'spam': 'eggs'}
+    # The class default stays untouched by instance mutation.
+    assert Defaulted.mapping == {'spam': 'ham'}
+    assert Defaulted('%(spam)s').mapping == {'spam': 'ham'}

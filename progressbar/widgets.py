@@ -1187,8 +1187,10 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
         self.format = format
         # Always build a fresh per-instance dict so update_mapping() never
         # mutates the shared class-level default (which every other
-        # default-constructed instance would otherwise alias).
-        self.mapping = dict(mapping or {})
+        # default-constructed instance would otherwise alias). Fall back to
+        # the class-level `mapping` so subclasses that declare defaults keep
+        # them when no mapping is passed.
+        self.mapping = dict(self.mapping if mapping is None else mapping)
         FormatWidgetMixin.__init__(self, format=format, **kwargs)
         WidgetBase.__init__(self, **kwargs)
 
