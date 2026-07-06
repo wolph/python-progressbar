@@ -357,7 +357,10 @@ class DefaultFdMixin(ProgressBarMixinBase):
         try:  # pragma: no cover
             self.fd.write(line)
         except UnicodeEncodeError:  # pragma: no cover
-            self.fd.write(typing.cast(str, line.encode('ascii', 'replace')))
+            # ``fd`` is a text stream, so write an ASCII-safe *str*: encode
+            # with 'replace' to drop un-encodable characters, then decode
+            # back. Writing the raw bytes here would raise ``TypeError``.
+            self.fd.write(line.encode('ascii', 'replace').decode('ascii'))
 
     def finish(
         self,
@@ -800,9 +803,7 @@ class ProgressBar(
             float(os.environ.get('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', 0)),
         )  # type: ignore
 
-    def _seed_variables(
-        self, variables: dict[str, typing.Any] | None
-    ) -> None:
+    def _seed_variables(self, variables: dict[str, typing.Any] | None) -> None:
         """Seed the user-defined variables dict and scan widgets for names.
 
         Builds the ``variables`` mapping used by ``Variable``/``FormatWidget``
