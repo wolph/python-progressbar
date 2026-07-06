@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import abc
-import collections
+import collections.abc
 import colorsys
 import enum
 import threading
@@ -12,7 +12,7 @@ from collections import defaultdict
 # `types` module
 from typing import ClassVar
 
-from python_utils import converters, types
+from python_utils import converters
 
 from .. import (
     base as pbase,
@@ -169,9 +169,9 @@ class _CPR(str):  # pragma: no cover  # pyright: ignore[reportUnusedClass]
             )
 
             if len(res_list) == 1:
-                return types.cast(types.Tuple[int, int], res_list[0])
+                return typing.cast(tuple[int, int], res_list[0])
 
-            return types.cast(types.Tuple[int, int], tuple(res_list))
+            return typing.cast(tuple[int, int], tuple(res_list))
 
     def row(self, stream: typing.IO[str]) -> int:
         row, _ = self(stream)
@@ -201,7 +201,7 @@ class WindowsColors(enum.Enum):
     INTENSE_WHITE = 255, 255, 255
 
     @staticmethod
-    def from_rgb(rgb: types.Tuple[int, int, int]) -> WindowsColors:
+    def from_rgb(rgb: tuple[int, int, int]) -> WindowsColors:
         """
         Find the closest WindowsColors to the given RGB color.
 
@@ -225,7 +225,9 @@ class WindowsColors(enum.Enum):
             rgb1: tuple[int, int, int],
             rgb2: tuple[int, int, int],
         ):
-            return sum((c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2))
+            return sum(
+                (c1 - c2) ** 2 for c1, c2 in zip(rgb1, rgb2, strict=False)
+            )
 
         return min(
             WindowsColors,
@@ -401,7 +403,7 @@ class Color(typing.NamedTuple):
             return SGRColor(self, 58, 59)
 
     @property
-    def ansi(self) -> types.Optional[str]:
+    def ansi(self) -> str | None:
         if (
             env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR
         ):  # pragma: no branch
@@ -448,30 +450,20 @@ class Color(typing.NamedTuple):
 
 
 class Colors:
-    by_name: ClassVar[defaultdict[str, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_lowername: ClassVar[defaultdict[str, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_hex: ClassVar[defaultdict[str, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_rgb: ClassVar[defaultdict[RGB, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
-    by_hls: ClassVar[defaultdict[HSL, types.List[Color]]] = (
-        collections.defaultdict(list)
-    )
+    by_name: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_lowername: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_hex: ClassVar[defaultdict[str, list[Color]]] = defaultdict(list)
+    by_rgb: ClassVar[defaultdict[RGB, list[Color]]] = defaultdict(list)
+    by_hls: ClassVar[defaultdict[HSL, list[Color]]] = defaultdict(list)
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
     @classmethod
     def register(
         cls,
         rgb: RGB,
-        hls: types.Optional[HSL] = None,
-        name: types.Optional[str] = None,
-        xterm: types.Optional[int] = None,
+        hls: HSL | None = None,
+        name: str | None = None,
+        xterm: int | None = None,
     ) -> Color:
         if hls is None:
             hls = HSL.from_rgb(rgb)
@@ -497,14 +489,14 @@ class Colors:
 
 
 class ColorGradient:
-    interpolate: typing.Callable[[Color, Color, float], Color] | None
+    interpolate: collections.abc.Callable[[Color, Color, float], Color] | None
     colors: tuple[Color, ...]
 
     def __init__(
         self,
         *colors: Color,
         interpolate: (
-            typing.Callable[[Color, Color, float], Color] | None
+            collections.abc.Callable[[Color, Color, float], Color] | None
         ) = Colors.interpolate,
     ) -> None:
         assert colors
@@ -555,7 +547,7 @@ class ColorGradient:
         return color
 
 
-OptionalColor = types.Union[Color, ColorGradient, None]
+OptionalColor = Color | ColorGradient | None
 
 
 def get_color(value: float, color: OptionalColor) -> Color | None:
@@ -572,7 +564,7 @@ def apply_colors(
     bg: OptionalColor = None,
     fg_none: Color | None = None,
     bg_none: Color | None = None,
-    **kwargs: types.Any,
+    **kwargs: typing.Any,
 ) -> str:
     """Apply colors/gradients to a string depending on the given percentage.
 

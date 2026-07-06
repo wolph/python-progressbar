@@ -1,7 +1,7 @@
 # We keep the ruff configuration separate so it can easily be shared across
 # all projects
 
-target-version = 'py39'
+target-version = 'py310'
 
 #src = ['progressbar']
 exclude = [

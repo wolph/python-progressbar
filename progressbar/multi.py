@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import enum
 import importlib
 import io
@@ -26,7 +27,7 @@ from .terminal import stream
 # thread and race MultiBar._label_bar's ``assert bar.widgets``.
 importlib.import_module('progressbar.widgets')
 
-SortKeyFunc = typing.Callable[[bar.ProgressBar], typing.Any]
+SortKeyFunc = collections.abc.Callable[[bar.ProgressBar], typing.Any]
 
 
 class _Update(typing.Protocol):
@@ -105,7 +106,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
     def __init__(
         self,
-        bars: typing.Iterable[tuple[str, bar.ProgressBar]] | None = None,
+        bars: collections.abc.Iterable[tuple[str, bar.ProgressBar]]
+        | None = None,
         fd: typing.TextIO = sys.stderr,
         prepend_label: bool = True,
         append_label: bool = False,
@@ -161,7 +163,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
         super().__init__(bars or {})
 
-    def __setitem__(self, key: str, bar: bar.ProgressBar):
+    def __setitem__(self, key: str, bar: bar.ProgressBar) -> None:
         """Add a progressbar to the multibar."""
         if bar.label != key or not key:  # pragma: no branch
             bar.label = key
@@ -186,7 +188,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self._finished_at.pop(bar_, None)
         self._labeled.discard(bar_)
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> bar.ProgressBar:
         """Get (and create if needed) a progressbar from the multibar."""
         try:
             return super().__getitem__(key)
@@ -265,7 +267,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         bar_: bar.ProgressBar,
         now: float,
         expired: float | None,
-    ) -> typing.Iterable[str]:
+    ) -> collections.abc.Iterable[str]:
         def update(
             force: bool = True, write: bool = True
         ) -> str:  # pragma: no cover
@@ -294,7 +296,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         now: float,
         expired: float | None,
         update: _Update,
-    ) -> typing.Iterable[str]:
+    ) -> collections.abc.Iterable[str]:
         if bar_ not in self._finished_at:
             self._finished_at[bar_] = now
             # Force update to get the finished format
@@ -411,17 +413,17 @@ class MultiBar(dict[str, bar.ProgressBar]):
             if not self._thread.is_alive():
                 self._thread = None
 
-    def stop(self, timeout: float | None = None):
+    def stop(self, timeout: float | None = None) -> None:
         self._thread_finished.set()
         self.join(timeout=timeout)
 
-    def get_sorted_bars(self):
+    def get_sorted_bars(self) -> list[bar.ProgressBar]:
         # Materialize the values into a list first so other threads can
         # add or remove bars while we are sorting and rendering
         bars = list(self.values())
         return sorted(bars, key=self.sort_keyfunc, reverse=self.sort_reverse)
 
-    def __enter__(self):
+    def __enter__(self) -> MultiBar:
         self.start()
         return self
 
