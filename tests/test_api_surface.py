@@ -104,7 +104,15 @@ def _describe(obj: typing.Any) -> str:
         return f'class{_describe_signature(obj)}'
     if callable(obj):
         return f'callable{_describe_signature(obj)}'
-    return type(obj).__name__
+    # Describe instances by their first non-freezegun class: if an earlier
+    # test imported a module under freezegun, module constants like
+    # widgets.MAX_DATE are Fake* instances forever, which would make this
+    # snapshot order-dependent (FakeDate vs date).
+    return next(
+        cls.__name__
+        for cls in type(obj).__mro__
+        if 'freezegun' not in cls.__module__
+    )
 
 
 def _public_names(module: types.ModuleType) -> list[str]:
