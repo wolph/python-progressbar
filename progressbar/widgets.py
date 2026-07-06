@@ -436,6 +436,9 @@ class Timer(FormatLabel, TimeSensitiveWidgetBase):
     def __init__(
         self, format='Elapsed Time: %(elapsed)s', **kwargs: typing.Any
     ):
+        # Backwards compatibility: very old configs used a bare ``%s``
+        # placeholder for the elapsed time. Silently rewrite it to the named
+        # ``%(elapsed)s`` form the widget actually formats with.
         if '%s' in format and '%(elapsed)s' not in format:
             format = format.replace('%s', '%(elapsed)s')
 
@@ -549,6 +552,9 @@ class ETA(Timer):
         format_na='ETA:      N/A',
         **kwargs,
     ):
+        # Backwards compatibility: rewrite a legacy bare ``%s`` placeholder to
+        # the named ``%(eta)s`` form (see ``Timer.__init__`` for the same
+        # elapsed-time shim).
         if '%s' in format and '%(eta)s' not in format:
             format = format.replace('%s', '%(eta)s')
 
@@ -688,7 +694,9 @@ class AdaptiveETA(ETA, SamplesMixin):
     """WidgetBase which attempts to estimate the time of arrival.
 
     Uses a sampled average of the speed based on the 10 last updates.
-    Very convenient for resuming the progress halfway.
+    Very convenient for resuming the progress halfway. For an estimate based
+    on an exponential moving average (EMA) of the speed instead of a windowed
+    sample, use `SmoothingETA`.
     """
 
     exponential_smoothing: bool
@@ -952,7 +960,8 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         return fill + marker  # type: ignore
 
 
-# Alias for backwards compatibility
+# Legacy alias for `AnimatedMarker`, kept for backwards compatibility. Kept as
+# a plain alias (no DeprecationWarning) until the next major version.
 RotatingMarker = AnimatedMarker
 
 
@@ -1573,7 +1582,11 @@ class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
 
 
 class DynamicMessage(Variable):
-    """Kept for backwards compatibility, please use `Variable` instead."""
+    """Legacy alias for `Variable`; prefer `Variable` in new code.
+
+    Kept as a plain subclass (no DeprecationWarning) until the next major
+    version.
+    """
 
 
 class CurrentTime(FormatWidgetMixin, TimeSensitiveWidgetBase):
