@@ -1,11 +1,10 @@
+import os
 import re
 import sys
 import textwrap
 from pathlib import Path
 
 import pytest
-
-import progressbar.env
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import scripts.render_readme_demos as demos  # noqa: E402
@@ -294,17 +293,13 @@ def test_readme_demos_show_wide_determinate_progress_bars() -> None:
         assert max(_bar_widths(frames_by_name[name])) >= 32
 
 
-def test_readme_demos_capture_real_percentage_color_changes(
-    monkeypatch,
-) -> None:
-    # Force truecolor support: on Windows runners detection reports the
-    # WINDOWS level whose color path is a no-op, so the truecolor escapes
-    # this test asserts would never be emitted.
-    monkeypatch.setattr(
-        progressbar.env,
-        'COLOR_SUPPORT',
-        progressbar.env.ColorSupport.XTERM_TRUECOLOR,
-    )
+@pytest.mark.skipif(
+    os.name == 'nt',
+    reason='capture_demo renders in a subprocess; on Windows the color '
+    'detection reports the WINDOWS level whose color path is a no-op, so '
+    'truecolor escapes are never emitted (demos are generated on posix)',
+)
+def test_readme_demos_capture_real_percentage_color_changes() -> None:
     demo = next(demo for demo in demos.DEMOS if demo.name == 'hero')
     text = '\n'.join(
         line for frame in demos.capture_demo(demo) for line in frame
