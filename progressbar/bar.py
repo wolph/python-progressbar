@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import contextlib
+import functools
 import importlib
 import itertools
 import logging
@@ -42,12 +43,17 @@ except Exception:  # pragma: no cover - environmental (absent / ABI mismatch)
     _FastBarIterator = None
 
 
+@functools.cache
 def _load_widgets() -> typing.Any:
-    """Import the widgets module lazily.
+    """Import the widgets module lazily (and once).
 
     The full-bar code needs ``widgets``, but the lean fast path must not pull
     it in (it drags the terminal/colour tables). Imported via importlib so the
     deferred load doesn't read as a static ``bar -> widgets`` import cycle.
+
+    Cached with ``functools.cache`` so full-bar render sites don't pay the
+    ``import_module`` lookup on every call; the module object is resolved once
+    on first use and reused thereafter.
     """
     return importlib.import_module('progressbar.widgets')
 
