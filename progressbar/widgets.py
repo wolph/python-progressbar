@@ -1249,7 +1249,8 @@ class FormatCustomText(FormatWidgetMixin, WidgetBase):
         mapping: dict[str, typing.Any] | None = None,
         **kwargs,
     ):
-        self.format = format
+        # ``self.format`` is set by FormatWidgetMixin.__init__ (via super
+        # below); assigning it here too would just overwrite that.
         # Always build a fresh per-instance dict so update_mapping() never
         # mutates the shared class-level default (which every other
         # default-constructed instance would otherwise alias). Fall back to
@@ -1672,7 +1673,6 @@ class JobStatusBar(Bar, VariableMixin):
         failure_marker='X',
         **kwargs,
     ):
-        self.name = name
         # Retained for backward compatibility only; render state now lives in
         # ``progress.extra`` (see get_job_markers) so a single widget reused by
         # multiple bars no longer interleaves their markers.
@@ -1680,9 +1680,6 @@ class JobStatusBar(Bar, VariableMixin):
         # Unique per-widget key so multiple JobStatusBars on the same bar do
         # not share storage either.
         self._markers_key = f'{type(self).__name__}_{id(self)}_job_markers'
-        self.left = string_or_lambda(left)
-        self.right = string_or_lambda(right)
-        self.fill = string_or_lambda(fill)
         self.success_fg_color = success_fg_color
         self.success_bg_color = success_bg_color
         self.success_marker = success_marker
