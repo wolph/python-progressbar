@@ -200,15 +200,15 @@ def test_del_suppresses_finish_errors(monkeypatch) -> None:
 def test_sigwinch_restored_with_overlapping_bars() -> None:
     # Regression: A5 - with two live bars, finishing them in creation
     # order left a dangling handler installed.
-    from progressbar.bar import _ResizeRegistry
+    import progressbar.bar as bar_module
 
     saved_handler = signal.getsignal(signal.SIGWINCH)
     # Isolate the global registry so the assertions don't depend on bars
     # left registered (and a handler left installed) by other tests
-    saved_bars = list(_ResizeRegistry.bars)
-    saved_prev = _ResizeRegistry.previous_handler
-    _ResizeRegistry.bars.clear()
-    _ResizeRegistry.previous_handler = None
+    saved_bars = list(bar_module._ResizeRegistry.bars)
+    saved_prev = bar_module._ResizeRegistry.previous_handler
+    bar_module._ResizeRegistry.bars.clear()
+    bar_module._ResizeRegistry.previous_handler = None
 
     # Start from a known sentinel handler so we can tell apart "still
     # installed" from "restored" without depending on global state
@@ -238,6 +238,6 @@ def test_sigwinch_restored_with_overlapping_bars() -> None:
         assert signal.getsignal(signal.SIGWINCH) is signal.SIG_IGN
     finally:
         for restored_bar in saved_bars:
-            _ResizeRegistry.bars.add(restored_bar)
-        _ResizeRegistry.previous_handler = saved_prev
+            bar_module._ResizeRegistry.bars.add(restored_bar)
+        bar_module._ResizeRegistry.previous_handler = saved_prev
         signal.signal(signal.SIGWINCH, saved_handler)
