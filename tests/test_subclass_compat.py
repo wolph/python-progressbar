@@ -423,3 +423,72 @@ def test_old_style_triple_call_bar_consumes_one_index() -> None:
     # parent __init__ entry points reaching ProgressBarBase.
     assert first.index >= 0
     assert second.index == first.index + 1
+
+
+# --- update/start/finish chain: cooperative-super() guarantees --------------
+
+
+def test_super_style_update_override_dispatched_once() -> None:
+    """A super()-style ``update`` override runs exactly once per call.
+
+    The collapsed ``_update_parents`` chain dispatches to the *parent*
+    mixins via ``super().update(...)``, so it must never re-enter the
+    subclass's own ``update`` override. A double dispatch through the
+    chain would bump the counter twice.
+    """
+    calls = 0
+
+    class CountingBar(progressbar.ProgressBar):
+        def update(
+            self,
+            value: typing.Any = None,
+            force: bool = False,
+            **kwargs: typing.Any,
+        ) -> None:
+            nonlocal calls
+            calls += 1
+            super().update(value, force=force, **kwargs)
+
+    bar = CountingBar(fd=io.StringIO(), max_value=10, term_width=60)
+    # start() itself calls update(min_value); ignore those bootstrap calls.
+    bar.start()
+    calls = 0
+    bar.update(1, force=True)
+    assert calls == 1
+    bar.finish()
+
+
+def test_finish_end_kwarg_threads_through_chain() -> None:
+    """``finish(end='')`` still threads ``end`` through the collapsed chain.
+
+    ``end`` is popped inside ``DefaultFdMixin.finish`` after the migration;
+    an empty value must suppress the trailing newline while the default
+    still writes one.
+    """
+    fd_blank = io.StringIO()
+    bar = progressbar.ProgressBar(
+        fd=fd_blank,
+        max_value=10,
+        term_width=60,
+        enable_colors=False,
+        line_breaks=False,
+    )
+    bar.start()
+    bar.update(5, force=True)
+    bar.finish(end='')
+    assert bar.finished()
+    assert not fd_blank.getvalue().endswith('\n')
+
+    # Contrast: the default end='\n' still writes the trailing newline.
+    fd_newline = io.StringIO()
+    bar2 = progressbar.ProgressBar(
+        fd=fd_newline,
+        max_value=10,
+        term_width=60,
+        enable_colors=False,
+        line_breaks=False,
+    )
+    bar2.start()
+    bar2.update(5, force=True)
+    bar2.finish()
+    assert fd_newline.getvalue().endswith('\n')

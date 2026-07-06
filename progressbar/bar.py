@@ -339,7 +339,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
         super().start()
 
     def update(self, *args: types.Any, **kwargs: types.Any) -> None:
-        ProgressBarMixinBase.update(self, *args, **kwargs)
+        super().update(*args, **kwargs)
 
         line: str = converters.to_unicode(self._format_line())
         if not self.enable_colors:
@@ -363,7 +363,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
             return
 
         end = kwargs.pop('end', '\n')
-        ProgressBarMixinBase.finish(self, *args, **kwargs)
+        super().finish(*args, **kwargs)
 
         if end and not self.line_breaks:
             self.fd.write(end)
@@ -500,7 +500,7 @@ class ResizableMixin(ProgressBarMixinBase):
         self.term_width = w
 
     def finish(self):  # pragma: no cover
-        ProgressBarMixinBase.finish(self)
+        super().finish()
         if self.signal_set:
             with contextlib.suppress(Exception):
                 _ResizeRegistry.uninstall(self)
@@ -556,7 +556,7 @@ class StdRedirectMixin(DefaultFdMixin):
         self.stderr = utils.streams.stderr
 
         utils.streams.start_capturing(self)
-        DefaultFdMixin.start(self, *args, **kwargs)
+        super().start(*args, **kwargs)
 
     def update(self, value: types.Optional[NumberT] = None):
         cleared = not self.line_breaks and utils.streams.needs_clear()
@@ -567,10 +567,10 @@ class StdRedirectMixin(DefaultFdMixin):
         if cleared and self.redirect_blank_line:
             # Keep a blank line between the redirected output and the bar
             self.fd.write('\n')
-        DefaultFdMixin.update(self, value=value)
+        super().update(value=value)
 
     def finish(self, end='\n'):
-        DefaultFdMixin.finish(self, end=end)
+        super().finish(end=end)
         utils.streams.stop_capturing(self)
         if self.redirect_stdout:
             utils.streams.unwrap_stdout()
@@ -1250,9 +1250,11 @@ class ProgressBar(
 
     def _update_parents(self, value: ValueT):
         self.updates += 1
-        ResizableMixin.update(self, value=value)
-        ProgressBarBase.update(self, value=value)
-        StdRedirectMixin.update(self, value=value)  # type: ignore
+        # Cooperative dispatch through the MRO
+        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase). The
+        # `value` is passed by keyword so the intermediate `*args, **kwargs`
+        # and `value=None` signatures interoperate.
+        super().update(value=value)  # type: ignore
 
         # Only flush if something was actually written
         self.fd.flush()
@@ -1293,9 +1295,10 @@ class ProgressBar(
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
-        StdRedirectMixin.start(self, max_value=max_value)
-        ResizableMixin.start(self, max_value=max_value)
-        ProgressBarBase.start(self, max_value=max_value)
+        # Cooperative dispatch through the MRO
+        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
+        # ResizableMixin/ProgressBarBase define no `start` and are skipped.
+        super().start(max_value=max_value)
 
         # Constructing the default widgets is only done when we know max_value
         if not self.widgets:
@@ -1385,9 +1388,13 @@ class ProgressBar(
             self.end_time = datetime.now()
             self.update(self.max_value, force=True)
 
-        StdRedirectMixin.finish(self, end=end)
-        ResizableMixin.finish(self)
-        ProgressBarBase.finish(self)
+        # Cooperative dispatch through the MRO
+        # (StdRedirectMixin -> DefaultFdMixin -> ResizableMixin ->
+        # ProgressBarMixinBase). Ordering note: the SIGWINCH uninstall in
+        # ResizableMixin.finish now runs *before* the stream unwrap in
+        # StdRedirectMixin.finish (previously it ran after). The two
+        # subsystems are independent, so the observable result is unchanged.
+        super().finish(end=end)
 
     @property
     def currval(self):
