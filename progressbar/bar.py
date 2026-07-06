@@ -187,7 +187,13 @@ class ProgressBarBase(types.Iterable[NumberT], ProgressBarMixinBase):
     label: str = ''
 
     def __init__(self, **kwargs: typing.Any):
-        self.index = next(self._index_counter)
+        # Guard against the cooperative chain (or an old-style subclass
+        # making several explicit parent __init__ calls) reaching this
+        # method more than once per instance: `index` keeps its class
+        # default of -1 until the first construction, so each bar
+        # consumes exactly one counter value.
+        if self.index == -1:
+            self.index = next(self._index_counter)
         super().__init__(**kwargs)
 
     def __repr__(self):
@@ -475,7 +481,7 @@ class _ResizeRegistry:
 
 class ResizableMixin(ProgressBarMixinBase):
     def __init__(self, term_width: int | None = None, **kwargs: typing.Any):
-        ProgressBarMixinBase.__init__(self, **kwargs)
+        super().__init__(**kwargs)
 
         self.signal_set = False
         if term_width:
@@ -528,7 +534,7 @@ class StdRedirectMixin(DefaultFdMixin):
         redirect_blank_line: bool = False,
         **kwargs,
     ):
-        DefaultFdMixin.__init__(self, **kwargs)
+        super().__init__(**kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
         # Separate redirected output from the bar with a blank line
@@ -675,9 +681,7 @@ class ProgressBar(
         **kwargs,
     ):  # sourcery skip: low-code-quality
         """Initializes a progress bar with sane defaults."""
-        StdRedirectMixin.__init__(self, **kwargs)
-        ResizableMixin.__init__(self, **kwargs)
-        ProgressBarBase.__init__(self, **kwargs)
+        super().__init__(**kwargs)
         if not max_value and kwargs.get('maxval') is not None:
             warnings.warn(
                 'The usage of `maxval` is deprecated, please use '

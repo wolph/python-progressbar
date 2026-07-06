@@ -23,11 +23,13 @@ import typing
 import pytest
 
 import progressbar
+import progressbar.bar
 import progressbar.widgets
 
 # Alias (not a `from` import) so CodeQL doesn't flag `progressbar` as
 # imported with both `import` and `import from`.
 widgets = progressbar.widgets
+bar_module = progressbar.bar
 
 
 def _render(
@@ -370,3 +372,54 @@ def test_super_style_color_kwargs_reach_widget_base() -> None:
     )
     assert widget.uses_colors is True
     assert widget._len is widgets.utils.len_color
+
+
+# --- bar.py __init__ chain: cooperative-super() guarantees ------------------
+
+
+def test_no_double_resizable_mixin_init(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The bar ``__init__`` tower must init each mixin exactly once.
+
+    Pre-migration ``ProgressBar.__init__`` reached
+    ``ResizableMixin.__init__`` twice: once via
+    ``StdRedirectMixin`` -> ``DefaultFdMixin.super()`` and again via an
+    explicit second call. The single cooperative chain must run it
+    exactly once.
+    """
+    calls = 0
+    original = bar_module.ResizableMixin.__init__
+
+    def counting_init(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        nonlocal calls
+        calls += 1
+        original(self, *args, **kwargs)
+
+    monkeypatch.setattr(bar_module.ResizableMixin, '__init__', counting_init)
+    progressbar.ProgressBar(fd=io.StringIO(), max_value=1, term_width=60)
+    assert calls == 1
+
+
+class TripleCallBar(progressbar.ProgressBar):
+    """Third-party old-style subclass: explicit unbound parent calls.
+
+    Mirrors ``ProgressBar.__init__``'s historic explicit-parent-call
+    pattern. After the cooperative migration each of these three calls
+    reaches ``ProgressBarBase.__init__``, so the guarded index
+    assignment must still consume exactly one index per instance.
+    """
+
+    def __init__(self, *args: typing.Any, **kwargs: typing.Any):
+        bar_module.StdRedirectMixin.__init__(self, *args, **kwargs)
+        bar_module.ResizableMixin.__init__(self, *args, **kwargs)
+        bar_module.ProgressBarBase.__init__(self, *args, **kwargs)
+
+
+def test_old_style_triple_call_bar_consumes_one_index() -> None:
+    first = TripleCallBar(fd=io.StringIO(), max_value=1, term_width=60)
+    second = TripleCallBar(fd=io.StringIO(), max_value=1, term_width=60)
+    # Each construction consumes exactly one index despite three explicit
+    # parent __init__ entry points reaching ProgressBarBase.
+    assert first.index >= 0
+    assert second.index == first.index + 1
