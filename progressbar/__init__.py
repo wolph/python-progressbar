@@ -8,9 +8,15 @@ when actually used) while preserving the full public API.
 
 import importlib
 import typing
-from datetime import date
 
-from .__about__ import __author__, __version__
+# Re-exported as a static module attribute (kept out of ``__all__`` for
+# backwards compatibility). ``__date__`` used to be recomputed at import time
+# via ``date.today()``; it now mirrors the release date from ``__about__``.
+from .__about__ import (
+    __author__,
+    __date__ as __date__,
+    __version__,
+)
 
 if typing.TYPE_CHECKING:
     # Eager imports for type checkers only; loaded lazily at runtime by
@@ -140,7 +146,10 @@ def __dir__() -> list[str]:
     return sorted(set(globals()) | set(__all__) | _SUBMODULES)
 
 
-__date__ = str(date.today())
+#: Canonical export list, kept equal to ``sorted(_NAME_TO_MODULE)`` (the single
+#: source of truth for lazily re-exported names) plus the eagerly imported
+#: dunders. Held as a static literal so type checkers can see the re-exports;
+#: ``tests/test_init_exports.py`` asserts it stays in sync with the mapping.
 __all__ = [
     'ETA',
     'AbsoluteETA',

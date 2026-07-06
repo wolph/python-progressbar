@@ -59,6 +59,33 @@ def test_fast_format_line_with_eta_calculation():
     assert 'ETA: --:--:--' not in line
 
 
+def test_fast_spinner_frames_cycle():
+    """The spinner is exactly four frames and cycles through all of them.
+
+    Regression: the raw literal ``r'|/-\\'`` is 5 chars long (the escape is not
+    collapsed), so the intended four-frame cycle was fragile and length-coupled
+    to a hardcoded ``% 4``.
+    """
+    from datetime import datetime, timedelta
+
+    assert len(fast_module._SPINNER_FRAMES) == 4
+    assert set(fast_module._SPINNER_FRAMES) == set('|/-\\')
+
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=progressbar.UnknownLength, fd=fd
+    )
+    bar.start_time = datetime(2020, 1, 1)
+    seen = []
+    for quarter in range(4):
+        # Freeze elapsed at exact quarter-seconds so int(elapsed * 4) walks
+        # 0, 1, 2, 3 and must surface each distinct frame.
+        bar.end_time = bar.start_time + timedelta(seconds=quarter / 4)
+        seen.append(bar._format_line().lstrip()[0])
+
+    assert seen == ['|', '/', '-', '\\']
+
+
 def test_fast_format_line_uses_native_hook(monkeypatch):
     """The native `_format_fast_line` hook takes precedence when set."""
 

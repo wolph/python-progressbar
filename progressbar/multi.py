@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections.abc
 import enum
 import importlib
 import io
@@ -26,7 +27,7 @@ from .terminal import stream
 # thread and race MultiBar._label_bar's ``assert bar.widgets``.
 importlib.import_module('progressbar.widgets')
 
-SortKeyFunc = typing.Callable[[bar.ProgressBar], typing.Any]
+SortKeyFunc = collections.abc.Callable[[bar.ProgressBar], typing.Any]
 
 
 class _Update(typing.Protocol):
@@ -53,6 +54,18 @@ class SortKey(str, enum.Enum):
 
 
 class MultiBar(dict[str, bar.ProgressBar]):
+    """Render and manage multiple progressbars from background threads.
+
+    On a clean context-manager exit the multibar waits for its render
+    thread via :meth:`join`. By default (``join_timeout=None``) that wait
+    is unbounded, so a bar that never finishes blocks the program forever.
+    Pass ``join_timeout`` (seconds, or a :class:`datetime.timedelta`) to
+    bound that wait: once it elapses any still-unfinished bars are
+    abandoned and the render thread -- a daemon -- is left running so the
+    program can exit. The default preserves the historical wait-forever
+    behavior.
+    """
+
     fd: typing.TextIO
     _buffer: io.StringIO
 
@@ -73,6 +86,9 @@ class MultiBar(dict[str, bar.ProgressBar]):
     # updates
     update_interval: float
     remove_finished: float | None
+    #: Seconds to wait for the render thread on a clean context-manager
+    # exit before abandoning unfinished bars. `None` waits forever.
+    join_timeout: float | None
 
     #: The kwargs passed to the progressbar constructor
     progressbar_kwargs: dict[str, typing.Any]
@@ -90,7 +106,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
     def __init__(
         self,
-        bars: typing.Iterable[tuple[str, bar.ProgressBar]] | None = None,
+        bars: collections.abc.Iterable[tuple[str, bar.ProgressBar]]
+        | None = None,
         fd: typing.TextIO = sys.stderr,
         prepend_label: bool = True,
         append_label: bool = False,
@@ -104,6 +121,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
         sort_key: str | SortKey = SortKey.CREATED,
         sort_reverse: bool = True,
         sort_keyfunc: SortKeyFunc | None = None,
+        *,
+        join_timeout: timedelta | float | None = None,
         **progressbar_kwargs: typing.Any,
     ):
         self.fd = fd
@@ -120,6 +139,9 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self.show_finished = show_finished
         self.remove_finished = python_utils.delta_to_seconds_or_none(
             remove_finished,
+        )
+        self.join_timeout = python_utils.delta_to_seconds_or_none(
+            join_timeout,
         )
 
         self.progressbar_kwargs = progressbar_kwargs
@@ -141,7 +163,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
         super().__init__(bars or {})
 
-    def __setitem__(self, key: str, bar: bar.ProgressBar):
+    def __setitem__(self, key: str, bar: bar.ProgressBar) -> None:
         """Add a progressbar to the multibar."""
         if bar.label != key or not key:  # pragma: no branch
             bar.label = key
@@ -166,7 +188,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self._finished_at.pop(bar_, None)
         self._labeled.discard(bar_)
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> bar.ProgressBar:
         """Get (and create if needed) a progressbar from the multibar."""
         try:
             return super().__getitem__(key)
@@ -245,7 +267,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         bar_: bar.ProgressBar,
         now: float,
         expired: float | None,
-    ) -> typing.Iterable[str]:
+    ) -> collections.abc.Iterable[str]:
         def update(
             force: bool = True, write: bool = True
         ) -> str:  # pragma: no cover
@@ -274,7 +296,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         now: float,
         expired: float | None,
         update: _Update,
-    ) -> typing.Iterable[str]:
+    ) -> collections.abc.Iterable[str]:
         if bar_ not in self._finished_at:
             self._finished_at[bar_] = now
             # Force update to get the finished format
@@ -391,17 +413,17 @@ class MultiBar(dict[str, bar.ProgressBar]):
             if not self._thread.is_alive():
                 self._thread = None
 
-    def stop(self, timeout: float | None = None):
+    def stop(self, timeout: float | None = None) -> None:
         self._thread_finished.set()
         self.join(timeout=timeout)
 
-    def get_sorted_bars(self):
+    def get_sorted_bars(self) -> list[bar.ProgressBar]:
         # Materialize the values into a list first so other threads can
         # add or remove bars while we are sorting and rendering
         bars = list(self.values())
         return sorted(bars, key=self.sort_keyfunc, reverse=self.sort_reverse)
 
-    def __enter__(self):
+    def __enter__(self) -> MultiBar:
         self.start()
         return self
 
@@ -412,7 +434,14 @@ class MultiBar(dict[str, bar.ProgressBar]):
         traceback: types.TracebackType | None,
     ) -> bool | None:
         if exc_type is None:
-            self.join()
+            # Bound the wait so a never-finishing bar cannot hang a clean
+            # exit; `join_timeout=None` keeps the historical forever-wait.
+            self.join(timeout=self.join_timeout)
+            if self._thread is not None:
+                # The timeout elapsed with bars unfinished: signal the
+                # render thread to shut down instead of leaving the daemon
+                # looping (and writing) until interpreter exit.
+                self.stop(timeout=self.update_interval)
         else:
             # Don't wait for unfinished progressbars when an exception is
             # propagating; that would block forever

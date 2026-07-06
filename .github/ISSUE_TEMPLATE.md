@@ -12,4 +12,3 @@ If applicable, code to reproduce the issue and/or the stacktrace of the issue
 - Python distribution/environment: CPython/Anaconda/IPython/IDLE
 - Operating System: Windows 10, Ubuntu Linux, etc.
 - Package version: `import progressbar; print(progressbar.__version__)`
-

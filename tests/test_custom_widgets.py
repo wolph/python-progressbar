@@ -93,3 +93,39 @@ def test_format_custom_text_widget() -> None:
     for i in bar(range(5)):
         widget.update_mapping(eggs=i * 2)
         assert widget.mapping['eggs'] == bar.widgets[0].mapping['eggs']
+
+
+def test_format_custom_text_mapping_is_per_instance() -> None:
+    # Regression: F2 - default-constructed FormatCustomText instances shared
+    # the mutable class-level ``mapping`` dict, so update_mapping on one bled
+    # into every other instance (and the class attribute).
+    class_default = dict(progressbar.FormatCustomText.mapping)
+
+    a = progressbar.FormatCustomText('%(spam)s')
+    b = progressbar.FormatCustomText('%(spam)s')
+
+    a.update_mapping(spam='eggs')
+
+    assert a.mapping == {'spam': 'eggs'}
+    assert b.mapping == {}
+    assert a.mapping is not b.mapping
+    assert progressbar.FormatCustomText.mapping == class_default
+
+
+def test_format_custom_text_subclass_keeps_class_default_mapping() -> None:
+    # A subclass may declare a class-level mapping default; instances
+    # constructed without an explicit mapping must inherit it (per
+    # instance, without aliasing the class dict).
+    class Defaulted(progressbar.FormatCustomText):
+        # The mutable class attribute is the point of this test: it mirrors
+        # how third-party subclasses declare default mappings.
+        mapping = {'spam': 'ham'}  # noqa: RUF012
+
+    widget = Defaulted('%(spam)s')
+    assert widget.mapping == {'spam': 'ham'}
+
+    widget.update_mapping(spam='eggs')
+    assert widget.mapping == {'spam': 'eggs'}
+    # The class default stays untouched by instance mutation.
+    assert Defaulted.mapping == {'spam': 'ham'}
+    assert Defaulted('%(spam)s').mapping == {'spam': 'ham'}

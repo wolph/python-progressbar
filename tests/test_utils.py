@@ -110,8 +110,12 @@ def test_is_ansi_terminal(monkeypatch) -> None:
     monkeypatch.delenv('ANSICON')
     assert not progressbar.env.is_ansi_terminal(fd)
 
+    # A stream that legitimately fails to report tty-ness (e.g. OSError on
+    # a real I/O object) is simply not treated as an ANSI terminal. Only the
+    # narrowed OSError/ValueError/AttributeError set is tolerated; unexpected
+    # errors propagate (covered in tests/test_env_detection.py).
     def raise_error():
-        raise RuntimeError('test')
+        raise OSError('test')
 
     fd.isatty = raise_error
     assert not progressbar.env.is_ansi_terminal(fd)
