@@ -173,6 +173,47 @@ def test_elapsed_data_spans_days() -> None:
     assert data['days_elapsed'] == pytest.approx(expected_days, abs=0.01)
 
 
+@pytest.mark.no_freezegun
+def test_data_is_a_pure_snapshot(monkeypatch) -> None:
+    # `data()` must be a pure read of the current state: calling it must not
+    # mutate the timing fields (`_last_update_time` / `_last_update_timer`).
+    # The redraw path refreshes those via `_mark_update()`, not the getter.
+    #
+    # A strictly-increasing clock makes any hidden mutation observable: on the
+    # old code each data() call re-stamped the fields with a fresh (larger)
+    # value, so two calls would disagree.
+    import timeit as _timeit
+
+    import progressbar.bar as bar_module
+
+    ticks = iter(range(1_700_000_000, 1_700_001_000))
+
+    def fake_clock() -> float:
+        return float(next(ticks))
+
+    bar = progressbar.ProgressBar(
+        max_value=10, fd=io.StringIO(), term_width=60
+    )
+    bar.start()
+
+    monkeypatch.setattr(bar_module.time, 'time', fake_clock)
+    monkeypatch.setattr(_timeit, 'default_timer', fake_clock)
+
+    time_before = bar._last_update_time
+    timer_before = bar._last_update_timer
+
+    first = bar.data()
+    second = bar.data()
+
+    # Neither the wall-clock nor the perf-counter timing state may change.
+    assert bar._last_update_time == time_before
+    assert bar._last_update_timer == timer_before
+    # And the two snapshots agree on the timing-derived fields.
+    assert first['last_update_time'] == second['last_update_time']
+    assert first['total_seconds_elapsed'] == second['total_seconds_elapsed']
+    assert first['time_elapsed'] == second['time_elapsed']
+
+
 def test_restart_after_finish_writes_final_newline() -> None:
     # Regression: A2 - init() did not reset _finished, so a reused bar
     # never wrote its final newline (and never flushed) again.
@@ -286,15 +327,15 @@ def test_start_preserves_original_error_when_base_cleanup_fails(
 def test_sigwinch_restored_with_overlapping_bars() -> None:
     # Regression: A5 - with two live bars, finishing them in creation
     # order left a dangling handler installed.
-    from progressbar.bar import _ResizeRegistry
+    import progressbar.bar as bar_module
 
     saved_handler = signal.getsignal(signal.SIGWINCH)
     # Isolate the global registry so the assertions don't depend on bars
     # left registered (and a handler left installed) by other tests
-    saved_bars = list(_ResizeRegistry.bars)
-    saved_prev = _ResizeRegistry.previous_handler
-    _ResizeRegistry.bars.clear()
-    _ResizeRegistry.previous_handler = None
+    saved_bars = list(bar_module._ResizeRegistry.bars)
+    saved_prev = bar_module._ResizeRegistry.previous_handler
+    bar_module._ResizeRegistry.bars.clear()
+    bar_module._ResizeRegistry.previous_handler = None
 
     # Start from a known sentinel handler so we can tell apart "still
     # installed" from "restored" without depending on global state
@@ -324,6 +365,6 @@ def test_sigwinch_restored_with_overlapping_bars() -> None:
         assert signal.getsignal(signal.SIGWINCH) is signal.SIG_IGN
     finally:
         for restored_bar in saved_bars:
-            _ResizeRegistry.bars.add(restored_bar)
-        _ResizeRegistry.previous_handler = saved_prev
+            bar_module._ResizeRegistry.bars.add(restored_bar)
+        bar_module._ResizeRegistry.previous_handler = saved_prev
         signal.signal(signal.SIGWINCH, saved_handler)

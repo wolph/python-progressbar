@@ -16,11 +16,61 @@ max_values: list[None | type[progressbar.base.UnknownLength] | int] = [
 
 
 def test_create_wrapper() -> None:
-    with pytest.raises(AssertionError):
+    # F4: user-facing validation must raise ValueError (not a bare assert that
+    # vanishes under ``python -O``).
+    with pytest.raises(ValueError):
         progressbar.widgets.create_wrapper('ab')
 
     with pytest.raises(RuntimeError):
         progressbar.widgets.create_wrapper(123)
+
+
+def test_create_marker_rejects_multichar_marker() -> None:
+    # F4: markers must be a single visible character.
+    with pytest.raises(ValueError):
+        progressbar.widgets.create_marker('ab')
+
+
+def test_multi_range_bar_rejects_multichar_marker() -> None:
+    # F4: the render path validates marker width; a 2-char marker must raise
+    # ValueError rather than a stripped-under-O assert.
+    widget = progressbar.MultiRangeBar('amounts', markers=['ab', ' '])
+    bar = progressbar.ProgressBar(
+        widgets=[widget],
+        variables={'amounts': []},
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    data = bar.data()
+    data['variables'] = {'amounts': [1, 0]}
+    with pytest.raises(ValueError):
+        widget(bar, data, width=20)
+    bar.finish(dirty=True)
+
+
+def test_multi_range_bar_rejects_multichar_fill() -> None:
+    # Item 4: the fill path validates the fill width; a 2-char fill must raise
+    # ValueError rather than a stripped-under-O assert. Non-empty amounts keep
+    # the initial render on the marker branch; emptying them forces the
+    # zero-sum ``else`` (fill) branch on the direct call.
+    widget = progressbar.MultiRangeBar(
+        'amounts', markers=[' ', '#'], fill='xx'
+    )
+    bar = progressbar.ProgressBar(
+        widgets=[widget],
+        variables={'amounts': [1, 0]},
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    data = bar.data()
+    data['variables'] = {'amounts': []}
+    with pytest.raises(ValueError):
+        widget(bar, data, width=20)
+    bar.finish(dirty=True)
 
 
 def test_widgets_small_values() -> None:

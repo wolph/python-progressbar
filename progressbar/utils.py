@@ -8,7 +8,8 @@ import logging
 import os
 import re
 import sys
-from collections.abc import Iterable, Iterator, Mapping
+import typing
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from types import TracebackType
 
 from python_utils import types
@@ -18,9 +19,6 @@ from python_utils.time import epoch, format_time, timedelta_to_seconds
 
 from progressbar import base, env, terminal
 
-if types.TYPE_CHECKING:
-    from .bar import ProgressBar, ProgressBarMixinBase
-
 # Make sure these are available for import
 assert timedelta_to_seconds is not None
 assert get_terminal_size is not None
@@ -28,13 +26,54 @@ assert format_time is not None
 assert scale_1024 is not None
 assert epoch is not None
 
-StringT = types.TypeVar('StringT', bound=types.StringTypes)
+StringT = typing.TypeVar('StringT', bound=types.StringTypes)
+T = typing.TypeVar('T')
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+
+class _ProgressListener(typing.Protocol):
+    """Structural type for the bars the stream wrapper notifies.
+
+    Defined locally instead of importing ``ProgressBarMixinBase`` from
+    ``bar`` so ``utils`` has no dependency on ``bar`` — not even a
+    type-checking-only one, which CodeQL still reports as a ``bar`` <->
+    ``utils`` module-level import cycle.
+    """
+
+    def update(self) -> None:
+        """Redraw in response to redirected output being written."""
+
+
+# Precompiled ANSI CSI escape-sequence patterns (str and bytes). Compiled once
+# at import instead of per no_color() call, which runs for every widget on
+# every redraw.
+_ANSI_COLOR_RE: re.Pattern[str] = re.compile('\x1b\\[.*?[@-~]')
+_ANSI_COLOR_RE_BYTES: re.Pattern[bytes] = re.compile(
+    bytes(terminal.ESC, 'ascii') + b'\\[.*?[@-~]',
+)
+
+
+@typing.overload
+def deltas_to_seconds(
+    *deltas: None | datetime.timedelta | float | int,
+    default: type[ValueError] = ...,
+) -> float:
+    """Coalesce to seconds; raise ``ValueError`` if no delta is valid."""
+
+
+@typing.overload
+def deltas_to_seconds(
+    *deltas: None | datetime.timedelta | float | int,
+    default: T,
+) -> float | T:
+    """Coalesce to seconds; return ``default`` if no delta is valid."""
 
 
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float,
-    default: types.Optional[types.Type[ValueError]] = ValueError,
-) -> int | float | None:
+    *deltas: None | datetime.timedelta | float | int,
+    default: typing.Any = ValueError,
+) -> typing.Any:
     """
     Convert timedeltas and seconds as int to seconds as float while coalescing.
 
@@ -72,8 +111,7 @@ def deltas_to_seconds(
     if default is ValueError:
         raise ValueError('No valid deltas passed to `deltas_to_seconds`')
     else:
-        # mypy doesn't understand the `default is ValueError` check
-        return default  # type: ignore
+        return default
 
 
 def no_color(value: StringT) -> StringT:
@@ -92,10 +130,17 @@ def no_color(value: StringT) -> StringT:
     TypeError: `value` must be a string or bytes, got 123
     """
     if isinstance(value, bytes):
-        pattern: bytes = bytes(terminal.ESC, 'ascii') + b'\\[.*?[@-~]'
-        return re.sub(pattern, b'', value)  # type: ignore
+        # Fast path: with no ESC byte there is nothing to strip, so the regex
+        # would return the value unchanged anyway. Skipping it avoids a
+        # substitution on the common plain-text case, which dominates the
+        # per-redraw render cost (len_color is called for every widget).
+        if b'\x1b' not in value:
+            return value  # type: ignore
+        return _ANSI_COLOR_RE_BYTES.sub(b'', value)  # type: ignore
     elif isinstance(value, str):
-        return re.sub('\x1b\\[.*?[@-~]', '', value)  # type: ignore
+        if '\x1b' not in value:
+            return value  # type: ignore
+        return _ANSI_COLOR_RE.sub('', value)  # type: ignore
     else:
         raise TypeError(f'`value` must be a string or bytes, got {value!r}')
 
@@ -118,14 +163,14 @@ class WrappingIO:
     buffer: io.StringIO
     target: base.IO
     capturing: bool
-    listeners: set
+    listeners: set[_ProgressListener]
     needs_clear: bool = False
 
     def __init__(
         self,
         target: base.IO,
         capturing: bool = False,
-        listeners: types.Optional[types.Set[ProgressBar]] = None,
+        listeners: set[_ProgressListener] | None = None,
     ) -> None:
         self.buffer = io.StringIO()
         self.target = target
@@ -199,7 +244,7 @@ class WrappingIO:
     def tell(self) -> int:
         return self.target.tell()
 
-    def truncate(self, size: types.Optional[int] = None) -> int:
+    def truncate(self, size: int | None = None) -> int:
         return self.target.truncate(size)
 
     def writable(self) -> bool:
@@ -232,9 +277,9 @@ class StreamWrapper:
 
     stdout: base.TextIO | WrappingIO
     stderr: base.TextIO | WrappingIO
-    original_excepthook: types.Callable[
+    original_excepthook: Callable[
         [
-            types.Type[BaseException],
+            type[BaseException],
             BaseException,
             TracebackType | None,
         ],
@@ -246,7 +291,7 @@ class StreamWrapper:
     wrapped_excepthook: int = 0
     logging_handlers: list[tuple[logging.StreamHandler[base.IO], base.IO]]
     capturing: int = 0
-    listeners: set
+    listeners: set[_ProgressListener]
 
     def __init__(self) -> None:
         self.stdout = self.original_stdout = sys.stdout
@@ -266,14 +311,14 @@ class StreamWrapper:
         if env.env_flag('WRAP_STDERR', default=False):  # pragma: no cover
             self.wrap_stderr()
 
-    def start_capturing(self, bar: ProgressBarMixinBase | None = None) -> None:
+    def start_capturing(self, bar: _ProgressListener | None = None) -> None:
         if bar:  # pragma: no branch
             self.listeners.add(bar)
 
         self.capturing += 1
         self.update_capturing()
 
-    def stop_capturing(self, bar: ProgressBarMixinBase | None = None) -> None:
+    def stop_capturing(self, bar: _ProgressListener | None = None) -> None:
         if bar:  # pragma: no branch
             with contextlib.suppress(KeyError):
                 self.listeners.remove(bar)
@@ -466,7 +511,7 @@ class StreamWrapper:
         self,
         exc_type: type[BaseException],
         exc_value: BaseException,
-        exc_traceback: types.TracebackType | None,
+        exc_traceback: TracebackType | None,
     ) -> None:
         self.original_excepthook(exc_type, exc_value, exc_traceback)
         self.flush()
@@ -518,13 +563,13 @@ class AttributeDict(dict):
     AttributeError: No such attribute: spam
     """
 
-    def __getattr__(self, name: str) -> int:
+    def __getattr__(self, name: str) -> typing.Any:
         if name in self:
             return self[name]
         else:
             raise AttributeError(f'No such attribute: {name}')
 
-    def __setattr__(self, name: str, value: int) -> None:
+    def __setattr__(self, name: str, value: typing.Any) -> None:
         self[name] = value
 
     def __delattr__(self, name: str) -> None:
@@ -534,6 +579,5 @@ class AttributeDict(dict):
             raise AttributeError(f'No such attribute: {name}')
 
 
-logger: logging.Logger = logging.getLogger(__name__)
 streams = StreamWrapper()
 atexit.register(streams.flush)

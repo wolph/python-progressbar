@@ -8,10 +8,12 @@ on:
 jobs:
   stale:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/stale@v8
         with:
           days-before-issue-stale: 30
           exempt-issue-labels: in-progress,help-wanted,pinned,security,enhancement
           exempt-all-assignees: true
-
