@@ -1,5 +1,11 @@
 [build-system]
 build-backend = 'setuptools.build_meta'
+# setuptools-scm is required at build time: its setuptools file-finder
+# entry point is what populates the sdist with the full set of
+# git-tracked files (docs/, tests/ data, tox.ini, .github/, ...).
+# Dropping it silently shrinks the sdist and omits the test harness, so
+# it must stay even though the version itself is static (see
+# tool.setuptools.dynamic below).
 requires = ['setuptools', 'setuptools-scm']
 
 [project]
@@ -124,12 +130,9 @@ docs = [
 ]
 tests = [
     'dill>=0.3.6',
-    'flake8>=3.7.7',
     'freezegun>=0.3.11',
     'pytest-cov>=2.6.1',
-    'pytest-mypy',
     'pytest>=4.6.9',
-    'sphinx>=1.8.5',
     'pywin32; sys_platform == "win32"',
 ]
 
