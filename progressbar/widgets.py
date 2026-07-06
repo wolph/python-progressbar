@@ -569,6 +569,27 @@ class ETA(Timer):
         else:
             return 0
 
+    def _resolve_value_elapsed(
+        self,
+        progress: ProgressBarMixinBase,
+        data: Data,
+        value,
+        elapsed,
+    ):
+        """Fill in the value/elapsed defaults shared by the ETA variants.
+
+        When a caller does not supply them, the per-item rate is based on the
+        progress relative to ``min_value`` (not the raw value) and the elapsed
+        time is taken from the data snapshot.
+        """
+        if value is None:
+            value = data['value'] - progress.min_value
+
+        if elapsed is None:
+            elapsed = data['time_elapsed']
+
+        return value, elapsed
+
     def __call__(
         self,
         progress: ProgressBarMixinBase,
@@ -577,25 +598,27 @@ class ETA(Timer):
         elapsed=None,
     ):
         """Updates the widget to show the ETA or total time when finished."""
-        if value is None:
-            # The per-item rate must be based on the progress relative to
-            # min_value, not the raw value
-            value = data['value'] - progress.min_value
+        value, elapsed = self._resolve_value_elapsed(
+            progress, data, value, elapsed
+        )
 
-        if elapsed is None:
-            elapsed = data['time_elapsed']
-
+        # ``max_value`` is ``UnknownLength`` for indeterminate bars. The
+        # remaining-count subtraction in ``_calculate_eta`` only runs (and
+        # only then fails) once ``elapsed`` is truthy, so guard on both to
+        # keep the ``elapsed == 0`` case rendering ``format_zero`` as before.
+        # Nothing else in the ETA math raises ``TypeError``, so the previous
+        # try/except-as-control-flow is intentionally removed.
         eta_na = False
-        try:
+        if elapsed and progress.max_value is base.UnknownLength:
+            data['eta_seconds'] = None
+            eta_na = True
+        else:
             data['eta_seconds'] = self._calculate_eta(
                 progress,
                 data,
                 value=value,
                 elapsed=elapsed,
             )
-        except TypeError:
-            data['eta_seconds'] = None
-            eta_na = True
 
         data['eta'] = None
         if data['eta_seconds']:
@@ -722,14 +745,9 @@ class SmoothingETA(ETA):
         value=None,
         elapsed=None,
     ):
-        if value is None:  # pragma: no branch
-            # The per-item rate must be based on the progress relative to
-            # min_value, not the raw value
-            value = data['value'] - progress.min_value
-
-        if elapsed is None:  # pragma: no branch
-            elapsed = data['time_elapsed']
-
+        value, elapsed = self._resolve_value_elapsed(
+            progress, data, value, elapsed
+        )
         value = self.smoothing_algorithm.update(value, elapsed)
         return ETA.__call__(self, progress, data, value=value, elapsed=elapsed)
 
