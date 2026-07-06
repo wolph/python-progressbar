@@ -185,6 +185,9 @@ def test_started_flag_not_observable_before_widgets(monkeypatch) -> None:
         # list is already populated at this exact moment.
         observed['widgets_at_flip'] = bool(self.widgets)
         observed['started_at_flip'] = self.started()
+        # update() re-enters start() while start_time is None, so a
+        # concurrent update(force=True) would double-run the start path.
+        observed['start_time_at_flip'] = self.start_time is not None
         return result
 
     monkeypatch.setattr(
@@ -197,6 +200,9 @@ def test_started_flag_not_observable_before_widgets(monkeypatch) -> None:
     assert observed.get('started_at_flip') is True
     assert observed.get('widgets_at_flip') is True, (
         'widgets must be populated before started() can observe _started'
+    )
+    assert observed.get('start_time_at_flip') is True, (
+        'start_time must be set before started() can observe _started'
     )
 
 

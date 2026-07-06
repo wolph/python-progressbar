@@ -1383,6 +1383,16 @@ class ProgressBar(
             self._gate_enabled = False
         self._verify_max_value()
 
+        # Timing state must be populated before `_started` becomes
+        # observable: a concurrent reader (MultiBar's render thread) that
+        # sees `started()` True calls `update(force=True)`, and `update()`
+        # re-enters `start()` whenever `start_time` is still None -- running
+        # the stream-capturing path twice.
+        now = datetime.now()
+        self.start_time = self.initial_start_time or now
+        self.last_update_time = now
+        self._last_update_timer = timeit.default_timer()
+
         # Cooperative dispatch through the MRO
         # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
         # ResizableMixin/ProgressBarBase define no `start` and are skipped.
@@ -1394,10 +1404,6 @@ class ProgressBar(
         # still happens at the same point, after stream/console setup.
         super().start(max_value=max_value)
 
-        now = datetime.now()
-        self.start_time = self.initial_start_time or now
-        self.last_update_time = now
-        self._last_update_timer = timeit.default_timer()
         self.update(self.min_value, force=True)
 
         return self
