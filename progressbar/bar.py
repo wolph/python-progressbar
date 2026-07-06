@@ -579,13 +579,18 @@ class StdRedirectMixin(DefaultFdMixin):
         super().update(value=value)
 
     def finish(self, end='\n'):
-        super().finish(end=end)
-        utils.streams.stop_capturing(self)
-        if self.redirect_stdout:
-            utils.streams.unwrap_stdout()
+        try:
+            super().finish(end=end)
+        finally:
+            # Always release the global stream-wrapping state, even when
+            # the final render raises; a leaked listener would corrupt
+            # every later progressbar in the process.
+            utils.streams.stop_capturing(self)
+            if self.redirect_stdout:
+                utils.streams.unwrap_stdout()
 
-        if self.redirect_stderr:
-            utils.streams.unwrap_stderr()
+            if self.redirect_stderr:
+                utils.streams.unwrap_stderr()
 
 
 class ProgressBar(
@@ -687,6 +692,11 @@ class ProgressBar(
         suffix=None,
         variables=None,
         min_poll_interval=None,
+        desc: str | None = None,
+        total: ValueT = None,
+        unit: str = 'it',
+        unit_scale: bool = False,
+        postfix: typing.Any = None,
         **kwargs,
     ):
         """Initializes a progress bar with sane defaults."""
@@ -695,6 +705,13 @@ class ProgressBar(
         max_value, poll_interval = self._apply_deprecated_aliases(
             max_value, poll_interval, kwargs
         )
+
+        if max_value is None and total is not None:
+            # tqdm-style alias for `max_value`
+            max_value = total
+        if prefix is None and desc is not None:
+            # tqdm-style alias for `prefix`
+            prefix = f'{desc}: '
 
         if max_value and min_value > typing.cast(NumberT, max_value):
             raise ValueError(
@@ -708,6 +725,13 @@ class ProgressBar(
 
         self.widgets = self._copy_widgets(widgets)
 
+        self.unit = unit
+        self.unit_scale = unit_scale
+        # Auto-append a Postfix widget in start() when `postfix` is used
+        # with the default widgets; explicit widget lists are left alone.
+        self._auto_postfix = widgets is None and postfix is not None
+        self._auto_postfix_added = False
+
         self.prefix = prefix
         self.suffix = suffix
         self.widget_kwargs = widget_kwargs or {}
@@ -720,6 +744,8 @@ class ProgressBar(
 
         self._setup_poll_intervals(poll_interval, min_poll_interval)
         self._seed_variables(variables)
+        if postfix is not None:
+            self.variables['postfix'] = postfix
 
     def _apply_deprecated_aliases(
         self,
@@ -964,6 +990,8 @@ class ProgressBar(
             time_elapsed=elapsed,
             # Percentage as a float or `None` if no max_value is available
             percentage=self.percentage,
+            unit=self.unit,
+            unit_scale=self.unit_scale,
             # Dictionary of user-defined
             # :py:class:`progressbar.widgets.Variable`'s
             variables=self.variables,
@@ -1368,9 +1396,13 @@ class ProgressBar(
         if self.max_value is None:
             self.max_value = self._DEFAULT_MAXVAL
 
-        # Constructing the default widgets is only done when we know max_value
+        # Constructing the default widgets is only done when we know
+        # max_value
         if not self.widgets:
             self.widgets = self.default_widgets()
+        if self._auto_postfix and not self._auto_postfix_added:
+            self.widgets.append(_load_widgets().Postfix())
+            self._auto_postfix_added = True
 
         self._init_prefix()
         self._init_suffix()
@@ -1380,30 +1412,40 @@ class ProgressBar(
             or not self.min_poll_interval
         ):
             self._gate_enabled = False
-        self._verify_max_value()
 
-        # Timing state must be populated before `_started` becomes
-        # observable: a concurrent reader (MultiBar's render thread) that
-        # sees `started()` True calls `update(force=True)`, and `update()`
-        # re-enters `start()` whenever `start_time` is still None -- running
-        # the stream-capturing path twice.
-        now = datetime.now()
-        self.start_time = self.initial_start_time or now
-        self.last_update_time = now
-        self._last_update_timer = timeit.default_timer()
+        try:
+            self._verify_max_value()
 
-        # Cooperative dispatch through the MRO
-        # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
-        # ResizableMixin/ProgressBarBase define no `start` and are skipped.
-        # This runs *after* all widget/state setup so that `_started` (set by
-        # ProgressBarMixinBase.start) only becomes observable once `widgets`
-        # is fully populated. Otherwise a concurrent reader (e.g. MultiBar's
-        # render thread) could see `started()` True with an empty widget list
-        # crash in `_label_bar`'s `assert bar.widgets`. The 0% draw below
-        # still happens at the same point, after stream/console setup.
-        super().start(max_value=max_value)
+            # Timing state must be populated before `_started` becomes
+            # observable: a concurrent reader (MultiBar's render thread) that
+            # sees `started()` True calls `update(force=True)`, and `update()`
+            # re-enters `start()` whenever `start_time` is still None --
+            # running the stream-capturing path twice.
+            now = datetime.now()
+            self.start_time = self.initial_start_time or now
+            self.last_update_time = now
+            self._last_update_timer = timeit.default_timer()
 
-        self.update(self.min_value, force=True)
+            # Cooperative dispatch through the MRO
+            # (StdRedirectMixin -> DefaultFdMixin -> ProgressBarMixinBase);
+            # ResizableMixin/ProgressBarBase define no `start` and are
+            # skipped. This runs *after* all widget/state setup so that
+            # `_started` (set by ProgressBarMixinBase.start) only becomes
+            # observable once `widgets` is fully populated. Otherwise a
+            # concurrent reader (e.g. MultiBar's render thread) could see
+            # `started()` True with an empty widget list and crash in
+            # `_label_bar`'s `assert bar.widgets`. The 0% draw below still
+            # happens at the same point, after stream/console setup.
+            super().start(max_value=max_value)
+
+            self.update(self.min_value, force=True)
+        except Exception:
+            # A failed start must not leak global stream-wrapping state
+            # (registered listeners, redirected stdout/stderr): run the
+            # finish chain suppressed and re-raise the original error.
+            with contextlib.suppress(Exception):
+                super().finish(end='')
+            raise
 
         return self
 
@@ -1469,17 +1511,21 @@ class ProgressBar(
             # state, so extra calls are no-ops
             return
 
-        if not dirty:
-            self.end_time = datetime.now()
-            self.update(self.max_value, force=True)
-
-        # Cooperative dispatch through the MRO
-        # (StdRedirectMixin -> DefaultFdMixin -> ResizableMixin ->
-        # ProgressBarMixinBase). Ordering note: the SIGWINCH uninstall in
-        # ResizableMixin.finish now runs *before* the stream unwrap in
-        # StdRedirectMixin.finish (previously it ran after). The two
-        # subsystems are independent, so the observable result is unchanged.
-        super().finish(end=end)
+        try:
+            if not dirty:
+                self.end_time = datetime.now()
+                self.update(self.max_value, force=True)
+        finally:
+            # Run the finish chain even when the final render raises, so a
+            # failing widget cannot leak the global stream-wrapping state.
+            # Cooperative dispatch through the MRO
+            # (StdRedirectMixin -> DefaultFdMixin -> ResizableMixin ->
+            # ProgressBarMixinBase). Ordering note: the SIGWINCH uninstall in
+            # ResizableMixin.finish now runs *before* the stream unwrap in
+            # StdRedirectMixin.finish (previously it ran after). The two
+            # subsystems are independent, so the observable result is
+            # unchanged.
+            super().finish(end=end)
 
     @property
     def currval(self):

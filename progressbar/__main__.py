@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import pathlib
 import sys
+import time
 import typing
 from pathlib import Path
 from typing import IO, BinaryIO, TextIO
@@ -271,7 +272,82 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> None:
+def _default_widgets(
+    filesize_available: bool,
+) -> list[progressbar.widgets.WidgetBase | str]:
+    if filesize_available:
+        return [
+            progressbar.Percentage(),
+            ' ',
+            progressbar.Bar(),
+            ' ',
+            progressbar.Timer(),
+            ' ',
+            progressbar.FileTransferSpeed(),
+        ]
+    return [
+        progressbar.SimpleProgress(),
+        ' ',
+        progressbar.DataSize(),
+        ' ',
+        progressbar.Timer(),
+    ]
+
+
+def _append_widget_group(
+    widgets: list[progressbar.widgets.WidgetBase | str],
+    group: typing.Sequence[progressbar.widgets.WidgetBase | str],
+) -> None:
+    if widgets:
+        widgets.append(' ')
+    widgets.extend(group)
+
+
+def _build_widgets(
+    args: argparse.Namespace,
+    filesize_available: bool,
+) -> list[progressbar.widgets.WidgetBase | str]:
+    if args.quiet:
+        return []
+
+    requested_widgets = [
+        (args.progress, [progressbar.Percentage(), ' ', progressbar.Bar()]),
+        (args.bytes, [progressbar.DataSize()]),
+        (args.timer, [progressbar.Timer()]),
+        (args.eta, [progressbar.AdaptiveETA()]),
+        (args.fineta, [progressbar.AbsoluteETA()]),
+        (args.rate or args.average_rate, [progressbar.FileTransferSpeed()]),
+    ]
+    selected_widgets = [
+        group for selected, group in requested_widgets if selected
+    ]
+    if not selected_widgets:
+        return _default_widgets(filesize_available)
+
+    widgets: list[progressbar.widgets.WidgetBase | str] = []
+    for group in selected_widgets:
+        _append_widget_group(widgets, group)
+
+    return widgets
+
+
+def _sleep_for_rate_limit(
+    rate_limit: int | None,
+    transferred: int,
+    started_at: float,
+    now: float | None = None,
+) -> None:
+    if not rate_limit:
+        return
+    now = time.monotonic() if now is None else now
+    expected_elapsed = transferred / rate_limit
+    actual_elapsed = now - started_at
+    delay = expected_elapsed - actual_elapsed
+    if delay > 0:
+        time.sleep(delay)
+
+
+def main(argv: list[str] | None = None) -> None:  # noqa: C901
     """
     Main function for the `progressbar` command.
 
@@ -289,162 +365,104 @@ def main(argv: list[str] | None = None) -> None:
             args.output, args.line_mode, stack
         )
 
-        input_paths, total_size, filesize_available = _resolve_inputs(
-            args, parser
-        )
+        input_paths: list[BinaryIO | TextIO | Path | IO[typing.Any]] = []
+        total_size: int = 0
+        filesize_available: bool = True
+        for filename in args.input:
+            input_path: typing.IO[typing.Any] | pathlib.Path
+            if filename == '-':
+                if args.line_mode:
+                    input_path = sys.stdin
+                else:
+                    input_path = sys.stdin.buffer
+
+                filesize_available = False
+            else:
+                input_path = pathlib.Path(filename)
+                if not input_path.exists():
+                    parser.error(f'File not found: {filename}')
+
+                if not args.size:
+                    total_size += input_path.stat().st_size
+
+            input_paths.append(input_path)
+
+        # Determine the size for the progress bar (if provided)
+        if args.size:
+            total_size = size_to_bytes(args.size)
+            filesize_available = True
+
         widgets = _build_widgets(args, filesize_available)
+        progress_bar_class: type[progressbar.ProgressBar] = (
+            progressbar.NullBar if args.quiet else progressbar.ProgressBar
+        )
 
         # Initialize the progress bar
-        bar = progressbar.ProgressBar(
+        bar = progress_bar_class(
             widgets=widgets,
             max_value=total_size if filesize_available else None,
             max_error=False,
+            line_breaks=True if args.numeric else None,
         )
 
-        _transfer(bar, input_paths, output_stream, args, stack)
+        # Data processing and updating the progress bar
+        buffer_size = (
+            size_to_bytes(args.buffer_size) if args.buffer_size else 1024
+        )
+        rate_limit = (
+            size_to_bytes(args.rate_limit) if args.rate_limit else None
+        )
+        started_at = time.monotonic()
+        total_transferred = 0
 
-
-def _resolve_inputs(
-    args: argparse.Namespace,
-    parser: argparse.ArgumentParser,
-) -> tuple[list[BinaryIO | TextIO | Path | IO[typing.Any]], int, bool]:
-    """
-    Resolve the input arguments into concrete streams/paths and the total size.
-
-    Returns the list of inputs (stdin streams or file paths), the total size in
-    bytes and whether that size is known (``filesize_available``).
-    """
-    input_paths: list[BinaryIO | TextIO | Path | IO[typing.Any]] = []
-    total_size: int = 0
-    filesize_available: bool = True
-    for filename in args.input:
-        input_path: typing.IO[typing.Any] | pathlib.Path
-        if filename == '-':
-            if args.line_mode:
-                input_path = sys.stdin
-            else:
-                input_path = sys.stdin.buffer
-
-            filesize_available = False
-        else:
-            input_path = pathlib.Path(filename)
-            if not input_path.exists():
-                parser.error(f'File not found: {filename}')
-
-            if not args.size:
-                total_size += input_path.stat().st_size
-
-        input_paths.append(input_path)
-
-    # An explicit ``--size`` overrides the detected file sizes entirely.
-    if args.size:
-        total_size = size_to_bytes(args.size)
-        filesize_available = True
-
-    return input_paths, total_size, filesize_available
-
-
-def _build_widgets(
-    args: argparse.Namespace,
-    filesize_available: bool,
-) -> list[typing.Any]:
-    """
-    Select the widget set for the progress bar.
-
-    When the total size is known a percentage/bar layout is used, otherwise a
-    size-based layout is used. An adaptive ETA is appended when requested.
-    """
-    widgets: list[typing.Any]
-    if filesize_available:
-        # Create the progress bar components
-        widgets = [
-            progressbar.Percentage(),
-            ' ',
-            progressbar.Bar(),
-            ' ',
-            progressbar.Timer(),
-            ' ',
-            progressbar.FileTransferSpeed(),
-        ]
-    else:
-        widgets = [
-            progressbar.SimpleProgress(),
-            ' ',
-            progressbar.DataSize(),
-            ' ',
-            progressbar.Timer(),
-        ]
-
-    if args.eta:
-        widgets.append(' ')
-        widgets.append(progressbar.AdaptiveETA())
-
-    return widgets
-
-
-def _transfer(
-    bar: progressbar.ProgressBar,
-    input_paths: list[BinaryIO | TextIO | Path | IO[typing.Any]],
-    output_stream: typing.IO[typing.Any],
-    args: argparse.Namespace,
-    stack: contextlib.ExitStack,
-) -> None:
-    """
-    Copy every input through the progress bar into ``output_stream``.
-
-    Opened files are registered on ``stack`` so they are closed when the caller
-    exits its ``ExitStack`` context.
-    """
-    # Data processing and updating the progress bar
-    buffer_size = size_to_bytes(args.buffer_size) if args.buffer_size else 1024
-    total_transferred = 0
-
-    bar.start()
-    with contextlib.suppress(KeyboardInterrupt, BrokenPipeError):
-        for input_path in input_paths:
-            if isinstance(input_path, pathlib.Path):
-                if args.line_mode:
-                    # newline='' disables universal-newline
-                    # translation so the byte count matches the file
-                    # size for CRLF files as well
-                    input_stream = stack.enter_context(
-                        input_path.open('r', newline=''),
-                    )
+        bar.start()
+        with contextlib.suppress(KeyboardInterrupt, BrokenPipeError):
+            for input_path in input_paths:
+                if isinstance(input_path, pathlib.Path):
+                    if args.line_mode:
+                        # newline='' disables universal-newline
+                        # translation so the byte count matches the file
+                        # size for CRLF files as well
+                        input_stream = stack.enter_context(
+                            input_path.open('r', newline=''),
+                        )
+                    else:
+                        input_stream = stack.enter_context(
+                            input_path.open('rb'),
+                        )
                 else:
-                    input_stream = stack.enter_context(
-                        input_path.open('rb'),
+                    input_stream = input_path
+
+                while True:
+                    data: str | bytes
+                    if args.line_mode:
+                        data = input_stream.readline(buffer_size)
+                    else:
+                        data = input_stream.read(buffer_size)
+
+                    if not data:
+                        break
+
+                    output_stream.write(data)
+                    if isinstance(data, str):
+                        # The total size is measured in bytes, so progress
+                        # must be tracked in bytes as well
+                        encoding = (
+                            getattr(input_stream, 'encoding', None) or 'utf-8'
+                        )
+                        total_transferred += len(
+                            data.encode(encoding, errors='replace'),
+                        )
+                    else:
+                        total_transferred += len(data)
+
+                    bar.update(total_transferred)
+                    _sleep_for_rate_limit(
+                        rate_limit,
+                        total_transferred,
+                        started_at,
                     )
-            else:
-                input_stream = input_path
 
-            while True:
-                data: str | bytes
-                if args.line_mode:
-                    data = input_stream.readline(buffer_size)
-                else:
-                    data = input_stream.read(buffer_size)
-
-                if not data:
-                    break
-
-                output_stream.write(data)
-                if isinstance(data, str):
-                    # The total size is measured in bytes, so progress
-                    # must be tracked in bytes as well
-                    encoding = (
-                        getattr(input_stream, 'encoding', None) or 'utf-8'
-                    )
-                    total_transferred += len(
-                        data.encode(encoding, errors='replace'),
-                    )
-                else:
-                    total_transferred += len(data)
-
-                bar.update(total_transferred)
-
-        # Inside the suppress block on purpose (matching the historical
-        # behavior): on interrupt/broken pipe the finish is skipped and a
-        # BrokenPipeError from a closed stderr cannot crash shutdown.
         bar.finish(dirty=True)
 
 

@@ -1019,6 +1019,55 @@ class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
         return self._apply_colors(output, data)
 
 
+UNIT_PREFIXES = ('', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi')
+DEFAULT_UNIT = object()
+
+
+def format_unit_value(value, unit='it', unit_scale=False) -> str:
+    if value in (None, base.UnknownLength):
+        return 'N/A'
+    if unit_scale:
+        scaled, power = utils.scale_1024(float(value), len(UNIT_PREFIXES))
+        prefix = UNIT_PREFIXES[int(power)]
+        return f'{scaled:.1f} {prefix}{unit}'
+    if isinstance(value, float):
+        return f'{value:g} {unit}'
+    return f'{value} {unit}'
+
+
+class UnitProgress(WidgetBase):
+    """Displays progress as a count with an optional unit and 1024 scaling."""
+
+    def __init__(
+        self,
+        unit=DEFAULT_UNIT,
+        unit_scale=DEFAULT_UNIT,
+        **kwargs: typing.Any,
+    ):
+        self.use_progress_unit = unit is DEFAULT_UNIT
+        self.use_progress_unit_scale = unit_scale is DEFAULT_UNIT
+        self.unit: str = (
+            'it' if unit is DEFAULT_UNIT else typing.cast(str, unit)
+        )
+        self.unit_scale: bool = (
+            False
+            if unit_scale is DEFAULT_UNIT
+            else typing.cast(bool, unit_scale)
+        )
+        WidgetBase.__init__(self, **kwargs)
+
+    def __call__(self, progress: ProgressBarMixinBase, data: Data) -> str:
+        unit = typing.cast(str, data.get('unit', self.unit))
+        unit_scale = typing.cast(bool, data.get('unit_scale', self.unit_scale))
+        if not self.use_progress_unit:
+            unit = self.unit
+        if not self.use_progress_unit_scale:
+            unit_scale = self.unit_scale
+        value = format_unit_value(data.get('value'), unit, unit_scale)
+        max_value = format_unit_value(data.get('max_value'), unit, unit_scale)
+        return f'{value} of {max_value}'
+
+
 class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
     """Returns progress as a count of the total (e.g.: "5 of 47")."""
 
@@ -1287,6 +1336,38 @@ class VariableMixin(_WidgetKwargsSink):
             raise ValueError('Variable(): argument must be single word')
         self.name = name
         super().__init__(**kwargs)
+
+
+class Postfix(VariableMixin, WidgetBase):
+    """Displays a live postfix string or key-value mapping."""
+
+    def __init__(
+        self,
+        name='postfix',
+        prefix=' ',
+        separator=', ',
+        **kwargs: typing.Any,
+    ):
+        self.prefix = prefix
+        self.separator = separator
+        VariableMixin.__init__(self, name=name)
+        WidgetBase.__init__(self, **kwargs)
+
+    def __call__(self, progress: ProgressBarMixinBase, data: Data) -> str:
+        value = data['variables'].get(self.name)
+        if value is None or (
+            isinstance(value, (str, dict, list, set, tuple)) and not value
+        ):
+            return ''
+        if isinstance(value, str):
+            rendered = value
+        elif isinstance(value, dict):
+            rendered = self.separator.join(
+                f'{key}={value[key]}' for key in sorted(value)
+            )
+        else:
+            rendered = str(value)
+        return f'{self.prefix}{rendered}'
 
 
 class MultiRangeBar(Bar, VariableMixin):

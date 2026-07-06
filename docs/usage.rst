@@ -16,6 +16,21 @@ Wrapping an iterable
    for i in bar(range(100)):
        time.sleep(0.02)
 
+Tqdm-style options
+------------------------------------------------------------------------------
+::
+
+   import progressbar
+
+   for item in progressbar.progressbar(
+       range(10),
+       desc='Items',
+       total=10,
+       unit='it',
+       postfix={'state': 'running'},
+   ):
+       pass
+
 Context wrapper
 ------------------------------------------------------------------------------
 ::
@@ -37,9 +52,24 @@ Combining progressbars with print output
 
     bar = progressbar.ProgressBar(redirect_stdout=True)
     for i in range(100):
-        print 'Some text', i
+        print('Some text', i)
         time.sleep(0.1)
         bar.update(i)
+
+Logging integration
+------------------------------------------------------------------------------
+::
+
+   import logging
+   import progressbar
+
+   progressbar.streams.wrap_stderr()
+   progressbar.streams.wrap_logging()
+   logging.basicConfig()
+
+   with progressbar.ProgressBar(total=10, redirect_stderr=True) as bar:
+       logging.warning('message above the bar')
+       bar.update(1)
 
 Progressbar with unknown length
 ------------------------------------------------------------------------------
