@@ -62,23 +62,50 @@ class ColorSupport(enum.IntEnum):
             'TERM',
         )
 
+        # Precedence order is significant: an interactive Jupyter kernel and
+        # the Windows console probe each take priority over (and short-circuit)
+        # the env-var scan below.
         if JUPYTER:
-            # Jupyter notebook always supports true color.
-            return cls.XTERM_TRUECOLOR
+            return cls._from_jupyter()
         elif os.name == 'nt':
-            # We can't reliably detect true color support on Windows, so we
-            # will assume it is supported if the console is configured to
-            # support it.
-            from .terminal.os_specific import windows
+            return cls._from_windows()
 
-            if (
-                windows.get_console_mode()
-                & windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
-            ):
-                return cls.XTERM_TRUECOLOR
-            else:
-                return cls.WINDOWS  # pragma: no cover
+        return cls._from_term_variables(variables)
 
+    @classmethod
+    def _from_jupyter(cls) -> ColorSupport:
+        """Jupyter notebooks always support true color."""
+        return cls.XTERM_TRUECOLOR
+
+    @classmethod
+    def _from_windows(cls) -> ColorSupport:  # pragma: no cover
+        """Detect color support from the Windows console mode.
+
+        We can't reliably detect true color support on Windows, so we assume
+        it is supported when the console is configured to support it.
+        """
+        from .terminal.os_specific import windows
+
+        if (
+            windows.get_console_mode()
+            & windows.WindowsConsoleModeFlags.ENABLE_PROCESSED_OUTPUT
+        ):
+            return cls.XTERM_TRUECOLOR
+        else:
+            return cls.WINDOWS
+
+    @classmethod
+    def _from_term_variables(
+        cls,
+        variables: tuple[str, ...],
+    ) -> ColorSupport:
+        """Pick the highest color support advertised by the terminal env vars.
+
+        The first `truecolor`/`24bit` value wins immediately; otherwise the
+        highest depth seen across all variables is returned. A generic truthy
+        flag such as `FORCE_COLOR=1` carries no depth and implies full color
+        support, analogous to the Jupyter handling above.
+        """
         support = cls.NONE
         for variable in variables:
             value = os.environ.get(variable)
@@ -93,9 +120,6 @@ class ColorSupport(enum.IntEnum):
             elif value == 'xterm':
                 support = max(cls.XTERM, support)
             elif env_flag(variable, default=False):
-                # Generic truthy flags such as `FORCE_COLOR=1` enable
-                # color support but don't specify the depth; assume full
-                # color support analogous to the Jupyter handling above.
                 return cls.XTERM_TRUECOLOR
 
         return support
