@@ -8,8 +8,12 @@ from . import (
     base,
 )
 
-#: Optional native line formatter, provided by the `speedups` package. When
-#: present it replaces the pure-Python formatter below. Wired in a later task.
+#: Optional native line-formatter hook. Left as ``None`` so the pure-Python
+#: ``_pure_format_fast_line`` below is used by default. When set to a callable
+#: it takes precedence in :py:meth:`FastProgressBar._format_line`, letting the
+#: ``speedups`` package — or any caller — swap in a faster/custom formatter.
+#: This is a supported extension point, exercised by
+#: ``test_fast_format_line_uses_native_hook``.
 _format_fast_line: typing.Callable[[FastProgressBar], str] | None = None
 
 #: Spinner frames cycled for unknown-length bars: bar, forward slash, dash,
@@ -71,7 +75,7 @@ class FastProgressBar(bar_module.ProgressBar):
     render-cheap. Output stays close to the default look without the gradient.
     """
 
-    def default_widgets(self) -> list:
+    def default_widgets(self) -> list[typing.Any]:
         # No widgets: the fixed formatter renders everything.
         return []
 
