@@ -9,12 +9,12 @@
     "Counter": "class(format=?, **kwargs)",
     "CurrentTime": "class(format=?, microseconds=?, **kwargs)",
     "DataSize": "class(variable=?, format=?, unit=?, prefixes=?, **kwargs)",
-    "DataTransferBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
+    "DataTransferBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "DoubleExponentialMovingAverage": "class(alpha=?)",
     "DynamicMessage": "class(name, format=?, width=?, precision=?, **kwargs)",
     "ETA": "class(format_not_started=?, format_finished=?, format=?, format_zero=?, format_na=?, **kwargs)",
     "ExponentialMovingAverage": "class(alpha=?)",
-    "FastProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
+    "FastProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "FileTransferSpeed": "class(format=?, inverse_format=?, unit=?, prefixes=?, **kwargs)",
     "FormatCustomText": "class(format, mapping=?, **kwargs)",
     "FormatLabel": "class(format, **kwargs)",
@@ -25,10 +25,11 @@
     "MultiBar": "class(bars=?, fd=?, prepend_label=?, append_label=?, label_format=?, initial_format=?, finished_format=?, update_interval=?, show_initial=?, show_finished=?, remove_finished=?, sort_key=?, sort_reverse=?, sort_keyfunc=?, *, join_timeout=?, **progressbar_kwargs)",
     "MultiProgressBar": "class(name, markers=?, **kwargs)",
     "MultiRangeBar": "class(name, markers, **kwargs)",
-    "NullBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
+    "NullBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "Percentage": "class(format=?, na=?, **kwargs)",
     "PercentageLabelBar": "class(format=?, na=?, **kwargs)",
-    "ProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
+    "Postfix": "class(name=?, prefix=?, separator=?, **kwargs)",
+    "ProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "ReverseBar": "class(marker=?, left=?, right=?, fill=?, fill_left=?, **kwargs)",
     "RotatingMarker": "class(markers=?, default=?, fill=?, marker_wrap=?, fill_wrap=?, **kwargs)",
     "SimpleProgress": "class(format=?, **kwargs)",
@@ -36,13 +37,14 @@
     "SmoothingETA": "class(smoothing_algorithm=?, smoothing_parameters=?, **kwargs)",
     "SortKey": "enum(CREATED,LABEL,VALUE,PERCENTAGE)",
     "Timer": "class(format=?, **kwargs)",
+    "UnitProgress": "class(unit=?, unit_scale=?, **kwargs)",
     "UnknownLength": "class()",
     "Variable": "class(name, format=?, width=?, precision=?, **kwargs)",
     "VariableMixin": "class(name, **kwargs)",
     "__author__": "str",
     "__version__": "str",
     "len_color": "callable(value)",
-    "progressbar": "callable(iterator, min_value=?, max_value=?, widgets=?, prefix=?, suffix=?, fast=?, **kwargs)",
+    "progressbar": "callable(iterator, min_value=?, max_value=?, widgets=?, prefix=?, suffix=?, fast=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "streams": "StreamWrapper"
   },
   "progressbar.algorithms": {
@@ -53,12 +55,12 @@
     "timedelta": "re-export"
   },
   "progressbar.bar": {
-    "DataTransferBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
+    "DataTransferBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "DefaultFdMixin": "class(fd=?, is_terminal=?, line_breaks=?, enable_colors=?, line_offset=?, **kwargs)",
     "FrameType": "re-export",
-    "NullBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
+    "NullBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "NumberT": "re-export",
-    "ProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
+    "ProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "ProgressBarBase": "class(**kwargs)",
     "ProgressBarMixinBase": "class(**kwargs)",
     "ResizableMixin": "class(term_width=?, **kwargs)",
@@ -89,7 +91,8 @@
     "is_terminal": "callable(fd, is_terminal=?)"
   },
   "progressbar.fast": {
-    "FastProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, **kwargs)",
+    "Callable": "re-export",
+    "FastProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "annotations": "_Feature",
     "datetime": "re-export",
     "timedelta": "re-export"
@@ -104,7 +107,7 @@
   "progressbar.shortcuts": {
     "T": "type-alias",
     "annotations": "_Feature",
-    "progressbar": "callable(iterator, min_value=?, max_value=?, widgets=?, prefix=?, suffix=?, fast=?, **kwargs)"
+    "progressbar": "callable(iterator, min_value=?, max_value=?, widgets=?, prefix=?, suffix=?, fast=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)"
   },
   "progressbar.terminal": {
     "CLEAR_LINE": "callable()",
@@ -128,6 +131,7 @@
     "DOWN": "callable(*args)",
     "DummyColor": "class()",
     "ESC": "str",
+    "Generator": "re-export",
     "HIDE_CURSOR": "callable()",
     "HSL": "class(hue, saturation, lightness)",
     "Iterable": "re-export",
@@ -447,6 +451,7 @@
     "yellow4": "callable(value)"
   },
   "progressbar.terminal.stream": {
+    "Generator": "re-export",
     "Iterable": "re-export",
     "Iterator": "re-export",
     "LastLineStream": "class(stream)",
@@ -457,10 +462,13 @@
   },
   "progressbar.utils": {
     "AttributeDict": "classsignature-unavailable",
+    "Callable": "re-export",
     "Iterable": "re-export",
     "Iterator": "re-export",
+    "Mapping": "re-export",
     "StreamWrapper": "class()",
     "StringT": "type-alias",
+    "T": "type-alias",
     "TracebackType": "re-export",
     "WrappingIO": "class(target, capturing=?, listeners=?)",
     "annotations": "_Feature",
@@ -487,6 +495,7 @@
     "ColoredMixin": "class()",
     "Counter": "class(format=?, **kwargs)",
     "CurrentTime": "class(format=?, microseconds=?, **kwargs)",
+    "DEFAULT_UNIT": "object",
     "Data": "type-alias",
     "DataSize": "class(variable=?, format=?, unit=?, prefixes=?, **kwargs)",
     "DynamicMessage": "class(name, format=?, width=?, precision=?, **kwargs)",
@@ -507,6 +516,7 @@
     "MultiRangeBar": "class(name, markers, **kwargs)",
     "Percentage": "class(format=?, na=?, **kwargs)",
     "PercentageLabelBar": "class(format=?, na=?, **kwargs)",
+    "Postfix": "class(name=?, prefix=?, separator=?, **kwargs)",
     "ReverseBar": "class(marker=?, left=?, right=?, fill=?, fill_left=?, **kwargs)",
     "RotatingMarker": "class(markers=?, default=?, fill=?, marker_wrap=?, fill_wrap=?, **kwargs)",
     "SamplesMixin": "class(samples=?, key_prefix=?, **kwargs)",
@@ -517,6 +527,8 @@
     "TGradientColors": "type-alias",
     "TimeSensitiveWidgetBase": "class(*args, fixed_colors=?, gradient_colors=?, **kwargs)",
     "Timer": "class(format=?, **kwargs)",
+    "UNIT_PREFIXES": "tuple",
+    "UnitProgress": "class(unit=?, unit_scale=?, **kwargs)",
     "Variable": "class(name, format=?, width=?, precision=?, **kwargs)",
     "VariableMixin": "class(name, **kwargs)",
     "WidgetBase": "class(*args, fixed_colors=?, gradient_colors=?, **kwargs)",
@@ -524,6 +536,7 @@
     "annotations": "_Feature",
     "create_marker": "callable(marker, wrap=?)",
     "create_wrapper": "callable(wrapper)",
+    "format_unit_value": "callable(value, unit=?, unit_scale=?)",
     "logger": "Logger",
     "string_or_lambda": "callable(input_)",
     "wrapper": "callable(function, wrapper_)"

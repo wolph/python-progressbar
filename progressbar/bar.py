@@ -69,49 +69,6 @@ ValueT = NumberT | type[base.UnknownLength] | None
 T = typing.TypeVar('T')
 
 
-def _resolve_max_value(
-    max_value: ValueT,
-    total: types.Optional[NumberT],
-    kwargs: dict[str, types.Any],
-) -> ValueT:
-    if not max_value and kwargs.get('maxval') is not None:
-        warnings.warn(
-            'The usage of `maxval` is deprecated, please use '
-            '`max_value` instead',
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        max_value = types.cast(ValueT, kwargs.get('maxval'))
-
-    if max_value is None and total is not None:
-        return total
-    return max_value
-
-
-def _resolve_poll_interval(
-    poll_interval: types.Optional[float],
-    kwargs: dict[str, types.Any],
-) -> types.Optional[float]:
-    if not poll_interval and kwargs.get('poll'):
-        warnings.warn(
-            'The usage of `poll` is deprecated, please use '
-            '`poll_interval` instead',
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return types.cast(types.Optional[float], kwargs.get('poll'))
-    return poll_interval
-
-
-def _resolve_prefix(
-    prefix: types.Optional[str],
-    desc: types.Optional[str],
-) -> types.Optional[str]:
-    if prefix is None and desc is not None:
-        return f'{desc}: '
-    return prefix
-
-
 class ProgressBarMixinBase(abc.ABC):
     _started = False
     _finished = False
@@ -735,11 +692,11 @@ class ProgressBar(
         suffix=None,
         variables=None,
         min_poll_interval=None,
-        desc=None,
-        total=None,
-        unit='it',
-        unit_scale=False,
-        postfix=None,
+        desc: str | None = None,
+        total: ValueT = None,
+        unit: str = 'it',
+        unit_scale: bool = False,
+        postfix: typing.Any = None,
         **kwargs,
     ):
         """Initializes a progress bar with sane defaults."""
