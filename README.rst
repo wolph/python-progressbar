@@ -5,7 +5,7 @@ Text progress bar library for Python.
 Build status:
 
 .. image:: https://github.com/WoLpH/python-progressbar/actions/workflows/main.yml/badge.svg
-    :alt: python-progressbar test status 
+    :alt: python-progressbar test status
     :target: https://github.com/WoLpH/python-progressbar/actions
 
 Coverage:

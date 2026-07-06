@@ -67,4 +67,3 @@ Bar with custom widgets
     ])
     for i in bar(range(20)):
         time.sleep(0.1)
-

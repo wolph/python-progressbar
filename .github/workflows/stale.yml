@@ -17,4 +17,3 @@ jobs:
           days-before-issue-stale: 30
           exempt-issue-labels: in-progress,help-wanted,pinned,security,enhancement
           exempt-all-assignees: true
-
