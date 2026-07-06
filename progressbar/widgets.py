@@ -1114,6 +1114,23 @@ class Bar(AutoWidthWidgetBase):
 
         super().__init__(**kwargs)
 
+    def _render_borders(
+        self,
+        progress: ProgressBarMixinBase,
+        data: Data,
+        width: int,
+    ) -> tuple[str, str, int]:
+        """Resolve the left/right borders and the width left for the body.
+
+        The borders may be callables, so they are resolved against
+        ``progress``/``data`` and their visible length subtracted from
+        ``width``. Shared by every :class:`Bar` subclass' ``__call__``.
+        """
+        left = converters.to_unicode(self.left(progress, data, width))
+        right = converters.to_unicode(self.right(progress, data, width))
+        width -= progress.custom_len(left) + progress.custom_len(right)
+        return left, right, width
+
     def __call__(
         self,
         progress: ProgressBarMixinBase,
@@ -1122,9 +1139,7 @@ class Bar(AutoWidthWidgetBase):
         color=True,
     ):
         """Updates the progress bar and its subcomponents."""
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
-        width -= progress.custom_len(left) + progress.custom_len(right)
+        left, right, width = self._render_borders(progress, data, width)
         marker = converters.to_unicode(self.marker(progress, data, width))
         fill = converters.to_unicode(self.fill(progress, data, width))
 
@@ -1185,9 +1200,7 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
         color=True,
     ):
         """Updates the progress bar and its subcomponents."""
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
-        width -= progress.custom_len(left) + progress.custom_len(right)
+        left, right, width = self._render_borders(progress, data, width)
         marker = converters.to_unicode(self.marker(progress, data, width))
 
         fill = converters.to_unicode(self.fill(progress, data, width))
@@ -1285,9 +1298,7 @@ class MultiRangeBar(Bar, VariableMixin):
         color=True,
     ):
         """Updates the progress bar and its subcomponents."""
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
-        width -= progress.custom_len(left) + progress.custom_len(right)
+        left, right, width = self._render_borders(progress, data, width)
         values = self.get_values(progress, data)
 
         values_sum = sum(values)
@@ -1414,6 +1425,10 @@ class GranularBar(AutoWidthWidgetBase):
         data: Data,
         width: int = 0,
     ):
+        # GranularBar descends from AutoWidthWidgetBase, not Bar, so it can't
+        # reach Bar._render_borders. The border preamble is intentionally
+        # duplicated here rather than hoisting the helper onto a shared base
+        # (which would put border concerns on width widgets that have none).
         left = converters.to_unicode(self.left(progress, data, width))
         right = converters.to_unicode(self.right(progress, data, width))
         width -= progress.custom_len(left) + progress.custom_len(right)
@@ -1682,9 +1697,7 @@ class JobStatusBar(Bar, VariableMixin):
         width: int = 0,
         color=True,
     ):
-        left = converters.to_unicode(self.left(progress, data, width))
-        right = converters.to_unicode(self.right(progress, data, width))
-        width -= progress.custom_len(left) + progress.custom_len(right)
+        left, right, width = self._render_borders(progress, data, width)
 
         status: str | bool | None = data['variables'].get(self.name)
 
