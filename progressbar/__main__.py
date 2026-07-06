@@ -442,7 +442,10 @@ def _transfer(
 
                 bar.update(total_transferred)
 
-    bar.finish(dirty=True)
+        # Inside the suppress block on purpose (matching the historical
+        # behavior): on interrupt/broken pipe the finish is skipped and a
+        # BrokenPipeError from a closed stderr cannot crash shutdown.
+        bar.finish(dirty=True)
 
 
 def _get_output_stream(
