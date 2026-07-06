@@ -207,16 +207,6 @@ class ProgressBarBase(collections.abc.Iterable[NumberT], ProgressBarMixinBase):
         label = f': {self.label}' if self.label else ''
         return f'<{self.__class__.__name__}#{self.index}{label}>'
 
-    def __del__(self) -> None:
-        # ProgressBarBase mixes collections.abc.Iterable in alongside
-        # ProgressBarMixinBase (which defines the real finalizer). Define
-        # __del__ here so that finalizer is reached explicitly through the MRO
-        # instead of only by attribute inheritance — behaviourally identical
-        # (super() resolves to the same ProgressBarMixinBase.__del__), but it
-        # makes the multiple-inheritance finalizer chain unambiguous.
-        super().__del__()  # pragma: no cover
-
-
 class DefaultFdMixin(ProgressBarMixinBase):
     # The file descriptor to write to. Defaults to `sys.stderr`
     fd: base.TextIO = sys.stderr
