@@ -602,14 +602,17 @@ class ETA(Timer):
             progress, data, value, elapsed
         )
 
-        # ``max_value`` is ``UnknownLength`` for indeterminate bars. The
-        # remaining-count subtraction in ``_calculate_eta`` only runs (and
-        # only then fails) once ``elapsed`` is truthy, so guard on both to
-        # keep the ``elapsed == 0`` case rendering ``format_zero`` as before.
-        # Nothing else in the ETA math raises ``TypeError``, so the previous
-        # try/except-as-control-flow is intentionally removed.
+        # ``max_value`` is ``UnknownLength`` (or ``None``) for indeterminate
+        # bars. The remaining-count subtraction in ``_calculate_eta`` only
+        # runs (and only then fails) once ``elapsed`` is truthy, so guard on
+        # both to keep the ``elapsed == 0`` case rendering ``format_zero`` as
+        # before. Nothing else in the ETA math raises ``TypeError``, so the
+        # previous try/except-as-control-flow is intentionally removed.
         eta_na = False
-        if elapsed and progress.max_value is base.UnknownLength:
+        if elapsed and (
+            progress.max_value is None
+            or progress.max_value is base.UnknownLength
+        ):
             data['eta_seconds'] = None
             eta_na = True
         else:
