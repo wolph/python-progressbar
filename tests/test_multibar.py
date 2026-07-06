@@ -283,11 +283,17 @@ def test_multibar_join_timeout_abandons_unfinished_bar() -> None:
     multibar = progressbar.MultiBar(fd=io.StringIO(), join_timeout=0.1)
     bar = progressbar.ProgressBar(max_value=10)
     multibar['stuck'] = bar
+    # Fully start the bar before the render thread exists: started() flips
+    # true before the widgets are populated, so a render tick during a
+    # concurrent bar.start() can crash the render thread on the
+    # empty-widgets assert -- join() then succeeds on a dead thread and the
+    # timeout path this test exists to exercise is never taken.
+    bar.start()
+    bar.update(5)  # never reaches max_value / finish()
 
     def exit_context() -> None:
         with multibar:
-            bar.start()
-            bar.update(5)  # never reaches max_value / finish()
+            pass
 
     thread = threading.Thread(target=exit_context, daemon=True)
     thread.start()
