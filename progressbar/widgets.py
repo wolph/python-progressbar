@@ -96,35 +96,35 @@ def create_marker(
     marker: str | collections.abc.Callable[..., str],
     wrap: str | tuple[str | None, str | None] | None = None,
 ) -> collections.abc.Callable[..., str]:
-    def _marker(progress, data, width):
-        # ``marker`` is narrowed to ``str`` by the caller below (``_marker`` is
-        # only wrapped when ``marker`` is a string); cast keeps the type
-        # checker honest without a runtime effect.
-        marker_str = typing.cast(str, marker)
-        if (
-            progress.max_value is not base.UnknownLength
-            and progress.max_value > 0
-        ):
-            # The fill length is based on the progress relative to
-            # min_value; the max() guards against a zero range and the
-            # min() keeps the marker within the allotted width when the
-            # value exceeds max_value (with max_error=False)
-            length = min(
-                width,
-                int(
-                    (progress.value - progress.min_value)
-                    / max(progress.max_value - progress.min_value, 1e-6)
-                    * width,
-                ),
-            )
-            return marker_str * length
-        else:
-            return marker_str
-
     if isinstance(marker, str):
-        marker = converters.to_unicode(marker)
-        if utils.len_color(marker) != 1:
+        # Narrow to ``str`` once, in a fresh local, so the ``_marker`` closure
+        # below closes over a plain ``str`` (no cast needed). ``_marker`` is
+        # only ever wrapped in this branch.
+        marker_str = converters.to_unicode(marker)
+        if utils.len_color(marker_str) != 1:
             raise ValueError('Markers are required to be 1 char')
+
+        def _marker(progress, data, width):
+            if (
+                progress.max_value is not base.UnknownLength
+                and progress.max_value > 0
+            ):
+                # The fill length is based on the progress relative to
+                # min_value; the max() guards against a zero range and the
+                # min() keeps the marker within the allotted width when the
+                # value exceeds max_value (with max_error=False)
+                length = min(
+                    width,
+                    int(
+                        (progress.value - progress.min_value)
+                        / max(progress.max_value - progress.min_value, 1e-6)
+                        * width,
+                    ),
+                )
+                return marker_str * length
+            else:
+                return marker_str
+
         return wrapper(_marker, wrap)
     else:
         return wrapper(marker, wrap)
@@ -240,8 +240,8 @@ class WidthWidgetMixin(_WidgetKwargsSink):
 
 
 class TGradientColors(typing.TypedDict):
-    fg: terminal.OptionalColor | None
-    bg: terminal.OptionalColor | None
+    fg: terminal.OptionalColor
+    bg: terminal.OptionalColor
 
 
 class TFixedColors(typing.TypedDict):
@@ -569,17 +569,14 @@ class ETA(Timer):
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        value: float | None,
+        value: float,
         elapsed: datetime.timedelta | None,
     ) -> float:
         """Updates the widget to show the ETA or total time when finished."""
         if elapsed:
-            # The max() prevents zero division errors. ``value`` is resolved
-            # to a number by ``_resolve_value_elapsed`` before it reaches
-            # here; the cast documents that without changing runtime behavior.
-            per_item = elapsed.total_seconds() / max(
-                typing.cast(float, value), 1e-6
-            )
+            # The max() prevents zero division errors. ``value`` is always a
+            # number here (``_resolve_value_elapsed`` fills the default).
+            per_item = elapsed.total_seconds() / max(value, 1e-6)
             remaining = progress.max_value - data['value']
             return remaining * per_item
         else:
@@ -665,7 +662,7 @@ class AbsoluteETA(ETA):
         self,
         progress: ProgressBarMixinBase,
         data: Data,
-        value: float | None,
+        value: float,
         elapsed: datetime.timedelta | None,
     ) -> datetime.datetime:
         eta_seconds = ETA._calculate_eta(self, progress, data, value, elapsed)
@@ -1102,8 +1099,8 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
 class Bar(AutoWidthWidgetBase):
     """A progress bar which stretches to fill the line."""
 
-    fg: terminal.OptionalColor | None = colors.gradient
-    bg: terminal.OptionalColor | None = None
+    fg: terminal.OptionalColor = colors.gradient
+    bg: terminal.OptionalColor = None
 
     def __init__(
         self,
