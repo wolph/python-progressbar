@@ -1,7 +1,9 @@
 import io
 import logging
 import os
+import subprocess
 import sys
+import textwrap
 
 import pytest
 
@@ -485,3 +487,33 @@ def test_line_offset_stream_wrapper_write_length_and_flush() -> None:
     written = wrapper.write('hello\n')
     assert written == 6
     assert target.flushes >= 1
+
+
+def test_redirect_stdout_unwrapped_after_keyboard_interrupt() -> None:
+    # #212: when redirect_stdout wraps sys.stdout and iteration is abandoned
+    # by a KeyboardInterrupt, the bar must unwrap stdout again. Runs in a
+    # subprocess because stream wrapping mutates process-global sys.stdout.
+    child = textwrap.dedent(
+        """
+        import sys
+        import progressbar
+        from progressbar.utils import WrappingIO
+
+        try:
+            for i in progressbar.progressbar(range(100), redirect_stdout=True):
+                print('text', i)
+                if i == 50:
+                    raise KeyboardInterrupt
+        except KeyboardInterrupt:
+            pass
+
+        sys.exit(2 if isinstance(sys.stdout, WrappingIO) else 0)
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, '-c', child], capture_output=True, text=True
+    )
+    assert result.returncode == 0, (
+        f'stdout left wrapped after interrupt; rc={result.returncode}\n'
+        f'stderr={result.stderr[-500:]}'
+    )
