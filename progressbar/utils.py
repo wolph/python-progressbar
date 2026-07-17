@@ -517,7 +517,7 @@ class StreamWrapper:
         self.flush()
 
 
-class AttributeDict(dict):
+class AttributeDict(dict[str, T], typing.Generic[T]):
     """
     A dict that can be accessed with .attribute.
 
@@ -563,13 +563,13 @@ class AttributeDict(dict):
     AttributeError: No such attribute: spam
     """
 
-    def __getattr__(self, name: str) -> typing.Any:
+    def __getattr__(self, name: str) -> T:
         if name in self:
             return self[name]
         else:
             raise AttributeError(f'No such attribute: {name}')
 
-    def __setattr__(self, name: str, value: typing.Any) -> None:
+    def __setattr__(self, name: str, value: T) -> None:
         self[name] = value
 
     def __delattr__(self, name: str) -> None:
