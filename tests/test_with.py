@@ -33,3 +33,33 @@ def test_context_manager_and_iterable_no_duplicate() -> None:
     # The completed bar must be rendered exactly once; the bug finished the
     # bar twice (StopIteration and then __exit__), drawing it a second time.
     assert fd.getvalue().count('100% (10 of 10)') == 1, repr(fd.getvalue())
+
+
+def test_context_manager_and_iterable_reporter_widgets_no_duplicate() -> None:
+    # Regression #301 with the reporter's exact widget set and a generator:
+    # using the bar as BOTH context manager and iterable must render the
+    # completed bar exactly once.
+    from progressbar.widgets import (
+        AnimatedMarker,
+        GranularBar,
+        SimpleProgress,
+        Timer,
+    )
+
+    fd = io.StringIO()
+    widgets = [
+        AnimatedMarker(),
+        ' ',
+        SimpleProgress(),
+        ' ',
+        GranularBar(),
+        ' ',
+        Timer(),
+    ]
+    with progressbar.ProgressBar(
+        max_value=10, fd=fd, is_terminal=True, term_width=60, widgets=widgets
+    ) as bar:
+        for _ in bar(i for i in range(10)):
+            pass
+
+    assert fd.getvalue().count('10 of 10') == 1, repr(fd.getvalue())
