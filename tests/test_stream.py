@@ -517,3 +517,39 @@ def test_redirect_stdout_unwrapped_after_keyboard_interrupt() -> None:
         f'stdout left wrapped after interrupt; rc={result.returncode}\n'
         f'stderr={result.stderr[-500:]}'
     )
+
+
+def test_wrap_logging_deduplicates_shared_handler(monkeypatch) -> None:
+    # A handler attached to more than one logger must be wrapped only once.
+    # _iter_loggers yields the root logger then named loggers, so a handler
+    # shared by both is seen twice and the second visit is skipped.
+    for _ in range(5):
+        progressbar.streams.unwrap(stderr=True, stdout=True)
+    progressbar.streams.unwrap_logging()
+
+    stream = io.StringIO()
+    monkeypatch.setattr(sys, 'stderr', stream)
+    monkeypatch.setattr(progressbar.streams, 'original_stderr', stream)
+    monkeypatch.setattr(progressbar.streams, 'stderr', stream)
+
+    root = logging.getLogger()
+    named = logging.getLogger('progressbar-test-shared-handler')
+    named.handlers = []
+    named.propagate = False
+    handler = logging.StreamHandler(sys.stderr)
+    named.addHandler(handler)
+    root.addHandler(handler)  # same handler object on two loggers
+
+    progressbar.streams.wrap_stderr()
+    try:
+        progressbar.streams.wrap_logging()
+        # Recorded exactly once despite being reachable via two loggers.
+        shared = [
+            h for h, _ in progressbar.streams.logging_handlers if h is handler
+        ]
+        assert len(shared) == 1
+    finally:
+        progressbar.streams.unwrap_logging()
+        progressbar.streams.unwrap(stderr=True)
+        root.removeHandler(handler)
+        named.handlers = []
