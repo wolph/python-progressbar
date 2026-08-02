@@ -493,7 +493,7 @@ def test_redirect_stdout_unwrapped_after_keyboard_interrupt() -> None:
     # #212: when redirect_stdout wraps sys.stdout and iteration is abandoned
     # by a KeyboardInterrupt, the bar must unwrap stdout again. Runs in a
     # subprocess because stream wrapping mutates process-global sys.stdout.
-    child = textwrap.dedent(
+    child: str = textwrap.dedent(
         """
         import sys
         import progressbar
@@ -510,8 +510,13 @@ def test_redirect_stdout_unwrapped_after_keyboard_interrupt() -> None:
         sys.exit(2 if isinstance(sys.stdout, WrappingIO) else 0)
         """
     )
-    result = subprocess.run(
-        [sys.executable, '-c', child], capture_output=True, text=True
+    env: dict[str, str] = os.environ.copy()
+    env['PYTHONPATH'] = os.pathsep.join(sys.path)
+    result: subprocess.CompletedProcess[str] = subprocess.run(
+        [sys.executable, '-c', child],
+        capture_output=True,
+        text=True,
+        env=env,
     )
     assert result.returncode == 0, (
         f'stdout left wrapped after interrupt; rc={result.returncode}\n'
@@ -523,9 +528,7 @@ def test_wrap_logging_deduplicates_shared_handler(monkeypatch) -> None:
     # A handler attached to more than one logger must be wrapped only once.
     # _iter_loggers yields the root logger then named loggers, so a handler
     # shared by both is seen twice and the second visit is skipped.
-    for _ in range(5):
-        progressbar.streams.unwrap(stderr=True, stdout=True)
-    progressbar.streams.unwrap_logging()
+    reset_wrapped_streams()
 
     stream = io.StringIO()
     monkeypatch.setattr(sys, 'stderr', stream)

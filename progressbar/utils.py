@@ -521,6 +521,10 @@ class AttributeDict(dict[str, T], typing.Generic[T]):
     """
     A dict that can be accessed with .attribute.
 
+    Double-underscore names are stored as instance attributes instead of
+    dictionary entries. This keeps runtime metadata such as
+    ``__orig_class__`` out of the mapping contents.
+
     >>> attrs = AttributeDict(spam=123)
 
     # Reading
@@ -570,9 +574,15 @@ class AttributeDict(dict[str, T], typing.Generic[T]):
             raise AttributeError(f'No such attribute: {name}')
 
     def __setattr__(self, name: str, value: T) -> None:
+        if name.startswith('__') and name.endswith('__'):
+            object.__setattr__(self, name, value)
+            return
         self[name] = value
 
     def __delattr__(self, name: str) -> None:
+        if name.startswith('__') and name.endswith('__'):
+            object.__delattr__(self, name)
+            return
         if name in self:
             del self[name]
         else:
