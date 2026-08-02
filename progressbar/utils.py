@@ -56,7 +56,7 @@ _ANSI_COLOR_RE_BYTES: re.Pattern[bytes] = re.compile(
 
 @typing.overload
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float | int,
+    *deltas: datetime.timedelta | float | int | None,
     default: type[ValueError] = ...,
 ) -> float:
     """Coalesce to seconds; raise ``ValueError`` if no delta is valid."""
@@ -64,14 +64,14 @@ def deltas_to_seconds(
 
 @typing.overload
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float | int,
+    *deltas: datetime.timedelta | float | int | None,
     default: T,
 ) -> float | T:
     """Coalesce to seconds; return ``default`` if no delta is valid."""
 
 
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float | int,
+    *deltas: datetime.timedelta | float | int | None,
     default: typing.Any = ValueError,
 ) -> typing.Any:
     """
@@ -517,9 +517,13 @@ class StreamWrapper:
         self.flush()
 
 
-class AttributeDict(dict):
+class AttributeDict(dict[str, T], typing.Generic[T]):
     """
     A dict that can be accessed with .attribute.
+
+    Double-underscore names are stored as instance attributes instead of
+    dictionary entries. This keeps runtime metadata such as
+    ``__orig_class__`` out of the mapping contents.
 
     >>> attrs = AttributeDict(spam=123)
 
@@ -563,16 +567,22 @@ class AttributeDict(dict):
     AttributeError: No such attribute: spam
     """
 
-    def __getattr__(self, name: str) -> typing.Any:
+    def __getattr__(self, name: str) -> T:
         if name in self:
             return self[name]
         else:
             raise AttributeError(f'No such attribute: {name}')
 
-    def __setattr__(self, name: str, value: typing.Any) -> None:
+    def __setattr__(self, name: str, value: T) -> None:
+        if name.startswith('__') and name.endswith('__'):
+            object.__setattr__(self, name, value)
+            return
         self[name] = value
 
     def __delattr__(self, name: str) -> None:
+        if name.startswith('__') and name.endswith('__'):
+            object.__delattr__(self, name)
+            return
         if name in self:
             del self[name]
         else:

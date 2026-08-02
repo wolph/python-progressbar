@@ -175,6 +175,34 @@ def test_attribute_dict_set_get_del() -> None:
         del attrs.spam
 
 
+def test_attribute_dict_generic_value_type() -> None:
+    # The generic upgrade lets homogeneous, explicitly-typed instances flow the
+    # real value type. Runtime contract asserted here; the static benefit
+    # (reveal_type -> int, mis-typed assignment flagged) is checked by pyright.
+    attrs: utils.AttributeDict[int] = utils.AttributeDict[int]()
+    assert attrs == {}
+    assert '__orig_class__' not in attrs
+    attrs.count = 5
+    assert attrs.count == 5
+    assert attrs['count'] == 5
+
+    mixed = utils.AttributeDict(a=1, b='x')
+    assert mixed.a == 1
+    assert mixed.b == 'x'
+
+
+def test_attribute_dict_dunder_attributes_use_instance_storage() -> None:
+    attrs: utils.AttributeDict[str] = utils.AttributeDict()
+    attrs.__probe__ = 'metadata'
+
+    assert attrs.__probe__ == 'metadata'
+    assert '__probe__' not in attrs
+
+    del attrs.__probe__
+    with pytest.raises(AttributeError):
+        _ = attrs.__probe__
+
+
 def test_stream_wrapper_unwrap_restores_excepthook() -> None:
     # Regression: C7 - unwrap_stdout/unwrap_stderr left the custom
     # excepthook installed forever.

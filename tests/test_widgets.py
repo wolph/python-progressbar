@@ -8,12 +8,6 @@ import pytest
 
 import progressbar
 
-max_values: list[None | type[progressbar.base.UnknownLength] | int] = [
-    None,
-    10,
-    progressbar.UnknownLength,
-]
-
 
 def test_create_wrapper() -> None:
     # F4: user-facing validation must raise ValueError (not a bare assert that

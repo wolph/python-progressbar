@@ -222,3 +222,18 @@ def test_redirect_blank_line_off_by_default(monkeypatch) -> None:
 
     monkeypatch.setattr(utils.streams, 'needs_clear', lambda: True)
     assert '\n' not in _redirect_update_output(redirect_blank_line=False)
+
+
+def test_redirect_blank_line_position(monkeypatch) -> None:
+    # #295: the blank line must sit immediately AFTER the clear sequence and
+    # BEFORE the bar redraw, not merely 'somewhere in the output'.
+    from progressbar import utils
+
+    monkeypatch.setattr(utils.streams, 'needs_clear', lambda: True)
+    output = _redirect_update_output(redirect_blank_line=True)
+    clear = '\r' + ' ' * 40 + '\r'
+    assert (clear + '\n') in output, repr(output)
+    assert output.index(clear + '\n') < output.index('50%'), repr(output)
+
+    output_off = _redirect_update_output(redirect_blank_line=False)
+    assert (clear + '\n') not in output_off, repr(output_off)
