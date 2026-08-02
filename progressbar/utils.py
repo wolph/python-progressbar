@@ -56,7 +56,7 @@ _ANSI_COLOR_RE_BYTES: re.Pattern[bytes] = re.compile(
 
 @typing.overload
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float | int,
+    *deltas: datetime.timedelta | float | int | None,
     default: type[ValueError] = ...,
 ) -> float:
     """Coalesce to seconds; raise ``ValueError`` if no delta is valid."""
@@ -64,14 +64,14 @@ def deltas_to_seconds(
 
 @typing.overload
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float | int,
+    *deltas: datetime.timedelta | float | int | None,
     default: T,
 ) -> float | T:
     """Coalesce to seconds; return ``default`` if no delta is valid."""
 
 
 def deltas_to_seconds(
-    *deltas: None | datetime.timedelta | float | int,
+    *deltas: datetime.timedelta | float | int | None,
     default: typing.Any = ValueError,
 ) -> typing.Any:
     """

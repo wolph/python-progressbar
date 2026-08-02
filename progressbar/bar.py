@@ -482,7 +482,7 @@ class _ResizeRegistry:
 
     @classmethod
     def handle_resize(
-        cls, signum: int | None = None, frame: None | FrameType = None
+        cls, signum: int | None = None, frame: FrameType | None = None
     ) -> None:
         for bar in list(cls.bars):
             bar._handle_resize(signum, frame)
@@ -502,7 +502,7 @@ class ResizableMixin(ProgressBarMixinBase):
                 self.signal_set = True
 
     def _handle_resize(
-        self, signum: int | None = None, frame: None | FrameType = None
+        self, signum: int | None = None, frame: FrameType | None = None
     ):
         "Tries to catch resize signals sent from the terminal."
         w, _h = utils.get_terminal_size()

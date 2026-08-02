@@ -8,7 +8,7 @@ import pytest
 
 import progressbar
 
-max_values: list[None | type[progressbar.base.UnknownLength] | int] = [
+max_values: list[type[progressbar.base.UnknownLength] | int | None] = [
     None,
     10,
     progressbar.UnknownLength,
