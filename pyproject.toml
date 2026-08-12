@@ -135,12 +135,19 @@ tests = [
     'pytest>=4.6.9',
     'pywin32; sys_platform == "win32"',
 ]
+# Only installed by .github/workflows/docs.yml -- never by the default
+# test run (tests/console is excluded from pytest.ini's python_files, and
+# `tests[]` above -- what `dev` pulls in -- deliberately omits this group).
+docs-tests = [
+    'playwright>=1.48.0',
+    'pytest>=4.6.9',
+]
 
 [dependency-groups]
 dev = ['progressbar2[docs,tests]']
 
 [tool.codespell]
-skip = '*/htmlcov,./docs/_build,*.asc'
+skip = '*/htmlcov,./docs/_build,*.asc,./docs/_static/vendor/xterm.js'
 ignore-words-list = 'datas,numbert'
 
 [tool.coverage.run]
@@ -225,3 +232,20 @@ version = { attr = 'progressbar.__about__.__version__' }
 
 [tool.setuptools.packages.find]
 exclude = ['docs*', 'tests*']
+
+# Keeps stray *data* files out of the wheel. Note this cannot exclude
+# stray *modules*: setuptools' build_py copies every `*.py` inside an
+# included package, and there is no declarative way to drop individual
+# ones. So an editor or sync-tool leftover such as
+# `progressbar/bar.sync-conflict-....py` still gets packaged, because the
+# wheel builder walks the filesystem rather than the git index (only the
+# sdist is git-aware, via setuptools-scm).
+# `scripts/build_docs_wheels.py` therefore refuses to publish a wheel that
+# contains such files, which turns a silent leak into a build failure.
+[tool.setuptools.exclude-package-data]
+'*' = [
+    '*.sync-conflict-*',
+    '*.orig',
+    '*.rej',
+    '*.bak',
+]

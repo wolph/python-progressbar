@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 import sys
-import termios
-import tty
 
 
 def getch() -> str:
+    # `termios` and `tty` are imported lazily: they are only needed to put
+    # a real terminal into raw mode, and they are absent from restricted
+    # builds such as Pyodide, where importing this module must still work.
+    import termios
+    import tty
+
     if not sys.stdin.isatty():
         # Raw mode is unavailable (and unnecessary) without a tty
         return sys.stdin.read(1)

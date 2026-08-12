@@ -78,6 +78,8 @@ select = [
 [lint.per-file-ignores]
 'tests/*' = ['INP001', 'T201', 'T203']
 'examples.py' = ['T201', 'N806']
+'docs/examples/**' = ['T201']
+'scripts/*' = ['T201']
 'docs/conf.py' = ['E501', 'INP001']
 'docs/_theme/flask_theme_support.py' = ['RUF012', 'INP001']
 

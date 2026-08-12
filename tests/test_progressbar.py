@@ -30,9 +30,12 @@ except ImportError:
 
 
 def test_examples(monkeypatch) -> None:
-    for example in examples.examples:
+    # examples.py is now a thin runner over docs/examples (see examples.py
+    # and tests/test_docs_examples.py); DEMOS/load_example is its public
+    # surface, there is no longer a flat `examples.examples` callable list.
+    for demo in examples.DEMOS:
         with contextlib.suppress(ValueError):
-            example()
+            examples.load_example(demo).main()
 
 
 @pytest.mark.filterwarnings('ignore:.*maxval.*:DeprecationWarning')
@@ -43,12 +46,12 @@ def test_original_examples(example, monkeypatch) -> None:
     example()
 
 
-@pytest.mark.parametrize('example', examples.examples)
-def test_examples_nullbar(monkeypatch, example) -> None:
+@pytest.mark.parametrize('demo', examples.DEMOS, ids=lambda demo: demo.name)
+def test_examples_nullbar(monkeypatch, demo) -> None:
     # Patch progressbar to use null bar instead of regular progress bar
     monkeypatch.setattr(progressbar, 'ProgressBar', progressbar.NullBar)
     assert progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL < 0.0001
-    example()
+    examples.load_example(demo).main()
 
 
 def test_reuse() -> None:

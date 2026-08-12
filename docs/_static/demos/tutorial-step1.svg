@@ -1,0 +1,60 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  role="img"
+  aria-labelledby="demo-wrap-an-iterable-title demo-wrap-an-iterable-desc"
+  width="1080"
+  height="96"
+  viewBox="0 0 1080 96"
+>
+  <title id="demo-wrap-an-iterable-title">Wrap an iterable</title>
+  <desc id="demo-wrap-an-iterable-desc">The first progress bar: wrap a range with progressbar.progressbar.</desc>
+  <style>
+    .terminal-bg { fill: #101418; }
+    .terminal-title {
+      fill: #dce3ea;
+      font: 600 16px ui-monospace, SFMono-Regular, Menlo, Consolas,
+        monospace;
+    }
+    .terminal-line {
+      fill: #d6e2ef;
+      font: 15px ui-monospace, SFMono-Regular, Menlo, Consolas,
+        monospace;
+    }
+    .terminal-label { fill: #7dd3fc; font-weight: 700; }
+    .terminal-percent { fill: #facc15; }
+    .terminal-bar-frame { fill: #7b8794; }
+    .terminal-bar-fill { fill: #34d399; }
+    .terminal-bar-empty { fill: #44515f; }
+    .terminal-bar-text { fill: #d6e2ef; }
+    .terminal-postfix { fill: #c084fc; }
+    .terminal-log { fill: #fb923c; }
+    .dot-red { fill: #ff5f57; }
+    .dot-yellow { fill: #ffbd2e; }
+    .dot-green { fill: #28c840; }
+    @media (prefers-reduced-motion: reduce) {
+      /* Setting display: none on the animate elements does not stop
+         their SMIL animation from running in every browser tested --
+         confirmed empirically, Chromium 2026-08: with only that rule in
+         place, every frame group's computed opacity kept cycling on its
+         original schedule. A SMIL-driven value sits in the CSS cascade's
+         animation layer, above normal author declarations but below
+         !important ones, so overriding opacity (and display, for
+         belt-and-suspenders) with !important here is load-bearing, not
+         decorative -- removing it silently reintroduces the animation.
+         The last frame is selected, not the first: a finished bar is more
+         informative at rest than the empty starting state. Every frame
+         group is a direct child of the root element and no other group
+         element appears in this document, so last-of-type unambiguously
+         selects the final frame. */
+      animate { display: none; }
+      g { display: none !important; opacity: 0 !important; }
+      g:last-of-type { display: inline !important; opacity: 1 !important; }
+    }
+  </style>
+  <rect class="terminal-bg" width="100%" height="100%" rx="10" />
+  <circle class="dot-red" cx="28" cy="26" r="6" />
+  <circle class="dot-yellow" cx="48" cy="26" r="6" />
+  <circle class="dot-green" cx="68" cy="26" r="6" />
+  <text class="terminal-title" x="96" y="32">Wrap an iterable</text>
+  <g opacity="1"><animate attributeName="opacity" values="1;0;0;0;0;0;0;0;0;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">0%</tspan> (0 of 100) |                                                         | Elapsed Time: 0:00:00 ETA: --:--:--</text></g><g opacity="0"><animate attributeName="opacity" values="0;1;0;0;0;0;0;0;0;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">7%</tspan> (7 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">####</tspan><tspan class="terminal-bar-empty">                                                      </tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:00 ETA: 0:00:00</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;1;0;0;0;0;0;0;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">22%</tspan> (22 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">############</tspan><tspan class="terminal-bar-empty">                                             </tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:00 ETA: 0:00:00</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;1;0;0;0;0;0;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">34%</tspan> (34 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">###################</tspan><tspan class="terminal-bar-empty">                                      </tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:00 ETA: 0:00:00</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;1;0;0;0;0;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">39%</tspan> (39 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">######################</tspan><tspan class="terminal-bar-empty">                                   </tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:00 ETA: 0:00:00</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;1;0;0;0;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">51%</tspan> (51 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">#############################</tspan><tspan class="terminal-bar-empty">                            </tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:00 ETA: 0:00:00</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;1;0;0;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">66%</tspan> (66 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">#####################################</tspan><tspan class="terminal-bar-empty">                    </tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:00 ETA: 0:00:00</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;1;0;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">78%</tspan> (78 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">############################################</tspan><tspan class="terminal-bar-empty">             </tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:00 ETA: 0:00:00</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;1;0" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">93%</tspan> (93 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">#####################################################</tspan><tspan class="terminal-bar-empty">    </tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:00 ETA: 0:00:00</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;1" dur="0.8s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve"><tspan class="terminal-percent">100%</tspan> (100 of 100) <tspan class="terminal-bar-frame">|</tspan><tspan class="terminal-bar-fill">########################################################</tspan><tspan class="terminal-bar-frame">|</tspan> Elapsed Time: 0:00:01 ETA: 0:00:00</text></g>
+</svg>

@@ -420,3 +420,66 @@ def test_animated_marker_fill_stays_full_when_finished() -> None:
     ][-1]
     # term_width 60 leaves ~58 fill characters; the collapse bug left ~1
     assert last_line.count('#') > 40, repr(last_line)
+
+
+def test_bar_marker_wrap() -> None:
+    # Coverage: Bar(marker_wrap=...) makes create_marker() route the marker
+    # through widgets.wrapper()'s closure (widgets.py:88-92). Nothing else in
+    # the suite passes marker_wrap, so that closure went uncovered once the
+    # old 872-line examples.py -- incidentally exercised via
+    # test_progressbar.py::test_examples -- was replaced by docs/examples.
+    bar = progressbar.ProgressBar(
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    bar.update(5)
+    data = bar.data()
+    widget = progressbar.Bar(marker='#', marker_wrap='<{}>', left='', right='')
+    rendered = widget(bar, data, width=10, color=False)
+    # 5/10 progress over a width-10 marker area fills 5 '#' characters,
+    # which the wrap template must surround before the fill padding.
+    assert '<#####>' in rendered, repr(rendered)
+
+
+def test_animated_marker_wraps_marker() -> None:
+    # Coverage: AnimatedMarker.marker_wrap formatting (widgets.py:940) only
+    # runs on an in-progress render -- the finished branch (end_time truthy)
+    # returns before reaching it, so a bar that only renders after finish()
+    # never covers this line.
+    bar = progressbar.ProgressBar(
+        max_value=10,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    bar.update(1)
+    data = bar.data()
+    widget = progressbar.AnimatedMarker(markers='|/-\\', marker_wrap='<{}>')
+    rendered = widget(bar, data, width=10)
+    assert isinstance(rendered, str), repr(rendered)
+    assert len(rendered) == 3, repr(rendered)
+    assert rendered[0] == '<' and rendered[-1] == '>', repr(rendered)
+    assert rendered[1] in '|/-\\'
+
+
+def test_granular_bar_unknown_length() -> None:
+    # Coverage: GranularBar's percent=0 fallback (widgets.py:1542), taken
+    # when max_value is UnknownLength. GranularBar duplicates the
+    # border/percent preamble instead of sharing Bar's -- see the comment on
+    # GranularBar.__call__ -- so covering the equivalent branch on the plain
+    # marker path does not cover this one too.
+    bar = progressbar.ProgressBar(
+        max_value=progressbar.UnknownLength,
+        fd=io.StringIO(),
+        term_width=60,
+    )
+    bar.start()
+    bar.update(5)
+    data = bar.data()
+    widget = progressbar.GranularBar(left='', right='')
+    rendered = widget(bar, data, width=10)
+    # percent=0 means no marker characters filled in -- the whole width is
+    # padded with the lowest (empty) marker.
+    assert rendered == ' ' * 10, repr(rendered)

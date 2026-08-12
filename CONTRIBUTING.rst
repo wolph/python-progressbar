@@ -40,6 +40,52 @@ Python Progressbar could always use more documentation, whether as part of the
 official Python Progressbar docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
+Regenerating the API reference
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``docs/progressbar*.rst`` pages are generated once with ``sphinx-apidoc`` and then
+committed and hand-maintained, not regenerated on every build. Never pass ``-f``/``--force``
+when running it again — that silently discards hand-added options, such as
+``docs/progressbar.bar.rst``'s ``:member-order: bysource``. If you add a new module under
+``progressbar/``, generate its page the same way the rest were generated and link it into
+``docs/progressbar.rst``'s ``Submodules`` toctree yourself::
+
+    $ sphinx-apidoc -e -o docs/ progressbar */os_specific/* */six.py
+
+The docs build runs with ``-W`` (warnings fail the build), so a page that exists but isn't
+linked into a toctree fails immediately with "document isn't included in any toctree" —
+you'll know right away if you forgot this step.
+
+Regenerating demo animations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``python scripts/render_demos.py`` captures each example attached to a pty, so
+it requires a POSIX system. The generated SVGs are committed, and CI regenerates
+and diffs them on Linux, so Windows contributors do not need to run it.
+
+Two demos -- ``howto/multibar`` and ``readme/multibar`` -- are excluded from
+that diff (``Demo.drift_check = False`` in ``docs/examples/_registry.py``):
+``MultiBar`` renders from a background thread that races the main thread's
+updates, so how many redraws land before both bars finish is a real OS
+thread-scheduling outcome, not something this script can pin down. ``--check``
+prints exactly which demos it skipped and why on every run rather than
+silently passing over them. If you change either demo, regenerate its SVG
+(``python scripts/render_demos.py --only readme/multibar``, for instance) and
+hand-verify the result instead of relying on ``--check``.
+
+Adding an example
+~~~~~~~~~~~~~~~~~~
+
+1. Write ``docs/examples/<section>/<name>.py`` with a module docstring, a
+   ``main()`` function, and no terminal-forcing arguments.
+2. Register it in ``docs/examples/_registry.py``.
+3. Run ``python scripts/render_demos.py --only <section>/<name>``.
+4. Reference it from a page with ``.. demo:: <section>/<name>``.
+
+``tests/test_docs_examples.py`` fails if an example exists without a registry
+entry or vice versa, and ``tox -e docs-demos`` fails if a committed animation is
+stale.
+
 Submit Feedback
 ~~~~~~~~~~~~~~~
 

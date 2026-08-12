@@ -32,102 +32,117 @@ Quick start
     for item in progressbar.progressbar(range(100), desc='Loading'):
         time.sleep(0.02)
 
+Try it in your browser
+==============================================================================
+
+Every example in the `documentation <https://progressbar-2.readthedocs.io/en/latest/>`_
+runs live in the page — press **Run** on any code block. No install required.
+
 Progress with clean logs
 ==============================================================================
 
-.. image:: docs/_static/progressbar-hero.svg
+.. image:: https://raw.githubusercontent.com/wolph/python-progressbar/develop/docs/_static/demos/readme-hero.svg
     :alt: progressbar2 showing clean progress output with logs
 
 .. code:: python
 
-    import sys
+    """A build log printing above a progress bar without corrupting it."""
+
+    from __future__ import annotations
+
     import time
+
     import progressbar
 
-    with progressbar.ProgressBar(
-        total=24,
-        desc='Build',
-        fd=sys.stdout,
-        redirect_stdout=True,
-        line_breaks=False,
-        is_terminal=True,
-        enable_colors=True,
-        term_width=112,
-    ) as bar:
-        for step in range(24):
-            if step in {8, 16}:
-                print(f'log: completed step {step}')
-            bar.update(step + 1, force=True)
-            time.sleep(0.005)
+    STEPS = 24
+
+
+    def main() -> None:
+        with progressbar.ProgressBar(
+            max_value=STEPS,
+            prefix='Build ',
+            redirect_stdout=True,
+        ) as bar:
+            for step in range(STEPS):
+                if step in {8, 16}:
+                    print(f'log: completed step {step}')
+                bar.update(step + 1)
+                time.sleep(0.005)
+
+
+    if __name__ == '__main__':
+        main()
 
 Multiple bars
 ==============================================================================
 
-.. image:: docs/_static/progressbar-multibar.svg
+.. image:: https://raw.githubusercontent.com/wolph/python-progressbar/develop/docs/_static/demos/readme-multibar.svg
     :alt: multiple progress bars updating together
 
 .. code:: python
 
-    import io
-    import re
+    """Two named bars progressing at different rates in one terminal."""
+
+    from __future__ import annotations
+
+    import sys
+    import time
+
     import progressbar
 
-    fd = io.StringIO()
-    multibar = progressbar.MultiBar(
-        fd=fd,
-        total=24,
-        enable_colors=True,
-        initial_format=None,
-        finished_format=None,
-        remove_finished=None,
-        sort_reverse=False,
-        term_width=112,
-    )
-    build = multibar['build']
-    test = multibar['test']
-    terminal_control_re = re.compile(r'\x1b\[[0-9;]*[A-Za-ln-z]')
+    STEPS = 24
 
-    def emit_frame():
-        output = terminal_control_re.sub('', fd.getvalue())
-        for line in output.split('\r'):
-            line = line.strip()
-            if line:
-                print(line)
-        print('\f', end='')
-        fd.seek(0)
-        fd.truncate(0)
 
-    multibar.render(force=True, flush=True)
-    emit_frame()
+    def main() -> None:
+        with progressbar.MultiBar(fd=sys.stdout) as multibar:
+            build = multibar['build']
+            test = multibar['test']
+            build.max_value = STEPS
+            test.max_value = STEPS
+            for step in range(STEPS):
+                build.update(step + 1)
+                test.update(min(STEPS, max(0, round((step - 3) * 1.2))))
+                time.sleep(0.005)
 
-    for step in range(24):
-        build.update(step + 1, force=True)
-        test_value = min(24, max(0, round((step - 3) * 1.2)))
-        test.update(test_value, force=True)
-        multibar.render(force=True, flush=True)
-        emit_frame()
+            # Reaching max_value doesn't finish a bar -- only finish() does.
+            # A MultiBar waits for every bar to report finished() before its
+            # context manager can exit, so without these calls the block
+            # above would hang forever on exit.
+            build.finish()
+            test.finish()
+
+
+    if __name__ == '__main__':
+        main()
 
 Unknown length and animated bars
 ==============================================================================
 
-.. image:: docs/_static/progressbar-unknown-length.svg
+.. image:: https://raw.githubusercontent.com/wolph/python-progressbar/develop/docs/_static/demos/readme-unknown-length.svg
     :alt: unknown length progress with an animated marker
 
 .. code:: python
 
-    import sys
+    """A bar for work whose total is not known up front."""
+
+    from __future__ import annotations
+
+    import time
+
     import progressbar
 
-    with progressbar.ProgressBar(
-        max_value=progressbar.UnknownLength,
-        fd=sys.stdout,
-        line_breaks=False,
-        is_terminal=True,
-        enable_colors=True,
-        term_width=112,
-    ) as bar:
-        for value in range(0, 120, 10):
-            bar.update(value, force=True)
+
+    def main() -> None:
+        with progressbar.ProgressBar(
+            max_value=progressbar.UnknownLength,
+        ) as bar:
+            for value in range(0, 120, 10):
+                bar.update(value)
+                time.sleep(0.005)
+
+
+    if __name__ == '__main__':
+        main()
 
 CLI usage
 ==============================================================================

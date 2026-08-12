@@ -1,0 +1,60 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  role="img"
+  aria-labelledby="demo-tqdm-style-keyword-arguments-title demo-tqdm-style-keyword-arguments-desc"
+  width="1080"
+  height="96"
+  viewBox="0 0 1080 96"
+>
+  <title id="demo-tqdm-style-keyword-arguments-title">tqdm-style keyword arguments</title>
+  <desc id="demo-tqdm-style-keyword-arguments-desc">Keep tqdm&#x27;s keyword style when you switch to progressbar.</desc>
+  <style>
+    .terminal-bg { fill: #101418; }
+    .terminal-title {
+      fill: #dce3ea;
+      font: 600 16px ui-monospace, SFMono-Regular, Menlo, Consolas,
+        monospace;
+    }
+    .terminal-line {
+      fill: #d6e2ef;
+      font: 15px ui-monospace, SFMono-Regular, Menlo, Consolas,
+        monospace;
+    }
+    .terminal-label { fill: #7dd3fc; font-weight: 700; }
+    .terminal-percent { fill: #facc15; }
+    .terminal-bar-frame { fill: #7b8794; }
+    .terminal-bar-fill { fill: #34d399; }
+    .terminal-bar-empty { fill: #44515f; }
+    .terminal-bar-text { fill: #d6e2ef; }
+    .terminal-postfix { fill: #c084fc; }
+    .terminal-log { fill: #fb923c; }
+    .dot-red { fill: #ff5f57; }
+    .dot-yellow { fill: #ffbd2e; }
+    .dot-green { fill: #28c840; }
+    @media (prefers-reduced-motion: reduce) {
+      /* Setting display: none on the animate elements does not stop
+         their SMIL animation from running in every browser tested --
+         confirmed empirically, Chromium 2026-08: with only that rule in
+         place, every frame group's computed opacity kept cycling on its
+         original schedule. A SMIL-driven value sits in the CSS cascade's
+         animation layer, above normal author declarations but below
+         !important ones, so overriding opacity (and display, for
+         belt-and-suspenders) with !important here is load-bearing, not
+         decorative -- removing it silently reintroduces the animation.
+         The last frame is selected, not the first: a finished bar is more
+         informative at rest than the empty starting state. Every frame
+         group is a direct child of the root element and no other group
+         element appears in this document, so last-of-type unambiguously
+         selects the final frame. */
+      animate { display: none; }
+      g { display: none !important; opacity: 0 !important; }
+      g:last-of-type { display: inline !important; opacity: 1 !important; }
+    }
+  </style>
+  <rect class="terminal-bg" width="100%" height="100%" rx="10" />
+  <circle class="dot-red" cx="28" cy="26" r="6" />
+  <circle class="dot-yellow" cx="48" cy="26" r="6" />
+  <circle class="dot-green" cx="68" cy="26" r="6" />
+  <text class="terminal-title" x="96" y="32">tqdm-style keyword arguments</text>
+  <g opacity="1"><animate attributeName="opacity" values="1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff0000">  0%</tspan> |                                                             | 0 files of 24 files  starting</text></g><g opacity="0"><animate attributeName="opacity" values="0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff1b00">  4%</tspan> |##                                                             | 1 files of 24 files  file 1</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff3700">  8%</tspan> |#####                                                          | 2 files of 24 files  file 2</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff5a00"> 12%</tspan> |#######                                                        | 3 files of 24 files  file 3</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff6500"> 16%</tspan> |##########                                                     | 4 files of 24 files  file 4</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff7100"> 20%</tspan> |#############                                                  | 5 files of 24 files  file 5</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff7d00"> 25%</tspan> |###############                                                | 6 files of 24 files  file 6</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff8800"> 29%</tspan> |##################                                             | 7 files of 24 files  file 7</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ff9400"> 33%</tspan> |#####################                                          | 8 files of 24 files  file 8</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ffa000"> 37%</tspan> |#######################                                        | 9 files of 24 files  file 9</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ffab00"> 41%</tspan> |#########################                                    | 10 files of 24 files  file 10</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ffbf00"> 45%</tspan> |###########################                                  | 11 files of 24 files  file 11</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #ffee00"> 54%</tspan> |#################################                            | 13 files of 24 files  file 13</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #fbff00"> 58%</tspan> |###################################                          | 14 files of 24 files  file 14</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #f0ff00"> 62%</tspan> |######################################                       | 15 files of 24 files  file 15</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #e4ff00"> 66%</tspan> |########################################                     | 16 files of 24 files  file 16</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #d8ff00"> 70%</tspan> |###########################################                  | 17 files of 24 files  file 17</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #cdff00"> 75%</tspan> |#############################################                | 18 files of 24 files  file 18</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #c1ff00"> 79%</tspan> |################################################             | 19 files of 24 files  file 19</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #b5ff00"> 83%</tspan> |##################################################           | 20 files of 24 files  file 20</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #aaff00"> 87%</tspan> |#####################################################        | 21 files of 24 files  file 21</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #66ff00"> 91%</tspan> |#######################################################      | 22 files of 24 files  file 22</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;0" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #33ff00"> 95%</tspan> |##########################################################   | 23 files of 24 files  file 23</text></g><g opacity="0"><animate attributeName="opacity" values="0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1" dur="1.92s" repeatCount="indefinite" calcMode="discrete" /><text x="32" y="72" class="terminal-line" xml:space="preserve">Downloading: <tspan style="fill: #00ff00">100%</tspan> |#############################################################| 24 files of 24 files  file 24</text></g>
+</svg>

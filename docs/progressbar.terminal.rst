@@ -1,14 +1,6 @@
 progressbar.terminal package
 ============================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   progressbar.terminal.os_specific
-
 Submodules
 ----------
 

@@ -1,0 +1,75 @@
+.demo {
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-background-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.demo .demo-animation {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.demo .demo-source {
+  margin: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--color-background-border);
+}
+
+.demo .demo-run:empty {
+  display: none;
+}
+
+.demo .demo-run-unavailable {
+  padding: 0.75rem;
+  border-top: 1px solid var(--color-background-border);
+  color: var(--color-foreground-secondary);
+  font-size: 0.9em;
+}
+
+.demo-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--color-background-border);
+}
+
+.demo-button {
+  background: var(--color-brand-primary);
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.25rem 0.9rem;
+  cursor: pointer;
+}
+
+.demo-button[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.demo-status {
+  font-size: 0.85em;
+  color: var(--color-foreground-secondary);
+}
+
+.demo-editor {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--color-background-border);
+  padding: 0.75rem;
+  font-family: var(--font-stack--monospace);
+  font-size: 0.85em;
+  background: var(--color-code-background);
+  color: var(--color-code-foreground);
+  resize: vertical;
+}
+
+.demo-terminal {
+  background: #101418;
+  padding: 0.5rem;
+  overflow-x: auto;
+}

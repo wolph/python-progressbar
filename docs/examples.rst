@@ -1,8 +1,8 @@
+:orphan:
+
+========
 Examples
-===================
+========
 
-The :doc:`usage` guide and README show the generated overview demos. This page
-keeps the full runnable example collection in sync with ``examples.py``.
-
-
-.. literalinclude:: ../examples.py
+The runnable examples now live in :doc:`widgets/index` and
+:doc:`howto/index`, each with an animation and an editable console.

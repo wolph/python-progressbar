@@ -15,8 +15,11 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   progressbar.algorithms
    progressbar.bar
    progressbar.base
+   progressbar.env
+   progressbar.fast
    progressbar.multi
    progressbar.shortcuts
    progressbar.utils

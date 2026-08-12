@@ -42,3 +42,9 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+
+# Superpowers brainstorming session artifacts
+.superpowers/
+
+# Built at docs build time for the in-browser console
+docs/_static/wheels/

@@ -1,1 +1,2 @@
 -e.[docs,tests]
+furo>=2024.8.6

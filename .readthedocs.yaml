@@ -13,6 +13,12 @@ build:
     # nodejs: "20"
     # rust: "1.70"
     # golang: "1.20"
+  jobs:
+    # Build the wheels the in-browser console installs. A list, so a
+    # future step can be appended here without restructuring this key.
+    pre_build:
+      - python -m pip install build
+      - python scripts/build_docs_wheels.py
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
@@ -20,9 +26,15 @@ sphinx:
   # You can configure Sphinx to use a different builder, for instance use the dirhtml builder for simpler URLs
   # builder: "dirhtml"
   # Fail on all warnings to avoid broken references
-  # fail_on_warning: true
+  fail_on_warning: true
 
-# Optionally build your docs in additional formats such as PDF and ePub
+# PDF and ePub are supported and build warning-free. They are necessarily
+# static: the `.. demo::` directive emits its animation and Run button as
+# HTML-only nodes, so in these formats a demo degrades to its source
+# listing plus surrounding prose -- readable, just not animated.
+# This works because `docs/index.rst` no longer includes `README.rst`;
+# doing so pulled remote SVG badges into every builder, and LaTeX cannot
+# render SVG at all.
 formats:
   - pdf
   - epub
