@@ -57,19 +57,14 @@ class ColorSupport(enum.IntEnum):
     def from_env(cls) -> ColorSupport:
         """Get the color support from the environment.
 
-        If any of the environment variables contain `24bit` or `truecolor`,
-        we will enable true color/24 bit support. A `TERM` that is itself a
-        truecolor terminal (see `TRUECOLOR_TERMS`) also enables 24 bit
-        support. If they contain `256`, we will enable 256 color/8 bit
-        support. If they match a known ANSI terminal (see `ANSI_TERM_RE`,
-        e.g. `xterm-color`, `screen`, `tmux`, `konsole`, `rxvt`, `linux`), we
-        will enable 16 color support. Otherwise, we assume no color support.
-
-        If `JUPYTER_COLUMNS` or `JUPYTER_LINES` or `JPY_PARENT_PID` is set, we
-        will assume true color support.
-
-        Note that the highest available value will be used! Having
-        `COLORTERM=truecolor` will override `TERM=xterm-256color`.
+        A variable containing `24bit` or `truecolor`, a `TERM` naming a
+        truecolor terminal (see `TRUECOLOR_TERMS`), or a Jupyter kernel
+        (`JUPYTER_COLUMNS`/`JUPYTER_LINES`/`JPY_PARENT_PID` set) enables
+        true color. A value containing `256` enables 256-color support,
+        and a match against a known ANSI terminal (see `ANSI_TERM_RE`,
+        e.g. `xterm-color`, `screen`, `tmux`) enables 16-color support.
+        Otherwise no color support is assumed. The highest depth seen
+        wins: `COLORTERM=truecolor` overrides `TERM=xterm-256color`.
         """
         variables = (
             'FORCE_COLOR',
@@ -154,27 +149,30 @@ def is_ansi_terminal(
     """Detect whether `fd` looks like an ANSI-capable terminal.
 
     Tri-state, not boolean: `True` is a confirmed ANSI terminal, and
-    `None` means detection was inconclusive rather than negative. Outside
-    the Windows branch this function never returns `False` on its own —
-    an unmatched `TERM`, no `ANSICON`, or a stream that can't answer
-    `isatty()` is left as `None`, so callers such as `is_terminal` keep
-    falling back instead of concluding "not a terminal" from missing
-    information. The Windows console-mode probe is the one exception: it
-    is authoritative there and can return a definite `False`.
+    `None` means detection was inconclusive rather than negative.
+    Outside the Windows branch this function never returns `False` on
+    its own: an unmatched `TERM`, no `ANSICON`, or a stream that can't
+    answer `isatty()` is left as `None`, so callers such as
+    `is_terminal` keep falling back instead of concluding "not a
+    terminal" from missing information. The Windows console-mode probe
+    is the one exception: it is authoritative there and can return a
+    definite `False`.
 
     Detection order: an interactive Jupyter kernel or a modern-enough
     PyCharm terminal (not under pytest) short-circuits straight to
-    `True`, since both can misreport `isatty`. Otherwise, `fd.isatty()`
-    plus a `TERM` match against `ANSI_TERM_RE`, or `ANSICON` being set,
-    or (on Windows) the console mode reporting processed output. Only
-    the errors a stream can legitimately raise while being probed —
+    `True`, since both render ANSI without being a tty. Otherwise,
+    `fd.isatty()` plus a `TERM` match against `ANSI_TERM_RE`, or
+    `ANSICON` being set, or (on Windows) the console-mode probe (see
+    `os_specific.windows.get_console_mode` for what that probe actually
+    tests, which is not what its flag name suggests). Only the errors a
+    stream can legitimately raise while being probed are swallowed:
     `OSError` (real I/O), `ValueError` (closed/detached file) and
-    `AttributeError` (no `isatty` at all) — are swallowed; anything else
-    is a bug and propagates.
+    `AttributeError` (no `isatty` at all). Anything else is a bug and
+    propagates.
 
     Args:
         fd: Stream to probe.
-        is_terminal: Already-known answer, if any; passed straight
+        is_terminal: Already-known answer, if any, passed straight
             through unchanged. Only `None` triggers detection.
 
     Returns:
@@ -192,14 +190,7 @@ def is_ansi_terminal(
             is_terminal = True
 
     if is_terminal is None:
-        # check if we are writing to a terminal or not. typically a file object
-        # is going to return False if the instance has been overridden and
-        # isatty has not been defined we have no way of knowing so we will not
-        # use ansi.  ansi terminals will typically define one of the 2
-        # environment variables. Only the errors a stream legitimately
-        # produces are treated as "not a terminal": OSError (real I/O),
-        # ValueError (closed/detached file objects) and AttributeError
-        # (objects without isatty). Anything else is a bug and propagates.
+        # Probe errors treated as "undetermined": see the docstring.
         with contextlib.suppress(OSError, ValueError, AttributeError):
             is_tty: bool = fd.isatty()
             # Try and match any of the huge amount of Linux/Unix ANSI consoles
@@ -228,14 +219,15 @@ def is_terminal(
     """Resolve whether `fd` should be treated as an interactive terminal.
 
     Falls back through the following, stopping at the first non-`None`
-    result: the `is_terminal` argument if the caller already knows;
-    `is_ansi_terminal(fd)`, with any falsy result normalized back to
-    `None` (an inconclusive ANSI check is not a confirmed "no", so it
-    must not stop the fallback chain here either); the
-    `PROGRESSBAR_IS_TERMINAL` environment variable, as an explicit
-    override for cases auto-detection can't cover; and finally a bare
-    `fd.isatty()`, defaulting to `False` if the stream can't answer at
-    all (closed, detached, or missing `isatty`).
+    result: the `is_terminal` argument if the caller already knows.
+    Then `is_ansi_terminal(fd)`, with any falsy result normalized back
+    to `None` (including the definite `False` the Windows branch can
+    return, because "no ANSI support" is not the same answer as "not a
+    terminal"). Then the `PROGRESSBAR_IS_TERMINAL` environment
+    variable, an explicit override for cases auto-detection can't
+    cover. Finally a bare `fd.isatty()`, defaulting to `False` if the
+    stream can't answer at all (closed, detached, or missing
+    `isatty`).
 
     Args:
         fd: Stream to probe.
@@ -254,10 +246,8 @@ def is_terminal(
         is_terminal = env_flag('PROGRESSBAR_IS_TERMINAL', None)
 
     if is_terminal is None:
-        # If we do get a TTY we know this is a valid terminal. Streams can
-        # legitimately fail with OSError (real I/O), ValueError (closed or
-        # detached file objects) or AttributeError (no isatty at all);
-        # anything else is a bug and propagates.
+        # If we do get a TTY we know this is a valid terminal. Probe
+        # errors are treated as "not a terminal": see the docstring.
         try:
             is_terminal = fd.isatty()
         except (OSError, ValueError, AttributeError):
@@ -295,8 +285,8 @@ ANSI_TERM_RE: re.Pattern[str] = re.compile(
 
 #: TERM values that on their own guarantee a truecolor-capable terminal, so
 #: 24-bit color still engages when ``COLORTERM`` is stripped (e.g. over ssh
-#: or sudo). Limited to names that *are* the terminal; generic values such as
-#: ``xterm-256color`` are used by plenty of 256-only emulators.
+#: or sudo). Limited to names that *are* the terminal, since generic values
+#: such as ``xterm-256color`` are used by plenty of 256-only emulators.
 TRUECOLOR_TERMS: frozenset[str] = frozenset({'xterm-kitty', 'xterm-ghostty'})
 
 #: The color depth this environment can support, computed once at import

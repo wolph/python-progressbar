@@ -14,5 +14,5 @@ data)``, returning the text to render for one redraw. Subclass
 (read from it, don't mutate it), and ``data`` is the same snapshot dict
 the built-in widgets read -- ``data['value']``, ``data['percentage']``,
 and so on. Drop the instance straight into a ``widgets=`` list alongside
-the built-ins; nothing distinguishes a custom widget from a shipped one
+the built-ins. Nothing distinguishes a custom widget from a shipped one
 at that point.

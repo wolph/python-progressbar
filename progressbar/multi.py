@@ -2,9 +2,9 @@
 
 :class:`MultiBar` is a ``dict[str, ProgressBar]``: adding a bar wires
 it into a single daemon render thread that redraws every registered
-bar in place, diffing each frame against the last one to move the
-cursor and clear only the lines that changed. See :class:`MultiBar`
-for the full contract.
+bar in place, diffing each frame against the last one so only the
+rows that changed are rewritten. See :class:`MultiBar` for the full
+contract.
 """
 
 from __future__ import annotations
@@ -51,10 +51,9 @@ class SortKey(str, enum.Enum):
     This is a string enum, so you can use any
     progressbar attribute or property as a sort key.
 
-    Note that the multibar defaults to lazily rendering only the changed
-    progressbars. This means that sorting by dynamic attributes such as
-    `value` might result in more rendering which can have a small
-    performance impact.
+    The multibar defaults to lazily rendering only the changed
+    progressbars, so sorting by dynamic attributes such as `value` can
+    trigger extra rendering with a small performance impact.
     """
 
     CREATED = 'index'
@@ -78,7 +77,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
     is unbounded, so a bar that never finishes blocks the program forever.
     Pass ``join_timeout`` (seconds, or a :class:`datetime.timedelta`) to
     bound that wait: once it elapses any still-unfinished bars are
-    abandoned and the render thread -- a daemon -- is left running so the
+    abandoned and the render thread (a daemon) is left running so the
     program can exit. The default preserves the historical wait-forever
     behavior.
 
@@ -95,7 +94,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         The render thread needs real OS threads. Under Pyodide,
         `Thread.start()` raises ``RuntimeError``, so `with
         MultiBar(...):` (which calls `start` from `__enter__`) fails
-        before anything is rendered; call `.render()` directly instead
+        before anything is rendered. Call `.render()` directly instead
         of using `.start()`/the context manager there.
 
     Args:
@@ -105,7 +104,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         prepend_label: Insert a label widget at the start of each bar's
             `widgets` the first time it's rendered.
         append_label: Like `prepend_label`, but appended at the end.
-        label_format: The `str.format` template for that label widget;
+        label_format: The `str.format` template for that label widget,
             formatted with `label` as a keyword argument.
         initial_format: The template used for a bar that hasn't been
             started yet, formatted with `label`. If `None`, the
@@ -287,7 +286,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
             bar.fd = stream.LastLineStream(self.fd)
 
         bar.paused = True
-        # Essentially `bar.print = self.print`, but `mypy` doesn't like that
+        # `mypy` rejects assigning to a method, hence the ignore.
         bar.print = self.print  # type: ignore
 
         # Just in case someone is using a progressbar with a custom
@@ -409,7 +408,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         Finished bars delegate to `_render_finished_bar` (0 or 1
         lines). A started bar is force-updated and yields its current
         line. A not-yet-started bar either yields `initial_format`
-        as-is, or -- if `initial_format` is `None` -- is started and
+        as-is, or, if `initial_format` is `None`, is started and
         rendered immediately instead of showing a placeholder.
 
         Returns:
@@ -494,10 +493,10 @@ class MultiBar(dict[str, bar.ProgressBar]):
         the builtin `print`, then restores the cursor -- but does so
         two different ways depending on `clear`:
 
-        - `clear=True` (the default; a genuine `print()` call made
-          while bars are active): clears the target line first, then
-          -- because the new line permanently occupies a row and pushes
-          everything below it down -- clears to the end of the screen
+        - `clear=True` (the default: a genuine `print()` call made
+          while bars are active): clears the target line first, then,
+          because the new line permanently occupies a row and pushes
+          everything below it down, clears to the end of the screen
           and re-emits the whole previous bar frame underneath, so the
           bars end up back on the lines below the new output.
         - `clear=False` (used internally by `render` to redraw a
@@ -518,7 +517,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
             flush: Whether to flush the buffered escape sequences to
                 `fd` immediately.
             clear: Whether this is a genuine new line of output rather
-                than an in-place bar redraw; see above.
+                than an in-place bar redraw (see above).
             **kwargs: Additional keyword arguments passed to the
                 builtin `print`.
         """
@@ -565,16 +564,16 @@ class MultiBar(dict[str, bar.ProgressBar]):
         """Render in a loop until stopped or every bar has finished.
 
         This is the render thread's target when started via `start`
-        (which passes `join=False`); it can also be called directly to
+        (which passes `join=False`). It can also be called directly to
         block the calling thread instead of backgrounding the loop.
         Each pass renders once and sleeps `update_interval`. Then, but
         only if `join` is true or `_thread_closed` has been set (i.e.
         `join`/`stop` was called), every current bar is checked in a
         `for`/`else`: finding an unfinished bar just breaks out and the
         loop continues, but running the `for` to completion means every
-        bar is finished, so one last forced render is issued -- to make
+        bar is finished, so one last forced render is issued, to make
         sure the just-finished bars' finished-format actually reaches
-        the screen -- and the method returns. `stop` bypasses all of
+        the screen, and the method returns. `stop` bypasses all of
         this by setting `_thread_finished` directly, which ends the
         loop on its next `while` check regardless of bar state.
 
@@ -582,9 +581,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
             join: Whether to return as soon as every current bar has
                 finished, rather than only after `_thread_closed` is
                 set. `start()` passes `False` so the background render
-                thread keeps looping -- and can pick up bars added
-                after it started -- until `join`/`stop` asks it to
-                close.
+                thread keeps looping, picking up bars added after it
+                started, until `join`/`stop` asks it to close.
         """
         while not self._thread_finished.is_set():  # pragma: no branch
             self.render()
@@ -610,13 +608,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
         exit on its own -- `__exit__`/`join`/`stop` are what make a
         clean shutdown actually wait for it.
 
-        Note:
-            Pyodide has no real threads: `Thread.start()` raises
-            ``RuntimeError: can't start new thread`` there, and since
-            `__enter__` calls `start()` before the first render, `with
-            MultiBar(...):` fails before drawing anything. Driving
-            `.render()` manually -- e.g. from a timer, without ever
-            calling `.start()` -- works there instead.
+        Not available under Pyodide, which has no real threads (see
+        the class docstring).
         """
         assert not self._thread, 'Multibar already started'
         self._thread_finished.clear()
@@ -656,7 +649,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         unlike a plain `join()`, unfinished bars don't block this.
 
         Args:
-            timeout: Seconds to wait for the thread; forwarded to
+            timeout: Seconds to wait for the thread, forwarded to
                 `join`.
         """
         self._thread_finished.set()
@@ -669,8 +662,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
             The bars sorted by `sort_keyfunc`, reversed if
             `sort_reverse`. The values are copied into a list first so
             a concurrent `__setitem__`/`__delitem__` from another
-            thread -- the multibar is a plain `dict`, not a
-            thread-safe one -- can't mutate it out from under the sort.
+            thread (the multibar is a plain `dict`, not a thread-safe
+            one) can't mutate it out from under the sort.
         """
         bars = list(self.values())
         return sorted(bars, key=self.sort_keyfunc, reverse=self.sort_reverse)
@@ -689,7 +682,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         """Wind down the render thread on context-manager exit.
 
         On a clean exit (`exc_type is None`), waits for the render
-        thread via `join(timeout=join_timeout)`; `join_timeout=None`
+        thread via `join(timeout=join_timeout)`. `join_timeout=None`
         (the default) waits forever, matching the historical behavior.
         If the timeout elapses with the thread still alive, `stop()`
         is called to explicitly signal it to shut down -- the thread is
@@ -706,7 +699,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
         """
         if exc_type is None:
             # Bound the wait so a never-finishing bar cannot hang a clean
-            # exit; `join_timeout=None` keeps the historical forever-wait.
+            # exit. `join_timeout=None` keeps the historical forever-wait.
             self.join(timeout=self.join_timeout)
             if self._thread is not None:
                 # The timeout elapsed with bars unfinished: signal the
@@ -715,5 +708,5 @@ class MultiBar(dict[str, bar.ProgressBar]):
                 self.stop(timeout=self.update_interval)
         else:
             # Don't wait for unfinished progressbars when an exception is
-            # propagating; that would block forever
+            # propagating: that would block forever.
             self.stop()

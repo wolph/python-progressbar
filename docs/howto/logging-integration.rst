@@ -18,10 +18,11 @@ is) gets pointed at the wrapped stream instead, so ``logging.info(...)``
 lands above the bar the same way ``print()`` does. Construction order does
 not matter here: a bar defaulting to ``sys.stderr`` resolves that to the
 *unwrapped* stream either way, which is what keeps its own redraws from
-recursing back through the capture. Unwind both in a ``finally``: ``unwrap_logging()``
-restores each handler's original stream, then ``unwrap_stderr()``
-restores ``sys.stderr`` -- both mutate process-global state, so a leaked
-wrapper affects every bar built afterward in the same process.
+recursing back through the capture. Unwind both in a ``finally``:
+``unwrap_logging()`` restores each handler's original stream, then
+``unwrap_stderr()`` restores ``sys.stderr``. Both mutate process-global
+state, so a leaked wrapper affects every bar built afterward in the same
+process.
 
 Caveats
 -------

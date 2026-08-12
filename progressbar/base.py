@@ -29,8 +29,8 @@ class FalseMeta(type):
 class UnknownLength(metaclass=FalseMeta):
     """The total amount of work is not knowable in advance.
 
-    Passed as `max_value` for an iterable with no `__len__` — a
-    generator, a stream — so the bar renders progress without a
+    Passed as `max_value` for an iterable with no `__len__` (a
+    generator, a stream) so the bar renders progress without a
     percentage or an ETA.
     """
 

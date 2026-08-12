@@ -8,16 +8,7 @@ without changing anything else about the loop.
 
 .. demo:: tutorial/step1
 
-First, check the install. ``pip install progressbar2`` (see
-:doc:`/installation`) puts a ``progressbar`` package on your path; confirm
-it with:
-
-.. code-block:: console
-
-   $ python -c "import progressbar; print(progressbar.__version__)"
-
-If that prints a version number instead of an ``ImportError``, you are
-ready.
+Install the library first if you have not yet (:doc:`/installation`).
 
 The example wraps ``range(100)`` in ``progressbar.progressbar(...)`` and
 iterates the result exactly as it would iterate ``range(100)`` on its own.
@@ -27,11 +18,8 @@ updates and finishes a bar behind the scenes as that iterator is consumed.
 There is no separate call to make the bar advance or to mark it done.
 
 That convenience comes from hiding the bar object entirely. The library
-also exposes that object directly as the ``ProgressBar`` class, which you
-construct yourself and update by calling a method whenever you decide
-progress has changed. ``progressbar.progressbar()`` is built on top of
-``ProgressBar`` for the common case of running a loop over an iterable and
-showing a bar for it; when progress does not come from iterating something,
-you reach for ``ProgressBar`` directly, which the next step shows.
+also exposes it directly as the ``ProgressBar`` class, which you construct
+and update yourself when progress does not come from iterating something.
+The next step shows how.
 
 Next: :doc:`step2`.

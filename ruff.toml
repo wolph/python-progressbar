@@ -103,8 +103,8 @@ force-wrap-aliases = true
 
 [lint.flake8-quotes]
 # No `docstring-quotes` setting: it used to ask for `'''`, which
-# contradicts pydocstyle's D300 and was contradicted by the code itself
-# — every one of the 666 docstring markers in `progressbar/` is `"""`.
+# contradicts pydocstyle's D300 and was contradicted by the code itself:
+# every one of the 666 docstring markers in `progressbar/` is `"""`.
 inline-quotes = 'single'
 multiline-quotes = 'single'
 

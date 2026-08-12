@@ -2,10 +2,9 @@
 Color a bar, solid or gradient
 ==============================
 
-A plain bar is monochrome, but sometimes color carries information: a
-gradient that shifts from red through yellow to green as work completes
-gives an at-a-glance health signal, and a solid color still helps a
-spinner stand out from surrounding log output.
+A plain bar is monochrome, but color can carry information: a gradient
+that shifts from red through yellow to green as work completes, or a
+solid color that makes a spinner stand out from surrounding log output.
 
 .. demo:: howto/colors
 

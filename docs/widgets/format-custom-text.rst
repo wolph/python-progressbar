@@ -21,5 +21,5 @@ Example
 See also
 --------------------------------------------------------------------------------
 
-* :doc:`postfix` — a compact key=value summary sourced from a bar variable instead.
-* :doc:`format-label` — a format string over the bar's own data snapshot instead.
+* :doc:`postfix`: a compact key=value summary sourced from a bar variable.
+* :doc:`format-label`: a format string over the bar's own data snapshot.

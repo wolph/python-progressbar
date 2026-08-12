@@ -11,7 +11,7 @@ than one bar, laid out and cleaned up as a group rather than by hand.
 ``MultiBar`` is a dict of label to ``ProgressBar``: subscripting it with
 a new label -- ``multibar[name]`` -- creates that job's bar on first
 access, so there's no separate registration step. A background thread
-renders every job's bar together, redrawing whichever rows changed; the
+renders every job's bar together, redrawing whichever rows changed. The
 ``with`` block waits for that thread on exit. Each job calls its own
 ``finish()`` independently once it reaches its own target (as every job
 here does), so its row freezes at its own finished state -- elapsed
@@ -22,13 +22,11 @@ Caveats
 -------
 
 By default, exiting the ``with`` block waits forever for every job to
-finish -- pass ``join_timeout=`` (seconds, or a ``datetime.timedelta``)
-to ``MultiBar()`` to bound that wait; once it elapses, any still-running
-jobs are abandoned and the render thread is left running as a daemon so
-the program can still exit.
+finish. Pass ``join_timeout=`` (seconds, or a ``datetime.timedelta``) to
+``MultiBar()`` to bound that wait (details: :doc:`/reference/multibar`).
 
 Rendering multiple bars in place relies on the terminal understanding
 cursor-movement escapes. JetBrains IDEs (PyCharm, IntelliJ) need
 "Enable terminal in output console" turned on in the run configuration
-for this to render correctly; IDLE's output pane doesn't support this at
+for this to render correctly. IDLE's output pane doesn't support it at
 all.

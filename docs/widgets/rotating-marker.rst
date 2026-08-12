@@ -4,9 +4,9 @@ RotatingMarker
 
 ``RotatingMarker`` is the original name for ``AnimatedMarker``.
 
-Same widget, kept as an alias for code written against the old name;
-prefer ``AnimatedMarker`` in new code. Shown here in its classic role:
-as the marker character of a ``Bar``, rather than standing alone.
+Same widget, kept as an alias for code written against the old name.
+Prefer ``AnimatedMarker`` in new code. The demo uses it in its classic
+role: the marker character of a ``Bar``.
 
 .. autoclass:: progressbar.widgets.RotatingMarker
    :members:
@@ -21,4 +21,4 @@ Example
 See also
 --------------------------------------------------------------------------------
 
-* :doc:`animated-marker` — the current name for this same widget.
+* :doc:`animated-marker`: the current name for this widget.

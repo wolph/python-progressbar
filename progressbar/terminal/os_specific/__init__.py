@@ -7,9 +7,11 @@ no console-mode API to speak of: `.posix.getch` puts the terminal
 into raw mode itself, locally, via `termios`/`tty` for the duration
 of a single read. So on POSIX the console-mode functions are filled
 in below with no-op stubs matching the Windows signatures, meaning
-callers (`bar.py`, `env.py`) can call `set_console_mode()` /
-`reset_console_mode()` / `get_console_mode()` unconditionally,
-without an `if os.name == 'nt':` branch of their own.
+callers can call `set_console_mode()` / `reset_console_mode()` /
+`get_console_mode()` unconditionally, without an `if os.name == 'nt':`
+branch of their own. `bar.py` does exactly that. `env.py` does not use
+this shim at all, importing `windows.get_console_mode` directly from
+inside its own `os.name == 'nt'` branches.
 """
 
 import os
@@ -43,7 +45,7 @@ getch = _getch
 #: No-op on POSIX.
 reset_console_mode = _reset_console_mode
 #: Enable virtual-terminal (ANSI) processing on the console. Returns
-#: whether it succeeded; always `False` on POSIX.
+#: whether it succeeded, always `False` on POSIX.
 set_console_mode = _set_console_mode
 #: The current console input mode as a bitmask. Always `0` on POSIX.
 get_console_mode = _get_console_mode

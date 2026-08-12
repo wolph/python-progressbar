@@ -20,7 +20,7 @@ def getch() -> str:
     # a real terminal into raw mode, and they are absent from restricted
     # builds such as Pyodide, where importing this module must still work.
     # A module-scope import would make `import progressbar` fail outright
-    # there; this bug was real and has already been fixed once.
+    # there. This bug was real and has already been fixed once.
     import termios
     import tty
 

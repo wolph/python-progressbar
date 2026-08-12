@@ -4,7 +4,7 @@ ProgressBar
 
 ``ProgressBar`` is the class behind ``progressbar.progressbar()`` and every
 bar you construct directly. It combines several mixins (stream redirection,
-terminal resizing, colour/terminal detection) but they are all reachable
+terminal resizing, color/terminal detection) but they are all reachable
 through this one class and its constructor.
 
 .. autoclass:: progressbar.bar.ProgressBar
@@ -17,9 +17,8 @@ through this one class and its constructor.
 Constructor arguments worth knowing
 ====================================
 
-``ProgressBar`` accepts every argument documented above; the table below
-only covers the ones most scripts actually set. Everything else keeps a
-sane default.
+The table below covers the constructor arguments most scripts actually
+set.
 
 .. list-table::
    :header-rows: 1
@@ -41,8 +40,8 @@ sane default.
        tqdm-style alias that sets ``prefix`` to ``f'{desc}: '``.
    * - ``unit``, ``unit_scale``, ``postfix``
      - tqdm-style extras: ``unit`` labels counted items, ``unit_scale``
-       enables SI-style scaling (1000/1024 suffixes), and ``postfix`` seeds
-       a trailing key-value widget. Any of the three routes construction
+       scales the count with IEC binary prefixes (KiB/MiB, base 1024), and
+       ``postfix`` seeds a trailing key-value widget. Any of the three routes
        through the full widget machinery even when the fast-path dispatch
        in :py:func:`progressbar.progressbar` would otherwise apply -- see
        :doc:`../explanation/performance-and-the-fast-path`.
@@ -53,11 +52,11 @@ sane default.
      - Capture the named stream and print it above the bar instead of
        letting it interleave with (and corrupt) the redraw.
    * - ``line_breaks``
-     - ``True`` prints a new line per update (log-friendly); ``False``
+     - ``True`` prints a new line per update (log-friendly), ``False``
        overwrites the current line with ``\r``. Defaults to the opposite of
-       terminal detection -- see :doc:`../explanation/terminal-detection`.
+       terminal detection (see :doc:`../explanation/terminal-detection`).
    * - ``enable_colors``, ``is_terminal``
-     - Override colour and terminal auto-detection explicitly instead of
+     - Override color and terminal auto-detection explicitly instead of
        relying on the environment. See
        :doc:`../explanation/terminal-detection` for exactly how the
        automatic values are derived.
@@ -87,7 +86,7 @@ Related classes
 
 ``DataTransferBar`` and ``NullBar`` are small ``ProgressBar`` subclasses
 that only override ``default_widgets()`` (or, for ``NullBar``, turn every
-lifecycle method into a no-op); every constructor argument above still
+lifecycle method into a no-op). Every constructor argument above still
 applies.
 
 .. autoclass:: progressbar.bar.DataTransferBar
@@ -105,8 +104,8 @@ applies.
 ``FastProgressBar`` is also a ``ProgressBar`` subclass, accepting the same
 constructor arguments, but it replaces the widget system with a single fixed
 formatter. It is what ``progressbar.progressbar()`` constructs automatically
-for the common case; see :doc:`../explanation/performance-and-the-fast-path`
-for when that happens and why.
+for the common case. :doc:`../explanation/performance-and-the-fast-path`
+covers when that happens and why.
 
 .. autoclass:: progressbar.fast.FastProgressBar
    :members:

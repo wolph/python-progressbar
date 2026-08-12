@@ -21,5 +21,6 @@ Example
 See also
 --------------------------------------------------------------------------------
 
-* :doc:`format-label-bar` — the same formatting centered inside a fill bar.
-* :doc:`format-custom-text` — text kept independent of the bar's data entirely.
+* :doc:`format-label-bar`: the same formatting centered inside a fill bar.
+* :doc:`format-custom-text`: text kept independent of the bar's data
+  entirely.

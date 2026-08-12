@@ -26,7 +26,7 @@ import typing
 import warnings
 import weakref
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from types import FrameType, TracebackType
 
 from python_utils import converters
@@ -44,7 +44,7 @@ from .terminal import os_specific
 try:
     # Optional native accelerator, shipped as the ``progressbar2[fast]`` extra
     # (the separate ``speedups`` package). When importable, the iterator path
-    # uses it automatically; otherwise we fall back to the pure-Python gate.
+    # uses it automatically. Otherwise we fall back to the pure-Python gate.
     # Loaded via importlib so type checkers don't try to resolve the optional
     # compiled module when it is absent.
     _FastBarIterator = importlib.import_module(
@@ -59,20 +59,19 @@ def _load_widgets() -> typing.Any:
     """Import the widgets module lazily (and once).
 
     The full-bar code needs ``widgets``, but the lean fast path must not pull
-    it in (it drags the terminal/colour tables). Imported via importlib so the
+    it in (it drags the terminal/color tables). Imported via importlib so the
     deferred load doesn't read as a static ``bar -> widgets`` import cycle.
 
     Cached with ``functools.cache`` so full-bar render sites don't pay the
-    ``import_module`` lookup on every call; the module object is resolved once
-    on first use and reused thereafter.
+    ``import_module`` lookup on every call.
     """
     return importlib.import_module('progressbar.widgets')
 
 
 logger = logging.getLogger(__name__)
 
-# float also accepts integers and longs but we don't want an explicit union
-# due to type checking complexity
+# A `float` hint already accepts `int` under the PEP 484 numeric tower, so
+# an explicit `int | float` union would be redundant noise
 NumberT = float
 ValueT = NumberT | type[base.UnknownLength] | None
 
@@ -96,7 +95,7 @@ class ProgressBarMixinBase(abc.ABC):
     #: fall back to 80 if auto detection is not possible.
     term_width: int = 80
     #: The widgets to render, defaults to the result of `default_widget()`
-    #: (typed loosely as Any to avoid a static bar->widgets import cycle; the
+    #: (typed loosely as Any to avoid a static bar->widgets import cycle. The
     #: public ``progressbar()`` shortcut keeps the precise WidgetBase typing).
     widgets: collections.abc.MutableSequence[typing.Any]
     #: When going beyond the max_value, raise an error if True or silently
@@ -134,7 +133,7 @@ class ProgressBarMixinBase(abc.ABC):
     value: NumberT
     #: Previous progress value
     previous_value: NumberT | None
-    #: Value at the last actual redraw (internal; used by the update gate's
+    #: Value at the last actual redraw (internal, used by the update gate's
     #: pixel check, kept separate from the public `previous_value`)
     _last_drawn_value: NumberT | None
     #: The minimum/start value for the progress bar
@@ -150,9 +149,10 @@ class ProgressBarMixinBase(abc.ABC):
     #: Seconds between `start_time` and last call to `update()`
     seconds_elapsed: float
 
-    #: Extra data for widgets with persistent state. This is used by
-    #: sampling widgets for example. Since widgets can be shared between
-    #: multiple progressbars we need to store the state with the progressbar.
+    #: Extra data for widgets with persistent state, used by the sampling
+    #: widgets for example. Keeping it here rather than on the widget lets
+    #: the widget stay stateless: the state belongs to the bar, so `init()`
+    #: clears it on restart and a shared widget cannot mix two bars' data.
     extra: dict[str, typing.Any]
 
     def get_last_update_time(self) -> datetime | None:
@@ -172,17 +172,17 @@ class ProgressBarMixinBase(abc.ABC):
     last_update_time = property(get_last_update_time, set_last_update_time)
 
     def __init__(self, **kwargs: typing.Any) -> None:  # noqa: B027
-        """Do nothing; concrete state is set up by subclasses/mixins."""
+        """Do nothing: concrete state is set up by subclasses/mixins."""
 
     def start(self, **kwargs: typing.Any) -> None:
-        """Mark the bar as started; subclasses do the actual rendering."""
+        """Mark the bar as started. Subclasses do the actual rendering."""
         self._started = True
 
     def update(self, value: ValueT = None) -> None:  # noqa: B027
-        """Do nothing; subclasses do the actual rendering."""
+        """Do nothing: subclasses do the actual rendering."""
 
     def finish(self) -> None:  # pragma: no cover
-        """Mark the bar as finished; subclasses do the actual rendering."""
+        """Mark the bar as finished. Subclasses do the actual rendering."""
         self._finished = True
 
     def __del__(self) -> None:
@@ -202,7 +202,7 @@ class ProgressBarMixinBase(abc.ABC):
         return self.__dict__
 
     def data(self) -> dict[str, typing.Any]:  # pragma: no cover
-        """Return the widget-facing data dict; see `ProgressBar.data`."""
+        """Return the widget-facing data dict (see `ProgressBar.data`)."""
         raise NotImplementedError()
 
     def started(self) -> bool:
@@ -218,7 +218,7 @@ class ProgressBarBase(collections.abc.Iterable[NumberT], ProgressBarMixinBase):
     """Adds the `Iterable` protocol and a process-unique `index`/`label`.
 
     `index` identifies a bar among others (e.g. for `MultiBar`, which uses
-    it to order/label child bars); `label` is a human-readable name for the
+    it to order/label child bars). `label` is a human-readable name for the
     same purpose.
     """
 
@@ -246,7 +246,7 @@ class ProgressBarBase(collections.abc.Iterable[NumberT], ProgressBarMixinBase):
 class DefaultFdMixin(ProgressBarMixinBase):
     """Formats and writes the bar's rendered line to a file descriptor.
 
-    Owns ANSI/terminal/colour detection for `fd` (defaults to
+    Owns ANSI/terminal/color detection for `fd` (defaults to
     `sys.stderr`) and the widget layout pass (`_format_widgets`) that turns
     `self.widgets` into one printable line.
     """
@@ -284,19 +284,19 @@ class DefaultFdMixin(ProgressBarMixinBase):
         line_offset: int = 0,
         **kwargs: typing.Any,
     ) -> None:
-        """Resolve `fd`/ANSI/colour state for this bar.
+        """Resolve `fd`/ANSI/color state for this bar.
 
         Args:
             fd: Where to write the bar. `sys.stdout`/`sys.stderr` are
                 swapped for the *original*, unwrapped streams so a bar
                 writing to one doesn't redirect through its own
                 `StdRedirectMixin` capture.
-            is_terminal: Force terminal detection; `None` autodetects.
+            is_terminal: Force terminal detection. `None` autodetects.
             line_breaks: Print each redraw on a new line instead of
-                overwriting via a carriage return; `None` autodetects from
+                overwriting via a carriage return. `None` autodetects from
                 `is_terminal` (and the `PROGRESSBAR_LINE_BREAKS`
                 environment variable).
-            enable_colors: Colour support override; `None` autodetects.
+            enable_colors: Color support override. `None` autodetects.
             line_offset: Number of lines to offset the bar from the current
                 line, via a `LineOffsetStreamWrapper` around `fd`.
             **kwargs: Forwarded to `super().__init__()`.
@@ -343,17 +343,17 @@ class DefaultFdMixin(ProgressBarMixinBase):
         self,
         enable_colors: progressbar.env.ColorSupport | None,
     ) -> progressbar.env.ColorSupport:
-        """Resolve the effective colour support for this bar.
+        """Resolve the effective color support for this bar.
 
         Args:
             enable_colors: `None` autodetects from the
                 `PROGRESSBAR_ENABLE_COLORS`/`FORCE_COLOR` environment
                 variables and ANSI-terminal detection, in that order.
-                `True` forces `XTERM_256`; `False` forces `NONE`. Any other
+                `True` forces `XTERM_256`, `False` forces `NONE`. Any other
                 value must already be a `ColorSupport` instance, used as-is.
 
         Returns:
-            The resolved colour support.
+            The resolved color support.
 
         Raises:
             ValueError: `enable_colors` is not `None`, `True`, `False`, or a
@@ -446,23 +446,25 @@ class DefaultFdMixin(ProgressBarMixinBase):
     def _format_widgets(self) -> list[str]:
         """Render `self.widgets` to strings, splitting width in two passes.
 
-        Pass 1 walks `self.widgets` in order: a widget failing
-        `check_size` is skipped entirely (no width, no output); a plain
+        Pass 1 walks `self.widgets` in order. A widget failing
+        `check_size` is skipped entirely (no width, no output). A plain
         `str` has its length subtracted from the shared `width` budget
-        immediately; an `AutoWidthWidgetBase` is deferred (its index is
+        immediately. An `AutoWidthWidgetBase` is deferred (its index is
         pushed onto `expanding`, so that list ends up in *reverse* index
-        order) rather than rendered yet; anything else (a fixed-width
+        order) rather than rendered yet. Anything else (a fixed-width
         widget) is rendered right away and its length subtracted from
         `width`.
 
         Pass 2 divides whatever `width` remains among the deferred
-        auto-width widgets, popped off `expanding` (so processed in
-        reverse index order, i.e. later-in-the-bar widgets first). Each
-        gets `ceil(remaining_width / remaining_count)`, floored at 0, so an
-        uneven split gives the larger remainder to the widgets popped
-        first; its rendered length is then subtracted from `width` before
-        the next widget's share is computed, so a widget rendering
-        shorter or longer than its allocation shifts the rest.
+        auto-width widgets. `expanding` holds them in reverse index
+        order and `pop()` takes from the end, so they are processed
+        front-to-back: the earliest auto-width widget in the bar is
+        sized first. Each gets `ceil(remaining_width /
+        remaining_count)`, floored at 0, so an uneven split gives the
+        larger share to the earlier widgets. Its rendered length is
+        then subtracted from `width` before the next widget's share is
+        computed, so a widget rendering shorter or longer than its
+        allocation shifts the rest.
         """
         widgets = _load_widgets()
 
@@ -527,7 +529,7 @@ class _ResizeRegistry:
         """Register `bar` for resize dispatch, installing the handler once.
 
         The process-global `SIGWINCH` handler is only installed (saving
-        whatever handler was previously set) on the first registration; a
+        whatever handler was previously set) on the first registration. A
         second, third, etc. overlapping bar just joins the `WeakSet`.
         """
         import signal
@@ -647,7 +649,7 @@ class StdRedirectMixin(DefaultFdMixin):
         redirect_blank_line: bool = False,
         **kwargs: typing.Any,
     ) -> None:
-        """Store the redirect flags; actual wrapping happens in `start()`."""
+        """Store the redirect flags. Actual wrapping happens in `start()`."""
         super().__init__(**kwargs)
         self.redirect_stderr = redirect_stderr
         self.redirect_stdout = redirect_stdout
@@ -748,30 +750,30 @@ class ProgressBar(
         widget_kwargs: Default keyword arguments passed to each widget
             built by `default_widgets()`.
         custom_len: Overrides how a rendered widget's width is measured.
-            The default also strips ANSI colour codes before measuring;
+            The default also strips ANSI color codes before measuring;
             override this if you use e.g. wide/CJK characters whose
             on-screen width doesn't match `len()`.
-        max_error: Raise a `ValueError` if `value` goes beyond `max_value`;
-            if `False`, `value` is clamped to `max_value` instead.
+        max_error: Raise a `ValueError` if `value` goes beyond `max_value`.
+            If `False`, `value` is clamped to `max_value` instead.
         prefix: Prefix the progressbar with the given string.
         suffix: Suffix the progressbar with the given string.
         variables: User-defined variables that can be used from a label
             using `format='{variables.my_var}'`. These values can be
-            updated using `bar.update(my_var='newValue')`; this can also
+            updated using `bar.update(my_var='newValue')`. This can also
             be used to set initial values for variables' widgets.
         line_offset: The number of lines to offset the progressbar from
             your current line. This is useful if you have other output or
             multiple progressbars.
-        desc: tqdm-style alias for `prefix` (rendered as `f'{desc}: '`);
-            ignored if `prefix` is also given.
-        total: tqdm-style alias for `max_value`; ignored if `max_value` is
+        desc: tqdm-style alias for `prefix` (rendered as `f'{desc}: '`).
+            Ignored if `prefix` is also given.
+        total: tqdm-style alias for `max_value`. Ignored if `max_value` is
             also given.
         unit: The unit label used by unit-aware widgets. Defaults to
             `'it'`.
         unit_scale: Whether unit-aware widgets should scale the unit (e.g.
             show `1.2K` instead of `1200`).
-        postfix: tqdm-style initial value for the `postfix` variable; with
-            the default widgets, also appends a `Postfix` widget
+        postfix: tqdm-style initial value for the `postfix` variable.
+            With the default widgets, also appends a `Postfix` widget
             automatically.
 
     A common way of using it is like:
@@ -822,14 +824,14 @@ class ProgressBar(
         widgets: collections.abc.Sequence[typing.Any] | None = None,
         left_justify: bool = True,
         initial_value: NumberT = 0,
-        poll_interval: float | None = None,
+        poll_interval: timedelta | float | None = None,
         widget_kwargs: dict[str, typing.Any] | None = None,
         custom_len: collections.abc.Callable[[str], int] = utils.len_color,
         max_error: bool = True,
         prefix: str | None = None,
         suffix: str | None = None,
         variables: dict[str, typing.Any] | None = None,
-        min_poll_interval: float | None = None,
+        min_poll_interval: timedelta | float | None = None,
         desc: str | None = None,
         total: ValueT = None,
         unit: str = 'it',
@@ -866,7 +868,7 @@ class ProgressBar(
         self.unit = unit
         self.unit_scale = unit_scale
         # Auto-append a Postfix widget in start() when `postfix` is used
-        # with the default widgets; explicit widget lists are left alone.
+        # with the default widgets. Explicit widget lists are left alone.
         self._auto_postfix = widgets is None and postfix is not None
         self._auto_postfix_added = False
 
@@ -888,9 +890,9 @@ class ProgressBar(
     def _apply_deprecated_aliases(
         self,
         max_value: ValueT,
-        poll_interval: float | None,
+        poll_interval: timedelta | float | None,
         kwargs: dict[str, typing.Any],
-    ) -> tuple[ValueT, float | None]:
+    ) -> tuple[ValueT, timedelta | float | None]:
         """Resolve the deprecated ``maxval``/``poll`` keyword aliases.
 
         Emits a :py:class:`DeprecationWarning` for each legacy name that is
@@ -934,8 +936,8 @@ class ProgressBar(
 
     def _setup_poll_intervals(
         self,
-        poll_interval: float | None,
-        min_poll_interval: float | None,
+        poll_interval: timedelta | float | None,
+        min_poll_interval: timedelta | float | None,
     ) -> None:
         """Convert the poll intervals to seconds and clamp the minimum.
 
@@ -957,8 +959,7 @@ class ProgressBar(
             or self._MINIMUM_UPDATE_INTERVAL
         )
 
-        # Note that the _MINIMUM_UPDATE_INTERVAL sets the minimum in case of
-        # low values.
+        # _MINIMUM_UPDATE_INTERVAL floors low values below.
         self.poll_interval = poll_interval
         self.min_poll_interval = max(
             min_poll_interval or self._MINIMUM_UPDATE_INTERVAL,
@@ -969,9 +970,10 @@ class ProgressBar(
     def _seed_variables(self, variables: dict[str, typing.Any] | None) -> None:
         """Seed the user-defined variables dict and scan widgets for names.
 
-        Builds the ``variables`` mapping used by ``Variable``/``FormatWidget``
-        and registers a ``None`` placeholder for every ``VariableMixin`` widget
-        whose name isn't already supplied.
+        Builds the ``variables`` mapping read by ``Variable`` and by
+        ``FormatWidgetMixin`` subclasses, and registers a ``None``
+        placeholder for every ``VariableMixin`` widget whose name isn't
+        already supplied.
         """
         self.variables = utils.AttributeDict(variables or {})
         if self.widgets:
@@ -986,12 +988,11 @@ class ProgressBar(
 
     @property
     def dynamic_messages(self) -> typing.Any:  # pragma: no cover
-        """Deprecated alias for `variables`; kept for old callers."""
+        """Deprecated alias for `variables`, kept for old callers."""
         return self.variables
 
     @dynamic_messages.setter
     def dynamic_messages(self, value: typing.Any) -> None:  # pragma: no cover
-        """Deprecated alias for `variables`; kept for old callers."""
         self.variables = value
 
     def init(self) -> None:
@@ -1000,8 +1001,8 @@ class ProgressBar(
         Called from `__init__` and re-run by `start(init=True)`.
         """
         self.previous_value = None
-        # Value at the last actual redraw; used internally by the update gate's
-        # pixel check (distinct from the public `previous_value`).
+        # Value at the last actual redraw, used internally by the update
+        # gate's pixel check (distinct from the public `previous_value`).
         self._last_drawn_value = None
         self.last_update_time = None
         self.start_time = None
@@ -1073,12 +1074,12 @@ class ProgressBar(
         Returns:
             dict:
                 - `max_value`: The configured maximum. `None` before
-                  `start()`; `UnknownLength` when the bar has no known
+                  `start()`, `UnknownLength` when the bar has no known
                   length.
                 - `start_time`: When `start()` ran.
                 - `last_update_time`: Wall-clock time of the most recent
                   redraw.
-                - `end_time`: Set by `finish()`; `None` until then.
+                - `end_time`: Set by `finish()`, `None` until then.
                 - `value`: The current value.
                 - `previous_value`: The value before the current
                   `update()` call.
@@ -1098,7 +1099,8 @@ class ProgressBar(
                   (e.g. `1.2K` instead of `1200`).
                 - `variables`: User-defined variables set via the
                   `variables=` constructor arg or `bar.update(name=value)`;
-                  backs `Variable`/`FormatWidget`.
+                  read by `Variable` and by `FormatWidgetMixin`
+                  subclasses via `str.format()` substitution.
                 - `dynamic_messages`: Deprecated alias for `variables` --
                   the same object, kept for old widgets that read this
                   key.
@@ -1110,41 +1112,25 @@ class ProgressBar(
         elapsed = self.last_update_time - self.start_time  # type: ignore
         total_seconds_elapsed = utils.deltas_to_seconds(elapsed)
         return dict(
-            # The maximum value (can be None with iterators)
             max_value=self.max_value,
-            # Start time of the widget
             start_time=self.start_time,
-            # Last update time of the widget
             last_update_time=self.last_update_time,
-            # End time of the widget
             end_time=self.end_time,
-            # The current value
             value=self.value,
-            # The previous value
             previous_value=self.previous_value,
-            # The total update count
             updates=self.updates,
-            # The seconds since the bar started
             total_seconds_elapsed=total_seconds_elapsed,
-            # The seconds since the bar started modulo 60
             seconds_elapsed=(elapsed.seconds % 60)
             + (elapsed.microseconds / 1000000.0),
-            # The minutes since the bar started modulo 60
             minutes_elapsed=(elapsed.seconds / 60) % 60,
-            # The hours since the bar started modulo 24
             hours_elapsed=(elapsed.seconds / (60 * 60)) % 24,
-            # The days since the bar started
             days_elapsed=(elapsed.total_seconds() / (60 * 60 * 24)),
-            # The raw elapsed `datetime.timedelta` object
             time_elapsed=elapsed,
-            # Percentage as a float or `None` if no max_value is available
             percentage=self.percentage,
             unit=self.unit,
             unit_scale=self.unit_scale,
-            # Dictionary of user-defined
-            # :py:class:`progressbar.widgets.Variable`'s
             variables=self.variables,
-            # Deprecated alias for `variables`
+            # Deprecated alias for `variables`, deliberately the same object.
             dynamic_messages=self.variables,
         )
 
@@ -1191,7 +1177,7 @@ class ProgressBar(
         """Wrap `iterable` for use as `for item in bar(iterable):`.
 
         If `max_value` isn't given (here or already set), it's inferred
-        from `len(iterable)`; an iterable without a `__len__` (e.g. a
+        from `len(iterable)`. An iterable without a `__len__` (e.g. a
         generator) falls back to `UnknownLength`.
         """
         if max_value is not None:
@@ -1228,10 +1214,10 @@ class ProgressBar(
         loop body raises `GeneratorExit` here, caught below to `finish()`
         the bar (and restore any redirected streams) on early exit too.
 
-        Value semantics must match the pre-gate behaviour: `start()`
+        Value semantics must match the pre-gate behavior: `start()`
         draws 0% and the first item is yielded at `value == min_value`
         (no increment), so during the loop body for item `i` (0-indexed),
-        `bar.value == i` -- not `i + 1`; only later items increment. The
+        `bar.value == i`, not `i + 1`. Only later items increment. The
         peek-first structure below (yield the first item, then loop the
         rest) reproduces that without a per-iteration branch for the
         first item.
@@ -1259,7 +1245,7 @@ class ProgressBar(
             for item in iterator:
                 value += 1
                 # When the gate is disabled, call `update()` every iteration so
-                # behaviour is byte-identical to the ungated bar. When enabled,
+                # behavior is byte-identical to the ungated bar. When enabled,
                 # only re-enter `update()` once value reaches the threshold.
                 # The step starts at 1, so until a real measurement grows it
                 # this still calls `update()` every iteration and lets
@@ -1332,7 +1318,7 @@ class ProgressBar(
         exc_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        """Finish the bar; mark it dirty if the with-block raised.
+        """Finish the bar, marking it dirty if the with-block raised.
 
         `dirty=True` leaves `value` alone rather than jumping to 100%, so
         exiting via an exception doesn't falsely report completion.
@@ -1379,7 +1365,7 @@ class ProgressBar(
         # to the progressbar (according to the current terminal width).
         # While the state is incomplete -- nothing drawn yet, no usable
         # terminal width, no (nonzero) max value -- there is no width
-        # threshold to compute and no redraw is due; those guards mirror
+        # threshold to compute and no redraw is due. Those guards mirror
         # what a `suppress(Exception)` used to swallow here. Anything else
         # failing in this math is a real bug and should propagate instead
         # of silently stopping redraws.
@@ -1422,7 +1408,7 @@ class ProgressBar(
         On a redraw, `_gate_step` is calibrated to ~one `min_poll_interval`
         window of iterations, measured from the value/time elapsed since the
         previous redraw (snapshotted here before the draw overwrites
-        `_last_drawn_value`/`_last_update_timer` — so the gate needs no extra
+        `_last_drawn_value`/`_last_update_timer`, so the gate needs no extra
         copies of those quantities). If we passed the threshold but no redraw
         was due (the loop sped up), back off by doubling the step.
         """
@@ -1433,7 +1419,7 @@ class ProgressBar(
                 self._update_parents(value)  # _mark_update refreshes timer
             finally:
                 # `_last_drawn_value` is the value at the last *redraw* (the
-                # pixel reference for `_needs_update`); set in finally so it
+                # pixel reference for `_needs_update`). Set in finally so it
                 # advances even if a draw raised.
                 self._last_drawn_value = self.value
             if self._gate_enabled:
@@ -1459,7 +1445,21 @@ class ProgressBar(
     def update(
         self, value: ValueT = None, force: bool = False, **kwargs: typing.Any
     ) -> None:
-        """Update the ProgressBar to a new value."""
+        """Update the bar to `value` and redraw if the gate allows it.
+
+        The redraw is skipped unless `force` is set, a `variables=`
+        value changed, or `_needs_update()` decides enough
+        time/progress has passed (see
+        :doc:`/explanation/rendering-and-the-update-gate`). Widget
+        variables can be updated by keyword:
+        `bar.update(my_var='value')`.
+
+        Args:
+            value: The new progress value. `None` leaves it unchanged.
+            force: Redraw regardless of the update gate.
+            **kwargs: Widget variable updates, applied to
+                `self.variables`.
+        """
         if self.start_time is None:
             self.start()
 
@@ -1501,7 +1501,7 @@ class ProgressBar(
         self._draw_and_recalibrate(value, variables_changed, force)
 
     def _update_variables(self, kwargs: dict[str, typing.Any]) -> bool:
-        """Apply changed `kwargs` to `self.variables`; return if any changed.
+        """Apply changed `kwargs` to `self.variables`, returning if changed.
 
         Raises:
             TypeError: `kwargs` contains a name not already present in
@@ -1522,13 +1522,10 @@ class ProgressBar(
     def _mark_update(self) -> None:
         """Stamp the wall-clock and perf-counter time of the current redraw.
 
-        Called from the draw path (:py:meth:`_update_parents`) before the
-        widgets read ``last_update_time``. ``_last_update_timer`` feeds the
-        poll-interval gate in :py:meth:`_needs_update` and the cadence
-        calibration in :py:meth:`_draw_and_recalibrate`; ``_last_update_time``
-        backs the public ``last_update_time`` property used by
-        elapsed-time/ETA widgets. Kept out of :py:meth:`data` so that method is
-        a pure snapshot with no timing side effects.
+        ``_last_update_timer`` feeds the poll-interval gate and cadence
+        calibration, ``_last_update_time`` backs the public
+        ``last_update_time`` read by timer/ETA widgets. Kept out of
+        :py:meth:`data` so that method stays a pure snapshot.
         """
         self._last_update_time = time.time()
         self._last_update_timer = timeit.default_timer()
@@ -1559,9 +1556,9 @@ class ProgressBar(
         *args: typing.Any,
         **kwargs: typing.Any,
     ) -> ProgressBar:
-        """Starts measuring time, and prints the bar at 0%.
+        """Start measuring time, print the bar at 0%, and return `self`.
 
-        It returns self so you can use it like this:
+        Returning `self` allows chaining, as in the example below.
 
         Args:
             max_value: The maximum value of the progressbar.
@@ -1570,7 +1567,7 @@ class ProgressBar(
                 data needs to be persisted between runs.
             *args: Accepted for signature compatibility with subclasses
                 that override `start()` and forward via
-                `super().start(*args, **kwargs)`; not used here.
+                `super().start(*args, **kwargs)`. Not used here.
             **kwargs: Same as `*args` -- accepted but not used here.
 
         >>> pbar = ProgressBar().start()
@@ -1686,7 +1683,7 @@ class ProgressBar(
     def _calculate_poll_interval(self) -> None:
         """Derive `poll_interval` from any widget's `INTERVAL` attribute.
 
-        Timer-like widgets (e.g. an animation) declare `INTERVAL`; the
+        Timer-like widgets (e.g. an animation) declare `INTERVAL`. The
         smallest one seen wins, so the bar redraws often enough to keep
         every such widget visibly moving.
         """

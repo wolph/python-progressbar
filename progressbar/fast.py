@@ -21,7 +21,7 @@ from . import (
 #: Optional native line-formatter hook. Left as ``None`` so the pure-Python
 #: ``_pure_format_fast_line`` below is used by default. When set to a callable
 #: it takes precedence in :py:meth:`FastProgressBar._format_line`, letting the
-#: ``speedups`` package — or any caller — swap in a faster/custom formatter.
+#: ``speedups`` package (or any caller) swap in a faster/custom formatter.
 #: This is a supported extension point, exercised by
 #: ``test_fast_format_line_uses_native_hook``.
 _format_fast_line: Callable[[FastProgressBar], str] | None = None
@@ -47,7 +47,7 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
     can't drive the ETA negative or overflow the bar's width.
 
     Args:
-        bar: Bar to render; treated as read-only.
+        bar: Bar to render, treated as read-only.
 
     Returns:
         The complete line, including `prefix`/`suffix`.
@@ -120,16 +120,12 @@ class FastProgressBar(bar_module.ProgressBar):
         return datetime.now()
 
     def _format_line(self) -> str:
-        """Render via the native `_format_fast_line` hook if set, else the
-        pure-Python formatter.
-        """
+        """Render via `_format_fast_line` or the pure-Python fallback."""
         formatter = _format_fast_line or _pure_format_fast_line
         return formatter(self)
 
     def _init_prefix(self) -> None:
         """No-op: the formatter renders `prefix` inline, not as a widget."""
-        # Label is rendered inline by the formatter; don't inject a widget.
 
     def _init_suffix(self) -> None:
         """No-op: the formatter renders `suffix` inline, not as a widget."""
-        # Label is rendered inline by the formatter; don't inject a widget.

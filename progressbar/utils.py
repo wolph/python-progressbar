@@ -1,11 +1,11 @@
-"""Colour stripping, delta coalescing, and stdout/stderr redirection.
+"""Color stripping, delta coalescing, and stdout/stderr redirection.
 
 The redirection machinery (`WrappingIO`, `StreamWrapper`, and the
 module-level `streams` singleton constructed at the bottom of this
 module) is what lets `print()` calls and logging output appear as
 normal lines above a redrawing progress bar instead of corrupting its
-line — see the "redirection model" section of this package's docstring
-brief for the full picture.
+line. See the "Print while a bar is running" how-to for the full
+picture.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ class _ProgressListener(typing.Protocol):
     """Structural type for the bars the stream wrapper notifies.
 
     Defined locally instead of importing ``ProgressBarMixinBase`` from
-    ``bar`` so ``utils`` has no dependency on ``bar`` — not even a
+    ``bar`` so ``utils`` has no dependency on ``bar``, not even a
     type-checking-only one, which CodeQL still reports as a ``bar`` <->
     ``utils`` module-level import cycle.
     """
@@ -69,7 +69,7 @@ def deltas_to_seconds(
     *deltas: datetime.timedelta | float | int | None,
     default: type[ValueError] = ...,
 ) -> float:
-    """Coalesce to seconds; raise ``ValueError`` if no delta is valid."""
+    """Coalesce to seconds, raising ``ValueError`` if no delta is valid."""
 
 
 @typing.overload
@@ -77,7 +77,7 @@ def deltas_to_seconds(
     *deltas: datetime.timedelta | float | int | None,
     default: T,
 ) -> float | T:
-    """Coalesce to seconds; return ``default`` if no delta is valid."""
+    """Coalesce to seconds, returning ``default`` if no delta is valid."""
 
 
 def deltas_to_seconds(
@@ -175,9 +175,8 @@ class WrappingIO:
 
     Buffers writes in memory instead of passing them straight through
     while `capturing` is on, so a bar can erase its own line, flush the
-    buffer above it, and redraw — see `StreamWrapper.wrap_stdout`/
-    `wrap_stderr` for how one gets installed, and this package's
-    docstring brief for the full redirection model.
+    buffer above it, and redraw. See `StreamWrapper.wrap_stdout`/
+    `wrap_stderr` for how one gets installed.
     """
 
     buffer: io.StringIO
@@ -214,7 +213,7 @@ class WrappingIO:
         """Write `value`, buffering it in memory while `capturing`.
 
         While `capturing` is on, `value` is appended to `buffer` instead
-        of reaching `target`; if the buffered text now contains a
+        of reaching `target`. If the buffered text now contains a
         newline, `needs_clear` is set and every listener's `update()` is
         called, so a capturing bar redraws promptly instead of waiting
         for its next scheduled update. While not `capturing`, `value` is
@@ -223,7 +222,7 @@ class WrappingIO:
 
         Returns:
             The number of characters written (buffered or passed
-            through) — mirrors the return value of a normal file
+            through), mirroring the return value of a normal file
             `write()`.
         """
         ret = 0
@@ -241,9 +240,9 @@ class WrappingIO:
         return ret
 
     def flush(self) -> None:
-        """Flush the in-memory buffer — a no-op for `io.StringIO`.
+        """Flush the in-memory buffer, a no-op for `io.StringIO`.
 
-        Only satisfies the file-like `flush()` protocol; it does not
+        Only satisfies the file-like `flush()` protocol. It does not
         write buffered text through to `target`. Use `_flush()` (or
         `StreamWrapper.flush()`, which calls it) for that.
         """
@@ -253,7 +252,7 @@ class WrappingIO:
         """Write buffered output through to `target`, then flush it.
 
         The buffer is drained (`seek`/`truncate`) *before*
-        `target.write()` is called, not after — so if that write
+        `target.write()` is called, not after, so if that write
         raises, the already-buffered text isn't written a second time
         by the next call. `target` is flushed unconditionally at the
         end, even when the buffer was empty, since this runs on every
@@ -384,7 +383,7 @@ class StreamWrapper:
         """Capture the *current* `sys.stdout`/`sys.stderr` as "real".
 
         Note:
-            This runs once, at construction — and `streams` (below) is
+            This runs once, at construction, and `streams` (below) is
             constructed at import time. Anything that reassigns
             `sys.stdout`/`sys.stderr` after `progressbar.utils` is first
             imported will not be picked up: `original_stdout`/
@@ -414,8 +413,8 @@ class StreamWrapper:
 
         Args:
             bar: Registered as a listener so it's notified (`update()`)
-                when captured output completes a line; omit to just bump
-                the refcount without listening.
+                when captured output completes a line. Omit to just
+                bump the refcount without listening.
         """
         if bar:  # pragma: no branch
             self.listeners.add(bar)
@@ -455,12 +454,7 @@ class StreamWrapper:
             self.flush()
 
     def wrap(self, stdout: bool = False, stderr: bool = False) -> None:
-        """Wrap `stdout` and/or `stderr`, per the given flags.
-
-        Args:
-            stdout: Also call `wrap_stdout()`.
-            stderr: Also call `wrap_stderr()`.
-        """
+        """Wrap `stdout` and/or `stderr`, per the given flags."""
         if stdout:
             self.wrap_stdout()
 
@@ -478,7 +472,7 @@ class StreamWrapper:
         capturing would otherwise bypass the buffer.
 
         Returns:
-            The installed `WrappingIO` — the same instance on every
+            The installed `WrappingIO`, the same instance on every
             call until it's fully unwrapped.
         """
         self.wrap_excepthook()
@@ -495,11 +489,11 @@ class StreamWrapper:
     def wrap_stderr(self) -> WrappingIO:
         """Install a `WrappingIO` over `sys.stderr`, or share it.
 
-        See `wrap_stdout` — same refcounting behaviour, mirrored for
-        `sys.stderr`.
+        See `wrap_stdout` for the refcounting behavior, mirrored here
+        for `sys.stderr`.
 
         Returns:
-            The installed `WrappingIO` — the same instance on every
+            The installed `WrappingIO`, the same instance on every
             call until it's fully unwrapped.
         """
         self.wrap_excepthook()
@@ -570,7 +564,7 @@ class StreamWrapper:
         `unwrap_logging` can restore it.
 
         Otherwise, if `handler.stream` is itself already a wrapper (per
-        `restore_streams` — e.g. `wrap_stdout`/`wrap_stderr` ran before
+        `restore_streams`, e.g. `wrap_stdout`/`wrap_stderr` ran before
         `wrap_logging`, so the handler already points at the wrapper),
         it's left untouched but still recorded for restoration, so
         `unwrap_logging` still puts it back once this session ends.
@@ -584,7 +578,7 @@ class StreamWrapper:
             self.logging_handlers.append((handler, restore_stream))
 
     def unwrap_logging(self) -> None:
-        """Undo one `wrap_logging()` call; restore at refcount zero.
+        """Undo one `wrap_logging()` call, restoring at refcount zero.
 
         Only the call that brings `wrapped_logging` to zero actually
         restores anything: it pops every entry `wrap_logging` recorded
@@ -611,7 +605,7 @@ class StreamWrapper:
 
         `StreamHandler.setStream()` flushes the handler's *current*
         stream as part of switching, which raises `ValueError` if that
-        stream is already closed; `AttributeError` guards against
+        stream is already closed. `AttributeError` guards against
         `handler` not actually exposing `setStream` (defensive, given
         the type hint promises it does). Either way, the handler is left
         untouched rather than raising.
@@ -657,12 +651,7 @@ class StreamWrapper:
             sys.excepthook = self.excepthook
 
     def unwrap(self, stdout: bool = False, stderr: bool = False) -> None:
-        """Unwrap `stdout` and/or `stderr`, per the given flags.
-
-        Args:
-            stdout: Also call `unwrap_stdout()`.
-            stderr: Also call `unwrap_stderr()`.
-        """
+        """Unwrap `stdout` and/or `stderr`, per the given flags."""
         if stdout:
             self.unwrap_stdout()
 
@@ -670,10 +659,10 @@ class StreamWrapper:
             self.unwrap_stderr()
 
     def unwrap_stdout(self) -> None:
-        """Undo one `wrap_stdout()` call; restore at refcount zero.
+        """Undo one `wrap_stdout()` call, restoring at refcount zero.
 
         Only the call that brings `wrapped_stdout` to zero actually
-        restores `sys.stdout` — and `self.stdout` alongside it, so
+        restores `sys.stdout`, and `self.stdout` alongside it, so
         `needs_clear()` and `update_capturing()` don't keep reading a
         wrapper that's no longer installed. Also unwraps the shared
         excepthook once `stderr` is back to its original too, since
@@ -690,7 +679,7 @@ class StreamWrapper:
                 self.unwrap_excepthook()
 
     def unwrap_stderr(self) -> None:
-        """Undo one `wrap_stderr()` call; restore at refcount zero.
+        """Undo one `wrap_stderr()` call, restoring at refcount zero.
 
         Mirrors `unwrap_stdout()`: only the call that brings
         `wrapped_stderr` to zero restores `sys.stderr`, and the shared
@@ -711,8 +700,8 @@ class StreamWrapper:
         """Return whether either wrapped stream has buffered output.
 
         Uses `getattr` with a `False` default so this is safe to call
-        whether or not `stdout`/`stderr` are currently wrapped — a
-        plain, unwrapped stream simply has no `needs_clear` attribute.
+        whether or not `stdout`/`stderr` are currently wrapped, since a
+        plain, unwrapped stream has no `needs_clear` attribute.
 
         Returns:
             Whether a bar's next redraw should erase its line first, so
@@ -730,7 +719,7 @@ class StreamWrapper:
         streams), that stream's redirection disables itself:
         `wrapped_stdout`/`wrapped_stderr` is reset to 0 so this method
         stops attempting to flush it on future calls, and a warning is
-        logged. `sys.stdout`/`sys.stderr` are left installed as-is —
+        logged. `sys.stdout`/`sys.stderr` are left installed as-is:
         only further flush attempts are skipped, not the wrapping
         itself.
         """
@@ -763,8 +752,8 @@ class StreamWrapper:
         """Run the original excepthook, then flush buffered output.
 
         Installed as `sys.excepthook` while stdout or stderr is wrapped
-        (see `wrap_excepthook`), so an uncaught exception's traceback —
-        written via the original hook — is followed by whatever output
+        (see `wrap_excepthook`), so an uncaught exception's traceback,
+        written via the original hook, is followed by whatever output
         was still buffered, instead of that text getting lost or
         appearing in the wrong order relative to the traceback.
         """
@@ -867,7 +856,7 @@ class AttributeDict(dict[str, T], typing.Generic[T]):
 
 #: Process-global, constructed once at import. The only place that knows
 #: the *real* ``sys.stdout``/``sys.stderr`` versus whatever is currently
-#: installed in their place; every bar that redirects goes through this
+#: installed in their place. Every bar that redirects goes through this
 #: one shared instance rather than each keeping its own. Mutating it
 #: (wrapping/unwrapping) affects every bar and every plain ``print()``
 #: in the process. ``bar.py``'s ``StdRedirectMixin`` is its only real

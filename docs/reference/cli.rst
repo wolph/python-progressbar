@@ -9,14 +9,15 @@ progress bar on stderr while it does -- a small, Python-native reimplementation
 of the ``pv`` ("pipe viewer") command. Per its own ``--help`` text it is
 "functional but not yet feature complete": most flags below are wired up,
 but a block of ``pv``-compatible flags is accepted for compatibility and
-currently has no effect. Each is marked in the tables below.
+currently has no effect. The unwired ones are listed as such below.
 
 Worked example
 ================
 
 .. code:: sh
 
-    curl -sL https://example.com/bigfile.iso | progressbar --progress --bytes --rate > bigfile.iso
+    curl -sL https://example.com/bigfile.iso \
+        | progressbar --progress --bytes --rate > bigfile.iso
 
 Reading from stdin means the total size isn't known up front, so the bar
 falls back to a count-only display (no percentage, no bar fill) until it
@@ -26,10 +27,11 @@ percentage and ETA:
 
 .. code:: sh
 
-    curl -sL https://example.com/bigfile.iso | progressbar --progress --bytes --eta --size 128m > bigfile.iso
+    curl -sL https://example.com/bigfile.iso \
+        | progressbar --progress --bytes --eta --size 128m > bigfile.iso
 
 The bar itself always writes to stderr, so it never ends up mixed into the
-piped stdout data; the equivalent file-based invocation from the project
+piped stdout data. The equivalent file-based invocation from the project
 README is:
 
 .. code:: sh
@@ -56,7 +58,7 @@ Positional and I/O arguments
        a pipe). Accepts a plain byte count or a ``k``/``m``/``g``/``t``/``p``
        suffix (powers of 1024), or ``@path`` to read another file's size.
    * - ``-l``, ``--line-mode``
-     - Count and transfer lines instead of bytes; input is read and written
+     - Count and transfer lines instead of bytes. Input is read and written
        as text rather than binary.
    * - ``-B``, ``--buffer-size BYTES``
      - Read/write in chunks of ``BYTES`` instead of the 1024-byte default.
@@ -88,9 +90,8 @@ known, count/size/timer otherwise).
      - Show a transfer-speed widget.
    * - ``-a``, ``--average-rate``
      - Also shows the transfer-speed widget. It currently selects the exact
-       same widget as ``--rate`` -- there is no separate averaging window
-       applied yet; ``--average-rate-window`` (below) is accepted but not
-       currently wired to it.
+       same widget as ``--rate``: there is no separate averaging window
+       yet, and ``--average-rate-window`` is accepted but not wired to it.
    * - ``-b``, ``--bytes``
      - Show the running byte/line count.
    * - ``-n``, ``--numeric``
@@ -111,32 +112,11 @@ These parse without error but have no observable effect today: ``-8``/
 Output modifiers
 ===================
 
-.. list-table::
-   :header-rows: 1
-   :widths: 25 75
-
-   * - Flag
-     - What it does
-   * - ``-f``, ``--force``
-     - Accepted, not yet wired up.
-   * - ``-c``, ``--cursor``
-     - Accepted, not yet wired up.
-   * - ``-W``, ``--wait``
-     - Accepted, not yet wired up.
-   * - ``-D``, ``--delay-start DELAY_START``
-     - Accepted, not yet wired up.
-   * - ``-0``, ``--null``
-     - Accepted, not yet wired up.
-   * - ``-i``, ``--interval INTERVAL``
-     - Accepted, not yet wired up.
-   * - ``-m``, ``--average-rate-window AVERAGE_RATE_WINDOW``
-     - Accepted, not yet wired up (see ``--average-rate`` above).
-   * - ``-w``, ``--width WIDTH``
-     - Accepted, not yet wired up.
-   * - ``-H``, ``--height HEIGHT``
-     - Accepted, not yet wired up.
-   * - ``-N``, ``--name NAME``
-     - Accepted, not yet wired up.
+All accepted for ``pv`` compatibility, none wired up yet:
+``-f``/``--force``, ``-c``/``--cursor``, ``-W``/``--wait``,
+``-D``/``--delay-start``, ``-0``/``--null``, ``-i``/``--interval``,
+``-m``/``--average-rate-window`` (see ``--average-rate`` above),
+``-w``/``--width``, ``-H``/``--height``, ``-N``/``--name``.
 
 Data transfer modifiers
 ==========================
@@ -151,35 +131,14 @@ Data transfer modifiers
      - Throttle transfer to ``RATE`` bytes per second (same size suffixes
        as ``--size``). Implemented by sleeping between chunks based on
        elapsed time vs. expected time at the target rate.
-   * - ``-C``, ``--no-splice``
-     - Accepted, not yet wired up.
-   * - ``-E``, ``--skip-errors``
-     - Accepted, not yet wired up.
-   * - ``-Z``, ``--error-skip-block SIZE``
-     - Accepted, not yet wired up.
-   * - ``-S``, ``--stop-at-size``
-     - Accepted, not yet wired up.
-   * - ``-Y``, ``--sync``
-     - Accepted, not yet wired up.
-   * - ``-K``, ``--direct-io``
-     - Accepted, not yet wired up.
-   * - ``-X``, ``--discard``
-     - Accepted, not yet wired up.
-   * - ``-d``, ``--watchfd FD``
-     - Accepted, not yet wired up.
-   * - ``-R``, ``--remote PID``
-     - Accepted, not yet wired up.
+
+Also accepted, not wired up: ``-C``/``--no-splice``,
+``-E``/``--skip-errors``, ``-Z``/``--error-skip-block``,
+``-S``/``--stop-at-size``, ``-Y``/``--sync``, ``-K``/``--direct-io``,
+``-X``/``--discard``, ``-d``/``--watchfd``, ``-R``/``--remote``.
 
 General options
 ==================
 
-.. list-table::
-   :header-rows: 1
-   :widths: 25 75
-
-   * - Flag
-     - What it does
-   * - ``-P``, ``--pidfile FILE``
-     - Accepted, not yet wired up.
-   * - ``-h``, ``--help``
-     - Show the built-in ``argparse`` help and exit.
+``-h``/``--help`` shows the built-in ``argparse`` help and exits.
+``-P``/``--pidfile`` is accepted but not wired up.

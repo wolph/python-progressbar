@@ -22,5 +22,5 @@ Example
 See also
 --------------------------------------------------------------------------------
 
-* :doc:`format-label-bar` — the general form this fixes to the percentage.
-* :doc:`percentage` — the plain percentage readout this overlays on a bar.
+* :doc:`format-label-bar`: the general form this fixes to the percentage.
+* :doc:`percentage`: the plain percentage readout this overlays on a bar.

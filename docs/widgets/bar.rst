@@ -6,8 +6,8 @@ Bar
 
 The default choice for a determinate task with a known total: a marker
 fills the line from left to right as ``value`` approaches ``max_value``.
-See ``ReverseBar`` for the mirrored direction, ``GranularBar`` for
-sub-character precision, and ``BouncingBar`` for indeterminate work.
+``marker``, ``left``, ``right``, and ``fill`` set the characters drawn,
+and ``fill_left`` picks the side the padding sits on.
 
 .. autoclass:: progressbar.widgets.Bar
    :members:
@@ -22,5 +22,6 @@ Example
 See also
 --------------------------------------------------------------------------------
 
-* :doc:`reverse-bar` — the same bar filling right to left.
-* :doc:`granular-bar` — sub-character resolution.
+* :doc:`reverse-bar`: the same bar filling right to left.
+* :doc:`granular-bar`: sub-character resolution.
+* :doc:`bouncing-bar`: an indeterminate variant for unknown totals.

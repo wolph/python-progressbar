@@ -91,7 +91,7 @@ progress too.
      - Raw count against its total, e.g. "5 of 47"
      - Yes
    * - :doc:`SmoothingETA <smoothing-eta>`
-     - Time remaining via an exponential-moving-average rate; the library default
+     - Time remaining via an exponential-moving-average rate, the library default
      - Yes
    * - :doc:`Timer <timer>`
      - Elapsed time since the bar started, no max_value required

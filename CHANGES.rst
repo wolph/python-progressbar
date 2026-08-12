@@ -8,4 +8,4 @@ releases or the commit log:
  - https://github.com/WoLpH/python-progressbar/releases
  - https://github.com/WoLpH/python-progressbar/commits/develop
 
-Hint: click on the `...` button to see the change message.
+Hint: the ``...`` button on a commit shows the full change message.

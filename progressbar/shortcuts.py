@@ -52,31 +52,33 @@ def progressbar(
         max_value: Value counted as complete. Defaults to the
             iterable's length, or `UnknownLength` when it has none.
         widgets: Replaces the default bar layout entirely. Passing
-            this forces the full widget machinery; see the widget
+            this forces the full widget machinery. See the widget
             reference for what can go in it.
         prefix: Text before the bar. `desc` is the tqdm-style alias.
         suffix: Text after the bar.
-        fast: Force the lean fast path on or off instead of letting
-            it be chosen. `False` always uses the full widget bar.
-            Mainly useful for benchmarking; the automatic choice is
-            usually right.
+        fast: Only `False` has an effect: it always uses the full
+            widget bar. `True` is the same as leaving it unset -- it
+            cannot force the fast path when another argument below
+            rules it out. Mainly useful for benchmarking.
         desc: tqdm-compatible alias for `prefix`.
         total: tqdm-compatible alias for `max_value`.
         unit: Noun for one item, shown in the rate. Anything other
             than the default forces the full widget bar.
-        unit_scale: Scale counts to SI prefixes (1200 becomes 1.2K).
+        unit_scale: Scale counts by IEC binary prefixes, base 1024, so
+            1200 renders as ``1.2 Kiit``. Forces the full widget bar.
+        postfix: Values rendered after the bar. Through this entry
+            point they are fixed for the run, since the bar itself is
+            not returned, leaving no handle to refresh them through.
             Forces the full widget bar.
-        postfix: Values rendered after the bar and refreshed as it
-            advances. Forces the full widget bar.
-        **kwargs: Passed through to the underlying bar. Note that
-            supplying `variables` forces the full widget bar.
+        **kwargs: Passed through to the underlying bar. Supplying
+            `variables` forces the full widget bar.
 
     Returns:
         An iterator yielding the same items, advancing the bar as it
         goes.
     """
-    # Auto-dispatch to the lean FastProgressBar for the simple, common case;
-    # anything that needs the full widget machinery uses ProgressBar. The
+    # Auto-dispatch to the lean FastProgressBar for the simple, common case.
+    # Anything that needs the full widget machinery uses ProgressBar. The
     # tqdm-style `desc` (a prefix) and `total` (a max_value) render fine on
     # the fast path, but units and postfixes are widgets and need the full
     # bar.

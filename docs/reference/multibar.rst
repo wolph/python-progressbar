@@ -52,16 +52,16 @@ Constructor arguments worth knowing
    * - ``remove_finished``
      - Seconds (or a ``timedelta``) after which a finished bar is dropped
        from the multibar entirely and stops being rendered. Defaults to one
-       hour; pass ``None`` to keep finished bars forever.
+       hour. Pass ``None`` to keep finished bars forever.
    * - ``sort_key``, ``sort_reverse``, ``sort_keyfunc``
      - How child bars are ordered on screen. ``sort_key`` takes a
        :py:class:`~progressbar.multi.SortKey` (or the matching attribute
-       name as a string); ``sort_keyfunc`` overrides the sort entirely with
+       name as a string). ``sort_keyfunc`` overrides the sort entirely with
        a custom callable when a single attribute isn't enough.
    * - ``join_timeout``
      - Seconds to wait for unfinished bars on a clean ``with`` block exit
        before giving up and abandoning them. ``None`` (the default) waits
-       forever, matching the historical behaviour; a never-finished bar
+       forever, matching the historical behavior. A never-finished bar
        under the default will hang the program on exit.
    * - ``**progressbar_kwargs``
      - Any keyword not listed above is forwarded to

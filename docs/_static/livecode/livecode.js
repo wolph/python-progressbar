@@ -8,7 +8,7 @@ const RUN_TIMEOUT_MS = 30000;
 
 // Read the Docs serves the site under `/en/<version>/`, so root-absolute
 // asset paths 404 there. Derive the static root from this script's own
-// URL instead — it is the one path the browser always knows.
+// URL instead: it is the one path the browser always knows.
 const SCRIPT_ELEMENT =
   document.currentScript ||
   document.querySelector('script[src$="livecode/livecode.js"]');
@@ -127,9 +127,9 @@ function createPanel(container, source) {
     terminal,
     setStatus(stage) {
       const labels = {
-        loading: 'Downloading Python…',
-        installing: 'Installing progressbar2…',
-        ready: 'Running…',
+        loading: 'Downloading Python...',
+        installing: 'Installing progressbar2...',
+        ready: 'Running...',
         idle: '',
       };
       status.textContent = labels[stage] ?? '';

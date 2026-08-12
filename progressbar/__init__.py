@@ -19,7 +19,7 @@ from .__about__ import (
 )
 
 if typing.TYPE_CHECKING:
-    # Eager imports for type checkers only; loaded lazily at runtime by
+    # Eager imports for type checkers only, loaded lazily at runtime by
     # __getattr__ below. Names appear in __all__ so they read as re-exports.
     from .algorithms import (
         DoubleExponentialMovingAverage,
@@ -147,12 +147,13 @@ def __getattr__(name: str) -> typing.Any:
 
 
 def __dir__() -> list[str]:
+    """List lazily loaded exports and submodules along with globals."""
     return sorted(set(globals()) | set(__all__) | _SUBMODULES)
 
 
 #: Canonical export list, kept equal to ``sorted(_NAME_TO_MODULE)`` (the single
 #: source of truth for lazily re-exported names) plus the eagerly imported
-#: dunders. Held as a static literal so type checkers can see the re-exports;
+#: dunders. Held as a static literal so type checkers can see the re-exports.
 #: ``tests/test_init_exports.py`` asserts it stays in sync with the mapping.
 __all__ = [
     'ETA',

@@ -22,8 +22,8 @@ import progressbar
 def size_to_bytes(size_str: str) -> int:
     """Convert a size string with suffixes 'k', 'm', etc., to bytes.
 
-    Note: This function also supports '@' as a prefix to a file path
-    to get the file size.
+    A `@`-prefixed argument is treated as a file path and returns that
+    file's size.
 
     >>> size_to_bytes('1024k')
     1048576
@@ -36,7 +36,6 @@ def size_to_bytes(size_str: str) -> int:
     >>> size_to_bytes('1024p')
     1152921504606846976
     """
-    # Define conversion rates
     suffix_exponent = {
         'k': 1,
         'm': 2,
@@ -45,21 +44,15 @@ def size_to_bytes(size_str: str) -> int:
         'p': 5,
     }
 
-    # Initialize the default exponent to 0 (for bytes)
     exponent = 0
 
-    # Check if the size starts with '@' (for file sizes, not handled here)
     if size_str.startswith('@'):
         return pathlib.Path(size_str[1:]).stat().st_size
 
-    # Check if the last character is a known suffix and adjust the multiplier
     if size_str[-1].lower() in suffix_exponent:
-        # Update exponent based on the suffix
         exponent = suffix_exponent[size_str[-1].lower()]
-        # Remove the suffix from the size_str
         size_str = size_str[:-1]
 
-    # Convert the size_str to an integer and apply the exponent
     return int(size_str) * (1024**exponent)
 
 
@@ -68,8 +61,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
     description = """
         Monitor the progress of data through a pipe.
 
-        Note that this is a Python implementation of the original `pv` command
-        that is functional but not yet feature complete.
+        A Python implementation of the original `pv` command: functional
+        but not yet feature complete.
     """
     parser = argparse.ArgumentParser(description=description)
 
@@ -311,12 +304,7 @@ def _append_widget_group(
     widgets: list[progressbar.widgets.WidgetBase | str],
     group: typing.Sequence[progressbar.widgets.WidgetBase | str],
 ) -> None:
-    """Append `group` to `widgets` in place, spacing groups apart.
-
-    Args:
-        widgets: The widget list being assembled; mutated in place.
-        group: The widgets to append, as one unit.
-    """
+    """Append `group` to `widgets` in place, spacing groups apart."""
     if widgets:
         widgets.append(' ')
     widgets.extend(group)
@@ -330,12 +318,12 @@ def _build_widgets(
 
     Each display flag (`-p`, `-b`, `-t`, `-e`, `-I`, `-r`/`-a`) that
     was set contributes its own widget group, in a fixed order,
-    space-separated; unset flags contribute nothing. With no display
+    space-separated. Unset flags contribute nothing. With no display
     flag at all, falls back to `_default_widgets`.
 
     Args:
         args: The parsed command-line arguments.
-        filesize_available: Whether a total size is known; passed
+        filesize_available: Whether a total size is known, passed
             through to `_default_widgets`.
 
     Returns:
@@ -385,7 +373,7 @@ def _sleep_for_rate_limit(
         transferred: Total bytes transferred so far.
         started_at: `time.monotonic()` reading taken when the
             transfer began.
-        now: `time.monotonic()` reading to treat as "now"; sampled
+        now: `time.monotonic()` reading to treat as "now", sampled
             internally if not given (a test seam).
     """
     if not rate_limit:
@@ -399,14 +387,10 @@ def _sleep_for_rate_limit(
 
 
 def main(argv: list[str] | None = None) -> None:  # noqa: C901
-    """
-    Main function for the `progressbar` command.
+    """Run the `progressbar` command.
 
     Args:
-        argv (list[str] | None): Command-line arguments passed to the script.
-
-    Returns:
-        None
+        argv: Command-line arguments. Defaults to `sys.argv[1:]`.
     """
     parser: argparse.ArgumentParser = create_argument_parser()
     args: argparse.Namespace = parser.parse_args(argv)
@@ -448,7 +432,6 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
             progressbar.NullBar if args.quiet else progressbar.ProgressBar
         )
 
-        # Initialize the progress bar
         bar = progress_bar_class(
             widgets=widgets,
             max_value=total_size if filesize_available else None,
@@ -456,7 +439,6 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
             line_breaks=True if args.numeric else None,
         )
 
-        # Data processing and updating the progress bar
         buffer_size = (
             size_to_bytes(args.buffer_size) if args.buffer_size else 1024
         )
@@ -522,6 +504,12 @@ def _get_output_stream(
     line_mode: bool,
     stack: contextlib.ExitStack,
 ) -> typing.IO[typing.Any]:
+    """Open (or pick) the output stream: a file, or stdout for `-`/unset.
+
+    Files are registered with `stack` so they close on exit. In line
+    mode the stream is text with newline translation disabled,
+    otherwise binary.
+    """
     if output and output != '-':
         if line_mode:
             # newline='' passes the data through without newline

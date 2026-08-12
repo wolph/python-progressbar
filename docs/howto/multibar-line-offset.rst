@@ -29,6 +29,6 @@ output for as long as they're active.
 
 Because independent bars don't coordinate a shared target the way
 ``MultiBar`` jobs do, a single call site incrementing a random bar past
-its own ``max_value`` is easy to trigger by accident; pass
+its own ``max_value`` is easy to trigger by accident. Pass
 ``max_error=False`` so an over-target update clamps at ``max_value``
 instead of raising.

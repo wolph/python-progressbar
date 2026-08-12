@@ -6,14 +6,14 @@ progressbar2 began as a fork of the original ``progressbar`` package, once
 hosted on the now-defunct Google Code and abandoned by its author. The
 project has said ever since that it is "backwards compatible with the
 original progressbar package so you can safely use it as a drop-in
-replacement for existing projects" (see the project README). This page is
-about what that claim covers today, verified against the current source,
-and -- just as importantly -- what it does not cover.
+replacement for existing projects" (see the project README). This page
+covers what that claim means today, verified against the current source,
+and what it does not cover.
 
 What "drop-in" covers
 ==========================
 
-* **The import name.** ``import progressbar`` still works; only the PyPI
+* **The import name.** ``import progressbar`` still works. Only the PyPI
   distribution name changed, to ``progressbar2``, because the original
   ``progressbar`` name on PyPI belonged to the abandoned package.
 * **The core object lifecycle.** Construct a ``ProgressBar``, call
@@ -61,12 +61,9 @@ What it does not cover
 
 * **Python version support moves forward, not backward.** The currently
   supported floor is CPython 3.10 (see ``pyproject.toml``'s
-  ``requires-python``); this is a live constraint, not a compatibility
+  ``requires-python``). This is a live constraint, not a compatibility
   promise about older interpreters the original package may have targeted.
-  Consult the project's GitHub releases for the history of exactly when that
-  floor changed -- this repository's own ``CHANGES.rst`` points there rather
-  than keeping an inline log, so this page does not restate specific past
-  versions it cannot verify from the source tree.
+  The project's GitHub releases record when that floor changed.
 * **Most of today's public surface is new, with no equivalent in the
   original package**: ``MultiBar``, ``FastProgressBar``, the native
   ``speedups`` accelerator (see
@@ -85,6 +82,6 @@ What it does not cover
   removal eventually, and migrate off them when convenient rather than
   relying on them long-term.
 * **The format-string compatibility shim is narrow.** It only rewrites a
-  bare ``%s`` for ``Timer`` and ``ETA`` specifically; a custom widget outside
-  that inheritance chain that expects the same old-style placeholder is not
-  covered.
+  bare ``%s`` for ``Timer`` and ``ETA`` specifically. A custom widget
+  outside that inheritance chain that expects the same old-style
+  placeholder is not covered.

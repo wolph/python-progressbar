@@ -4,9 +4,8 @@ DynamicMessage
 
 ``DynamicMessage`` is the original name for ``Variable``.
 
-Same widget, kept as an alias for code written against the old name;
-prefer ``Variable`` in new code. Shown here in its classic role: a live
-training metric climbing toward its target, reported next to the bar.
+Same widget, kept as an alias for code written against the old name.
+Prefer ``Variable`` in new code.
 
 .. autoclass:: progressbar.widgets.DynamicMessage
    :members:
@@ -21,4 +20,4 @@ Example
 See also
 --------------------------------------------------------------------------------
 
-* :doc:`variable` — the current name for this same widget.
+* :doc:`variable`: the current name for this widget.

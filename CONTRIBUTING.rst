@@ -2,10 +2,8 @@
 Contributing
 ============
 
-Contributions are welcome, and they are greatly appreciated! Every
-little bit helps, and credit will always be given.
-
-You can contribute in many ways:
+Contributions are welcome: bug reports, fixes, features, and
+documentation.
 
 Types of Contributions
 ----------------------
@@ -36,16 +34,15 @@ is open to whoever wants to implement it.
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-Python Progressbar could always use more documentation, whether as part of the
-official Python Progressbar docs, in docstrings, or even on the web in blog posts,
-articles, and such.
+The documentation lives in ``docs/`` and is built with Sphinx. The
+sections below cover the parts of that build that are easy to get wrong.
 
 Regenerating the API reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``docs/progressbar*.rst`` pages are generated once with ``sphinx-apidoc`` and then
 committed and hand-maintained, not regenerated on every build. Never pass ``-f``/``--force``
-when running it again — that silently discards hand-added options, such as
+when running it again: that silently discards hand-added options, such as
 ``docs/progressbar.bar.rst``'s ``:member-order: bysource``. If you add a new module under
 ``progressbar/``, generate its page the same way the rest were generated and link it into
 ``docs/progressbar.rst``'s ``Submodules`` toctree yourself::
@@ -53,8 +50,8 @@ when running it again — that silently discards hand-added options, such as
     $ sphinx-apidoc -e -o docs/ progressbar */os_specific/* */six.py
 
 The docs build runs with ``-W`` (warnings fail the build), so a page that exists but isn't
-linked into a toctree fails immediately with "document isn't included in any toctree" —
-you'll know right away if you forgot this step.
+linked into a toctree fails immediately with "document isn't included in any toctree".
+You'll know right away if you forgot this step.
 
 Regenerating demo animations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -95,8 +92,6 @@ If you are proposing a feature:
 
 * Explain in detail how it would work.
 * Keep the scope as narrow as possible, to make it easier to implement.
-* Remember that this is a volunteer-driven project, and that contributions
-  are welcome :)
 
 Get Started!
 ------------
@@ -123,15 +118,14 @@ Ready to contribute? Here's how to set up `python-progressbar` for local develop
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8 and the tests, including testing other Python versions with tox::
+5. When you're done making changes, check that your changes pass the
+   linter and the tests, including other Python versions with tox::
 
-    $ flake8 progressbar tests
-    $ py.test
-    $ tox
+    $ uv run ruff check progressbar tests
+    $ uv run pytest
+    $ uv run tox
 
-   To get flake8 and tox, just pip install them into your virtualenv using the requirements file.
-
-    $ pip install -r tests/requirements.txt
+   The ``uv sync`` from step 3 already installed all of these.
 
 6. Commit your changes and push your branch to GitHub with `git-flow-avh`_::
 
@@ -153,18 +147,17 @@ Pull Request Guidelines
 Before you submit a pull request, check that it meets these guidelines:
 
 1. The pull request should include tests.
-2. If the pull request adds functionality, the docs should be updated. Put
-   your new functionality into a function with a docstring, and add the
-   feature to the list in README.rst.
-3. The pull request should work for Python 2.7, 3.3, and for PyPy. Check
-   https://travis-ci.org/WoLpH/python-progressbar/pull_requests
-   and make sure that the tests pass for all supported Python versions.
+2. If the pull request adds functionality, the docs should be updated:
+   docstrings plus the relevant page under ``docs/``.
+3. The pull request should work for every supported Python version (see
+   ``requires-python`` in ``pyproject.toml``). CI runs the full matrix on
+   GitHub Actions for every pull request.
 
 Tips
 ----
 
 To run a subset of tests::
 
-	$ py.test tests/some_test.py
+    $ uv run pytest tests/some_test.py
 
 .. _git-flow-avh: https://github.com/petervanderdoes/gitflow

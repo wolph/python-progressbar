@@ -29,10 +29,8 @@ backing off further. The gate starts at a step of ``1`` (redraw every call)
 so a slow loop, where real time passes between iterations, is never skipped
 before a timing measurement has had a chance to grow it.
 
-This is what "the integer gate keeps the common iteration to an increment +
-compare + store" (the comment above
-:py:meth:`~progressbar.bar.ProgressBar._iter_python` in the source) refers
-to, and it is also why :doc:`the fast path <performance-and-the-fast-path>`
+This gate keeps the common iteration down to an increment, a compare, and
+a store. That is why :doc:`the fast path <performance-and-the-fast-path>`
 can claim single-digit-nanosecond overhead per iteration in the common case:
 most iterations never reach the more expensive check described next.
 
@@ -61,12 +59,9 @@ real decision, in this order:
 ``force=True``
 ================
 
-``update(value, force=True)`` bypasses both checks unconditionally: the
-integer gate never skips a forced call, and ``_needs_update()``'s answer is
-discarded rather than skipped -- it is the leftmost operand of
-``if self._needs_update() or variables_changed or force:``, so it still runs,
-but ``force`` makes the result irrelevant. Either way the line is redrawn
-regardless of timing or value movement.
+``update(value, force=True)`` always redraws: the integer gate never skips
+a forced call, and ``force`` overrides whatever ``_needs_update()``
+answers, so the line is redrawn regardless of timing or value movement.
 ``start()`` and ``finish()`` both call ``update(..., force=True)``
 internally, which is why a bar always shows 0% on start and 100% (or its
 final state) on finish even if the gate would otherwise have skipped that
@@ -87,7 +82,7 @@ These are opposites: one is a floor, the other is a ceiling.
   above whatever the code already requested, never lower it.
 * ``poll_interval`` is the *maximum* time between redraws -- a forced
   refresh. It has no default (``None``, meaning "never force a redraw on
-  time alone"); set it when your widgets show elapsed time or an animation
+  time alone"). Set it when your widgets show elapsed time or an animation
   and should keep visibly moving even while the tracked value sits still.
 
 Both are seconds (or anything :py:func:`progressbar.utils.deltas_to_seconds`

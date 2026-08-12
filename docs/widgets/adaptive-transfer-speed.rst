@@ -4,12 +4,10 @@ AdaptiveTransferSpeed
 
 ``AdaptiveTransferSpeed`` averages transfer speed over a short window.
 
-Reach for it when the transfer rate itself fluctuates and a plain
-``FileTransferSpeed`` -- which averages over the whole run -- reacts too
-slowly to those swings. The windowed average only fills in once several
-updates have landed more than a fraction of a second apart, so this
-example runs longer and sleeps longer per step than most in this set;
-without that, it would render '0.0 B/s' the whole way through.
+Reach for it when the transfer rate fluctuates and ``FileTransferSpeed``,
+which averages over the whole run, reacts too slowly to the swings. The
+windowed average only fills in once several updates have landed more
+than a fraction of a second apart. Until then it renders "0.0 B/s".
 
 .. autoclass:: progressbar.widgets.AdaptiveTransferSpeed
    :members:
@@ -24,4 +22,4 @@ Example
 See also
 --------------------------------------------------------------------------------
 
-* :doc:`file-transfer-speed` — the whole-run average this reacts faster than.
+* :doc:`file-transfer-speed`: the whole-run average this reacts faster than.

@@ -23,8 +23,6 @@ while the bar is active -- here, the loop's own ``print(f'Reached step
 {i}')`` -- is held back and flushed above the bar on its next redraw,
 instead of colliding with the bar's carriage return.
 
-That's the whole tutorial: a wrapped loop, an explicit ``update()``, a
-known ``max_value``, a chosen widget list, and output that survives
-``print()``. From here, the how-to guides cover specific tasks and the
-widget reference documents every widget shown above and the ones that
-were not. Back to the documentation home: :doc:`/index`.
+That's the whole tutorial. From here, the :doc:`how-to guides
+</howto/index>` cover specific tasks and the :doc:`widget pages
+</widgets/index>` document every widget.

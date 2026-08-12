@@ -49,6 +49,21 @@ extensions = [
     'demo',
 ]
 
+# `sphinx-autodoc-typehints` is a declared docs dependency but is
+# deliberately NOT enabled. It would move each annotation next to its
+# parameter description, which suits docstrings that never repeat a type
+# in prose -- but it cannot document this package. Enabling it fails the
+# `-W` build with 40 `error while formatting signature ... list assignment
+# index out of range` warnings, one per module-level callable *instance*
+# documented as a data member: every `CSINoArg`/`CSI` escape sequence
+# (`CLEAR_LINE`, `CUP`, `HIDE_CURSOR`, ...) and every `ColorGradient`
+# class attribute (`Bar.fg`, `JobStatusBar.success_fg_color`, ...). The
+# extension tries to resolve hints against the instance rather than its
+# `__call__`, and that pattern is pervasive here. Autodoc already renders
+# the annotations in the signature, so nothing is lost by leaving this
+# off. Do not re-enable without rebuilding from a clean `docs/_build`:
+# an incremental rebuild reuses cached doctrees and reports success.
+
 # Merge each class's `__init__` docstring into its class page. Constructor
 # arguments are user-facing -- `ProgressBar` alone takes more than fifteen
 # -- and without this the default ('class') renders only the class

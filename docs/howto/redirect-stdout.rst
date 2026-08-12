@@ -10,8 +10,7 @@ neither comes out readable.
 
 Pass ``redirect_stdout=True`` and call ``print()`` normally from inside
 the loop. The bar holds the line back and flushes it above the moving
-bar on its next redraw, instead of the two colliding over the same
-line. This only catches writes to ``sys.stdout`` -- ``print()`` and
-anything else writing there directly. Route the stdlib ``logging``
-module the same way instead; see
+bar on its next redraw. This only catches writes to ``sys.stdout``:
+``print()`` and anything else writing there directly. To route the
+stdlib ``logging`` module the same way, see
 :doc:`Send logging output above a running bar <logging-integration>`.

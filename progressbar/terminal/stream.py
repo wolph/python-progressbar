@@ -1,7 +1,7 @@
 """`typing.TextIO` wrappers that intercept or redirect stream writes.
 
 `TextIOOutputWrapper` is a pass-through base that delegates every
-`TextIO` operation to a wrapped stream unchanged; concrete wrappers
+`TextIO` operation to a wrapped stream unchanged. Concrete wrappers
 subclass it and override only the operation(s) they need to change
 (typically `write`). Two concrete wrappers:
 
@@ -13,8 +13,8 @@ subclass it and override only the operation(s) they need to change
   letting it reach the terminal directly.
 
 Every non-underscore name here is re-exported by `progressbar.terminal`
-(``from .stream import *``, no ``__all__``); `LineOffsetStreamWrapper`
-is additionally part of the top-level `progressbar` public API.
+(``from .stream import *``, no ``__all__``). `LineOffsetStreamWrapper`
+is also part of the top-level `progressbar` public API.
 """
 
 from __future__ import annotations
@@ -30,9 +30,9 @@ from progressbar import base
 class TextIOOutputWrapper(base.TextIO):  # pragma: no cover
     """Pass-through `TextIO` base that delegates to a wrapped stream.
 
-    Every operation forwards to `self.stream` unchanged; subclasses
-    override only what they need to intercept. Leaves `write`
-    unimplemented — it is meant to be subclassed, not used as-is.
+    Every operation forwards to `self.stream` unchanged, and subclasses
+    override only what they need to intercept. `write` is left
+    unimplemented: this class is meant to be subclassed, not used as-is.
     """
 
     def __init__(self, stream: base.TextIO) -> None:
@@ -170,8 +170,6 @@ class LineOffsetStreamWrapper(TextIOOutputWrapper):
         self.stream.write(self.DOWN * self.lines)
 
         self.flush()
-        # Return the length of the original data; callers use this to
-        # detect short writes
         return written
 
 
@@ -179,20 +177,22 @@ class LastLineStream(TextIOOutputWrapper):
     """Discards everything but the most recently written line.
 
     `MultiBar` rebinds a bar's `fd` to one of these so the bar's own
-    redraws never reach the terminal directly; instead the multibar
+    redraws never reach the terminal directly. The multibar instead
     reads `.line` back out and places it on that bar's row of the
     combined frame.
     """
 
-    #: The most recently written (or seeked-to) line.
+    #: The most recently written line. Only `write`, `writelines` and
+    #: `truncate` touch this. Every other inherited method still
+    #: operates on the wrapped stream.
     line: str = ''
 
     def seekable(self) -> bool:
-        """Always `False`; there is nothing to seek within."""
+        """Always `False`: there is nothing to seek within."""
         return False
 
     def readable(self) -> bool:
-        """Always `True`; `.line` can always be read back."""
+        """Always `True`: `.line` can always be read back."""
         return True
 
     def read(self, __n: int = -1) -> str:

@@ -4,13 +4,11 @@ BouncingBar
 
 ``BouncingBar`` slides a marker back and forth instead of filling.
 
-Reach for it for indeterminate work -- there is no total to measure
-progress against, so instead of a percentage it shows a bouncing marker
-to signal that the process is still running, similar in spirit to
-``AnimatedMarker`` but shaped like a full-width bar. The marker moves on
-a wall-clock timer, not per ``update()`` call, so this example runs
-longer than most in this set -- otherwise it barely twitches before the
-run ends.
+Reach for it for indeterminate work: with no total to measure progress
+against, it shows a marker bouncing across the full width to signal
+that the process is still running. The marker moves on a wall-clock
+timer, not per ``update()`` call, and the characters come from the same
+``marker``/``left``/``right``/``fill`` arguments as ``Bar``.
 
 .. autoclass:: progressbar.widgets.BouncingBar
    :members:
@@ -25,5 +23,5 @@ Example
 See also
 --------------------------------------------------------------------------------
 
-* :doc:`animated-marker` — a narrower spinner in the same indeterminate spirit.
-* :doc:`bar` — the determinate fill bar this stands in for when no total is known.
+* :doc:`animated-marker`: a single-character spinner, also indeterminate.
+* :doc:`bar`: the determinate fill bar this stands in for.

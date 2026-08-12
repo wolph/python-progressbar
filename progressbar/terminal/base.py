@@ -31,11 +31,11 @@ from .. import (
 )
 
 # Re-exported for backwards compatibility (previously consumed by the removed
-# ``_CPR`` cursor-position helper; guarded by the API snapshot). The redundant
+# ``_CPR`` cursor-position helper, guarded by the API snapshot). The redundant
 # alias marks the re-export as intentional so it is not stripped as unused.
 from .os_specific import getch as getch
 
-#: ANSI escape character (``\x1b``); the CSI/SGR sequence prefix.
+#: ANSI escape character (``\x1b``), the CSI/SGR sequence prefix.
 ESC = '\x1b'
 
 
@@ -81,7 +81,7 @@ class CSI:
         )
 
     def __str__(self) -> str:
-        """Render using the default arguments; see `__call__`."""
+        """Render using the default arguments (see `__call__`)."""
         return self()
 
 
@@ -89,7 +89,7 @@ class CSINoArg(CSI):
     """A `CSI` whose escape sequence never takes parameters.
 
     Narrows `__call__` to accept no arguments, since sequences such
-    as `HIDE_CURSOR` (``?25l``) are parameterless; the base
+    as `HIDE_CURSOR` (``?25l``) are parameterless. The base
     `CSI.__call__` signature would otherwise let callers pass values
     that are silently ignored (falling back to the default
     arguments).
@@ -171,30 +171,6 @@ HIDE_CURSOR: CSINoArg = CSINoArg('?25l')
 SHOW_CURSOR: CSINoArg = CSINoArg('?25h')
 
 
-#
-# UP = CSI + '{n}A'  # Cursor Up
-# DOWN = CSI + '{n}B'  # Cursor Down
-# RIGHT = CSI + '{n}C'  # Cursor Forward
-# LEFT = CSI + '{n}D'  # Cursor Backward
-# NEXT = CSI + '{n}E'  # Cursor Next Line
-# PREV = CSI + '{n}F'  # Cursor Previous Line
-# MOVE_COLUMN = CSI + '{n}G'  # Cursor Horizontal Absolute
-# MOVE = CSI + '{row};{column}H'  # Cursor Position [row;column] (default = [
-# 1,1])
-#
-# CLEAR = CSI + '{n}J'  # Clear (part of) the screen
-# CLEAR_BOTTOM = CLEAR.format(n=0)  # Clear from cursor to end of screen
-# CLEAR_TOP = CLEAR.format(n=1)  # Clear from cursor to beginning of screen
-# CLEAR_SCREEN = CLEAR.format(n=2)  # Clear Screen
-# CLEAR_WIPE = CLEAR.format(n=3)  # Clear Screen and scrollback buffer
-#
-# CLEAR_LINE = CSI + '{n}K'  # Erase in Line
-# CLEAR_LINE_RIGHT = CLEAR_LINE.format(n=0)  # Clear from cursor to end of line
-# CLEAR_LINE_LEFT = CLEAR_LINE.format(n=1)  # Clear from cursor to beginning
-# of line
-# CLEAR_LINE_ALL = CLEAR_LINE.format(n=2)  # Clear Line
-
-
 def clear_line(n: int) -> str:
     """Clear the terminal line `n` rows above the cursor.
 
@@ -216,7 +192,7 @@ class WindowsColors(enum.Enum):
     """The 16 colors the legacy Windows console can render.
 
     Named after the classic 16-color console palette (black through
-    intense white); `from_rgb` maps an arbitrary RGB color to its
+    intense white). `from_rgb` maps an arbitrary RGB color to its
     nearest member for terminals without ANSI/truecolor support.
     """
 
@@ -304,15 +280,8 @@ class WindowsColor:
         self.color = color
 
     def __call__(self, text: str) -> str:
-        """Return `text` unchanged; see the class docstring."""
+        """Return `text` unchanged (see the class docstring)."""
         return text
-        ## In the future we might want to use this, but it requires direct
-        ## printing to stdout and all of our surrounding functions expect
-        ## buffered output so it's not feasible right now. Additionally,
-        ## recent Windows versions all support ANSI codes without issue so
-        ## there is little need.
-        # from progressbar.terminal.os_specific import windows
-        # windows.print_color(text, WindowsColors.from_rgb(self.color.rgb))
 
 
 class RGB(typing.NamedTuple):
@@ -326,7 +295,7 @@ class RGB(typing.NamedTuple):
     blue: int
 
     def __str__(self) -> str:
-        """Return the CSS-style `rgb(...)` string; see `rgb`."""
+        """Return the CSS-style `rgb(...)` string (see `rgb`)."""
         return self.rgb
 
     @property
@@ -349,9 +318,6 @@ class RGB(typing.NamedTuple):
         only ever 1 at exactly 255, which collapsed almost every
         color (e.g. maroon 128,0,0) to black.
         """
-        # Threshold each channel at half intensity so a mid-range channel
-        # sets its bit. ``int(c / 255)`` was only ever 1 at exactly 255, which
-        # collapsed almost every colour (e.g. maroon 128,0,0) to black.
         red = int(self.red >= 128)
         green = int(self.green >= 128)
         blue = int(self.blue >= 128)
@@ -379,8 +345,8 @@ class RGB(typing.NamedTuple):
 
         Args:
             end: The color to interpolate toward.
-            step: Interpolation position; 0 returns (approximately)
-                this color, 1 returns `end`. Not clamped to
+            step: Interpolation position. 0 returns this color, 1
+                returns `end`. Not clamped to
                 ``[0, 1]`` -- a value outside that range
                 extrapolates past whichever endpoint it's beyond.
 
@@ -438,7 +404,7 @@ class HSL(typing.NamedTuple):
 
         Args:
             end: The color to interpolate toward.
-            step: Interpolation position; 0 returns this color, 1
+            step: Interpolation position. 0 returns this color, 1
                 returns `end`. Not clamped to ``[0, 1]``.
 
         Returns:
@@ -452,15 +418,15 @@ class HSL(typing.NamedTuple):
 
 
 class ColorBase(abc.ABC):
-    """Deprecated common base for color-like classes; unused.
+    """Deprecated common base for color-like classes, unused.
 
     `typing.NamedTuple` doesn't support multiple inheritance, so
-    this class can't actually be mixed into `Color`; nothing
+    this class can't actually be mixed into `Color`, and nothing
     subclasses it.
     """
 
     def get_color(self, value: float) -> Color:
-        """Unimplemented; deprecated and unused (see class docstring).
+        """Unimplemented, deprecated and unused (see class docstring).
 
         Raises:
             NotImplementedError: Always.
@@ -475,7 +441,7 @@ class Color(typing.NamedTuple):
     Saturation, Lightness) and Xterm (8-bit) representations, plus
     an optional name.
 
-    To make a custom color the only required argument is `rgb`; the
+    To make a custom color the only required argument is `rgb`. The
     other values are automatically derived from it if omitted, but
     you can be more explicit if you wish.
 
@@ -526,7 +492,7 @@ class Color(typing.NamedTuple):
     def bg(self) -> DummyColor | SGRColor:
         """Background-color callable for this color.
 
-        Reads `env.COLOR_SUPPORT` live, at call time -- see `fg`.
+        Reads `env.COLOR_SUPPORT` live, at call time, like `fg`.
 
         Returns:
             A no-op `DummyColor` on the legacy Windows console (no
@@ -542,11 +508,11 @@ class Color(typing.NamedTuple):
     def underline(self) -> DummyColor | SGRColor:
         """Underline-color callable for this color.
 
-        Reads `env.COLOR_SUPPORT` live, at call time -- see `fg`.
+        Reads `env.COLOR_SUPPORT` live, at call time, like `fg`.
 
         Returns:
             A no-op `DummyColor` on the legacy Windows console,
-            otherwise an `SGRColor` (start code 58, end code 59;
+            otherwise an `SGRColor` (start code 58, end code 59: the
             underline color, distinct from text color).
         """
         if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
@@ -559,15 +525,15 @@ class Color(typing.NamedTuple):
         """ANSI SGR color parameter for this color, or `None`.
 
         Picks the encoding by resolving, in order: truecolor (if
-        `env.COLOR_SUPPORT` is `XTERM_TRUECOLOR`); 16-color (if
-        `env.COLOR_SUPPORT` is `XTERM`, via `RGB.to_ansi_16`); this
+        `env.COLOR_SUPPORT` is `XTERM_TRUECOLOR`), 16-color (if
+        `env.COLOR_SUPPORT` is `XTERM`, via `RGB.to_ansi_16`), this
         color's own registered `xterm` index, if it has one
         (checked with ``is not None``, so a registered index of 0
         counts -- rendering an SGR at all means the caller already
         decided colors are wanted, even if global detection reports
-        no support); then 256-color (`RGB.to_ansi_256`) if
+        no support), then 256-color (`RGB.to_ansi_256`) if
         `env.COLOR_SUPPORT` is `XTERM_256`. Reads
-        `env.COLOR_SUPPORT` live, at call time -- see `fg`.
+        `env.COLOR_SUPPORT` live, at call time, like `fg`.
 
         Returns:
             The SGR color parameter (e.g. ``'5;196'``), or `None`
@@ -578,12 +544,6 @@ class Color(typing.NamedTuple):
         ):  # pragma: no branch
             return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
 
-        # A true 16-colour terminal must not be handed a 256-colour index,
-        # so translate through to_ansi_16 there. Everywhere else prefer the
-        # registered xterm index (``is not None`` so index 0/Black counts):
-        # rendering an SGR at all means the caller decided colours are
-        # wanted (e.g. forced via ``enable_colors``), even when the global
-        # detection reported no support.
         if env.COLOR_SUPPORT is env.ColorSupport.XTERM:
             color = self.rgb.to_ansi_16
         elif self.xterm is not None:
@@ -630,7 +590,7 @@ class Color(typing.NamedTuple):
         return f'{self.__class__.__name__}({self.name!r})'
 
     def __hash__(self) -> int:
-        """Hash by `rgb`; ignores `hls`/`name`/`xterm`."""
+        """Hash by `rgb`, ignoring `hls`/`name`/`xterm`."""
         return hash(self.rgb)
 
 
@@ -653,7 +613,7 @@ class Colors:
     by_rgb: ClassVar[defaultdict[RGB, list[Color]]] = defaultdict(list)
     #: Registered colors keyed by `HSL`.
     by_hls: ClassVar[defaultdict[HSL, list[Color]]] = defaultdict(list)
-    #: Registered colors keyed by xterm palette index; at most one color per
+    #: Registered colors keyed by xterm palette index, at most one color per
     #: index, later registrations overwrite earlier ones.
     by_xterm: ClassVar[dict[int, Color]] = dict()
 
@@ -669,7 +629,7 @@ class Colors:
 
         Args:
             rgb: The color's RGB representation.
-            hls: The color's HSL representation; derived from
+            hls: The color's HSL representation, derived from
                 `rgb` via `HSL.from_rgb` if omitted.
             name: An optional human-readable name to index by
                 (both as given and lowercased).
@@ -717,7 +677,7 @@ class ColorGradient:
 
     Used for widgets whose color should shift with progress (e.g. a
     bar that goes from red to yellow to green as it nears
-    completion); see `get_color` for how a value maps to a `Color`.
+    completion). See `get_color` for how a value maps to a `Color`.
     """
 
     interpolate: collections.abc.Callable[[Color, Color, float], Color] | None
@@ -736,7 +696,7 @@ class ColorGradient:
             *colors: The colors to interpolate across, in order;
                 at least one is required.
             interpolate: The function used to blend between two
-                adjacent colors given a 0-1 step; pass `None` to
+                adjacent colors given a 0-1 step. Pass `None` to
                 disable blending and snap to the nearest color
                 instead (see `get_color`).
         """
@@ -755,7 +715,7 @@ class ColorGradient:
         `pbase.Undefined`/`pbase.UnknownLength`) returns the first
         color, `>= 1` returns the last. Otherwise, if `interpolate`
         is `None`, the nearest color by index is returned with no
-        blending; if it's set, `value` is split into a segment
+        blending. If it's set, `value` is split into a segment
         index (the pair of adjacent colors to blend between) and a
         0-1 step within that segment, then blended via
         `self.interpolate`.
@@ -769,7 +729,7 @@ class ColorGradient:
             every segment is an equal ``1 / max_color_idx`` wide.
             For gradients of four or more colors this mismatch
             means `step` can fall outside ``[0, 1]`` near an
-            interior segment boundary; `Color.interpolate` does not
+            interior segment boundary, and `Color.interpolate` does not
             clamp it, so colors near those boundaries can
             extrapolate past the two blended stops rather than
             blend smoothly between them. Left as-is here (fixing it
@@ -829,7 +789,7 @@ def get_color(value: float, color: OptionalColor) -> Color | None:
     """Resolve `color` to a concrete `Color` for the given `value`.
 
     If `color` is a `ColorGradient`, resolve it via
-    `ColorGradient.get_color`; a plain `Color` (or `None`) passes
+    `ColorGradient.get_color`. A plain `Color` (or `None`) passes
     through unchanged.
 
     Args:
@@ -937,7 +897,7 @@ class SGR(CSI):
 
         Args:
             text: The text to style.
-            *args: Unused; accepted for signature compatibility
+            *args: Unused, accepted for signature compatibility
                 with other CSI callables.
 
         Returns:
@@ -977,7 +937,7 @@ class SGRColor(SGR):
 
         Args:
             text: The text to style.
-            *args: Unused; accepted for signature compatibility
+            *args: Unused, accepted for signature compatibility
                 with other CSI callables.
 
         Returns:
@@ -1012,7 +972,7 @@ overline: SGR = SGR(53, 55)
 #: Bold (increased intensity) text (SGR 1/22).
 bold: SGR = SGR(1, 22)
 
-#: Gothic/Fraktur text (SGR 20/10); rarely supported by terminals.
+#: Gothic/Fraktur text (SGR 20/10), rarely supported by terminals.
 gothic: SGR = SGR(20, 10)
 
 #: Italic text (SGR 3/23).

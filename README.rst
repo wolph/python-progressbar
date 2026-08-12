@@ -2,8 +2,8 @@
 progressbar2
 ##############################################################################
 
-A mature, typed terminal progress bar library for Python scripts that need
-custom widgets, clean output around prints and logs, multiple concurrent bars,
+A typed terminal progress bar library for Python. It handles custom
+widgets, clean output around prints and logs, multiple concurrent bars,
 unknown-length progress, and pipe-friendly CLI usage.
 
 .. image:: https://github.com/WoLpH/python-progressbar/actions/workflows/main.yml/badge.svg
@@ -36,7 +36,7 @@ Try it in your browser
 ==============================================================================
 
 Every example in the `documentation <https://progressbar-2.readthedocs.io/en/latest/>`_
-runs live in the page — press **Run** on any code block. No install required.
+runs live in the page. Press **Run** on any code block, no install required.
 
 Progress with clean logs
 ==============================================================================
@@ -151,17 +151,6 @@ CLI usage
 
     progressbar --progress --timer --eta --rate --bytes input.bin -o output.bin
 
-Feature highlights
-==============================================================================
-
-* Works as an iterable wrapper or a manually updated progress bar.
-* Supports custom widgets, colors, granular bars, animated markers, and labels.
-* Handles unknown-length iterators.
-* Supports multiple concurrent progress bars with ``MultiBar``.
-* Redirects stdout/stderr so regular output does not corrupt the active bar.
-* Includes a pipe-friendly ``progressbar`` command.
-* Ships typed package metadata.
-
 Known terminal caveats
 ==============================================================================
 
@@ -178,8 +167,8 @@ on the now defunct Google Code. Since that project was completely abandoned by
 its developer and the developer did not respond to email, I decided to fork the
 package.
 
-This package is still backwards compatible with the original progressbar package
-so you can safely use it as a drop-in replacement for existing projects.
+This package is still backwards compatible with the original progressbar
+package so you can use it as a drop-in replacement for existing projects.
 
 Links
 ==============================================================================
