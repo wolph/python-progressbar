@@ -19,7 +19,9 @@ def main() -> None:
             if step in {8, 16}:
                 print(f'log: completed step {step}')
             bar.update(step + 1)
-            time.sleep(0.005)
+            # Longer than the bar's 0.05s update gate, so every step
+            # lands as a visible redraw.
+            time.sleep(0.1)
 
 
 if __name__ == '__main__':

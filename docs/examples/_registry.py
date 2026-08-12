@@ -27,14 +27,20 @@ class Demo:
     log_lines: int = 0
     #: Upper bound on animation frames; excess frames are sampled evenly.
     max_frames: int = 24
+    #: Seconds each animation frame stays visible in the rendered SVG.
+    frame_seconds: float = 0.08
+    #: Extra seconds the final frame stays visible before the loop
+    #: restarts, so the finished state registers before the reset.
+    end_hold_seconds: float = 0.0
     #: Whether ``scripts/render_demos.py --check`` compares this demo's
-    #: committed SVG against a fresh render. ``False`` for demos whose
-    #: capture is not byte-stable across runs for reasons this repository
-    #: cannot fix from the capture side alone -- see the two ``False``
-    #: entries below for the one known case. Everything else defaults to
-    #: gated; flipping this off is the exception, not a shortcut, so any
-    #: new ``False`` entry needs a comment naming the cause right next to
-    #: it, the same way those two do.
+    #: committed SVG against a fresh render. ``False`` is reserved for
+    #: demos whose capture is not byte-stable across runs for reasons the
+    #: capture side cannot fix. Everything defaults to gated; flipping
+    #: this off is the exception, not a shortcut, so any new ``False``
+    #: entry needs a comment naming the cause right next to it. (The
+    #: MultiBar demos used to be the two ``False`` entries, until the
+    #: capture bootstrap started driving ``render()`` synchronously --
+    #: see ``scripts/render_demos.py``'s ``_demo_argv``.)
     drift_check: bool = True
 
     @property
@@ -56,33 +62,36 @@ DEMOS: tuple[Demo, ...] = (
     ),
     Demo('howto/iterable-wrapper', 'Wrapping an iterable directly'),
     Demo('howto/logging-integration', 'Logging above the bar', log_lines=2),
-    # drift_check=False: MultiBar renders from a background thread that
-    # races the main thread's updates (progressbar/multi.py's `run`) --
-    # real OS thread scheduling decides how many redraws land before both
-    # bars report finished(), so the captured frame count (and so the SVG)
-    # is not reproducible run to run. Confirmed empirically: capturing this
-    # demo repeatedly produced distinct frame sequences even after
-    # collapsing consecutive-duplicate frames, so the variation is in which
-    # states get seen, not merely how many times a state repeats. Fixing it
-    # would mean changing MultiBar's threaded render loop, which is outside
-    # scripts/render_demos.py's reach. Hand-verify this SVG after
-    # regenerating it instead of trusting --check.
-    Demo(
-        'howto/multibar',
-        'MultiBar jobs finishing at different times',
-        drift_check=False,
-    ),
+    Demo('howto/multibar', 'MultiBar jobs finishing at different times'),
     Demo('howto/multibar-line-offset', 'Manual line-offset bars'),
     Demo('howto/non-tty', 'Forcing one line per update'),
     Demo('howto/prefix-suffix', 'Templated prefix and suffix'),
     Demo('howto/redirect-stdout', 'print() above the bar', log_lines=2),
     Demo('howto/tqdm-style', 'tqdm-style keyword arguments'),
     Demo('howto/unknown-length', 'UnknownLength with an animated marker'),
-    Demo('readme/hero', 'Progress with clean logs', log_lines=2),
-    # drift_check=False: same MultiBar background-thread race as
-    # howto/multibar above.
-    Demo('readme/multibar', 'Multiple active jobs', drift_check=False),
-    Demo('readme/unknown-length', 'Unknown length'),
+    # The README demos pace slower than the in-docs ones: they are the
+    # first thing a visitor sees and have to read as a demonstration, not
+    # a flicker. Each frame gets a quarter second and the finished state
+    # holds for two before the loop restarts.
+    Demo(
+        'readme/hero',
+        'Progress with clean logs',
+        log_lines=2,
+        frame_seconds=0.25,
+        end_hold_seconds=2.0,
+    ),
+    Demo(
+        'readme/multibar',
+        'Multiple active jobs',
+        frame_seconds=0.25,
+        end_hold_seconds=2.0,
+    ),
+    Demo(
+        'readme/unknown-length',
+        'Unknown length',
+        frame_seconds=0.25,
+        end_hold_seconds=2.0,
+    ),
     Demo('tutorial/step1', 'Wrap an iterable'),
     Demo('tutorial/step2', 'Explicit update()'),
     Demo('tutorial/step3', 'A known max_value'),

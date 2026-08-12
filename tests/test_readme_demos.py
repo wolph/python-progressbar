@@ -158,7 +158,7 @@ def test_render_svg_first_frame_is_visible_without_animation(
     assert '<g opacity="1"><animate' in text
 
 
-def test_render_svg_uses_fast_readme_animation_pacing(
+def test_render_svg_uses_fast_default_animation_pacing(
     tmp_path: Path,
 ) -> None:
     output = tmp_path / 'demo.svg'
@@ -166,8 +166,29 @@ def test_render_svg_uses_fast_readme_animation_pacing(
 
     text = output.read_text(encoding='utf-8')
     assert 'dur="0.24s"' in text
+    assert 'keyTimes' not in text
     assert 'dur="3.6s"' not in text
     assert '3.599999999' not in text
+
+
+def test_render_svg_holds_the_final_frame_when_asked(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / 'demo.svg'
+    demos.render_svg(
+        output,
+        title='Demo',
+        frames=[['a'], ['b'], ['c']],
+        frame_seconds=0.25,
+        end_hold_seconds=2.0,
+    )
+
+    # 3 frames * 0.25s + a 2s hold: the total runs 2.75s and explicit
+    # keyTimes give the first two frames 0.25s each, leaving the final
+    # frame everything from t=0.5s to the loop restart.
+    text = output.read_text(encoding='utf-8')
+    assert 'dur="2.75s"' in text
+    assert 'keyTimes="0;0.0909091;0.181818" ' in text
 
 
 def test_render_svg_uses_wide_canvas_for_readable_bars(
@@ -853,6 +874,8 @@ def test_render_mode_still_renders_drift_check_false_demos(
         svg_path=output,
         drift_check=False,
         path=source,
+        frame_seconds=0.08,
+        end_hold_seconds=0.0,
     )
 
     monkeypatch.setattr(demos, 'DEMOS_BY_NAME', {demo.name: demo})
@@ -878,6 +901,8 @@ def test_check_mode_does_not_rewrite_mismatched_asset(
         svg_path=output,
         drift_check=True,
         path=source,
+        frame_seconds=0.08,
+        end_hold_seconds=0.0,
     )
 
     monkeypatch.setattr(demos, 'DEMOS_BY_NAME', {demo.name: demo})

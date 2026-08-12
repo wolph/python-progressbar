@@ -13,7 +13,9 @@ def main() -> None:
     ) as bar:
         for value in range(0, 120, 10):
             bar.update(value)
-            time.sleep(0.005)
+            # Longer than the bar's 0.05s update gate, so every step
+            # lands as a visible redraw.
+            time.sleep(0.1)
 
 
 if __name__ == '__main__':

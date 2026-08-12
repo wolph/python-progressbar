@@ -96,6 +96,10 @@ MULTIBAR_REPOSITION_RE = re.compile(
     r'\x1b\[(\d*)F\r?(.*?)\x1b\[\d*E',
     re.DOTALL,
 )
+# Default per-frame duration. Registry entries can override it (and add a
+# final-frame hold) via ``Demo.frame_seconds``/``Demo.end_hold_seconds``;
+# the README demos do, since they pace as a first impression rather than
+# an inline illustration.
 ANIMATION_FRAME_SECONDS = 0.08
 SVG_WIDTH = 1080
 
@@ -148,35 +152,41 @@ def _demo_argv(demo: Demo) -> list[str]:
        once ``time.sleep`` no longer blocks for real -- collapsing the
        animation to just its first and last (forced, on ``finish()``)
        frames. Confirmed empirically switching between the two.
-    2. The reassignment is lock-protected because ``MultiBar`` renders from
-       a background thread (``progressbar/multi.py``'s own
-       ``time.sleep(self.update_interval)`` loop) that calls the same
-       patched ``time.sleep`` concurrently with the demo's main thread;
-       freezegun's frozen-time state is not thread-safe, and unserialized
-       concurrent ``tick()`` calls occasionally corrupt it. The lock only
-       prevents that corruption -- it does not make a ``MultiBar`` demo's
-       exact frame count deterministic, since how many times the render
-       thread's own loop wakes up before the main thread finishes is still
-       a real OS thread-scheduling race, not something any clock patch can
-       control. ``readme/multibar``, ``howto/multibar`` and
-       ``howto/multibar-line-offset`` can therefore still occasionally
-       render with a different frame count between runs; seen empirically
-       in roughly 4 of 9 repeated captures in this environment (versus 0 of
-       9 for every single-threaded, ``ProgressBar``-only demo tried).
-       Fixing that would mean changing ``MultiBar``'s threaded render loop
-       itself, which is out of this script's reach (nothing under
-       ``progressbar/`` changes here) -- flagged for whoever wires up
-       ``--check`` against all 50 demos.
+    2. ``MultiBar`` normally renders from a background thread
+       (``progressbar/multi.py``'s ``time.sleep(self.update_interval)``
+       loop). Under the no-op patched sleep the demo's main loop finishes
+       in microseconds of real time, so that thread got one or two real
+       scheduling slices: the captured animation was a pile of identical
+       early frames and a jump to 100%, and the frame count was a real
+       OS-scheduling race between runs. The bootstrap therefore patches
+       ``MultiBar.start`` to *not* start the thread (``join``/``stop``
+       are documented no-ops with no thread running) and instead calls
+       ``render()`` on every live multibar after each ``time.sleep``
+       tick, which is the documented manual-drive mode. That makes the
+       multibar captures complete (every update lands as a frame) and
+       deterministic. The ``tick()`` lock stays for demos that spawn
+       threads of their own (``howto/multibar-line-offset``), where
+       concurrent ticks would corrupt freezegun's state; such demos
+       remain scheduling-dependent and keep ``drift_check=False``.
     """
     bootstrap = (
         'import threading, time, runpy, freezegun\n'
+        'import progressbar.multi\n'
         '_frozen = freezegun.freeze_time('
         f'{CAPTURE_CLOCK_INSTANT!r}).start()\n'
         '_tick_lock = threading.Lock()\n'
+        '_multibars = []\n'
+        '\n'
+        'def _capture_start(self):\n'
+        '    _multibars.append(self)\n'
+        '\n'
+        'progressbar.multi.MultiBar.start = _capture_start\n'
         '\n'
         'def _deterministic_sleep(seconds):\n'
         '    with _tick_lock:\n'
-        '        return _frozen.tick(seconds)\n'
+        '        _frozen.tick(seconds)\n'
+        '    for _multibar in _multibars:\n'
+        '        _multibar.render()\n'
         '\n'
         'time.sleep = _deterministic_sleep\n'
         f"runpy.run_path({str(demo.path)!r}, run_name='__main__')\n"
@@ -683,12 +693,28 @@ def svg_document(
     title: str,
     frames: list[list[str]],
     description: str | None = None,
+    *,
+    frame_seconds: float = ANIMATION_FRAME_SECONDS,
+    end_hold_seconds: float = 0.0,
 ) -> str:
     width = SVG_WIDTH
     line_height = 24
     max_lines = max(len(frame) for frame in frames)
     height = 72 + max_lines * line_height
-    duration = f'{max(len(frames), 1) * ANIMATION_FRAME_SECONDS:g}'
+    total_seconds = max(len(frames), 1) * frame_seconds + end_hold_seconds
+    duration = f'{total_seconds:g}'
+    # Without a hold, frames divide ``dur`` evenly and no ``keyTimes`` is
+    # needed. With one, the extra time must all land on the final frame,
+    # which is exactly what explicit ``keyTimes`` with ``calcMode=
+    # "discrete"`` expresses: each frame shows from its keyTime to the
+    # next, and the last one holds until ``dur``.
+    key_times = ''
+    if end_hold_seconds:
+        starts = ';'.join(
+            f'{index * frame_seconds / total_seconds:g}'
+            for index in range(len(frames))
+        )
+        key_times = f'keyTimes="{starts}" '
     title_id = f'demo-{slug(title)}-title'
     desc_id = f'demo-{slug(title)}-desc'
     desc_text = description or f'Terminal recording of {title}.'
@@ -709,6 +735,7 @@ def svg_document(
             f'<g opacity="{base_opacity}">'
             '<animate attributeName="opacity" '
             f'values="{visible_value_list}" '
+            f'{key_times}'
             f'dur="{duration}s" '
             'repeatCount="indefinite" '
             'calcMode="discrete" />' + ''.join(lines) + '</g>'
@@ -782,8 +809,17 @@ def render_svg(
     title: str,
     frames: list[list[str]],
     description: str | None = None,
+    *,
+    frame_seconds: float = ANIMATION_FRAME_SECONDS,
+    end_hold_seconds: float = 0.0,
 ) -> None:
-    svg = svg_document(title, frames, description)
+    svg = svg_document(
+        title,
+        frames,
+        description,
+        frame_seconds=frame_seconds,
+        end_hold_seconds=end_hold_seconds,
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(svg, encoding='utf-8')
 
@@ -841,10 +877,23 @@ def main() -> None:
         if args.check:
             check_svg(
                 demo.svg_path,
-                svg_document(demo.title, frames, description),
+                svg_document(
+                    demo.title,
+                    frames,
+                    description,
+                    frame_seconds=demo.frame_seconds,
+                    end_hold_seconds=demo.end_hold_seconds,
+                ),
             )
         else:
-            render_svg(demo.svg_path, demo.title, frames, description)
+            render_svg(
+                demo.svg_path,
+                demo.title,
+                frames,
+                description,
+                frame_seconds=demo.frame_seconds,
+                end_hold_seconds=demo.end_hold_seconds,
+            )
 
 
 if __name__ == '__main__':

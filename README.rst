@@ -67,7 +67,9 @@ Progress with clean logs
                 if step in {8, 16}:
                     print(f'log: completed step {step}')
                 bar.update(step + 1)
-                time.sleep(0.005)
+                # Longer than the bar's 0.05s update gate, so every step
+                # lands as a visible redraw.
+                time.sleep(0.1)
 
 
     if __name__ == '__main__':
@@ -102,7 +104,9 @@ Multiple bars
             for step in range(STEPS):
                 build.update(step + 1)
                 test.update(min(STEPS, max(0, round((step - 3) * 1.2))))
-                time.sleep(0.005)
+                # Longer than the bars' 0.05s update gate, so every step
+                # lands as a visible redraw.
+                time.sleep(0.1)
 
             # Reaching max_value doesn't finish a bar -- only finish() does.
             # A MultiBar waits for every bar to report finished() before its
@@ -138,7 +142,9 @@ Unknown length and animated bars
         ) as bar:
             for value in range(0, 120, 10):
                 bar.update(value)
-                time.sleep(0.005)
+                # Longer than the bar's 0.05s update gate, so every step
+                # lands as a visible redraw.
+                time.sleep(0.1)
 
 
     if __name__ == '__main__':

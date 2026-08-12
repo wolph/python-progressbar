@@ -19,7 +19,9 @@ def main() -> None:
         for step in range(STEPS):
             build.update(step + 1)
             test.update(min(STEPS, max(0, round((step - 3) * 1.2))))
-            time.sleep(0.005)
+            # Longer than the bars' 0.05s update gate, so every step
+            # lands as a visible redraw.
+            time.sleep(0.1)
 
         # Reaching max_value doesn't finish a bar -- only finish() does.
         # A MultiBar waits for every bar to report finished() before its
