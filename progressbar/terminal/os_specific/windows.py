@@ -1,9 +1,10 @@
 # ruff: noqa: N801
-"""
-Windows specific code for the terminal.
+"""Windows specific code for the terminal.
 
-Note that the naming convention here is non-pythonic because we are
-matching the Windows API naming.
+Talks to Kernel32 directly through `ctypes` for single-key input and
+console-mode control, since neither has a `termios`/`tty` equivalent
+on Windows. Note that the naming convention here is non-pythonic
+because we are matching the Windows API naming.
 """
 
 from __future__ import annotations
@@ -40,6 +41,20 @@ def _valid_handle(handle) -> bool:
 
 
 class WindowsConsoleModeFlags(enum.IntFlag):
+    """`GetConsoleMode`/`SetConsoleMode` bits, for both handle kinds.
+
+    Input-handle and output-handle modes are two separate C bit
+    spaces that happen to share this one Python `IntFlag`. Several
+    `*_OUTPUT` members below have the same numeric value as an
+    `*_INPUT` member declared earlier (e.g. `ENABLE_PROCESSED_OUTPUT`
+    and `ENABLE_PROCESSED_INPUT` are both `0x0001`); Python's `enum`
+    then treats the later name as an alias of the first, so accessing
+    it yields a member whose `.name` (and `__str__`) is the *input*
+    name even when read through the output-side alias. Only
+    meaningful when combined with the handle it was read from/is
+    being written to.
+    """
+
     ENABLE_ECHO_INPUT = 0x0004
     ENABLE_EXTENDED_FLAGS = 0x0080
     ENABLE_INSERT_MODE = 0x0020
@@ -57,11 +72,14 @@ class WindowsConsoleModeFlags(enum.IntFlag):
     ENABLE_LVB_GRID_WORLDWIDE = 0x0010
 
     def __str__(self) -> str:
+        """Render as ``NAME (0xHHHH)``, e.g. for debug logging."""
         return f'{self.name} (0x{self.value:04X})'
 
 
-# Explicit argtypes are required: without them ctypes passes arguments
-# as 32-bit C ints, silently truncating 64-bit HANDLE values
+# The five Kernel32 entry points below all take a HANDLE argument, so
+# they all need explicit argtypes: without them ctypes passes
+# arguments as 32-bit C ints, silently truncating 64-bit HANDLE
+# values.
 _GetConsoleMode = _kernel32.GetConsoleMode
 _GetConsoleMode.argtypes = (_HANDLE, ctypes.POINTER(_DWORD))
 _GetConsoleMode.restype = _BOOL
@@ -89,6 +107,14 @@ if _valid_handle(_h_console_output):
     _GetConsoleMode(_HANDLE(_h_console_output), ctypes.byref(_output_mode))
 
 
+# The structures and unions below mirror, field-for-field, the C
+# layout of the Win32 console input records used by
+# `ReadConsoleInput` (`COORD`, `*_EVENT_RECORD`, `INPUT_RECORD`, and
+# the `Event`/`uChar` unions within them). ctypes marshals a raw
+# buffer into Python by matching this declared layout byte-for-byte
+# against the C struct, so they exist purely to make that marshaling
+# possible and are not meant to be used as general-purpose Python
+# types.
 class _COORD(ctypes.Structure):
     _fields_ = (('X', _SHORT), ('Y', _SHORT))
 
@@ -152,6 +178,13 @@ _ReadConsoleInput.restype = _BOOL
 
 
 def reset_console_mode() -> None:
+    """Restore the input/output console modes saved at import time.
+
+    Writes `_input_mode`/`_output_mode` — captured once, before
+    `set_console_mode` ever ran — back via `SetConsoleMode`. A no-op
+    for either handle that was never valid (e.g. no console
+    attached).
+    """
     if _valid_handle(_h_console_input):
         _SetConsoleMode(_HANDLE(_h_console_input), _DWORD(_input_mode.value))
 
@@ -160,6 +193,20 @@ def reset_console_mode() -> None:
 
 
 def set_console_mode() -> bool:
+    """Enable ANSI/VT escape-sequence processing on the console.
+
+    ORs `ENABLE_VIRTUAL_TERMINAL_INPUT` into the saved input mode
+    (best effort; not reflected in the return value) and
+    `ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING`
+    into the saved output mode, on top of whatever was already set,
+    so the console starts accepting ANSI color/cursor escapes without
+    losing its existing behaviour. `reset_console_mode` restores the
+    pre-call state saved at import time.
+
+    Returns:
+        Whether the output-mode change succeeded; `False` if there
+        is no valid output handle (e.g. piped output).
+    """
     if not _valid_handle(_h_console_output):
         return False
 
@@ -179,21 +226,48 @@ def set_console_mode() -> bool:
 
 
 def get_console_mode() -> int:
+    """Return the input console mode captured at import, as a bitmask.
+
+    This is the snapshot taken once at import time, not a live
+    re-query of the console — it does not reflect changes made by a
+    later `set_console_mode` call. `env.py` reads it to test flags
+    such as `ENABLE_PROCESSED_OUTPUT` for color-support detection.
+    """
     return _input_mode.value
 
 
-def set_text_color(color) -> None:
+def set_text_color(color: int) -> None:
+    """Set the console's current text-attribute color.
+
+    Args:
+        color: A `SetConsoleTextAttribute` attribute bitmask (as a
+            `WORD`), combining foreground/background color bits.
+    """
     if _valid_handle(_h_console_output):
         _SetConsoleTextAttribute(_HANDLE(_h_console_output), _WORD(color))
 
 
-def print_color(text, color) -> None:
+def print_color(text: str, color: int) -> None:
+    """Print `text` in `color`, then reset to the default grey."""
     set_text_color(color)
     print(text)  # noqa: T201
     set_text_color(7)  # Reset to default color, grey
 
 
-def getch():
+def getch() -> str | None:
+    """Read a single keypress via `ReadConsoleInput`, without echo.
+
+    `ReadConsoleInput` reports every kind of console event (mouse,
+    focus, window-resize, menu, key), not just keypresses, so the
+    records read back must be filtered down to `KEY_EVENT` entries,
+    and further to key-down (not key-up) ones, before a character can
+    be pulled out; non-ASCII bytes are replaced rather than raising.
+
+    Returns:
+        The character read, or `None` if there is no valid console
+        input handle, the read call failed, or neither record read
+        turned out to be a usable key-down event.
+    """
     if not _valid_handle(_h_console_input):
         return None
 

@@ -1,3 +1,10 @@
+"""`python -m progressbar`: a partial reimplementation of Unix `pv`.
+
+Pipes data from one or more input files (or stdin) to an output file
+(or stdout) while rendering a progress bar, with optional rate
+limiting. See `create_argument_parser` for the supported flags.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -13,11 +20,10 @@ import progressbar
 
 
 def size_to_bytes(size_str: str) -> int:
-    """
-    Convert a size string with suffixes 'k', 'm', etc., to bytes.
+    """Convert a size string with suffixes 'k', 'm', etc., to bytes.
 
-    Note: This function also supports '@' as a prefix to a file path to get the
-    file size.
+    Note: This function also supports '@' as a prefix to a file path
+    to get the file size.
 
     >>> size_to_bytes('1024k')
     1048576
@@ -28,9 +34,8 @@ def size_to_bytes(size_str: str) -> int:
     >>> size_to_bytes('1024')
     1024
     >>> size_to_bytes('1024p')
-    1125899906842624
+    1152921504606846976
     """
-
     # Define conversion rates
     suffix_exponent = {
         'k': 1,
@@ -59,10 +64,7 @@ def size_to_bytes(size_str: str) -> int:
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
-    """
-    Create the argument parser for the `progressbar` command.
-    """
-
+    """Create the argument parser for the `progressbar` command."""
     description = """
         Monitor the progress of data through a pipe.
 
@@ -275,6 +277,17 @@ def create_argument_parser() -> argparse.ArgumentParser:
 def _default_widgets(
     filesize_available: bool,
 ) -> list[progressbar.widgets.WidgetBase | str]:
+    """Build the widget list used when no display flag was passed.
+
+    Args:
+        filesize_available: Whether a total size is known, so
+            progress can be shown as a percentage/bar rather than a
+            raw count.
+
+    Returns:
+        A percentage/bar/timer/speed layout if a size is known,
+        otherwise a count/data-size/timer layout.
+    """
     if filesize_available:
         return [
             progressbar.Percentage(),
@@ -298,6 +311,12 @@ def _append_widget_group(
     widgets: list[progressbar.widgets.WidgetBase | str],
     group: typing.Sequence[progressbar.widgets.WidgetBase | str],
 ) -> None:
+    """Append `group` to `widgets` in place, spacing groups apart.
+
+    Args:
+        widgets: The widget list being assembled; mutated in place.
+        group: The widgets to append, as one unit.
+    """
     if widgets:
         widgets.append(' ')
     widgets.extend(group)
@@ -307,6 +326,21 @@ def _build_widgets(
     args: argparse.Namespace,
     filesize_available: bool,
 ) -> list[progressbar.widgets.WidgetBase | str]:
+    """Build the widget list from the display flags the user passed.
+
+    Each display flag (`-p`, `-b`, `-t`, `-e`, `-I`, `-r`/`-a`) that
+    was set contributes its own widget group, in a fixed order,
+    space-separated; unset flags contribute nothing. With no display
+    flag at all, falls back to `_default_widgets`.
+
+    Args:
+        args: The parsed command-line arguments.
+        filesize_available: Whether a total size is known; passed
+            through to `_default_widgets`.
+
+    Returns:
+        The assembled widget list, or `[]` if `--quiet` was passed.
+    """
     if args.quiet:
         return []
 
@@ -337,6 +371,23 @@ def _sleep_for_rate_limit(
     started_at: float,
     now: float | None = None,
 ) -> None:
+    """Block until `transferred` bytes are on pace for `rate_limit`.
+
+    Compares how long transferring `transferred` bytes at
+    `rate_limit` bytes/second *should* have taken against how long it
+    actually took since `started_at`, and sleeps off the difference
+    when running ahead of schedule. A no-op once actual elapsed time
+    has caught up or overtaken the expected pace.
+
+    Args:
+        rate_limit: Target transfer rate in bytes/second, or `None`/
+            `0` to disable rate limiting entirely.
+        transferred: Total bytes transferred so far.
+        started_at: `time.monotonic()` reading taken when the
+            transfer began.
+        now: `time.monotonic()` reading to treat as "now"; sampled
+            internally if not given (a test seam).
+    """
     if not rate_limit:
         return
     now = time.monotonic() if now is None else now

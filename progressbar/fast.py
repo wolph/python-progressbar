@@ -1,3 +1,12 @@
+"""The lean, widget-free renderer used by `progressbar.progressbar()`.
+
+`FastProgressBar` reuses the full `ProgressBar` lifecycle (update gate,
+native iterator, stream redirect, resizing) and replaces only the render
+step with one fixed formatter, so the common "just wrap my loop" case
+stays cheap. See docs/explanation/performance-and-the-fast-path.rst for
+the full layer breakdown and measured costs.
+"""
+
 from __future__ import annotations
 
 import typing
@@ -29,7 +38,20 @@ def _format_seconds(seconds: float) -> str:
 
 
 def _pure_format_fast_line(bar: FastProgressBar) -> str:
-    """Build the whole status line directly (no widgets, no data() dict)."""
+    """Build the whole status line directly (no widgets, no data() dict).
+
+    Two layouts: a known-length bar (percentage, count, `#`-filled bar,
+    elapsed/ETA) when `max_value` is set; otherwise a spinner plus item
+    count and elapsed time. Progress is clamped to `total` so a forced
+    over-max render (e.g. `max_error=False` letting `value` overshoot)
+    can't drive the ETA negative or overflow the bar's width.
+
+    Args:
+        bar: Bar to render; treated as read-only.
+
+    Returns:
+        The complete line, including `prefix`/`suffix`.
+    """
     value = bar.value
     min_value = bar.min_value
     max_value = bar.max_value
@@ -77,26 +99,37 @@ class FastProgressBar(bar_module.ProgressBar):
     """
 
     def default_widgets(self) -> list[typing.Any]:
-        # No widgets: the fixed formatter renders everything.
+        """Return no widgets -- `_format_line` renders everything itself."""
         return []
 
     def _fast_elapsed(self) -> float:
+        """Seconds elapsed so far, clamped to non-negative.
+
+        Returns:
+            `0.0` before `start()` has run; otherwise elapsed since
+            `start_time`, ending at `end_time` once `finish()` has run,
+            or at the current time while the bar is still active.
+        """
         if self.start_time is None:
             return 0.0
         end = self.end_time or self._fast_now()
         return max((end - self.start_time).total_seconds(), 0.0)
 
     def _fast_now(self) -> datetime:
+        """Current wall-clock time, split out so tests can monkeypatch it."""
         return datetime.now()
 
     def _format_line(self) -> str:
+        """Render via the native `_format_fast_line` hook if set, else the
+        pure-Python formatter.
+        """
         formatter = _format_fast_line or _pure_format_fast_line
         return formatter(self)
 
     def _init_prefix(self) -> None:
+        """No-op: the formatter renders `prefix` inline, not as a widget."""
         # Label is rendered inline by the formatter; don't inject a widget.
-        pass
 
     def _init_suffix(self) -> None:
+        """No-op: the formatter renders `suffix` inline, not as a widget."""
         # Label is rendered inline by the formatter; don't inject a widget.
-        pass

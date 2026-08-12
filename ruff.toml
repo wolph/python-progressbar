@@ -50,8 +50,11 @@ select = [
     'C90', # mccabe
     'COM', # flake8-commas
 
-    ## Require docstrings for all public methods, would be good to enable at some point
-    # 'D',     # pydocstyle
+    # Docstrings are required throughout `progressbar/`, which is fully
+    # documented. Everything else is exempted below: test names are
+    # already the documentation, and docs/scripts/tools are not the
+    # published API.
+    'D', # pydocstyle
 
     'E', # pycodestyle error ('W' for warning)
     'F', # pyflakes
@@ -76,11 +79,14 @@ select = [
 ]
 
 [lint.per-file-ignores]
-'tests/*' = ['INP001', 'T201', 'T203']
-'examples.py' = ['T201', 'N806']
-'docs/examples/**' = ['T201']
-'scripts/*' = ['T201']
-'docs/conf.py' = ['E501', 'INP001']
+'tests/*' = ['D', 'INP001', 'T201', 'T203']
+'tests/**' = ['D']
+'examples.py' = ['D', 'T201', 'N806']
+'docs/examples/**' = ['D', 'T201']
+'docs/**' = ['D']
+'scripts/*' = ['D', 'T201']
+'tools/**' = ['D']
+'docs/conf.py' = ['D', 'E501', 'INP001']
 'docs/_theme/flask_theme_support.py' = ['RUF012', 'INP001']
 
 [lint.pydocstyle]
@@ -96,7 +102,9 @@ combine-as-imports = true
 force-wrap-aliases = true
 
 [lint.flake8-quotes]
-docstring-quotes = 'single'
+# No `docstring-quotes` setting: it used to ask for `'''`, which
+# contradicts pydocstyle's D300 and was contradicted by the code itself
+# — every one of the 666 docstring markers in `progressbar/` is `"""`.
 inline-quotes = 'single'
 multiline-quotes = 'single'
 

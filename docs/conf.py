@@ -49,6 +49,12 @@ extensions = [
     'demo',
 ]
 
+# Merge each class's `__init__` docstring into its class page. Constructor
+# arguments are user-facing -- `ProgressBar` alone takes more than fifteen
+# -- and without this the default ('class') renders only the class
+# docstring, leaving all of that documentation invisible to readers.
+autoclass_content = 'both'
+
 suppress_warnings = [
     'image.nonlocal_uri',
     # The ePub builder copies `html_static_path` wholesale and warns about

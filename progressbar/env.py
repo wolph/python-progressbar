@@ -1,3 +1,12 @@
+"""Environment-driven terminal capability detection.
+
+Resolves two independent questions about an output stream: whether it is
+a terminal at all (`is_terminal`, via `is_ansi_terminal`) and how many
+colors it can display (`ColorSupport`, computed once at import time as
+`COLOR_SUPPORT`). See docs/explanation/terminal-detection.rst for the
+full precedence rules and worked examples.
+"""
+
 from __future__ import annotations
 
 import contextlib
@@ -16,12 +25,16 @@ def env_flag(name: str, default: bool | None = None) -> bool | None: ...
 
 
 def env_flag(name: str, default: bool | None = None) -> bool | None:
-    """
-    Accepts environt variables formatted as y/n, yes/no, 1/0, true/false,
-    on/off, and returns it as a boolean.
+    """Read a boolean-ish environment variable.
 
-    If the environment variable is not defined, or has an unknown value,
-    returns `default`
+    Args:
+        name: Environment variable to read.
+        default: Returned when `name` is unset or its value isn't
+            recognized.
+
+    Returns:
+        `True` for y/yes/t/true/on/1, `False` for n/no/f/false/off/0
+        (case-insensitive), otherwise `default`.
     """
     v = os.getenv(name)
     if v and v.lower() in ('y', 'yes', 't', 'true', 'on', '1'):
@@ -138,6 +151,35 @@ def is_ansi_terminal(
     fd: typing.IO[typing.Any],
     is_terminal: bool | None = None,
 ) -> bool | None:  # pragma: no cover
+    """Detect whether `fd` looks like an ANSI-capable terminal.
+
+    Tri-state, not boolean: `True` is a confirmed ANSI terminal, and
+    `None` means detection was inconclusive rather than negative. Outside
+    the Windows branch this function never returns `False` on its own —
+    an unmatched `TERM`, no `ANSICON`, or a stream that can't answer
+    `isatty()` is left as `None`, so callers such as `is_terminal` keep
+    falling back instead of concluding "not a terminal" from missing
+    information. The Windows console-mode probe is the one exception: it
+    is authoritative there and can return a definite `False`.
+
+    Detection order: an interactive Jupyter kernel or a modern-enough
+    PyCharm terminal (not under pytest) short-circuits straight to
+    `True`, since both can misreport `isatty`. Otherwise, `fd.isatty()`
+    plus a `TERM` match against `ANSI_TERM_RE`, or `ANSICON` being set,
+    or (on Windows) the console mode reporting processed output. Only
+    the errors a stream can legitimately raise while being probed —
+    `OSError` (real I/O), `ValueError` (closed/detached file) and
+    `AttributeError` (no `isatty` at all) — are swallowed; anything else
+    is a bug and propagates.
+
+    Args:
+        fd: Stream to probe.
+        is_terminal: Already-known answer, if any; passed straight
+            through unchanged. Only `None` triggers detection.
+
+    Returns:
+        `True`, `False`, or `None` (undetermined) -- see above.
+    """
     if is_terminal is None:
         # Jupyter Notebooks support progress bars
         if JUPYTER:
@@ -183,6 +225,26 @@ def is_terminal(
     fd: typing.IO[typing.Any],
     is_terminal: bool | None = None,
 ) -> bool | None:
+    """Resolve whether `fd` should be treated as an interactive terminal.
+
+    Falls back through the following, stopping at the first non-`None`
+    result: the `is_terminal` argument if the caller already knows;
+    `is_ansi_terminal(fd)`, with any falsy result normalized back to
+    `None` (an inconclusive ANSI check is not a confirmed "no", so it
+    must not stop the fallback chain here either); the
+    `PROGRESSBAR_IS_TERMINAL` environment variable, as an explicit
+    override for cases auto-detection can't cover; and finally a bare
+    `fd.isatty()`, defaulting to `False` if the stream can't answer at
+    all (closed, detached, or missing `isatty`).
+
+    Args:
+        fd: Stream to probe.
+        is_terminal: Known answer, if already determined by the caller.
+
+    Returns:
+        `True` or `False` once resolved -- the final fallback always
+        settles on a boolean, so a caller never sees `None` back.
+    """
     if is_terminal is None:
         # Full ansi support encompasses what we expect from a terminal
         is_terminal = is_ansi_terminal(fd) or None
@@ -204,12 +266,18 @@ def is_terminal(
     return is_terminal
 
 
-JUPYTER = bool(
+#: Whether this process looks like it's running inside a Jupyter kernel,
+#: computed once at import time from JUPYTER_COLUMNS/JUPYTER_LINES/
+#: JPY_PARENT_PID. Jupyter and Windows short-circuit color/terminal
+#: detection ahead of everything else -- see `ColorSupport.from_env` and
+#: `is_ansi_terminal`.
+JUPYTER: bool = bool(
     os.environ.get('JUPYTER_COLUMNS')
     or os.environ.get('JUPYTER_LINES')
     or os.environ.get('JPY_PARENT_PID')
 )
-ANSI_TERMS = (
+#: Regex fragments (unanchored) recognized as ANSI-capable `TERM` values.
+ANSI_TERMS: tuple[str, ...] = (
     '([xe]|bv)term',
     '(sco)?ansi',
     'cygwin',
@@ -220,6 +288,7 @@ ANSI_TERMS = (
     'tmux',
     'vt(10[02]|220|320)',
 )
+#: Compiled prefix match against `ANSI_TERMS`, case-insensitive.
 ANSI_TERM_RE: re.Pattern[str] = re.compile(
     f'^({"|".join(ANSI_TERMS)})', re.IGNORECASE
 )
@@ -230,5 +299,9 @@ ANSI_TERM_RE: re.Pattern[str] = re.compile(
 #: ``xterm-256color`` are used by plenty of 256-only emulators.
 TRUECOLOR_TERMS: frozenset[str] = frozenset({'xterm-kitty', 'xterm-ghostty'})
 
+#: The color depth this environment can support, computed once at import
+#: time (see `ColorSupport.from_env`). This is a ceiling, not a per-bar
+#: decision -- `DefaultFdMixin._determine_enable_colors` is what decides
+#: whether any given bar actually uses color.
 # Defined after ANSI_TERM_RE / TRUECOLOR_TERMS because from_env() reads them.
-COLOR_SUPPORT = ColorSupport.from_env()
+COLOR_SUPPORT: ColorSupport = ColorSupport.from_env()

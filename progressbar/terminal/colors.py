@@ -1,3 +1,12 @@
+"""The xterm 256-color table and the gradients built from it.
+
+Pure data. Every color is registered with `Colors.register` at import,
+which is what lets a color be looked up later by name, RGB, HSL or
+palette index. The gradients at the end are what widgets use to shade a
+bar by completion, and come in light and dark variants chosen from the
+terminal's background brightness.
+"""
+
 from __future__ import annotations
 
 # Based on: https://www.ditig.com/256-colors-cheat-sheet
