@@ -32,7 +32,7 @@ let pyodide = null;
 // reached some other way.
 const THREAD_ERROR_MARKER = "can't start new thread";
 const THREAD_ERROR_MESSAGE =
-  'This demo uses MultiBar's `with` form, which starts a real OS ' +
+  'This demo uses MultiBar\'s `with` form, which starts a real OS ' +
   'thread. Browsers cannot provide that, so it cannot run here -- the ' +
   'animation above is the real output. See the source for the pattern.';
 
