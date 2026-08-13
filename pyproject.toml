@@ -231,7 +231,12 @@ include-package-data = true
 version = { attr = 'progressbar.__about__.__version__' }
 
 [tool.setuptools.packages.find]
-exclude = ['docs*', 'tests*']
+# Only the installable package goes into the wheel. The previous
+# exclude list ('docs*', 'tests*') still let auto-discovery sweep the
+# repo-level benchmarks/, scripts/ and tools/ directories into
+# site-packages. The sdist is unaffected: its contents come from the
+# setuptools-scm file finder (see build-system).
+include = ['progressbar*']
 
 # Keeps stray *data* files out of the wheel. Note this cannot exclude
 # stray *modules*: setuptools' build_py copies every `*.py` inside an
