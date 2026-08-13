@@ -139,7 +139,12 @@ tests = [
 # test run (tests/console is excluded from pytest.ini's python_files, and
 # `tests[]` above -- what `dev` pulls in -- deliberately omits this group).
 docs-tests = [
+    # freezegun and pytest-cov are not used by tests/console itself, but
+    # the shared tests/conftest.py imports freezegun at module scope and
+    # the workflow passes --no-cov, so both must be importable.
+    'freezegun>=0.3.11',
     'playwright>=1.48.0',
+    'pytest-cov>=2.6.1',
     'pytest>=4.6.9',
 ]
 
