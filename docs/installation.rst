@@ -28,5 +28,5 @@ Confirm the install by printing the version:
 
     $ python -c "import progressbar; print(progressbar.__version__)"
 
-If that prints a version number such as ``4.5.0``, continue with
+If that prints a version number such as ``4.6.0``, continue with
 :doc:`tutorial/index`.
