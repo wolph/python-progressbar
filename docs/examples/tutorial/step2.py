@@ -6,8 +6,6 @@ new value wherever your own loop happens to be, instead of handing the
 loop itself to a wrapper.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

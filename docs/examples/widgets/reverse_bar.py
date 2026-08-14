@@ -5,8 +5,6 @@ pair of gauges that meet in the middle -- or any layout that reads
 right-to-left. Everything else about it matches ``Bar``.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

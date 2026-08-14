@@ -7,8 +7,6 @@ first to reserve the rows, since `line_offset` moves the cursor relative to
 wherever it already is.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

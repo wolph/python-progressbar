@@ -6,8 +6,6 @@ count. For a rate that reacts to recent speed changes instead of the
 whole-run average, see ``AdaptiveTransferSpeed``.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

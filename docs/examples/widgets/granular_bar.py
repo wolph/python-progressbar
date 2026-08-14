@@ -4,8 +4,6 @@ Useful when the bar is narrow and whole-character steps would look like
 the bar is stuck.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

@@ -1,7 +1,5 @@
 """A bar for work whose total is not known up front."""
 
-from __future__ import annotations
-
 import time
 
 import progressbar

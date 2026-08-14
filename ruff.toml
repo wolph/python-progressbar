@@ -35,7 +35,6 @@ ignore = [
     'RET506', # Unnecessary `else` after `raise` statement
     'Q001', # Remove bad quotes
     'Q002', # Remove bad quotes
-    'FA100', # Missing `from __future__ import annotations`, but uses `typing.Optional`
     'COM812', # Missing trailing comma in a list
     'ISC001', # String concatenation with implicit str conversion
     'SIM108', # Ternary operators are not always more readable
@@ -58,7 +57,6 @@ select = [
 
     'E', # pycodestyle error ('W' for warning)
     'F', # pyflakes
-    'FA', # flake8-future-annotations
     'I', # isort
     'ICN', # flake8-import-conventions
     'INP', # flake8-no-pep420

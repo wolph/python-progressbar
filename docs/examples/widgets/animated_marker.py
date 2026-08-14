@@ -6,8 +6,6 @@ Unlike ``Bar``, it does not grow or fill; it only replaces one character
 each redraw.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

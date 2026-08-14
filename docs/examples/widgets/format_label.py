@@ -5,8 +5,6 @@ Reach for it to display fields from the bar's own data snapshot --
 none of the built-in widgets already say it the way you want.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

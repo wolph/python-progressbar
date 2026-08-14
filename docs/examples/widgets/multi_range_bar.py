@@ -9,8 +9,6 @@ of categories of one whole. Its loop runs until every unit reaches the
 widget is for.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

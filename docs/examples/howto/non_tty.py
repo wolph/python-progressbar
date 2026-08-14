@@ -12,8 +12,6 @@ stdout genuinely is a terminal -- a build log, say, where every line should
 stay on screen.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

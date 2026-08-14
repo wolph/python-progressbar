@@ -5,8 +5,6 @@ prefer ``Variable`` in new code. Shown here in its classic role: a live
 training metric climbing toward its target, reported next to the bar.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

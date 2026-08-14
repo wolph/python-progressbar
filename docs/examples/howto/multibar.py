@@ -9,8 +9,6 @@ complete one at a time. Finished bars stay on screen rather than
 disappearing -- `remove_finished` defaults to an hour.
 """
 
-from __future__ import annotations
-
 import random
 import sys
 import time

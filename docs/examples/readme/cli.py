@@ -8,8 +8,6 @@ transfer progress on stderr. This example drives it in-process, moving
 and byte-counter displays turned on.
 """
 
-from __future__ import annotations
-
 import pathlib
 import tempfile
 

@@ -7,8 +7,6 @@ string, which is what most other examples in this set use for their
 prefix.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

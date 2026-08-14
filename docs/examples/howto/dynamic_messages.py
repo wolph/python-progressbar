@@ -6,8 +6,6 @@ Older code may still import `DynamicMessage` -- it is a plain subclass of
 from the same value, to show they behave identically.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

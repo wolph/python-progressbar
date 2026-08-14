@@ -1,7 +1,5 @@
 """Two named bars progressing at different rates in one terminal."""
 
-from __future__ import annotations
-
 import sys
 import time
 

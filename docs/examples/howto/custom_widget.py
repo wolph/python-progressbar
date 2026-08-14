@@ -7,8 +7,6 @@ mutate it); `data` is the same snapshot dict the built-in widgets read --
 current phase instead of showing a percentage.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

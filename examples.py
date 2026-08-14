@@ -1,12 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 """Run every documented example in sequence.
 
 The examples themselves live in ``docs/examples/`` so that the
 documentation, the generated animations, the browser console and the
 test suite all read the same files. This script only sequences them.
 """
-
-from __future__ import annotations
 
 import importlib.util
 import pathlib

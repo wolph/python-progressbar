@@ -6,8 +6,6 @@ fraction against -- just the raw count so far. Compare ``SimpleProgress``
 should carry a unit label.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

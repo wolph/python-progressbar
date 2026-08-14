@@ -9,8 +9,6 @@ longer than most in this set -- otherwise it barely twitches before the
 run ends.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

@@ -6,8 +6,6 @@ fresh bar. Call an existing `ProgressBar` instance the same way --
 prefix and want to reuse it as a wrapper.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

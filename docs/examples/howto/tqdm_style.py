@@ -7,8 +7,6 @@ the prefix and `total` becomes `max_value` on any `ProgressBar`. `unit=`/
 live per-file status.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

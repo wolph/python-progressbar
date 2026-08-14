@@ -12,8 +12,6 @@ whole-second resolution, so too short a run shows only a tick or two rather
 than a real countdown reacting to the pace change.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

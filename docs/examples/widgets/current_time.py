@@ -10,8 +10,6 @@ second would show the same, unmoving reading for its entire run --
 "updated live" would never actually be visible.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

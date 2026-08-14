@@ -7,8 +7,6 @@ indeterminate bar, which never has a percentage, uses `fg_none`/`bg_none`
 as a single unchanging color instead.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

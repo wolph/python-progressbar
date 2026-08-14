@@ -5,8 +5,6 @@ bar on its next redraw, instead of colliding with the bar's own carriage
 return.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

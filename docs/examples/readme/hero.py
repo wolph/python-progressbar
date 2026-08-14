@@ -1,7 +1,5 @@
 """A build log printing above a progress bar without corrupting it."""
 
-from __future__ import annotations
-
 import time
 
 import progressbar

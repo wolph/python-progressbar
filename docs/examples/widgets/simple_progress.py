@@ -5,8 +5,6 @@ just their ratio -- compare ``Percentage`` for the ratio alone, and
 ``UnitProgress`` for the same count with a unit label attached.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

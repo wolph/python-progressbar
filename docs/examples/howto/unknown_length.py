@@ -5,8 +5,6 @@ so there is still something visibly moving -- there is no percentage or
 ETA to show without a known total to measure against.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

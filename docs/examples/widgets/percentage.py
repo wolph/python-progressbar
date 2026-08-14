@@ -6,8 +6,6 @@ the raw counts matter more than the ratio, and ``PercentageLabelBar``
 to overlay the same percentage on a fill bar instead of beside it.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

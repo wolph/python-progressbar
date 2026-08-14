@@ -10,8 +10,6 @@ updates -- and since the ETA is only shown to whole-second resolution,
 "longer" means several seconds, not merely more than a few milliseconds.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

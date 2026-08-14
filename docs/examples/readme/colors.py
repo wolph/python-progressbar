@@ -7,8 +7,6 @@ sweeps sky blue into fuchsia. The scan bar has no percentage to sweep
 unchanging cyan instead.
 """
 
-from __future__ import annotations
-
 import sys
 import time
 

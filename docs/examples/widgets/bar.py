@@ -6,8 +6,6 @@ See ``ReverseBar`` for the mirrored direction, ``GranularBar`` for
 sub-character precision, and ``BouncingBar`` for indeterminate work.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

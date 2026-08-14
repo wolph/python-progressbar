@@ -8,8 +8,6 @@ Inside a task, `progressbar.current_task_bar()` hands back that task's
 own bar so it can report sub-progress too.
 """
 
-from __future__ import annotations
-
 import sys
 import time
 

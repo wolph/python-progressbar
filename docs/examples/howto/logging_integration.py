@@ -10,8 +10,6 @@ recursing through the capture. Always unwrap (and, here, remove the
 handler) in a `finally`, since both mutate process-global state.
 """
 
-from __future__ import annotations
-
 import logging
 import sys
 import time

@@ -6,8 +6,6 @@ specialization of ``FormatLabelBar`` with the format fixed to the
 percentage.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

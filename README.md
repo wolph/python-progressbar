@@ -84,8 +84,6 @@ sweeps sky blue into fuchsia. The scan bar has no percentage to sweep
 unchanging cyan instead.
 """
 
-from __future__ import annotations
-
 import sys
 import time
 
@@ -161,8 +159,6 @@ the bar instead:
 ```python
 """A build log printing above a progress bar without corrupting it."""
 
-from __future__ import annotations
-
 import time
 
 import progressbar
@@ -201,8 +197,6 @@ thread, and waits for all of them on exit:
 
 ```python
 """Two named bars progressing at different rates in one terminal."""
-
-from __future__ import annotations
 
 import sys
 import time
@@ -274,8 +268,6 @@ here, lets the finished overall bar stay on screen when the run ends.
 Inside a task, `progressbar.current_task_bar()` hands back that task's
 own bar so it can report sub-progress too.
 """
-
-from __future__ import annotations
 
 import sys
 import time
@@ -352,8 +344,6 @@ with a counter instead of a percentage:
 
 ```python
 """A bar for work whose total is not known up front."""
-
-from __future__ import annotations
 
 import time
 

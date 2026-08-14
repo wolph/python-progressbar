@@ -11,8 +11,6 @@ would read "Elapsed Time: 0:00:00" for its entire run -- the one thing this
 widget exists to show would never move.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

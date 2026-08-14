@@ -8,8 +8,6 @@ example runs longer and sleeps longer per step than most in this set;
 without that, it would render '0.0 B/s' the whole way through.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

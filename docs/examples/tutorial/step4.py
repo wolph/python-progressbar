@@ -5,8 +5,6 @@ picked based on `max_value` -- the previous step's percentage, bar and ETA
 are gone unless you list them again yourself.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

@@ -7,8 +7,6 @@ rendered together as one compact suffix, and ``DynamicMessage`` for the
 original name of this same widget.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

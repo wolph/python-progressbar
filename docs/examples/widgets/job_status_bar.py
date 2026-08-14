@@ -5,8 +5,6 @@ progress -- each ``update()`` records one job's outcome as a colored
 marker; jobs not yet reported stay blank rather than showing a fill.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

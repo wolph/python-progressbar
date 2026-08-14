@@ -6,8 +6,6 @@ the next redraw, rather than the two colliding over the same carriage
 return.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

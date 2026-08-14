@@ -5,8 +5,6 @@ how much work is left, so it falls back to an indeterminate spinner
 instead of a percentage.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

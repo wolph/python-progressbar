@@ -6,8 +6,6 @@ for the same idea without a unit, and ``DataSize`` for a single scaled
 byte value rather than a count against a total.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

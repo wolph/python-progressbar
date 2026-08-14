@@ -6,8 +6,6 @@ sensible unit. Compare ``FileTransferSpeed``, which shows a *rate*
 instead of a static amount.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

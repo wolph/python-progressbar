@@ -8,8 +8,6 @@ every job finishes rather than a fixed ``STEPS`` count, since that is
 what the widget is for.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

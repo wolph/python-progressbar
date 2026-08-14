@@ -5,8 +5,6 @@ bar with no other change to the loop -- start, update and finish all
 happen for you.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

@@ -7,8 +7,6 @@ value and ``FormatCustomText`` for text that is not tied to the bar's
 variables at all.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

@@ -5,8 +5,6 @@ prefer ``AnimatedMarker`` in new code. Shown here in its classic role:
 as the marker character of a ``Bar``, rather than standing alone.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

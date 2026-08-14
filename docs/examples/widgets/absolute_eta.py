@@ -9,8 +9,6 @@ never accumulates enough elapsed time for the projected finish time to
 visibly move.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

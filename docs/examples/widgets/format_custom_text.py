@@ -5,8 +5,6 @@ bar's progress or ``variables`` -- it keeps its own mapping, updated
 directly with ``update_mapping()`` rather than through ``bar.update()``.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar

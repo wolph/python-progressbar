@@ -8,8 +8,6 @@ landed more than a fraction of a second apart, so this sleeps longer per
 step than most examples in this set.
 """
 
-from __future__ import annotations
-
 import random
 import time
 

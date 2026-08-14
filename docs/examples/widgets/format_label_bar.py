@@ -6,8 +6,6 @@ label sits centered over the fill instead of beside it. See
 specifically.
 """
 
-from __future__ import annotations
-
 import time
 
 import progressbar
