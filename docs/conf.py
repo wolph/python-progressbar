@@ -394,3 +394,12 @@ intersphinx_mapping: dict[str, tuple[str, None]] = {
 # workflow's continue-on-error for experimental envs can absorb.
 linkcheck_timeout = 15
 linkcheck_retries = 2
+# GitHub 429-rate-limits anonymous CI requests to github.com pages (seen
+# on this repository's own /commits/develop link), and sphinx's backoff
+# sleeps up to linkcheck_rate_limit_timeout per retry -- 300 s by
+# default, which single-handedly blows the job's 10-minute budget.
+# Links into this repository verify nothing worth that cost.
+linkcheck_rate_limit_timeout = 30
+linkcheck_ignore = [
+    r'https://github\.com/(WoLpH|wolph)/python-progressbar.*',
+]
