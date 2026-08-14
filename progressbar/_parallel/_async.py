@@ -283,6 +283,153 @@ async def execute_async(
         await run.close(success=success)
 
 
+async def aimap(
+    fn: typing.Callable[..., typing.Any],
+    /,
+    *iterables: typing.Iterable[typing.Any],
+    **kwargs: typing.Any,
+) -> typing.AsyncIterator[typing.Any]:
+    """Lazily apply `fn` on the event loop, yielding in input order.
+
+    The async counterpart of `imap`: results-only, ordered, with
+    out-of-order completions held back until their turn. Use
+    `contextlib.aclosing` for deterministic cleanup on early exit.
+    See `execute_async` for keywords.
+    """
+    held: dict[int, typing.Any] = {}
+    next_index: int = 0
+    async for index, _args, _ok, value in execute_async(
+        fn, iterables, **kwargs
+    ):
+        held[index] = value
+        while next_index in held:
+            yield held.pop(next_index)
+            next_index += 1
+
+
+async def aimap_unordered(
+    fn: typing.Callable[..., typing.Any],
+    /,
+    *iterables: typing.Iterable[typing.Any],
+    **kwargs: typing.Any,
+) -> typing.AsyncIterator[tuple[typing.Any, typing.Any]]:
+    """Lazily apply `fn` on the event loop, yielding as tasks finish.
+
+    The async counterpart of `imap_unordered`: ``(item, result)`` pairs
+    in completion order (the pair shape restores the correspondence
+    completion order loses). See `execute_async` for keywords.
+    """
+    single: bool = len(iterables) == 1
+    async for _index, args, _ok, value in execute_async(
+        fn, iterables, **kwargs
+    ):
+        yield _common.item_of(args, single), value
+
+
+async def gather(
+    *awaitables: typing.Awaitable[typing.Any],
+    return_exceptions: bool = False,
+    bar: typing.Any = 'plain',
+    poll_interval: float = DEFAULT_POLL_INTERVAL,
+    timeout: float | None = None,
+    **bar_kwargs: typing.Any,
+) -> list[typing.Any]:
+    """`asyncio.gather` with a progress bar.
+
+    A drop-in replacement: results in argument order, no arguments
+    yields ``[]``, and `return_exceptions` keeps asyncio's exact
+    keyword (mapped to ``on_error='return'`` internally). Unlike
+    `amap` there is no concurrency limiting -- the awaitables already
+    exist, matching `asyncio.gather` semantics.
+    """
+    if not awaitables:
+        return []
+    results: dict[int, typing.Any] = {
+        index: value
+        async for index, _args, _ok, value in execute_async(
+            None,
+            (awaitables,),
+            on_error='return' if return_exceptions else 'raise',
+            bar=bar,
+            poll_interval=poll_interval,
+            timeout=timeout,
+            awaitables=True,
+            **bar_kwargs,
+        )
+    }
+    return [results[index] for index in range(len(results))]
+
+
+class AsyncPool:
+    """Shared concurrency limit plus per-call defaults for async verbs.
+
+    The async sibling of `Pool`. There is no executor to manage --
+    tasks run on the caller's event loop -- so this is configuration
+    reuse: a concurrency bound and default keywords applied to every
+    call, overridable per call::
+
+        async with progressbar.AsyncPool(8) as pool:
+            first = await pool.map(fetch, urls)
+            async for item, result in pool.imap_unordered(fetch, more):
+                ...
+    """
+
+    _concurrency: int | None
+    _defaults: dict[str, typing.Any]
+
+    def __init__(
+        self, concurrency: int | None = None, **defaults: typing.Any
+    ) -> None:
+        """Store the concurrency bound and per-call defaults."""
+        self._concurrency = concurrency
+        self._defaults = defaults
+
+    def _merged(self, kwargs: dict[str, typing.Any]) -> dict[str, typing.Any]:
+        """Per-call keywords override the pool's defaults."""
+        return {
+            'concurrency': self._concurrency,
+            **self._defaults,
+            **kwargs,
+        }
+
+    def map(  # noqa: A003 - mirrors the module verb
+        self,
+        fn: typing.Callable[..., typing.Any],
+        /,
+        *iterables: typing.Iterable[typing.Any],
+        **kwargs: typing.Any,
+    ) -> typing.Coroutine[typing.Any, typing.Any, list[typing.Any]]:
+        """`amap` with this pool's limit and defaults; awaitable."""
+        return amap(fn, *iterables, **self._merged(kwargs))
+
+    def imap(
+        self,
+        fn: typing.Callable[..., typing.Any],
+        /,
+        *iterables: typing.Iterable[typing.Any],
+        **kwargs: typing.Any,
+    ) -> typing.AsyncIterator[typing.Any]:
+        """`aimap` with this pool's limit and defaults."""
+        return aimap(fn, *iterables, **self._merged(kwargs))
+
+    def imap_unordered(
+        self,
+        fn: typing.Callable[..., typing.Any],
+        /,
+        *iterables: typing.Iterable[typing.Any],
+        **kwargs: typing.Any,
+    ) -> typing.AsyncIterator[tuple[typing.Any, typing.Any]]:
+        """`aimap_unordered` with this pool's limit and defaults."""
+        return aimap_unordered(fn, *iterables, **self._merged(kwargs))
+
+    async def __aenter__(self) -> AsyncPool:
+        """Return the pool (no resource to acquire; symmetry with Pool)."""
+        return self
+
+    async def __aexit__(self, *exc_info: typing.Any) -> None:
+        """Nothing to release; tasks belong to the caller's loop."""
+
+
 async def amap(
     fn: typing.Callable[..., typing.Any],
     /,

@@ -179,6 +179,174 @@ class TestKeepAlive:
         assert stream.getvalue().count('Elapsed Time') > 3
 
 
+class TestAimap:
+    @pytest.mark.no_freezegun
+    def test_ordered_despite_scrambled_completion(self) -> None:
+        async def _staggered(value: int) -> int:
+            await asyncio.sleep((5 - value) * 0.02)
+            return value
+
+        async def _run() -> list[int]:
+            return [
+                value
+                async for value in _async.aimap(
+                    _staggered, range(5), bar=False
+                )
+            ]
+
+        assert asyncio.run(_run()) == list(range(5))
+
+    @pytest.mark.no_freezegun
+    def test_early_break_with_aclosing(self) -> None:
+        import contextlib
+
+        async def _run() -> list[int]:
+            collected: list[int] = []
+            async with contextlib.aclosing(
+                _async.aimap(
+                    _async_double, range(10), concurrency=2, bar=False
+                )
+            ) as iterator:
+                async for value in iterator:
+                    collected.append(value)
+                    if len(collected) == 2:
+                        break
+            return collected
+
+        assert asyncio.run(_run()) == [0, 2]
+
+
+class TestAimapUnordered:
+    @pytest.mark.no_freezegun
+    def test_yields_pairs_in_completion_order(self) -> None:
+        async def _staggered(value: int) -> int:
+            await asyncio.sleep((5 - value) * 0.02)
+            return value
+
+        async def _run() -> list[tuple[int, int]]:
+            return [
+                pair
+                async for pair in _async.aimap_unordered(
+                    _staggered, range(5), bar=False
+                )
+            ]
+
+        pairs: list[tuple[int, int]] = asyncio.run(_run())
+        assert sorted(pairs) == [(value, value) for value in range(5)]
+        assert pairs[0] == (4, 4)
+
+    def test_multi_iterable_pairs_use_args_tuple(self) -> None:
+        async def _add(left: int, right: int) -> int:
+            return left + right
+
+        async def _run() -> list[tuple[typing.Any, int]]:
+            return [
+                pair
+                async for pair in _async.aimap_unordered(
+                    _add, [1, 2], [10, 20], bar=False
+                )
+            ]
+
+        assert sorted(asyncio.run(_run())) == [
+            ((1, 10), 11),
+            ((2, 20), 22),
+        ]
+
+
+class TestGather:
+    def test_ordered_results(self) -> None:
+        async def _run() -> list[int]:
+            return await _async.gather(
+                _async_double(1),
+                _async_double(2),
+                _async_double(3),
+                bar=False,
+            )
+
+        assert asyncio.run(_run()) == [2, 4, 6]
+
+    def test_empty_returns_empty_list(self) -> None:
+        async def _run() -> list[typing.Any]:
+            return await _async.gather()
+
+        assert asyncio.run(_run()) == []
+
+    def test_return_exceptions(self) -> None:
+        async def _run() -> list[typing.Any]:
+            return await _async.gather(
+                _async_double(1),
+                _boom_on_two(2),
+                _async_double(3),
+                return_exceptions=True,
+                bar=False,
+            )
+
+        results: list[typing.Any] = asyncio.run(_run())
+        assert results[0] == 2
+        assert isinstance(results[1], ValueError)
+        assert results[2] == 6
+
+    def test_fail_fast_by_default(self) -> None:
+        async def _run() -> list[typing.Any]:
+            return await _async.gather(
+                _async_double(1), _boom_on_two(2), bar=False
+            )
+
+        with pytest.raises(ValueError, match='boom'):
+            asyncio.run(_run())
+
+
+class TestAsyncPool:
+    @pytest.mark.no_freezegun
+    def test_bounds_concurrency(self) -> None:
+        running: list[int] = [0]
+        seen_max: list[int] = [0]
+
+        async def _tracked(value: int) -> int:
+            running[0] += 1
+            seen_max[0] = max(seen_max[0], running[0])
+            await asyncio.sleep(0.02)
+            running[0] -= 1
+            return value
+
+        async def _run() -> list[int]:
+            async with _async.AsyncPool(2, bar=False) as pool:
+                return await pool.map(_tracked, range(8))
+
+        assert asyncio.run(_run()) == list(range(8))
+        assert seen_max[0] <= 2
+
+    def test_defaults_merge_and_override(self) -> None:
+        async def _run() -> list[typing.Any]:
+            async with _async.AsyncPool(2, bar=False) as pool:
+                return await pool.map(
+                    _boom_on_two, range(4), on_error='return'
+                )
+
+        results: list[typing.Any] = asyncio.run(_run())
+        assert isinstance(results[2], ValueError)
+
+    def test_imap_methods(self) -> None:
+        async def _run() -> tuple[list[int], list[tuple[int, int]]]:
+            async with _async.AsyncPool(2, bar=False) as pool:
+                ordered: list[int] = [
+                    value async for value in pool.imap(_async_double, range(3))
+                ]
+                pairs: list[tuple[int, int]] = sorted(
+                    [
+                        pair
+                        async for pair in pool.imap_unordered(
+                            _async_double, range(3)
+                        )
+                    ]
+                )
+            return ordered, pairs
+
+        ordered, pairs = asyncio.run(_run())
+        assert ordered == [0, 2, 4]
+        assert pairs == [(0, 0), (1, 2), (2, 4)]
+
+
 class TestCallStrategy:
     def test_detects_coroutine_function(self) -> None:
         assert _async._call_strategy(_async_double) == 'async'
