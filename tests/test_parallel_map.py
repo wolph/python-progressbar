@@ -100,6 +100,32 @@ class TestMap:
         assert main_thread.name not in seen
 
 
+class TestMultiBarMode:
+    def test_workers_see_their_task_bar(self) -> None:
+        from progressbar._parallel import _common
+
+        seen: list[bool] = []
+
+        def _check(value: int) -> int:
+            seen.append(_common.current_task_bar() is not None)
+            return value
+
+        _sync.map(_check, range(4), workers=2, bar='multi', fd=io.StringIO())
+        assert seen == [True, True, True, True]
+
+    def test_plain_mode_has_no_task_bar(self) -> None:
+        from progressbar._parallel import _common
+
+        seen: list[bool] = []
+
+        def _check(value: int) -> int:
+            seen.append(_common.current_task_bar() is None)
+            return value
+
+        _sync.map(_check, range(2), workers=2, bar=False)
+        assert seen == [True, True]
+
+
 class TestResolveExecutor:
     def test_thread_pool_created_and_owned(self) -> None:
         executor, owned, workers = _sync.resolve_executor(

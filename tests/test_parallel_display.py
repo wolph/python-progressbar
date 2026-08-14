@@ -152,6 +152,21 @@ class TestMultiDisplay:
         display.finish()
         assert display.multibar._thread is None  # noqa: SLF001
 
+    def test_task_finished_with_unknown_seq_is_a_noop(self) -> None:
+        display = self._multi()
+        display.start(1)
+        display.task_finished(99, ok=True)
+        display.finish()
+
+    def test_finish_removes_live_task_bars(self) -> None:
+        display = self._multi()
+        display.start(3)
+        display.task_started(1, 'still-running')
+        display.task_started(2, 'also-running')
+        display.finish(success=False)
+        assert '1: still-running' not in display.multibar
+        assert '2: also-running' not in display.multibar
+
     def test_adopts_existing_multibar_without_stopping_it(self) -> None:
         multibar = progressbar.MultiBar(fd=io.StringIO())
         multibar.start()

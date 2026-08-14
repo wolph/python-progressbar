@@ -141,11 +141,8 @@ class _AsyncRun:
         while self.in_flight:
             self._check_deadline()
             task = await self._next_done()
-            if task is None:
-                continue
-            event: Completion | None = self._handle(task)
-            if event is not None:
-                yield event
+            if task is not None:
+                yield self._handle(task)
 
     def _launch_one(self) -> bool:
         """Create the next task; `False` when the input is exhausted."""
@@ -196,7 +193,7 @@ class _AsyncRun:
                 f'parallel execution exceeded timeout={self.timeout}'
             )
 
-    def _handle(self, task: asyncio.Task[typing.Any]) -> Completion | None:
+    def _handle(self, task: asyncio.Task[typing.Any]) -> Completion:
         """Turn one finished task into a completion event."""
         index, args, seq = self.in_flight.pop(task)
         if task.cancelled():

@@ -124,6 +124,10 @@ class TestRun:
         assert results[0].returncode == 0
         assert isinstance(results[1], subprocess.CalledProcessError)
 
+    def test_pool_kwarg_rejected(self) -> None:
+        with pytest.raises(TypeError, match=r'Pool\.run'):
+            _shell.run(_EXIT, [1], pool='process', bar=False)
+
     @pytest.mark.no_freezegun
     def test_pool_run_method(self) -> None:
         with _sync.Pool(2) as pool:

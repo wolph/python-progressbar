@@ -280,10 +280,8 @@ class MultiDisplay:
 
     def finish(self, *, success: bool = True) -> None:
         """Finish the overall bar and wind down the render thread."""
-        for key in list(self._keys.values()):
-            if key in self.multibar:
-                del self.multibar[key]
-        self._keys.clear()
+        for seq in list(self._keys):
+            self.task_finished(seq, ok=success)
         self._overall.finish(dirty=not success)
         if self._started_thread:
             # One last frame so the final state is on screen even if

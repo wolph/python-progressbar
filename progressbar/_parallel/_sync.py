@@ -109,7 +109,7 @@ def _interpreter_executor(
         )
     except AttributeError:
         raise ValueError('pool="interpreter" requires Python 3.14+') from None
-    return interpreter_pool(
+    return interpreter_pool(  # pragma: no cover - reachable on 3.14+ only
         max_workers=workers,
         initializer=initializer,
         initargs=initargs,

@@ -347,6 +347,46 @@ class TestAsyncPool:
         assert pairs == [(0, 0), (1, 2), (2, 4)]
 
 
+class TestMultiBarMode:
+    def test_async_workers_see_their_task_bar(self) -> None:
+        from progressbar._parallel import _common
+
+        seen: list[bool] = []
+
+        async def _check(value: int) -> int:
+            seen.append(_common.current_task_bar() is not None)
+            return value
+
+        async def _run() -> list[int]:
+            return await _async.amap(
+                _check, range(3), bar='multi', fd=io.StringIO()
+            )
+
+        assert asyncio.run(_run()) == [0, 1, 2]
+        assert seen == [True, True, True]
+
+
+class TestExternalCancellation:
+    def test_self_cancelling_task_surfaces(self) -> None:
+        async def _self_cancel(value: int) -> int:
+            if value == 1:
+                task = asyncio.current_task()
+                assert task is not None
+                task.cancel()
+                await asyncio.sleep(1)
+            return value
+
+        async def _run() -> list[int]:
+            return await _async.amap(
+                _self_cancel, range(3), concurrency=1, bar=False
+            )
+
+        # A cancellation this run did not initiate must surface, never
+        # silently drop the item.
+        with pytest.raises(asyncio.CancelledError):
+            asyncio.run(_run())
+
+
 class TestCallStrategy:
     def test_detects_coroutine_function(self) -> None:
         assert _async._call_strategy(_async_double) == 'async'
