@@ -380,10 +380,9 @@ if __name__ == '__main__':
 The features above are the flashy half. The other half is why the
 package has survived since 2012:
 
-- Maintained since February 2012, with 111 releases on PyPI since
-  2013. The lineage goes back further: this is the continuation of the
-  original `progressbar` package, on PyPI since 2006, and it still
-  works as a drop-in replacement for it.
+- Supported non-stop since 2012, with 111 releases on PyPI, and since
+  2008 before that as the original `progressbar` library, which
+  progressbar2 still replaces drop-in.
 - 1131 tests at 100% branch coverage, enforced in CI on every commit.
 - Fully typed (PEP 561 `py.typed`), so your type checker sees the real
   signatures.

@@ -141,6 +141,13 @@ def race_frames(results: dict[str, typing.Any]) -> list[list[str]]:
             fraction = min(1.0, t / total)
             filled = round(fraction * BAR_WIDTH)
             pct = f'{fraction * 100:3.0f}%'
+            if lane == 'progressbar2':
+                # The full bar's default widgets color the percentage
+                # readout with the red->green progress gradient
+                # (widgets.Bar's `fg=colors.gradient` default), so the
+                # plain lane wears that here too. The fill stays plain
+                # '#', which is also faithful to the default look.
+                pct = f'{_sgr(*_gradient_rgb(fraction))}{pct}{RESET}'
             suffix = f'  {total * 1000:.1f} ms' if fraction >= 1.0 else ''
             lines.append(
                 f'{RESET}{lane:<{LABEL_WIDTH}} {pct} '
