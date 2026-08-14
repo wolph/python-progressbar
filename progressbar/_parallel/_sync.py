@@ -468,6 +468,158 @@ def execute(
         run.close(interrupted=interrupted, success=success)
 
 
+#: Keywords that configure a `Pool`'s lazily created executor rather
+#: than an individual run.
+_EXECUTOR_KWARG_NAMES: frozenset[str] = frozenset(
+    {
+        'initializer',
+        'initargs',
+        'mp_context',
+        'max_tasks_per_child',
+        'thread_name_prefix',
+    }
+)
+
+
+class Pool:
+    """A reusable executor plus per-call defaults for the sync verbs.
+
+    The flat verbs create and destroy an executor per call; a `Pool`
+    keeps one alive across calls::
+
+        with progressbar.Pool(8) as pool:
+            first = pool.map(fetch, urls)
+            second = pool.map(fetch, more_urls)
+
+    Positional shorthand: ``Pool(8)`` is eight threads, ``Pool(8,
+    'process')`` eight processes. ``Pool(executor=existing)`` adopts a
+    caller-owned executor (never shut down here). Every other keyword
+    becomes a per-call default that individual calls can override.
+
+    The executor is created lazily on first use, so an unused
+    ``Pool(kind='process')`` spawns nothing.
+    """
+
+    _workers: int | None
+    _kind: str
+    _external: concurrent.futures.Executor | None
+    _executor: concurrent.futures.Executor | None
+    _executor_kwargs: dict[str, typing.Any]
+    _defaults: dict[str, typing.Any]
+
+    def __init__(
+        self,
+        workers: int | None = None,
+        kind: str = 'thread',
+        *,
+        executor: concurrent.futures.Executor | None = None,
+        **defaults: typing.Any,
+    ) -> None:
+        """Validate eagerly (fail fast); create nothing yet."""
+        executor_kwargs: dict[str, typing.Any] = {
+            name: defaults.pop(name)
+            for name in list(defaults)
+            if name in _EXECUTOR_KWARG_NAMES
+        }
+        if executor is not None:
+            if workers is not None or kind != 'thread' or executor_kwargs:
+                raise ValueError(
+                    'workers/kind/executor-construction options cannot '
+                    'be combined with an existing executor instance'
+                )
+        elif kind not in _POOL_KINDS:
+            raise ValueError(
+                f'kind={kind!r} is not valid: expected "thread", '
+                f'"process" or "interpreter"'
+            )
+        self._workers = workers
+        self._kind = kind
+        self._external = executor
+        self._executor = None
+        self._executor_kwargs = executor_kwargs
+        self._defaults = defaults
+
+    @property
+    def executor(self) -> concurrent.futures.Executor:
+        """The underlying executor, created on first access."""
+        if self._external is not None:
+            return self._external
+        if self._executor is None:
+            self._executor, _owned, _workers = resolve_executor(
+                self._kind,
+                self._workers,
+                initializer=self._executor_kwargs.get('initializer'),
+                initargs=self._executor_kwargs.get('initargs', ()),
+                mp_context=self._executor_kwargs.get('mp_context'),
+                max_tasks_per_child=self._executor_kwargs.get(
+                    'max_tasks_per_child'
+                ),
+                thread_name_prefix=self._executor_kwargs.get(
+                    'thread_name_prefix', ''
+                ),
+            )
+        return self._executor
+
+    def _merged(self, kwargs: dict[str, typing.Any]) -> dict[str, typing.Any]:
+        """Per-call keywords override the pool's defaults."""
+        return {**self._defaults, **kwargs, 'pool': self.executor}
+
+    def map(  # noqa: A003 - mirrors the module verb
+        self,
+        fn: typing.Callable[..., typing.Any],
+        /,
+        *iterables: typing.Iterable[typing.Any],
+        **kwargs: typing.Any,
+    ) -> list[typing.Any]:
+        """`map` on this pool's executor; see the module `map`."""
+        return map(fn, *iterables, **self._merged(kwargs))
+
+    def imap(
+        self,
+        fn: typing.Callable[..., typing.Any],
+        /,
+        *iterables: typing.Iterable[typing.Any],
+        **kwargs: typing.Any,
+    ) -> typing.Generator[typing.Any, None, None]:
+        """`imap` on this pool's executor; see the module `imap`."""
+        return imap(fn, *iterables, **self._merged(kwargs))
+
+    def imap_unordered(
+        self,
+        fn: typing.Callable[..., typing.Any],
+        /,
+        *iterables: typing.Iterable[typing.Any],
+        **kwargs: typing.Any,
+    ) -> typing.Generator[tuple[typing.Any, typing.Any], None, None]:
+        """`imap_unordered` on this pool's executor; see the module verb."""
+        return imap_unordered(fn, *iterables, **self._merged(kwargs))
+
+    def starmap(
+        self,
+        fn: typing.Callable[..., typing.Any],
+        iterable: typing.Iterable[typing.Any],
+        /,
+        **kwargs: typing.Any,
+    ) -> list[typing.Any]:
+        """`starmap` on this pool's executor; see the module `starmap`."""
+        return starmap(fn, iterable, **self._merged(kwargs))
+
+    def shutdown(
+        self, wait: bool = True, *, cancel_futures: bool = False
+    ) -> None:
+        """Shut down the owned executor; adopted executors are spared."""
+        if self._executor is not None:
+            self._executor.shutdown(wait=wait, cancel_futures=cancel_futures)
+
+    def __enter__(self) -> Pool:
+        """Return the pool; the executor still waits for first use."""
+        return self
+
+    def __exit__(self, *exc_info: typing.Any) -> None:
+        """Shut down the owned executor, waiting for running work."""
+        self.shutdown(wait=True)
+
+
 def _star_call(
     fn: typing.Callable[..., typing.Any], args: typing.Any
 ) -> typing.Any:
