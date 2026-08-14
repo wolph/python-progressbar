@@ -393,8 +393,11 @@ def test_readme_demos_are_registered_in_display_order() -> None:
         demo for demo in demos.DEMOS if demo.name.startswith('readme/')
     ]
     assert [(demo.name, demo.title) for demo in readme_demos] == [
+        ('readme/cli', 'progressbar data.bin -o copy.bin'),
+        ('readme/colors', 'Gradients, colors and animated markers'),
         ('readme/hero', 'Progress with clean logs'),
         ('readme/multibar', 'Multiple active jobs'),
+        ('readme/parallel', 'progressbar.map with per-task bars'),
         ('readme/unknown-length', 'Unknown length'),
     ]
 
@@ -469,23 +472,32 @@ def test_time_derived_widget_reading_visibly_changes(
     )
 
 
+#: Every generated demo/race asset the README embeds.
+README_ASSETS = (
+    'readme-race.svg',
+    'readme-colors.svg',
+    'readme-hero.svg',
+    'readme-multibar.svg',
+    'readme-parallel.svg',
+    'readme-cli.svg',
+    'readme-unknown-length.svg',
+)
+
+
 def test_readme_uses_absolute_demo_asset_urls() -> None:
-    # README.rst is rendered as the PyPI package description, which serves
+    # README.md is rendered as the PyPI package description, which serves
     # the file with no repository around it -- relative image paths (e.g.
     # `docs/_static/...`) 404 there, so demo assets must be absolute URLs
-    # back to this repo instead, pointing at the registry's committed demo
-    # names under docs/_static/demos/ (see docs/examples/_registry.py's
-    # Demo.svg_path), not the superseded docs/_static/progressbar-*.svg
-    # assets those replaced.
-    readme = (demos.ROOT / 'README.rst').read_text(encoding='utf-8')
+    # back to this repo instead, pointing at the committed generated
+    # assets under docs/_static/demos/ (see docs/examples/_registry.py's
+    # Demo.svg_path and scripts/render_race.py), not the superseded
+    # docs/_static/progressbar-*.svg assets those replaced.
+    readme = (demos.ROOT / 'README.md').read_text(encoding='utf-8')
 
-    assert f'.. image:: {_RAW_ASSET_BASE}/demos/readme-hero.svg' in readme
-    assert f'.. image:: {_RAW_ASSET_BASE}/demos/readme-multibar.svg' in readme
-    assert (
-        f'.. image:: {_RAW_ASSET_BASE}/demos/readme-unknown-length.svg'
-        in readme
-    )
-    assert '.. image:: docs/_static/' not in readme
+    for asset in README_ASSETS:
+        assert f'{_RAW_ASSET_BASE}/demos/{asset}' in readme
+    assert '](docs/_static/' not in readme
+    assert 'src="docs/_static/' not in readme
     assert 'progressbar-hero.svg' not in readme
     assert 'progressbar-multibar.svg' not in readme
     assert 'progressbar-unknown-length.svg' not in readme
@@ -494,34 +506,32 @@ def test_readme_uses_absolute_demo_asset_urls() -> None:
 
 
 def _readme_demo_block(example_name: str) -> str:
-    """Return ``docs/examples/readme/{example_name}.py``, RST-indented.
+    """Return ``docs/examples/readme/{example_name}.py`` as a Markdown fence.
 
-    README.rst is plain RST rendered standalone on PyPI -- no Sphinx, so no
-    ``literalinclude`` -- meaning each ``.. code:: python`` block is a
-    literal copy of the matching example file's current contents, indented
-    four spaces per RST's code-block convention. This must stay a copy
-    checked by a test, not just a one-time paste: nothing else would catch
-    the block silently drifting out of sync the next time someone edits the
-    example but not the README.
+    README.md is rendered standalone on PyPI -- no Sphinx, so no
+    ``literalinclude`` -- meaning each ```` ```python ```` block is a
+    literal copy of the matching example file's current contents. This
+    must stay a copy checked by a test, not just a one-time paste:
+    nothing else would catch the block silently drifting out of sync the
+    next time someone edits the example but not the README.
     """
     source = (
         demos.ROOT / 'docs' / 'examples' / 'readme' / f'{example_name}.py'
     ).read_text(encoding='utf-8')
-    return '\n'.join(
-        f'    {line}' if line else '' for line in source.splitlines()
-    )
+    return f'```python\n{source}```'
 
 
 @pytest.mark.parametrize(
-    'example_name', ['hero', 'multibar', 'unknown_length']
+    'example_name',
+    ['colors', 'hero', 'multibar', 'parallel', 'unknown_length'],
 )
 def test_readme_code_blocks_match_example_sources(example_name: str) -> None:
-    readme = (demos.ROOT / 'README.rst').read_text(encoding='utf-8')
+    readme = (demos.ROOT / 'README.md').read_text(encoding='utf-8')
     assert _readme_demo_block(example_name) in readme
 
 
 def test_readme_omits_obsolete_gpg_release_verification() -> None:
-    readme = (demos.ROOT / 'README.rst').read_text(encoding='utf-8')
+    readme = (demos.ROOT / 'README.md').read_text(encoding='utf-8')
 
     assert 'Release verification' not in readme
     assert 'GPG' not in readme
@@ -559,6 +569,51 @@ def test_multibar_demo_shows_both_bars_finishing() -> None:
     assert 'build' in last_frame
     assert 'test' in last_frame
     assert last_frame.count('(24 of 24)') == 2
+
+
+def test_colors_demo_captures_colored_multibar() -> None:
+    demo = demos.DEMOS_BY_NAME['readme/colors']
+    frames = demos.capture_demo(demo)
+    text = '\n'.join(line for frame in frames for line in frame)
+
+    assert 'download' in text
+    assert 'render' in text
+    assert 'scan' in text
+    # The gradient/fixed colors must survive capture as extended SGR
+    # sequences -- a colorless montage would defeat the demo.
+    assert '\x1b[38;' in text
+    # All three styled bars visible together at least once.
+    assert any(len(frame) == 3 for frame in frames)
+
+
+def test_parallel_demo_captures_total_and_task_bars() -> None:
+    demo = demos.DEMOS_BY_NAME['readme/parallel']
+    frames = demos.capture_demo(demo)
+    text = '\n'.join(line for frame in frames for line in frame)
+
+    assert frames
+    assert 'Total' in text
+    # Some frame shows the overall bar together with at least one
+    # per-task bar -- the entire point of ``bar='multi'``.
+    assert any(
+        len(frame) >= 2 and any('Total' in line for line in frame)
+        for frame in frames
+    )
+    # The batch completes: the final frame reports every item done.
+    assert '(8 of 8)' in '\n'.join(frames[-1])
+
+
+def test_cli_demo_captures_pv_style_transfer() -> None:
+    demo = demos.DEMOS_BY_NAME['readme/cli']
+    frames = demos.capture_demo(demo)
+    text = '\n'.join(line for frame in frames for line in frame)
+
+    # The pv-style widgets all render: percentage, byte counter, rate.
+    assert '%' in text
+    assert 'B/s' in text
+    assert 'iB' in text
+    # The transfer completes on screen.
+    assert any('100%' in line for line in frames[-1])
 
 
 def test_capture_demo_reports_a_crashing_example_clearly(

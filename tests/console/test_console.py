@@ -30,7 +30,7 @@ silently:
   form starts a real OS thread, which Pyodide cannot provide
   (``Thread.start()`` raises there). ``howto/multibar`` is the one page
   in the built site that uses it (``readme/multibar`` is registered for
-  SVG rendering only -- ``README.rst`` embeds it as a static image for
+  SVG rendering only -- ``README.md`` embeds it as a static image for
   PyPI/GitHub, never through the ``.. demo::`` directive, so it never
   produces a ``.demo-run`` element to test). The Run button must never
   be offered there, and the contrast case

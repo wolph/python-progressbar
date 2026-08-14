@@ -14,7 +14,7 @@ description = 'A Python Progressbar library to provide visual (yet text based) p
 dynamic = ['version']
 authors = [{ name = 'Rick van Hattem (Wolph)', email = 'wolph@wol.ph' }]
 license = { text = 'BSD-3-Clause' }
-readme = 'README.rst'
+readme = 'README.md'
 keywords = [
     'REPL',
     'animated',

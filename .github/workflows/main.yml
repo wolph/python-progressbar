@@ -67,6 +67,8 @@ jobs:
             tox-env: docs-linkcheck
             experimental: true
           - python-version: '3.14'
+            tox-env: readme
+          - python-version: '3.14'
             tox-env: ruff
           - python-version: '3.14'
             tox-env: codespell

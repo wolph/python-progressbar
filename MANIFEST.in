@@ -3,6 +3,6 @@ recursive-exclude *.pyo
 include CHANGES.rst
 include CONTRIBUTING.rst
 include LICENSE
-include README.rst
+include README.md
 include examples.py
 include pytest.ini

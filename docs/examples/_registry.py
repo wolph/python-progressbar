@@ -74,6 +74,18 @@ DEMOS: tuple[Demo, ...] = (
     # a flicker. Each frame gets a quarter second and the finished state
     # holds for two before the loop restarts.
     Demo(
+        'readme/cli',
+        'progressbar data.bin -o copy.bin',
+        frame_seconds=0.25,
+        end_hold_seconds=2.0,
+    ),
+    Demo(
+        'readme/colors',
+        'Gradients, colors and animated markers',
+        frame_seconds=0.25,
+        end_hold_seconds=2.0,
+    ),
+    Demo(
         'readme/hero',
         'Progress with clean logs',
         log_lines=2,
@@ -85,6 +97,16 @@ DEMOS: tuple[Demo, ...] = (
         'Multiple active jobs',
         frame_seconds=0.25,
         end_hold_seconds=2.0,
+    ),
+    Demo(
+        'readme/parallel',
+        'progressbar.map with per-task bars',
+        frame_seconds=0.25,
+        end_hold_seconds=2.0,
+        # Worker threads update their own bars, so which redraws land in
+        # a capture depends on real OS thread scheduling -- same cause as
+        # howto/multibar-line-offset.
+        drift_check=False,
     ),
     Demo(
         'readme/unknown-length',

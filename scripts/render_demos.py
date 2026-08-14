@@ -359,6 +359,24 @@ def _parse_multibar_frames(output: str) -> list[list[str]]:
         offset = int(match.group(1) or 1)
         text = normalize_terminal_line(match.group(2).strip())
         if not text:
+            # An empty body at an offset is MultiBar clearing that row --
+            # its `render` erases the line of a bar that vanished since
+            # the previous frame (e.g. the parallel display deletes each
+            # finished task bar). Dropping the tracked row, rather than
+            # ignoring the write, keeps removed bars from lingering as
+            # stale duplicates once later redraws reuse their offsets.
+            # The post-clear state is emitted as a frame of its own:
+            # a clear can be the last thing a run writes (a final render
+            # that only retires rows), and without this append the
+            # animation would end on a frame still showing the retired
+            # bar. `dedupe_consecutive_frames` folds the no-op cases.
+            if lines_by_offset.pop(offset, None) and lines_by_offset:
+                frames.append(
+                    [
+                        lines_by_offset[key]
+                        for key in sorted(lines_by_offset, reverse=True)
+                    ]
+                )
             continue
         lines_by_offset[offset] = text
         frames.append(

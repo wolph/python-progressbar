@@ -45,22 +45,22 @@ def _font() -> str:
 
 
 def _classify(panel: str, key: str) -> str:
-    """Tag a library as our fast default, our full mode, or another lib."""
-    if key == 'progressbar2-fast':
+    """Tag a library as our accelerated spelling, our plain one, or another.
+
+    Every panel now carries both spellings under explicit keys:
+    ``progressbar2[fast]`` (A/C) and ``progressbar2-fast`` (B) are the
+    accelerated/lean variants, a bare ``progressbar2`` is the plain
+    install.
+    """
+    if key in ('progressbar2[fast]', 'progressbar2-fast'):
         return FAST
     if key == SUBJECT:
-        # Panels A/C only benchmark the fast default; B splits fast vs full.
-        return FAST if panel in ('A', 'C') else FULL
+        return FULL
     return OTHER
 
 
 def _relabel(panel: str, key: str) -> str:
-    """Display name: spell out fast/full for our bars, raw key otherwise."""
-    cls = _classify(panel, key)
-    if cls == FAST:
-        return 'progressbar2 (fast)'
-    if cls == FULL:
-        return 'progressbar2 (full)'
+    """Display name: the result keys are already self-describing."""
     return key
 
 
@@ -259,7 +259,7 @@ def make_report(data: dict[str, typing.Any], chart_name: str) -> str:
         {k: vv['overhead_ns_per_iter'] for k, vv in a['libs'].items()}
     ):
         vv = a['libs'][name]
-        bold = '**' if name in (SUBJECT, 'progressbar2-fast') else ''
+        bold = '**' if name.startswith('progressbar2') else ''
         w(
             f'| {bold}{name}{bold} | {vv["total_min_s"] * 1e3:.1f} ms '
             f'| {vv["overhead_ns_per_iter"]:.1f} ns '
@@ -282,7 +282,7 @@ def make_report(data: dict[str, typing.Any], chart_name: str) -> str:
         {k: vv['per_update_us'] for k, vv in b['libs'].items()}
     ):
         vv = b['libs'][name]
-        bold = '**' if name in (SUBJECT, 'progressbar2-fast') else ''
+        bold = '**' if name.startswith('progressbar2') else ''
         w(
             f'| {bold}{name}{bold} | {vv["total_min_s"] * 1e3:.1f} ms '
             f'| {vv["per_update_us"]:.2f} us '
@@ -308,7 +308,7 @@ def make_report(data: dict[str, typing.Any], chart_name: str) -> str:
     w('|---|--:|')
     for name, v in _sorted({k: vv['net_ms'] for k, vv in c['libs'].items()}):
         vv = c['libs'][name]
-        bold = '**' if name in (SUBJECT, 'progressbar2-fast') else ''
+        bold = '**' if name.startswith('progressbar2') else ''
         w(f'| {bold}{name}{bold} | {vv["net_ms"]:.1f} ms |')
     w('')
 
@@ -330,10 +330,10 @@ def make_report(data: dict[str, typing.Any], chart_name: str) -> str:
         f'({a_rank[-1][1]:.0f} ns).'
     )
     w(
-        f'  - `{fastest_a}` and `tqdm` win here because their default settings '
-        f'do almost no per-iteration work (counter compare / background refresh '
-        f'thread); `{SUBJECT}` calls a monotonic clock and evaluates its redraw '
-        f'predicate on every `update()`.'
+        f'  - `progressbar2[fast]` wins because the `speedups` C iterator '
+        f'counts natively and only calls back into Python at redraw '
+        f'crossings; a plain `{SUBJECT}` install pays the pure-Python '
+        f'integer gate instead.'
     )
     w(
         f'- **Render cost:** when a redraw actually happens, `{SUBJECT}` draws '
@@ -347,9 +347,11 @@ def make_report(data: dict[str, typing.Any], chart_name: str) -> str:
         f'default (50 ms floor), so in practice the cheap render in B fires '
         f'rarely and the per-iteration cost in A dominates real workloads.'
     )
+    c_rank = _sorted({k: vv['net_ms'] for k, vv in c['libs'].items()})
     w(
-        f'- **Import weight:** `{SUBJECT}` is mid-pack to import; '
-        f'`alive-progress` is the lightest, `rich` the heaviest.'
+        f'- **Import weight:** `{c_rank[0][0]}` is the lightest to import '
+        f'({c_rank[0][1]:.1f} ms), `{c_rank[-1][0]}` the heaviest '
+        f'({c_rank[-1][1]:.1f} ms).'
     )
     w('')
 

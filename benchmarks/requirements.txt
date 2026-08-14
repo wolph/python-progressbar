@@ -1,3 +1,4 @@
+speedups==2.3.0
 tqdm==4.68.3
 rich==15.0.0
 alive-progress==3.3.0

@@ -1791,5 +1791,11 @@ class NullBar(ProgressBar):
         return self
 
     def finish(self, *args: typing.Any, **kwargs: typing.Any) -> ProgressBar:
-        """Do nothing and return self."""
+        """Mark the bar finished without rendering anything.
+
+        The `_finished` flag must still flip: `MultiBar` waits for every
+        member bar's `finished()` before its context manager can exit,
+        and would otherwise wait forever on a `NullBar` member.
+        """
+        self._finished = True
         return self

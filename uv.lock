@@ -792,8 +792,10 @@ docs = [
     { name = "sphinx-autodoc-typehints", version = "3.11.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 docs-tests = [
+    { name = "freezegun" },
     { name = "playwright" },
     { name = "pytest" },
+    { name = "pytest-cov" },
 ]
 fast = [
     { name = "speedups" },
@@ -814,10 +816,12 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "dill", marker = "extra == 'tests'", specifier = ">=0.3.6" },
+    { name = "freezegun", marker = "extra == 'docs-tests'", specifier = ">=0.3.11" },
     { name = "freezegun", marker = "extra == 'tests'", specifier = ">=0.3.11" },
     { name = "playwright", marker = "extra == 'docs-tests'", specifier = ">=1.48.0" },
     { name = "pytest", marker = "extra == 'docs-tests'", specifier = ">=4.6.9" },
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=4.6.9" },
+    { name = "pytest-cov", marker = "extra == 'docs-tests'", specifier = ">=2.6.1" },
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=2.6.1" },
     { name = "python-utils", specifier = ">=3.8.1" },
     { name = "pywin32", marker = "sys_platform == 'win32' and extra == 'tests'" },

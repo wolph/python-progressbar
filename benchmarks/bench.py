@@ -110,8 +110,33 @@ def baseline_loop(n: int) -> None:
 
 
 def iter_progressbar2(f: typing.TextIO, n: int) -> None:
+    # Plain `pip install progressbar2`: no native accelerator, so the
+    # pure-Python integer gate paces the loop. The accelerator is forced
+    # off for this case because the bench venv installs `speedups` for
+    # the `progressbar2[fast]` case below and detection is automatic.
     import progressbar
+    import progressbar.bar
 
+    saved = progressbar.bar._FastBarIterator
+    progressbar.bar._FastBarIterator = None
+    try:
+        for _ in progressbar.progressbar(range(n), fd=f):
+            pass
+    finally:
+        progressbar.bar._FastBarIterator = saved
+
+
+def iter_progressbar2_fast(f: typing.TextIO, n: int) -> None:
+    # `pip install 'progressbar2[fast]'`: the speedups C iterator counts
+    # natively and calls back into Python only at redraw crossings.
+    import progressbar
+    import progressbar.bar
+
+    if progressbar.bar._FastBarIterator is None:
+        raise SystemExit(
+            'the progressbar2[fast] case needs the speedups package '
+            '(pip install -r benchmarks/requirements.txt)'
+        )
     for _ in progressbar.progressbar(range(n), fd=f):
         pass
 
@@ -192,7 +217,12 @@ def render_rich(f: typing.TextIO, n: int) -> None:
 # --- Scenario C: cold import time -----------------------------------------
 
 IMPORT_STMTS: dict[str, str] = {
-    'progressbar2': 'import progressbar',
+    # Blocking `speedups` in sys.modules makes the accelerator probe fail
+    # exactly as it does on a plain install, without needing a second venv.
+    'progressbar2': (
+        'import sys; sys.modules["speedups"] = None; import progressbar'
+    ),
+    'progressbar2[fast]': 'import progressbar',
     'tqdm': 'from tqdm import tqdm',
     'rich': 'from rich.progress import track',
     'alive-progress': 'from alive_progress import alive_bar',
@@ -216,6 +246,7 @@ def time_import(stmt: str, runs: int) -> float:
 
 
 ITER_LIBS: dict[str, typing.Callable[[typing.TextIO, int], None]] = {
+    'progressbar2[fast]': iter_progressbar2_fast,
     'progressbar2': iter_progressbar2,
     'tqdm': iter_tqdm,
     'rich': iter_rich,
@@ -244,6 +275,7 @@ def main() -> None:
                 name: metadata.version(dist)
                 for name, dist in {
                     'progressbar2': 'progressbar2',
+                    'speedups': 'speedups',
                     'tqdm': 'tqdm',
                     'rich': 'rich',
                     'alive-progress': 'alive-progress',

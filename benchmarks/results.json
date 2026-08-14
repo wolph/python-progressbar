@@ -2,11 +2,12 @@
   "meta": {
     "python": "3.13.12",
     "implementation": "CPython",
-    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
     "processor": "arm",
     "cpu_count": 18,
     "versions": {
-      "progressbar2": "4.5.0",
+      "progressbar2": "4.6.0",
+      "speedups": "2.3.0",
       "tqdm": "4.68.3",
       "rich": "15.0.0",
       "alive-progress": "3.3.0",
@@ -20,58 +21,63 @@
     "term": "80x24"
   },
   "scenario_a_default_overhead": {
-    "baseline_min_s": 0.005465084221214056,
-    "baseline_median_s": 0.005537374876439571,
+    "baseline_min_s": 0.005573375150561333,
+    "baseline_median_s": 0.005613917019218206,
     "libs": {
+      "progressbar2[fast]": {
+        "total_min_s": 0.009218999883159995,
+        "total_median_s": 0.00934887514449656,
+        "overhead_ns_per_iter": 3.6456247325986624
+      },
       "progressbar2": {
-        "total_min_s": 0.01052025007084012,
-        "total_median_s": 0.010792375076562166,
-        "overhead_ns_per_iter": 5.055165849626064
+        "total_min_s": 0.03153854189440608,
+        "total_median_s": 0.032419707858935,
+        "overhead_ns_per_iter": 25.965166743844748
       },
       "tqdm": {
-        "total_min_s": 0.05926787527278066,
-        "total_median_s": 0.06034625042229891,
-        "overhead_ns_per_iter": 53.8027910515666
+        "total_min_s": 0.05763970804400742,
+        "total_median_s": 0.05843504099175334,
+        "overhead_ns_per_iter": 52.06633289344609
       },
       "rich": {
-        "total_min_s": 0.024457333143800497,
-        "total_median_s": 0.024638874921947718,
-        "overhead_ns_per_iter": 18.99224892258644
+        "total_min_s": 0.02379308408126235,
+        "total_median_s": 0.024018916068598628,
+        "overhead_ns_per_iter": 18.219708930701017
       },
       "alive-progress": {
-        "total_min_s": 0.2534806248731911,
-        "total_median_s": 0.26495025027543306,
-        "overhead_ns_per_iter": 248.01554065197706
+        "total_min_s": 0.2489139169920236,
+        "total_median_s": 0.25842712516896427,
+        "overhead_ns_per_iter": 243.34054184146223
       },
       "click": {
-        "total_min_s": 1.8613821249455214,
-        "total_median_s": 1.8722192500717938,
-        "overhead_ns_per_iter": 1855.9170407243073
+        "total_min_s": 1.8352209581062198,
+        "total_median_s": 1.8481180840171874,
+        "overhead_ns_per_iter": 1829.6475829556584
       }
     }
   },
   "scenario_b_forced_render": {
-    "baseline_min_s": 0.00015695812180638313,
+    "baseline_min_s": 0.00015587499365210533,
     "libs": {
       "progressbar2": {
-        "total_min_s": 0.7645597076043487,
-        "total_median_s": 0.7665333333425224,
-        "per_update_us": 25.480091649418075
+        "total_min_s": 0.7742712090257555,
+        "total_median_s": 0.7781639168970287,
+        "per_update_us": 25.80384446773678
       },
       "progressbar2-fast": {
-        "total_min_s": 0.1489091250114143,
-        "total_median_s": 0.14924920815974474,
-        "per_update_us": 4.95840556298693
+        "total_min_s": 0.14825395797379315,
+        "total_median_s": 0.14857316599227488,
+        "per_update_us": 4.936602766004701
       },
       "tqdm": {
-        "total_min_s": 0.3326972499489784,
-        "total_median_s": 0.33332004211843014,
-        "per_update_us": 11.084676394239068
+        "total_min_s": 0.3275949589442462,
+        "total_median_s": 0.3301131250336766,
+        "per_update_us": 10.91463613168647
       },
       "rich": {
-        "total_min_s": 5.156592667102814,
-        "total_median_s": 5.1774807083420455,
-        "per_update_us": 171.8811902993669
+        "total_min_s": 5.049460625043139,
+        "total_median_s": 5.063134750118479,
+        "per_update_us": 168.3101583349829
       }
     },
     "excluded": {
@@ -80,27 +86,31 @@
     }
   },
   "scenario_c_import_time": {
-    "interpreter_baseline_s": 0.015367416199296713,
+    "interpreter_baseline_s": 0.014062916859984398,
     "libs": {
       "progressbar2": {
-        "total_min_s": 0.016899917274713516,
-        "net_ms": 1.5325010754168034
+        "total_min_s": 0.015543833142146468,
+        "net_ms": 1.4809162821620703
+      },
+      "progressbar2[fast]": {
+        "total_min_s": 0.01548366597853601,
+        "net_ms": 1.420749118551612
       },
       "tqdm": {
-        "total_min_s": 0.03698108298704028,
-        "net_ms": 21.61366678774357
+        "total_min_s": 0.03564291703514755,
+        "net_ms": 21.58000017516315
       },
       "rich": {
-        "total_min_s": 0.06224083295091987,
-        "net_ms": 46.873416751623154
+        "total_min_s": 0.059682250022888184,
+        "net_ms": 45.619333162903786
       },
       "alive-progress": {
-        "total_min_s": 0.023891292046755552,
-        "net_ms": 8.52387584745884
+        "total_min_s": 0.02274266700260341,
+        "net_ms": 8.679750142619014
       },
       "click": {
-        "total_min_s": 0.0388890840113163,
-        "net_ms": 23.521667812019587
+        "total_min_s": 0.037099249893799424,
+        "net_ms": 23.036333033815026
       }
     }
   }

@@ -54,6 +54,18 @@ def test_examples_nullbar(monkeypatch, demo) -> None:
     examples.load_example(demo).main()
 
 
+def test_nullbar_in_multibar_context_exits() -> None:
+    # MultiBar's context manager waits for every member bar to report
+    # finished(). A NullBar whose finish() does not flip that flag makes
+    # the exit wait spin forever -- exactly what test_examples_nullbar
+    # hits for any example that assigns constructed bars into a MultiBar
+    # while ProgressBar is patched to NullBar.
+    with progressbar.MultiBar() as multibar:
+        multibar['task'] = progressbar.NullBar(max_value=10)
+        multibar['task'].update(10)
+        multibar['task'].finish()
+
+
 def test_reuse() -> None:
     bar = progressbar.ProgressBar()
     bar.start()
