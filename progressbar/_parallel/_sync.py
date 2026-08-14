@@ -468,6 +468,110 @@ def execute(
         run.close(interrupted=interrupted, success=success)
 
 
+def _star_call(
+    fn: typing.Callable[..., typing.Any], args: typing.Any
+) -> typing.Any:
+    """Unpack one `starmap` argument tuple into a call (picklable)."""
+    return fn(*args)
+
+
+def starmap(
+    fn: typing.Callable[..., typing.Any],
+    iterable: typing.Iterable[typing.Any],
+    /,
+    **kwargs: typing.Any,
+) -> list[typing.Any]:
+    """`map` over pre-tupled arguments (``multiprocessing.Pool.starmap``).
+
+    ``starmap(fn, [(1, 2), (3, 4)])`` calls ``fn(1, 2)`` and
+    ``fn(3, 4)`` in parallel. See `execute` for keywords.
+    """
+    return map(functools.partial(_star_call, fn), iterable, **kwargs)
+
+
+def thread_map(
+    fn: typing.Callable[..., typing.Any],
+    /,
+    *iterables: typing.Iterable[typing.Any],
+    **kwargs: typing.Any,
+) -> list[typing.Any]:
+    """`map` pinned to a thread pool (tqdm-compatible spelling)."""
+    if 'pool' in kwargs:
+        raise TypeError(
+            "thread_map() already sets pool='thread'; use map() to pick "
+            'a pool explicitly'
+        )
+    return map(fn, *iterables, pool='thread', **kwargs)
+
+
+def process_map(
+    fn: typing.Callable[..., typing.Any],
+    /,
+    *iterables: typing.Iterable[typing.Any],
+    **kwargs: typing.Any,
+) -> list[typing.Any]:
+    """`map` pinned to a process pool (tqdm-compatible spelling)."""
+    if 'pool' in kwargs:
+        raise TypeError(
+            "process_map() already sets pool='process'; use map() to "
+            'pick a pool explicitly'
+        )
+    return map(fn, *iterables, pool='process', **kwargs)
+
+
+def as_completed(
+    futures: typing.Iterable[concurrent.futures.Future[typing.Any]],
+    timeout: float | None = None,
+    *,
+    bar: typing.Any = 'plain',
+    poll_interval: float = DEFAULT_POLL_INTERVAL,
+    **bar_kwargs: typing.Any,
+) -> typing.Generator[concurrent.futures.Future[typing.Any], None, None]:
+    """`concurrent.futures.as_completed` with a progress bar.
+
+    A superset of the stdlib function: same yield order and `timeout`
+    semantics, plus a bar counting completions (total inferred from the
+    futures). The caller owns the futures -- an early ``break`` or a
+    timeout never cancels them.
+    """
+    futures_list: list[concurrent.futures.Future[typing.Any]] = list(futures)
+    display: _display.Display = _display.make_display(
+        bar,
+        total=len(futures_list),
+        poll_interval=poll_interval,
+        bar_kwargs=bar_kwargs,
+    )
+    done: queue.SimpleQueue[concurrent.futures.Future[typing.Any]] = (
+        queue.SimpleQueue()
+    )
+    pending: set[concurrent.futures.Future[typing.Any]] = set(futures_list)
+    deadline: float | None = (
+        None if timeout is None else time.monotonic() + timeout
+    )
+    success: bool = False
+    for future in pending:
+        future.add_done_callback(done.put)
+    try:
+        display.start(len(futures_list))
+        while pending:
+            if deadline is not None and time.monotonic() > deadline:
+                raise concurrent.futures.TimeoutError(
+                    f'{len(pending)} (of {len(futures_list)}) futures '
+                    f'unfinished within timeout={timeout}'
+                )
+            try:
+                future = done.get(timeout=poll_interval)
+            except queue.Empty:
+                display.tick()
+                continue
+            pending.discard(future)
+            display.advance()
+            yield future
+        success = True
+    finally:
+        display.finish(success=success)
+
+
 def imap(
     fn: typing.Callable[..., typing.Any],
     /,
