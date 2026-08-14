@@ -604,6 +604,34 @@ class Pool:
         """`starmap` on this pool's executor; see the module `starmap`."""
         return starmap(fn, iterable, **self._merged(kwargs))
 
+    def run(
+        self,
+        command: typing.Any,
+        items: typing.Iterable[typing.Any],
+        /,
+        **kwargs: typing.Any,
+    ) -> list[typing.Any]:
+        """`run` a shell command per item on this pool's executor."""
+        # Deferred import: _shell imports this module.
+        from . import _shell
+
+        runner = _shell.make_runner(
+            command,
+            **{
+                name: kwargs.pop(name)
+                for name in (
+                    'check',
+                    'capture_output',
+                    'text',
+                    'shell',
+                    'cwd',
+                    'env',
+                )
+                if name in kwargs
+            },
+        )
+        return self.map(runner, items, **kwargs)
+
     def shutdown(
         self, wait: bool = True, *, cancel_futures: bool = False
     ) -> None:
