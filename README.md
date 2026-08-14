@@ -246,9 +246,9 @@ hand. One call does all three, on threads, processes, or asyncio:
 ```python
 import progressbar
 
-results = progressbar.map(fetch, urls, workers=8)          # threads
-results = progressbar.map(crunch, files, pool='process')   # processes
-results = await progressbar.amap(fetch, urls)              # asyncio
+results = progressbar.map(fetch, urls, workers=8)  # threads
+results = progressbar.map(crunch, files, pool='process')  # processes
+results = await progressbar.amap(fetch, urls)  # asyncio
 
 # A progress-bar'd xargs -P:
 progressbar.run('gzip -k {}', files, workers=4)
