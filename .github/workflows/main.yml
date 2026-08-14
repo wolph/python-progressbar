@@ -36,6 +36,12 @@ jobs:
     name: tox (${{ matrix.tox-env }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Job-level continue-on-error, not only step-level: a job that hits
+    # timeout-minutes is cancelled rather than failed, which a step-level
+    # continue-on-error cannot absorb -- an experimental env (e.g.
+    # docs-linkcheck waiting on slow external servers) would still mark
+    # the whole run cancelled.
+    continue-on-error: ${{ matrix.experimental || false }}
     strategy:
       fail-fast: false
       matrix:
