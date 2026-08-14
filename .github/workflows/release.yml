@@ -1,0 +1,50 @@
+name: release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git tag to build and publish (e.g. v4.6.0)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - name: Build sdist and wheel
+        run: uv build --no-sources
+      - name: Verify wheel contains only the progressbar package
+        run: |
+          unpacked="$(unzip -Z1 dist/*.whl | cut -d/ -f1 | sort -u)"
+          echo "$unpacked"
+          test "$(echo "$unpacked" | grep -cvE '^progressbar$|^progressbar2-.*\.dist-info$')" -eq 0
+      - uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/progressbar2/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+      - name: Publish via Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
