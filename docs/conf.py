@@ -384,3 +384,13 @@ epub_copyright: str = copyright
 intersphinx_mapping: dict[str, tuple[str, None]] = {
     'python': ('https://docs.python.org/3', None)
 }
+
+# -- Options for linkcheck ------------------------------------------------
+
+# Without a timeout, one hanging external server blocks its linkcheck
+# worker forever and runs the CI docs-linkcheck job into its 10-minute
+# kill, where it ends up cancelled instead of failed. A bounded timeout
+# turns the hang into an ordinary broken-link failure, which the
+# workflow's continue-on-error for experimental envs can absorb.
+linkcheck_timeout = 15
+linkcheck_retries = 2
