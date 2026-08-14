@@ -468,6 +468,53 @@ def execute(
         run.close(interrupted=interrupted, success=success)
 
 
+def imap(
+    fn: typing.Callable[..., typing.Any],
+    /,
+    *iterables: typing.Iterable[typing.Any],
+    **kwargs: typing.Any,
+) -> typing.Generator[typing.Any, None, None]:
+    """Lazily apply `fn` in parallel, yielding results in input order.
+
+    The parallel counterpart of ``multiprocessing.Pool.imap``: same
+    ordering, same laziness, same results-only element shape. Results
+    completed out of order are held back until their turn; the held
+    set stays bounded by the submission window (`buffersize`).
+
+    Closing the generator early (``break``) cancels unsubmitted work
+    and shuts down the run's executor; wrap in `contextlib.closing`
+    for deterministic cleanup. See `execute` for keywords.
+    """
+    held: dict[int, typing.Any] = {}
+    next_index: int = 0
+    for index, _args, _ok, value in execute(fn, iterables, **kwargs):
+        held[index] = value
+        while next_index in held:
+            yield held.pop(next_index)
+            next_index += 1
+
+
+def imap_unordered(
+    fn: typing.Callable[..., typing.Any],
+    /,
+    *iterables: typing.Iterable[typing.Any],
+    **kwargs: typing.Any,
+) -> typing.Generator[tuple[typing.Any, typing.Any], None, None]:
+    """Lazily apply `fn` in parallel, yielding as tasks complete.
+
+    Yields ``(item, result)`` pairs in *completion* order -- the pair
+    shape exists because completion order loses the input
+    correspondence (a deliberate deviation from
+    ``multiprocessing.Pool.imap_unordered``, which yields bare
+    results). With multiple iterables, ``item`` is the argument tuple.
+
+    Closing the generator early cancels unsubmitted work; see `imap`.
+    """
+    single: bool = len(iterables) == 1
+    for _index, args, _ok, value in execute(fn, iterables, **kwargs):
+        yield _common.item_of(args, single), value
+
+
 def map(  # noqa: A001 - intentional builtin name, namespaced use only
     fn: typing.Callable[..., typing.Any],
     /,
