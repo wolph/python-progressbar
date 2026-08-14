@@ -1,4 +1,5 @@
 import io
+import pathlib
 
 import pytest
 
@@ -288,3 +289,15 @@ def test_main_empty_file_has_known_size(tmp_path, recorded_bars) -> None:
     main.main([str(file), '-o', str(tmp_path / 'out.bin')])
 
     assert recorded_bars[0].init_kwargs.get('max_value') == 0
+
+
+def test_console_scripts_include_the_bar_shorthand() -> None:
+    # Both the canonical `progressbar` command and its `bar` shorthand
+    # must point at the same entry point: the shorthand exists purely
+    # for shorter pipelines (`bar data.bin -o copy.bin`).
+    pyproject = (
+        pathlib.Path(__file__).parents[1] / 'pyproject.toml'
+    ).read_text(encoding='utf-8')
+
+    assert "progressbar = 'progressbar.__main__:main'" in pyproject
+    assert "bar = 'progressbar.__main__:main'" in pyproject

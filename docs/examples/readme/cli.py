@@ -1,11 +1,12 @@
 """The `progressbar` command is a `pv` replacement for pipes and files.
 
-Installing the package puts a `progressbar` executable on the path
-(`python -m progressbar` is the same program), a Python implementation
-of the classic Unix `pv`: it copies input to output while drawing
-transfer progress on stderr. This example drives it in-process, moving
-4 MiB at a rate-limited 2 MiB/s with the percentage, timer, ETA, rate
-and byte-counter displays turned on.
+Installing the package puts a `progressbar` executable on the path,
+with `bar` as its pipeline shorthand (`python -m progressbar` is the
+same program), a Python implementation of the classic Unix `pv`: it
+copies input to output while drawing transfer progress on stderr.
+This example drives it in-process, moving 4 MiB at a rate-limited
+2 MiB/s with the percentage, timer, ETA, rate and byte-counter
+displays turned on.
 """
 
 import pathlib

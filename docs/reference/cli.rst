@@ -3,7 +3,8 @@
 ====================
 
 Installing ``progressbar2`` installs a ``progressbar`` console script
-(:py:func:`progressbar.__main__.main`). It reads from stdin (or one or more
+(:py:func:`progressbar.__main__.main`), plus ``bar`` as a shorthand for
+the same command in pipelines. It reads from stdin (or one or more
 files), writes the same bytes through to stdout (or a file), and draws a
 progress bar on stderr while it does -- a small, Python-native reimplementation
 of the ``pv`` ("pipe viewer") command. Per its own ``--help`` text it is

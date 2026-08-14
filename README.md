@@ -315,16 +315,18 @@ Errors, timeouts, pools, and the decorator form are covered in the
 
 ## Replace pv on the command line
 
-Installing the package also installs a `progressbar` command, a Python
-implementation of the classic Unix `pv`: it copies input to output and
-draws the transfer on stderr, so it drops into pipelines:
+Installing the package also installs a `progressbar` command and its
+`bar` shorthand, a Python implementation of the classic Unix `pv`: it
+copies input to output and draws the transfer on stderr, so it drops
+into pipelines:
 
 ```sh
 # File to file, with percentage, timer, ETA, rate and byte count:
 progressbar --progress --timer --eta --rate --bytes data.bin -o copy.bin
 
-# In a pipeline, data on stdout and progress on stderr:
-tar cf - src/ | progressbar --bytes --rate > backup.tar
+# In a pipeline, data on stdout and progress on stderr. `bar` is the
+# same command with three keystrokes:
+tar cf - src/ | bar --bytes --rate > backup.tar
 ```
 
 ![the progressbar command copying a file with percentage, timer, ETA, rate and byte count displays](https://raw.githubusercontent.com/wolph/python-progressbar/develop/docs/_static/demos/readme-cli.svg)

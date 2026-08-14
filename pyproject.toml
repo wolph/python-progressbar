@@ -116,6 +116,8 @@ repository = 'https://github.com/wolph/python-progressbar/'
 
 [project.scripts]
 progressbar = 'progressbar.__main__:main'
+# Shorthand for pipelines: `bar data.bin -o copy.bin`.
+bar = 'progressbar.__main__:main'
 
 [project.optional-dependencies]
 # Optional native iterator accelerator. When installed it is detected and used
