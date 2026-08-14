@@ -455,7 +455,14 @@ def execute(
         yield from run.completions()
         success = True
     except BaseException as error:
-        interrupted = isinstance(error, KeyboardInterrupt)
+        # Ctrl-C means "stop now" and a timeout is a promise about
+        # wall-clock time -- neither may block on running tasks. Plain
+        # fail-fast still waits so results/streams aren't torn down
+        # under a worker mid-write.
+        interrupted = isinstance(
+            error,
+            (KeyboardInterrupt, TimeoutError, concurrent.futures.TimeoutError),
+        )
         raise
     finally:
         run.close(interrupted=interrupted, success=success)
