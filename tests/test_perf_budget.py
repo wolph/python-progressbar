@@ -91,14 +91,13 @@ def test_import_stays_lazy() -> None:
     # nothing beyond the package itself and the version module. Anything
     # else appearing here means an eager import crept into __init__.py
     # and the ~1.6 ms import time regressed for every consumer.
+    probe: str = (
+        'import sys, progressbar; '
+        "print(','.join(sorted("
+        "m for m in sys.modules if m.startswith('progressbar'))))"
+    )
     out: str = subprocess.run(
-        [
-            sys.executable,
-            '-c',
-            'import sys, progressbar; '
-            "print(','.join(sorted("
-            "m for m in sys.modules if m.startswith('progressbar'))))",
-        ],
+        [sys.executable, '-c', probe],
         capture_output=True,
         text=True,
         check=True,
