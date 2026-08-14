@@ -108,7 +108,7 @@ def _rich_bar(filled: int) -> str:
     return f'{done}{rest}{RESET}  '
 
 
-def _lane_bar(lane: str, filled: int) -> str:
+def _lane_bar(lane: str, filled: int, fraction: float) -> str:
     if lane == 'progressbar2[fast]':
         return _gradient_bar(filled)
     if lane == 'rich':
@@ -117,7 +117,9 @@ def _lane_bar(lane: str, filled: int) -> str:
         return _plain_bar(filled, '█', None)
     if lane == 'alive-progress':
         return _plain_bar(filled, '▇', _sgr(0, 191, 255))
-    return _plain_bar(filled, '#', None)
+    # Plain progressbar2: the default Bar colors its whole fill with the
+    # gradient color for the current percentage, so the lane does too.
+    return _plain_bar(filled, '#', _sgr(*_gradient_rgb(fraction)))
 
 
 def load_results() -> dict[str, typing.Any]:
@@ -151,7 +153,7 @@ def race_frames(results: dict[str, typing.Any]) -> list[list[str]]:
             suffix = f'  {total * 1000:.1f} ms' if fraction >= 1.0 else ''
             lines.append(
                 f'{RESET}{lane:<{LABEL_WIDTH}} {pct} '
-                f'{_lane_bar(lane, filled)}{suffix}'
+                f'{_lane_bar(lane, filled, fraction)}{suffix}'
             )
         lines.append(f'{RESET}elapsed {t * 1000:6.1f} ms')
         frames.append(lines)

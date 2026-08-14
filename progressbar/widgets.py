@@ -1412,8 +1412,16 @@ class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
 class Bar(AutoWidthWidgetBase):
     """A progress bar which stretches to fill the line."""
 
-    fg: terminal.OptionalColor = colors.gradient
-    bg: terminal.OptionalColor = None
+    # Default look: the fill sweeps the red->green gradient as progress
+    # grows, matching ColoredMixin's percentage/count defaults. These
+    # must be the `_gradient_colors` dict `_apply_colors` actually
+    # reads: an earlier revision declared plain `fg`/`bg` attributes
+    # here that nothing consumed, which silently left the default fill
+    # colorless (see test_default_bar_fill_uses_the_progress_gradient).
+    _gradient_colors: TGradientColors = TGradientColors(
+        fg=colors.gradient,
+        bg=None,
+    )
 
     def __init__(
         self,

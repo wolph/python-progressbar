@@ -383,7 +383,7 @@ package has survived since 2012:
 - Supported non-stop since 2012, with 111 releases on PyPI, and since
   2008 before that as the original `progressbar` library, which
   progressbar2 still replaces drop-in.
-- 1131 tests at 100% branch coverage, enforced in CI on every commit.
+- 1133 tests at 100% branch coverage, enforced in CI on every commit.
 - Fully typed (PEP 561 `py.typed`), so your type checker sees the real
   signatures.
 - Python 3.10 through 3.14, plus PyPy, with 3.15 pre-releases already

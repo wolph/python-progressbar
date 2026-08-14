@@ -22,12 +22,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import scripts.render_demos as demos  # noqa: E402
 
 
+def _has_bar(line: str) -> bool:
+    """Return whether `line` contains a rendered ``|...|`` bar frame.
+
+    Matched against SGR-stripped text: the default bar's fill is colored
+    (the red->green gradient), and BAR_RE's inner group cannot match a
+    fill with escape codes woven through it.
+    """
+    return bool(demos.BAR_RE.search(demos.ANSI_SGR_RE.sub('', line)))
+
+
 def _bar_widths(frames: list[list[str]]) -> list[int]:
     return [
         len(match.group('inner'))
         for frame in frames
         for line in frame
-        if (match := demos.BAR_RE.search(line))
+        if (match := demos.BAR_RE.search(demos.ANSI_SGR_RE.sub('', line)))
     ]
 
 
@@ -693,7 +703,7 @@ def test_logging_integration_demo_keeps_recent_logs_visible_above_progress() -> 
     assert max(len(frame) for frame in frames) >= 2
     assert any(
         any('completed step 8' in line for line in frame)
-        and any(demos.BAR_RE.search(line) for line in frame)
+        and any(_has_bar(line) for line in frame)
         for frame in frames
     )
 
@@ -710,7 +720,7 @@ def test_redirect_stdout_demo_keeps_recent_prints_visible_above_progress() -> (
     assert max(len(frame) for frame in frames) >= 2
     assert any(
         any('Processing errors.log' in line for line in frame)
-        and any(demos.BAR_RE.search(line) for line in frame)
+        and any(_has_bar(line) for line in frame)
         for frame in frames
     )
 
@@ -738,7 +748,7 @@ def test_tutorial_step5_demo_keeps_recent_prints_visible_above_progress() -> (
     assert max(len(frame) for frame in frames) >= 2
     assert any(
         any('Reached step 0' in line for line in frame)
-        and any(demos.BAR_RE.search(line) for line in frame)
+        and any(_has_bar(line) for line in frame)
         for frame in frames
     )
 

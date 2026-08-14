@@ -61,7 +61,12 @@ def test_nullbar_in_multibar_context_exits() -> None:
     # hits for any example that assigns constructed bars into a MultiBar
     # while ProgressBar is patched to NullBar.
     with progressbar.MultiBar() as multibar:
-        multibar['task'] = progressbar.NullBar(max_value=10)
+        # A NullBar never builds its default widgets (start() is a
+        # no-op), so hand it one: MultiBar's render thread labels each
+        # bar and asserts on an empty widget list.
+        multibar['task'] = progressbar.NullBar(
+            max_value=10, widgets=[progressbar.widgets.Bar()]
+        )
         multibar['task'].update(10)
         multibar['task'].finish()
 

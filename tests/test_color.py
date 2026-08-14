@@ -592,3 +592,28 @@ def test_registered_color_renders_when_forced_without_support(
     green = colors.green
     assert green.ansi == '5;2'
     assert green.fg('X') == '\x1b[38;5;2mX\x1b[39m'
+
+
+def test_default_bar_fill_uses_the_progress_gradient() -> None:
+    # The Bar widget's default look is a fill that sweeps the red->green
+    # gradient with progress, matching ColoredMixin's percentage/count
+    # defaults. This regressed once before: Bar declared dead `fg`/`bg`
+    # attributes that nothing read, leaving `_gradient_colors` all-None
+    # and the default fill colorless on every terminal.
+    bar_widget = progressbar.widgets.Bar()
+
+    assert bar_widget.uses_colors
+    assert bar_widget._gradient_colors['fg'] is colors.gradient
+    assert bar_widget._gradient_colors['bg'] is None
+
+
+def test_bar_with_colors_opted_out_renders_text_unchanged() -> None:
+    # The gradient default can be switched off per instance. That must
+    # leave `_apply_colors` as a pass-through, and it also keeps the
+    # no-colors branch honest now that the default Bar is colored.
+    bar_widget = progressbar.widgets.Bar(
+        gradient_colors={'fg': None, 'bg': None},
+    )
+
+    assert not bar_widget.uses_colors
+    assert bar_widget._apply_colors('#####', {}) == '#####'

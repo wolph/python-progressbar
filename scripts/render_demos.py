@@ -421,7 +421,16 @@ def keep_recent_logs_with_progress(
     """
 
     def is_progress_line(line: str) -> bool:
-        return bool(PERCENT_RE.search(line) or BAR_RE.search(line))
+        # Classify against SGR-stripped text: the default bar colors its
+        # percentage/count and (since the Bar gradient fix) its fill, and
+        # the escape codes defeat both patterns on the raw line --
+        # ``\b\d`` finds no word boundary in ``...39m100%`` (``m`` and
+        # ``1`` are both word characters), and ``BAR_RE``'s inner group
+        # cannot match a fill with color codes woven through it. The
+        # colored 100% finish line then misclassifies as log output and
+        # the animation never shows the bar completing.
+        text = ANSI_SGR_RE.sub('', line)
+        return bool(PERCENT_RE.search(text) or BAR_RE.search(text))
 
     logs: list[str] = []
     output: list[list[str]] = []
