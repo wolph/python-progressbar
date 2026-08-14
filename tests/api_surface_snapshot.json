@@ -4,6 +4,7 @@
     "AdaptiveETA": "class(exponential_smoothing=?, exponential_smoothing_factor=?, **kwargs)",
     "AdaptiveTransferSpeed": "class(**kwargs)",
     "AnimatedMarker": "class(markers=?, default=?, fill=?, marker_wrap=?, fill_wrap=?, **kwargs)",
+    "AsyncPool": "class(concurrency=?, **defaults)",
     "Bar": "class(marker=?, left=?, right=?, fill=?, fill_left=?, marker_wrap=?, **kwargs)",
     "BouncingBar": "class(marker=?, left=?, right=?, fill=?, fill_left=?, marker_wrap=?, **kwargs)",
     "Counter": "class(format=?, **kwargs)",
@@ -26,8 +27,10 @@
     "MultiProgressBar": "class(name, markers=?, **kwargs)",
     "MultiRangeBar": "class(name, markers, **kwargs)",
     "NullBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
+    "ParallelFunction": "type-alias",
     "Percentage": "class(format=?, na=?, **kwargs)",
     "PercentageLabelBar": "class(format=?, na=?, **kwargs)",
+    "Pool": "class(workers=?, kind=?, *, executor=?, **defaults)",
     "Postfix": "class(name=?, prefix=?, separator=?, **kwargs)",
     "ProgressBar": "class(min_value=?, max_value=?, widgets=?, left_justify=?, initial_value=?, poll_interval=?, widget_kwargs=?, custom_len=?, max_error=?, prefix=?, suffix=?, variables=?, min_poll_interval=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
     "ReverseBar": "class(marker=?, left=?, right=?, fill=?, fill_left=?, **kwargs)",
@@ -43,9 +46,14 @@
     "VariableMixin": "class(name, **kwargs)",
     "__author__": "str",
     "__version__": "str",
+    "current_task_bar": "callable()",
     "len_color": "callable(value)",
+    "parallel": "callable(**config)",
+    "process_map": "callable(fn, *iterables, **kwargs)",
     "progressbar": "callable(iterator, min_value=?, max_value=?, widgets=?, prefix=?, suffix=?, fast=?, desc=?, total=?, unit=?, unit_scale=?, postfix=?, **kwargs)",
-    "streams": "StreamWrapper"
+    "starmap": "callable(fn, iterable, **kwargs)",
+    "streams": "StreamWrapper",
+    "thread_map": "callable(fn, *iterables, **kwargs)"
   },
   "progressbar.algorithms": {
     "DoubleExponentialMovingAverage": "class(alpha=?)",
@@ -66,11 +74,13 @@
     "ResizableMixin": "class(term_width=?, **kwargs)",
     "StdRedirectMixin": "class(redirect_stderr=?, redirect_stdout=?, redirect_blank_line=?, **kwargs)",
     "T": "type-alias",
+    "TracebackType": "re-export",
     "ValueT": "type-alias",
     "annotations": "_Feature",
     "datetime": "re-export",
     "deepcopy": "callable(x, memo=?, _nil=?)",
-    "logger": "Logger"
+    "logger": "Logger",
+    "timedelta": "re-export"
   },
   "progressbar.base": {
     "FalseMeta": "classsignature-unavailable",
@@ -85,6 +95,7 @@
     "COLOR_SUPPORT": "ColorSupport",
     "ColorSupport": "enum(NONE,XTERM,XTERM_256,XTERM_TRUECOLOR,WINDOWS)",
     "JUPYTER": "bool",
+    "TRUECOLOR_TERMS": "frozenset",
     "annotations": "_Feature",
     "env_flag": "callable(name, default=?)",
     "is_ansi_terminal": "callable(fd, is_terminal=?)",

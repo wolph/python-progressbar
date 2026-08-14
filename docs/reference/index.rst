@@ -9,5 +9,6 @@ Complete descriptions of the public API surface.
 
    progressbar
    multibar
+   parallel
    cli
    Full module autodoc <../progressbar>

@@ -21,6 +21,28 @@ from .__about__ import (
 if typing.TYPE_CHECKING:
     # Eager imports for type checkers only, loaded lazily at runtime by
     # __getattr__ below. Names appear in __all__ so they read as re-exports.
+    # The redundant `name as name` aliases mark the namespace-only
+    # exports (kept out of ``__all__``, see ``_NAMESPACE_ONLY``) as
+    # deliberate re-exports for type checkers and linters.
+    from ._parallel import (
+        AsyncPool,
+        ParallelFunction,
+        Pool,
+        aimap as aimap,
+        aimap_unordered as aimap_unordered,
+        amap as amap,
+        as_completed as as_completed,
+        current_task_bar,
+        gather as gather,
+        imap as imap,
+        imap_unordered as imap_unordered,
+        map as map,  # noqa: A004 - namespaced use only, not in __all__
+        parallel,
+        process_map,
+        run as run,
+        starmap,
+        thread_map,
+    )
     from .algorithms import (
         DoubleExponentialMovingAverage,
         ExponentialMovingAverage,
@@ -94,6 +116,14 @@ _NAME_TO_MODULE: dict[str, str] = {
     'UnknownLength': 'base',
     'MultiBar': 'multi',
     'SortKey': 'multi',
+    'AsyncPool': '_parallel',
+    'ParallelFunction': '_parallel',
+    'Pool': '_parallel',
+    'current_task_bar': '_parallel',
+    'parallel': '_parallel',
+    'process_map': '_parallel',
+    'starmap': '_parallel',
+    'thread_map': '_parallel',
     'progressbar': 'shortcuts',
     'LineOffsetStreamWrapper': 'terminal.stream',
     'len_color': 'utils',
@@ -130,6 +160,22 @@ _NAME_TO_MODULE: dict[str, str] = {
     'VariableMixin': 'widgets',
 }
 
+#: Exported name -> submodule, for names resolvable as
+#: ``progressbar.<name>`` (and by explicit import) but deliberately
+#: kept out of ``__all__``: they would shadow builtins or stdlib names
+#: under ``from progressbar import *`` (``map``, ``as_completed``, ...).
+_NAMESPACE_ONLY: dict[str, str] = {
+    'aimap': '_parallel',
+    'aimap_unordered': '_parallel',
+    'amap': '_parallel',
+    'as_completed': '_parallel',
+    'gather': '_parallel',
+    'imap': '_parallel',
+    'imap_unordered': '_parallel',
+    'map': '_parallel',
+    'run': '_parallel',
+}
+
 
 def __getattr__(name: str) -> typing.Any:
     """Lazily import submodules and exported names on first access."""
@@ -138,7 +184,7 @@ def __getattr__(name: str) -> typing.Any:
         globals()[name] = module  # cache so __getattr__ runs only once
         return module
 
-    module_name = _NAME_TO_MODULE.get(name)
+    module_name = _NAME_TO_MODULE.get(name) or _NAMESPACE_ONLY.get(name)
     if module_name is None:
         raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
     value = getattr(importlib.import_module(f'.{module_name}', __name__), name)
@@ -161,6 +207,7 @@ __all__ = [
     'AdaptiveETA',
     'AdaptiveTransferSpeed',
     'AnimatedMarker',
+    'AsyncPool',
     'Bar',
     'BouncingBar',
     'Counter',
@@ -182,8 +229,10 @@ __all__ = [
     'MultiProgressBar',
     'MultiRangeBar',
     'NullBar',
+    'ParallelFunction',
     'Percentage',
     'PercentageLabelBar',
+    'Pool',
     'Postfix',
     'ProgressBar',
     'ReverseBar',
@@ -199,7 +248,12 @@ __all__ = [
     'VariableMixin',
     '__author__',
     '__version__',
+    'current_task_bar',
     'len_color',
+    'parallel',
+    'process_map',
     'progressbar',
+    'starmap',
     'streams',
+    'thread_map',
 ]
