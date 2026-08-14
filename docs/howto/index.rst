@@ -21,3 +21,4 @@ already read the :doc:`tutorial <../tutorial/index>`.
    unknown-length
    multibar
    multibar-line-offset
+   parallel-execution

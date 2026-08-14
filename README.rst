@@ -119,6 +119,33 @@ Multiple bars
     if __name__ == '__main__':
         main()
 
+Parallel execution
+==============================================================================
+
+Run a function over a batch of items -- threads, processes, or asyncio --
+with a live progress bar, in one call:
+
+.. code:: python
+
+    import progressbar
+
+    results = progressbar.map(fetch, urls, workers=8)          # threads
+    results = progressbar.map(crunch, files, pool='process')   # processes
+    results = await progressbar.amap(fetch, urls)              # asyncio
+
+    # A progress-bar'd xargs -P:
+    progressbar.run('gzip -k {}', files, workers=4)
+
+    # An overall bar plus one bar per in-flight task:
+    progressbar.map(crunch, files, workers=4, bar='multi')
+
+Results come back in input order; ``imap``/``imap_unordered`` stream
+them instead, ``gather`` is a drop-in ``asyncio.gather`` with a bar,
+and the bar keeps animating even while long tasks are running. See the
+`parallel execution guide
+<https://progressbar-2.readthedocs.io/en/latest/howto/parallel-execution.html>`_
+for errors, timeouts, pools, and the decorator form.
+
 Unknown length and animated bars
 ==============================================================================
 
