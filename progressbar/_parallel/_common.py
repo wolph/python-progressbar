@@ -83,14 +83,19 @@ def detect_total(
     """
     totals: list[int] = []
     for iterable in iterables:
-        try:
-            totals.append(len(iterable))  # type: ignore[arg-type]
-        except TypeError:
-            hint: int = operator.length_hint(iterable, -1)
-            if hint < 0:
-                return base.UnknownLength
-            totals.append(hint)
+        total: int = _total_of(iterable)
+        if total < 0:
+            return base.UnknownLength
+        totals.append(total)
     return min(totals) if totals else 0
+
+
+def _total_of(iterable: typing.Iterable[typing.Any]) -> int:
+    """Return `len`/`length_hint` for one iterable, -1 when unknown."""
+    try:
+        return len(iterable)  # type: ignore[arg-type]
+    except TypeError:
+        return operator.length_hint(iterable, -1)
 
 
 @functools.cache
@@ -163,7 +168,7 @@ def iter_chunks(
     chunksize: int,
 ) -> typing.Iterator[list[ItemArgs]]:
     """Lazily zip `iterables` and batch the argument tuples."""
-    zipped: typing.Iterator[ItemArgs] = zip(*iterables)
+    zipped: typing.Iterator[ItemArgs] = zip(*iterables, strict=False)
     while chunk := list(itertools.islice(zipped, chunksize)):
         yield chunk
 

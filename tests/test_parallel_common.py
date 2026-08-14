@@ -5,10 +5,10 @@ from __future__ import annotations
 import typing
 
 import pytest
-from progressbar._parallel import _common
 
 import progressbar
 from progressbar import base
+from progressbar._parallel import _common
 
 
 def _boom_on_two(value: int) -> int:
