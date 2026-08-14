@@ -97,6 +97,22 @@ class TestProcessPool:
         ) == [0, 1, 4, 9]
 
     @pytest.mark.skipif(
+        sys.version_info >= (3, 11),
+        reason='the ValueError applies before Python 3.11',
+    )
+    def test_max_tasks_per_child_rejected_on_310(
+        self,
+    ) -> None:  # pragma: no cover
+        with pytest.raises(ValueError, match=r'3\.11'):
+            _sync.map(
+                _square,
+                range(2),
+                pool='process',
+                max_tasks_per_child=2,
+                bar=False,
+            )
+
+    @pytest.mark.skipif(
         sys.version_info < (3, 11),
         reason='max_tasks_per_child needs Python 3.11+',
     )
@@ -143,9 +159,12 @@ class TestInterpreterPool:
         reason='InterpreterPoolExecutor needs Python 3.14+',
     )
     def test_interpreter_pool_runs(self) -> None:  # pragma: no cover
+        # Subinterpreter workers cannot import test modules, so the
+        # worker callable must come from an importable module -- the
+        # builtin `abs` qualifies everywhere.
         assert _sync.map(
-            _square, range(4), pool='interpreter', workers=2, bar=False
-        ) == [0, 1, 4, 9]
+            abs, [-1, -2, -3], pool='interpreter', workers=2, bar=False
+        ) == [1, 2, 3]
 
     @pytest.mark.skipif(
         sys.version_info >= (3, 14),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import typing
@@ -38,7 +39,12 @@ class TestBuildArgv:
         argv = _shell.build_argv(
             "awk '{print $1}' {}", 'data.csv', shell=False
         )
-        assert argv == ['awk', '{print $1}', 'data.csv']
+        if os.name == 'nt':
+            # Windows uses non-POSIX splitting (so backslash paths
+            # survive), which also preserves quote characters.
+            assert argv == ['awk', "'{print $1}'", 'data.csv']
+        else:
+            assert argv == ['awk', '{print $1}', 'data.csv']
 
     def test_item_placeholder_synonym(self) -> None:
         assert _shell.build_argv(

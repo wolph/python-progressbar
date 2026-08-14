@@ -89,9 +89,12 @@ def _process_executor(
         'initargs': initargs,
     }
     if max_tasks_per_child is not None:
+        # Assignment before the version gate so the line is reachable
+        # (and measured) on every Python; on 3.10 the raise below
+        # discards the dict anyway.
+        process_kwargs['max_tasks_per_child'] = max_tasks_per_child
         if sys.version_info < (3, 11):  # pragma: no cover - version gate
             raise ValueError('max_tasks_per_child requires Python 3.11+')
-        process_kwargs['max_tasks_per_child'] = max_tasks_per_child
     return concurrent.futures.ProcessPoolExecutor(**process_kwargs)
 
 
@@ -107,7 +110,7 @@ def _interpreter_executor(
         interpreter_pool: typing.Any = (
             concurrent.futures.InterpreterPoolExecutor  # type: ignore[attr-defined]
         )
-    except AttributeError:
+    except AttributeError:  # pragma: no cover - version gate (<=3.13)
         raise ValueError('pool="interpreter" requires Python 3.14+') from None
     return interpreter_pool(  # pragma: no cover - reachable on 3.14+ only
         max_workers=workers,
