@@ -1,8 +1,11 @@
-"""Guard the three hand-synced export lists in ``progressbar/__init__.py``.
+"""Guard the hand-synced export lists in ``progressbar/__init__.py``.
 
-``_NAME_TO_MODULE`` is the single source of truth for the lazily re-exported
-public names. ``__all__`` and the ``TYPE_CHECKING`` import block must stay in
-sync with it; these tests fail loudly if any of the three drift apart.
+``_NAME_TO_MODULE`` is the single source of truth for the lazily
+re-exported public names; ``_NAMESPACE_ONLY`` holds the names that
+resolve via the namespace but stay out of ``__all__`` (they would
+shadow builtins or stdlib names under a star-import). ``__all__`` and
+the ``TYPE_CHECKING`` import block must stay in sync with them; these
+tests fail loudly if any of the lists drift apart.
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ import progressbar
 # Alias (not a `from` import) so CodeQL doesn't flag `progressbar` as imported
 # with both `import` and `import from`.
 _NAME_TO_MODULE = progressbar._NAME_TO_MODULE
+_NAMESPACE_ONLY = progressbar._NAMESPACE_ONLY
 
 #: Dunders that are eagerly imported (not part of ``_NAME_TO_MODULE``) but are
 #: still part of the public ``__all__``.
@@ -28,18 +32,33 @@ def test_every_mapping_name_resolves() -> None:
         assert getattr(progressbar, name) is not None, name
 
 
+def test_every_namespace_only_name_resolves() -> None:
+    for name in _NAMESPACE_ONLY:
+        assert getattr(progressbar, name) is not None, name
+
+
 def test_all_matches_mapping_plus_dunders() -> None:
     # ``__all__`` must contain exactly the mapping names plus the eager
-    # dunders. The concrete ordering is delegated to ruff's RUF022, so this
-    # compares contents rather than the exact list order.
+    # dunders -- and none of the namespace-only names, which would
+    # shadow builtins/stdlib under ``from progressbar import *``. The
+    # concrete ordering is delegated to ruff's RUF022, so this compares
+    # contents rather than the exact list order.
     assert set(progressbar.__all__) == set(_NAME_TO_MODULE) | _EAGER_DUNDERS
+
+
+def test_namespace_only_stays_out_of_all() -> None:
+    assert not set(_NAMESPACE_ONLY) & set(progressbar.__all__)
+
+
+def test_mappings_do_not_overlap() -> None:
+    assert not set(_NAMESPACE_ONLY) & set(_NAME_TO_MODULE)
 
 
 def test_all_has_no_duplicates() -> None:
     assert len(progressbar.__all__) == len(set(progressbar.__all__))
 
 
-def test_type_checking_block_imports_exactly_the_mapping() -> None:
+def test_type_checking_block_imports_exactly_the_mappings() -> None:
     source: str = pathlib.Path(progressbar.__file__).read_text()
     tree: ast.Module = ast.parse(source)
 
@@ -60,4 +79,4 @@ def test_type_checking_block_imports_exactly_the_mapping() -> None:
                 for alias in stmt.names:
                     imported.add(alias.asname or alias.name)
 
-    assert imported == set(_NAME_TO_MODULE)
+    assert imported == set(_NAME_TO_MODULE) | set(_NAMESPACE_ONLY)
