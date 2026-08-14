@@ -100,6 +100,71 @@ class TestInstanceDisplay:
         assert not bar.finished()
 
 
+class TestMultiDisplay:
+    def _multi(self, total: int = 3) -> _display.MultiDisplay:
+        display = _display.make_display(
+            'multi',
+            total=total,
+            poll_interval=0.05,
+            bar_kwargs={'fd': io.StringIO()},
+        )
+        assert isinstance(display, _display.MultiDisplay)
+        return display
+
+    def test_satisfies_protocol(self) -> None:
+        display = self._multi()
+        assert isinstance(display, _display.Display)
+        display.finish()
+
+    def test_per_task_bars_appear_and_disappear(self) -> None:
+        display = self._multi()
+        display.start(3)
+        task_bar = display.task_started(1, 'item-a')
+        assert task_bar is not None
+        assert '1: item-a' in display.multibar
+        display.task_finished(1, ok=True)
+        assert '1: item-a' not in display.multibar
+        display.finish()
+
+    def test_duplicate_labels_get_distinct_keys(self) -> None:
+        display = self._multi()
+        display.start(3)
+        display.task_started(1, 'same')
+        display.task_started(2, 'same')
+        assert '1: same' in display.multibar
+        assert '2: same' in display.multibar
+        display.task_finished(1, ok=True)
+        display.task_finished(2, ok=False)
+        display.finish()
+
+    def test_overall_bar_counts_completions(self) -> None:
+        display = self._multi()
+        display.start(3)
+        display.advance()
+        display.advance(2)
+        assert display.multibar['Total'].value == 3
+        display.finish()
+
+    def test_render_thread_stopped_after_finish(self) -> None:
+        display = self._multi()
+        display.start(3)
+        display.advance(3)
+        display.finish()
+        assert display.multibar._thread is None  # noqa: SLF001
+
+    def test_adopts_existing_multibar_without_stopping_it(self) -> None:
+        multibar = progressbar.MultiBar(fd=io.StringIO())
+        multibar.start()
+        display = _display.make_display(
+            multibar, total=2, poll_interval=0.05, bar_kwargs={}
+        )
+        display.start(2)
+        display.advance(2)
+        display.finish()
+        assert multibar._thread is not None  # noqa: SLF001
+        multibar.stop(timeout=5)
+
+
 class TestMakeDisplay:
     def test_unknown_mode_raises(self) -> None:
         with pytest.raises(TypeError, match='bogus'):

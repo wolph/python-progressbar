@@ -15,13 +15,18 @@ no-ops, which would freeze ETA/spinners during long tasks.
 from __future__ import annotations
 
 import os
+import sys
 import typing
 
 from .. import (
     bar as bar_module,
+    base,
     fast as fast_module,
 )
 from . import _common
+
+if typing.TYPE_CHECKING:
+    from .. import multi as multi_module
 
 
 @typing.runtime_checkable
@@ -167,10 +172,124 @@ class PlainDisplay:
 
 
 class MultiDisplay:
-    """Placeholder until the MultiBar-backed display lands (Task 3)."""
+    """A MultiBar: one overall bar plus one bar per in-flight task.
 
-    def __init__(self, **_kwargs: typing.Any) -> None:
-        raise NotImplementedError('multi display not implemented yet')
+    Per-task bars are keyed ``'{seq}: {label}'`` -- ``seq`` is unique
+    per run, so two items with the same ``str()`` can never collide on
+    a key (a plain-label key would silently merge them and corrupt the
+    display). Finished task bars are deleted immediately: MultiBar's
+    own default keeps them around for an hour, which would stack
+    thousands of dead lines on a big batch.
+
+    Rendering is done by MultiBar's daemon thread at
+    ``update_interval=poll_interval``, so `tick` needs no work here.
+    Best suited to modest worker counts: the block occupies one
+    terminal row per in-flight task plus one for the total.
+    """
+
+    #: Overall bar's key in the multibar (also its visible label).
+    _TOTAL_KEY: typing.ClassVar[str] = 'Total'
+    #: Bounded wait for the render thread; it wakes every
+    #: `update_interval` seconds, so this is generous.
+    _STOP_TIMEOUT: typing.ClassVar[float] = 5.0
+
+    multibar: multi_module.MultiBar
+    _keys: dict[int, str]
+    _owned: bool
+    _started_thread: bool
+    _value: int
+    _poll_interval: float
+
+    def __init__(
+        self,
+        *,
+        total: typing.Any,
+        poll_interval: float,
+        bar_kwargs: dict[str, typing.Any],
+        instance: multi_module.MultiBar | None = None,
+    ) -> None:
+        """Create (or adopt) the multibar and its overall bar."""
+        # Deferred import: keeps `import progressbar` + plain-mode use
+        # from paying for the multibar/widget machinery.
+        from .. import multi as multi_module
+
+        self._keys = {}
+        self._value = 0
+        self._started_thread = False
+        self._poll_interval = poll_interval
+        self._owned = instance is None
+        kwargs: dict[str, typing.Any] = dict(bar_kwargs)
+        if instance is not None:
+            self.multibar = instance
+        else:
+            self.multibar = multi_module.MultiBar(
+                fd=kwargs.pop('fd', sys.stderr),
+                update_interval=poll_interval,
+                show_finished=False,
+                remove_finished=0,
+                sort_reverse=False,
+            )
+        # Remaining bar kwargs style the overall bar.
+        kwargs.setdefault('poll_interval', poll_interval)
+        kwargs.setdefault('max_value', total)
+        self._overall: bar_module.ProgressBar = bar_module.ProgressBar(
+            **kwargs
+        )
+
+    def start(self, total: typing.Any) -> None:
+        """Add and start the overall bar, then the render thread."""
+        self.multibar[self._TOTAL_KEY] = self._overall
+        self._overall.start()
+        # `_thread` is the only handle MultiBar exposes for "already
+        # running"; an adopted, already-started instance must not be
+        # started twice (MultiBar asserts on that).
+        if self.multibar._thread is None:  # noqa: SLF001
+            self.multibar.start()
+            self._started_thread = True
+
+    def task_started(
+        self, seq: int, label: str
+    ) -> bar_module.ProgressBar | None:
+        """Add a per-task bar and hand it out for `current_task_bar`."""
+        key: str = f'{seq}: {label}'
+        self._keys[seq] = key
+        task_bar: bar_module.ProgressBar = bar_module.ProgressBar(
+            max_value=base.UnknownLength,
+        )
+        self.multibar[key] = task_bar
+        task_bar.start()
+        return task_bar
+
+    def task_finished(self, seq: int, ok: bool) -> None:
+        """Drop the task's bar -- finished bars must not pile up."""
+        key: str | None = self._keys.pop(seq, None)
+        if key is not None and key in self.multibar:
+            del self.multibar[key]
+
+    def advance(self, n: int = 1) -> None:
+        """Count completions on the overall bar.
+
+        The overall bar is `paused` (MultiBar contract), so `update`
+        only records the value; the render thread draws it.
+        """
+        self._value += n
+        self._overall.update(self._value)
+
+    def tick(self) -> None:
+        """No-op: the render thread redraws every `poll_interval`."""
+
+    def finish(self, *, success: bool = True) -> None:
+        """Finish the overall bar and wind down the render thread."""
+        for key in list(self._keys.values()):
+            if key in self.multibar:
+                del self.multibar[key]
+        self._keys.clear()
+        self._overall.finish(dirty=not success)
+        if self._started_thread:
+            # One last frame so the final state is on screen even if
+            # the render thread never woke between finish and stop.
+            self.multibar.render(force=True)
+            self.multibar.stop(timeout=self._STOP_TIMEOUT)
 
 
 def make_display(
@@ -201,16 +320,22 @@ def make_display(
             total=total, poll_interval=poll_interval, bar_kwargs=bar_kwargs
         )
     if bar_mode == 'multi':
-        return typing.cast(
-            Display,
-            MultiDisplay(
-                total=total,
-                poll_interval=poll_interval,
-                bar_kwargs=bar_kwargs,
-            ),
+        return MultiDisplay(
+            total=total, poll_interval=poll_interval, bar_kwargs=bar_kwargs
         )
     if isinstance(bar_mode, bar_module.ProgressBar):
         return PlainDisplay(
+            total=total,
+            poll_interval=poll_interval,
+            bar_kwargs=bar_kwargs,
+            instance=bar_mode,
+        )
+    # Deferred import mirrors MultiDisplay's: only pay for the multibar
+    # machinery when a MultiBar is actually in play.
+    from .. import multi as multi_module
+
+    if isinstance(bar_mode, multi_module.MultiBar):
+        return MultiDisplay(
             total=total,
             poll_interval=poll_interval,
             bar_kwargs=bar_kwargs,
