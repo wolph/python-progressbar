@@ -113,6 +113,7 @@ dependencies = ['python-utils >= 3.8.1']
 bugs = 'https://github.com/wolph/python-progressbar/issues'
 documentation = 'https://progressbar-2.readthedocs.io/en/latest/'
 repository = 'https://github.com/wolph/python-progressbar/'
+Funding = 'https://github.com/sponsors/wolph'
 
 [project.scripts]
 progressbar = 'progressbar.__main__:main'

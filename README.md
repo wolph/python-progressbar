@@ -409,3 +409,12 @@ existing projects.
 - Source: <https://github.com/wolph/python-progressbar>
 - Bug reports: <https://github.com/wolph/python-progressbar/issues>
 - Package homepage: <https://pypi.org/project/progressbar2/>
+
+## Support
+
+progressbar2 is maintained by [Rick van Hattem](https://github.com/wolph) in his own time. Most of that time goes on terminals nobody tests against and on keeping the bar out of your logging.
+
+If it saved you an afternoon, a tip covers an hour of issue triage:
+[Ko-fi](https://ko-fi.com/wolph_gh) or [GitHub Sponsors](https://github.com/sponsors/wolph).
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/wolph_gh)

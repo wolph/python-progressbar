@@ -52,3 +52,4 @@ real CPython compiled to WebAssembly, nothing installed.
 
    contributing
    history
+   sponsor
