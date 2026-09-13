@@ -59,7 +59,11 @@ class Demo:
 DEMOS: tuple[Demo, ...] = (
     Demo('howto/colors', 'Fixed and gradient bar colors'),
     Demo('howto/custom-widget', 'The current job phase', term_width=60),
-    Demo('howto/dynamic-messages', 'Errors found while scanning logs', term_width=60),
+    Demo(
+        'howto/dynamic-messages',
+        'Errors found while scanning logs',
+        term_width=60,
+    ),
     Demo(
         'howto/file-transfer',
         'DataSize, FileTransferSpeed, AdaptiveTransferSpeed',

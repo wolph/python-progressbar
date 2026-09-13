@@ -66,12 +66,16 @@ def test_showcase_keyboard_updates_recording_title_and_guide(
     tabs.first.focus()
     browser_page.keyboard.press('ArrowRight')
     playwright_api.expect(tabs.nth(1)).to_be_focused()
-    playwright_api.expect(tabs.nth(1)).to_have_attribute('aria-selected', 'true')
+    playwright_api.expect(tabs.nth(1)).to_have_attribute(
+        'aria-selected', 'true'
+    )
     playwright_api.expect(recording).to_have_attribute(
         'data', '_static/demos/readme-multibar.svg'
     )
     playwright_api.expect(title).to_have_text('Several jobs in one terminal')
-    playwright_api.expect(guide).to_have_attribute('href', 'howto/multibar.html')
+    playwright_api.expect(guide).to_have_attribute(
+        'href', 'howto/multibar.html'
+    )
     browser_page.keyboard.press('End')
     playwright_api.expect(tabs.last).to_be_focused()
     playwright_api.expect(guide).to_have_attribute(
@@ -186,7 +190,9 @@ def test_showcase_reduced_motion_and_failed_recording_keep_guides(
     browser_page.route('**/readme-multibar.svg', _missing)
     browser_page.get_by_role('tab', name='Multiple jobs').click()
     guide: Locator = browser_page.locator('#showcase-guide')
-    playwright_api.expect(guide).to_have_attribute('href', 'howto/multibar.html')
+    playwright_api.expect(guide).to_have_attribute(
+        'href', 'howto/multibar.html'
+    )
     playwright_api.expect(guide).to_be_visible()
     playwright_api.expect(
         browser_page.locator('#showcase-pause')
