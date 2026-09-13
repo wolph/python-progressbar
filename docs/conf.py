@@ -47,6 +47,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
     'demo',
+    'page_assets',
 ]
 
 # `sphinx-autodoc-typehints` is a declared docs dependency but is

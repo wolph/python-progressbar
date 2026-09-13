@@ -29,6 +29,13 @@ def _missing(route: Route) -> None:
     route.fulfill(status=404, body='not found')
 
 
+def _stale_home_styles(route: Route) -> None:
+    route.fulfill(
+        content_type='text/css',
+        body='.home-quickstart .demo-source { display: none; }',
+    )
+
+
 def test_homepage_loads_python_only_after_run(
     server: str,
     page: tuple[Page, list[str]],
@@ -41,6 +48,7 @@ def test_homepage_loads_python_only_after_run(
             downloads.append(request.url)
 
     browser_page.on('request', record_download)
+    browser_page.route('**/_static/home.css', _stale_home_styles)
     browser_page.goto(f'{server}/index.html')
     button: Locator = browser_page.locator('.home-quickstart .demo-button')
     playwright_api.expect(button).to_be_visible()
