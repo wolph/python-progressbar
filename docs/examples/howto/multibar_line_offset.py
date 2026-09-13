@@ -14,20 +14,32 @@ import progressbar
 
 random.seed(0)
 
-BARS = 4
-STEPS = 20
+BARS: int = 4
+STEPS: int = 20
 
 
 def main() -> None:
     print('\n' * BARS, end='')
-    bars = [
+    bars: list[progressbar.ProgressBar] = [
         progressbar.ProgressBar(
             max_value=STEPS,
             line_offset=index + 1,
+            prefix=f'Job {index + 1}: ',
+            widgets=[
+                progressbar.Percentage(),
+                ' ',
+                progressbar.Bar(),
+                ' (',
+                progressbar.SimpleProgress(),
+                ')',
+            ],
             max_error=False,
         )
         for index in range(BARS)
     ]
+    bar: progressbar.ProgressBar
+    for bar in bars:
+        bar.start()
     for _ in range(STEPS * BARS):
         random.choice(bars).increment()
         time.sleep(0.01)

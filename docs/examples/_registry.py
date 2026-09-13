@@ -25,6 +25,10 @@ class Demo:
     term_width: int = 112
     #: How many preceding log lines to keep visible above the bar.
     log_lines: int = 0
+    #: Completed output lines retained for line-by-line log recordings.
+    history_lines: int = 0
+    #: Preserve real thread scheduling when concurrency is the demonstration.
+    capture_real_time: bool = False
     #: Upper bound on animation frames; excess frames are sampled evenly.
     max_frames: int = 120
     #: Seconds each animation frame stays visible in the rendered SVG.
@@ -54,8 +58,8 @@ class Demo:
 
 DEMOS: tuple[Demo, ...] = (
     Demo('howto/colors', 'Fixed and gradient bar colors'),
-    Demo('howto/custom-widget', 'A hand-written widget'),
-    Demo('howto/dynamic-messages', 'Variable and DynamicMessage'),
+    Demo('howto/custom-widget', 'The current job phase', term_width=60),
+    Demo('howto/dynamic-messages', 'Errors found while scanning logs', term_width=60),
     Demo(
         'howto/file-transfer',
         'DataSize, FileTransferSpeed, AdaptiveTransferSpeed',
@@ -63,9 +67,24 @@ DEMOS: tuple[Demo, ...] = (
     Demo('howto/iterable-wrapper', 'Wrapping an iterable directly'),
     Demo('howto/logging-integration', 'Logging above the bar', log_lines=2),
     Demo('howto/multibar', 'MultiBar jobs finishing at different times'),
-    Demo('howto/multibar-line-offset', 'Manual line-offset bars'),
-    Demo('howto/non-tty', 'Forcing one line per update'),
-    Demo('howto/prefix-suffix', 'Templated prefix and suffix'),
+    Demo('howto/multibar-line-offset', 'Four independent rows', term_width=60),
+    Demo(
+        'howto/non-tty',
+        'Keeping each update in a log',
+        term_width=60,
+        history_lines=4,
+    ),
+    Demo(
+        'howto/parallel-execution',
+        'Three workers reporting task progress',
+        term_width=60,
+        capture_real_time=True,
+        # Real worker threads must overlap in this demonstration. Their
+        # redraw order depends on scheduling, so compare the behaviour
+        # in tests rather than requiring byte-identical recordings.
+        drift_check=False,
+    ),
+    Demo('howto/prefix-suffix', 'Live file and block labels', term_width=60),
     Demo('howto/redirect-stdout', 'print() above the bar', log_lines=2),
     Demo('howto/tqdm-style', 'tqdm-style keyword arguments'),
     Demo('howto/unknown-length', 'UnknownLength with an animated marker'),

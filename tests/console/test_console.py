@@ -28,8 +28,8 @@ silently:
   xterm entirely).
 * ``test_multibar_demos_have_no_run_button`` -- ``MultiBar``'s ``with``
   form starts a real OS thread, which Pyodide cannot provide
-  (``Thread.start()`` raises there). ``howto/multibar`` is the one page
-  in the built site that uses it (``readme/multibar`` is registered for
+  (``Thread.start()`` raises there). Both ``howto/multibar`` and
+  ``howto/parallel-execution`` need threads (``readme/multibar`` is registered for
   SVG rendering only -- ``README.md`` embeds it as a static image for
   PyPI/GitHub, never through the ``.. demo::`` directive, so it never
   produces a ``.demo-run`` element to test). The Run button must never
@@ -268,13 +268,15 @@ def test_run_button_streams_progress_to_completion(
     assert not errors, f'console errors during a normal run: {errors}'
 
 
+@pytest.mark.parametrize('demo_name', ['howto/multibar', 'howto/parallel-execution'])
 def test_multibar_demos_have_no_run_button(
     server: str,
     page: tuple[Page, list[str]],
+    demo_name: str,
 ) -> None:
     browser_page, _errors = page
-    browser_page.goto(f'{server}/howto/multibar.html')
-    container = browser_page.locator('.demo-run[data-demo="howto/multibar"]')
+    browser_page.goto(f'{server}/{demo_name}.html')
+    container = browser_page.locator(f'.demo-run[data-demo="{demo_name}"]')
     expect_ = playwright_api.expect
     expect_(container).to_have_class('demo-run demo-run-unavailable')
     assert container.locator('.demo-button').count() == 0
