@@ -5,6 +5,9 @@
 {% if pagename == 'index' and builder == 'html' %}
 <link rel="stylesheet" href="{{ pathto('_static/home.css', 1) }}">
 {% endif %}
+{% if pagename == 'tutorial/index' and builder == 'html' %}
+<link rel="stylesheet" href="{{ pathto('_static/tutorial.css', 1) }}">
+{% endif %}
 {% endblock %}
 
 {% block body %}
