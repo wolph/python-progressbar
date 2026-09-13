@@ -8,7 +8,13 @@ import time
 
 import progressbar
 
-FILES: list[str] = ['users.csv', 'sales.csv', 'stock.csv', 'costs.csv', 'audit.csv']
+FILES: list[str] = [
+    'users.csv',
+    'sales.csv',
+    'stock.csv',
+    'costs.csv',
+    'audit.csv',
+]
 BLOCKS_PER_FILE: int = 20
 
 
@@ -17,7 +23,7 @@ def main() -> None:
     bar: progressbar.ProgressBar
     file_number: int
     filename: str
-    block: int
+    _block: int
     with progressbar.ProgressBar(
         max_value=len(FILES) * BLOCKS_PER_FILE,
         prefix='{variables.filename} {variables.file_number}/5 ',
@@ -26,7 +32,7 @@ def main() -> None:
         widgets=[progressbar.Percentage(), ' ', progressbar.Bar()],
     ) as bar:
         for file_number, filename in enumerate(FILES, start=1):
-            for block in range(BLOCKS_PER_FILE):
+            for _block in range(BLOCKS_PER_FILE):
                 time.sleep(0.02)
                 completed += 1
                 bar.update(

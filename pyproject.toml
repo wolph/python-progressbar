@@ -149,6 +149,7 @@ docs-tests = [
     'playwright>=1.48.0',
     'pytest-cov>=2.6.1',
     'pytest>=4.6.9',
+    'sphinx>=1.8.5',
 ]
 
 [dependency-groups]

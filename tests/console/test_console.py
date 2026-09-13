@@ -29,10 +29,10 @@ silently:
 * ``test_multibar_demos_have_no_run_button`` -- ``MultiBar``'s ``with``
   form starts a real OS thread, which Pyodide cannot provide
   (``Thread.start()`` raises there). Both ``howto/multibar`` and
-  ``howto/parallel-execution`` need threads (``readme/multibar`` is registered for
-  SVG rendering only -- ``README.md`` embeds it as a static image for
+  ``howto/parallel-execution`` need threads. ``readme/multibar`` is only
+  registered for SVG rendering -- ``README.md`` embeds a static image for
   PyPI/GitHub, never through the ``.. demo::`` directive, so it never
-  produces a ``.demo-run`` element to test). The Run button must never
+  produces a ``.demo-run`` element to test. The Run button must never
   be offered there, and the contrast case
   (``howto/multibar-line-offset``, which does not use the threaded
   form) must still get one -- otherwise this test would pass whether or
@@ -268,7 +268,9 @@ def test_run_button_streams_progress_to_completion(
     assert not errors, f'console errors during a normal run: {errors}'
 
 
-@pytest.mark.parametrize('demo_name', ['howto/multibar', 'howto/parallel-execution'])
+@pytest.mark.parametrize(
+    'demo_name', ['howto/multibar', 'howto/parallel-execution']
+)
 def test_multibar_demos_have_no_run_button(
     server: str,
     page: tuple[Page, list[str]],

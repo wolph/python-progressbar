@@ -379,10 +379,10 @@ def _parse_history_frames(
         for part in raw_line.split('\r'):
             line: str = normalize_terminal_line(part.strip())
             if line:
-                frames.append((history + [line])[-history_lines:])
+                frames.append([*history, line][-history_lines:])
                 last_line = line
         if last_line:
-            history = (history + [last_line])[-history_lines:]
+            history = [*history, last_line][-history_lines:]
     return frames
 
 

@@ -1,4 +1,4 @@
-"""The homepage's raw HTML recordings fail the build when an asset is absent."""
+"""Reject missing homepage recording assets during the build."""
 
 from __future__ import annotations
 
@@ -14,7 +14,9 @@ from sphinx.errors import ExtensionError
 ROOT: pathlib.Path = pathlib.Path(__file__).resolve().parents[2]
 
 
-@pytest.mark.parametrize('name', ['readme/colors', 'readme/multibar', 'readme/hero'])
+@pytest.mark.parametrize(
+    'name', ['readme/colors', 'readme/multibar', 'readme/hero']
+)
 def test_missing_showcase_recording_is_a_build_error(
     name: str,
     tmp_path: pathlib.Path,

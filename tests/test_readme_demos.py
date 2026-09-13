@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import os
 import re
 import sys
@@ -414,9 +415,7 @@ def test_parse_frames_groups_repeated_manual_line_offsets() -> None:
 
 def test_multibar_clear_removes_only_the_retired_row() -> None:
     output: str = (
-        '\x1b[2Fbuild 100%\x1b[2E'
-        '\x1b[1Ftest 50%\x1b[1E'
-        '\x1b[2F\x1b[2K\x1b[2E'
+        '\x1b[2Fbuild 100%\x1b[2E\x1b[1Ftest 50%\x1b[1E\x1b[2F\x1b[2K\x1b[2E'
     )
     assert demos.parse_frames(output)[-1] == ['test 50%']
 
@@ -431,8 +430,7 @@ def test_manual_line_offset_capture_shows_four_actual_rows() -> None:
     )
     assert len(frames[-1]) == 4
     assert all(
-        '(20 of 20)' in demos.ANSI_SGR_RE.sub('', line)
-        for line in frames[-1]
+        '(20 of 20)' in demos.ANSI_SGR_RE.sub('', line) for line in frames[-1]
     )
     assert min(_bar_widths(frames)) >= 20
 
@@ -450,7 +448,7 @@ def test_parallel_execution_capture_shows_three_active_workers() -> None:
             plain_line: str = demos.ANSI_SGR_RE.sub('', line)
             match: re.Match[str] | None = demos.PERCENT_RE.search(plain_line)
             if match and 0 < int(match.group()[:-1]) < 100:
-                active_workers.add(plain_line[:match.start()].strip())
+                active_workers.add(plain_line[: match.start()].strip())
         if len(active_workers) >= 3:
             break
     else:
@@ -504,16 +502,17 @@ def test_non_tty_capture_keeps_increasing_updates_in_history() -> None:
         [
             int(match.group()[:-1])
             for line in frame
-            if (match := demos.PERCENT_RE.search(
-                demos.ANSI_SGR_RE.sub('', line)
-            ))
+            if (
+                match := demos.PERCENT_RE.search(
+                    demos.ANSI_SGR_RE.sub('', line)
+                )
+            )
         ]
         for frame in frames
     ]
     assert max(map(len, frames)) == 4
     assert any(
-        len(values) == 4
-        and all(a < b for a, b in zip(values, values[1:]))
+        len(values) == 4 and all(a < b for a, b in itertools.pairwise(values))
         for values in percentages
     )
     assert percentages[-1][-1] == 100
@@ -582,7 +581,7 @@ def test_tutorial_recording_preserves_intermediate_progress() -> None:
     assert percentages[0] == 0
     assert percentages[-1] == 100
     assert len(set(percentages)) >= 80
-    assert max(b - a for a, b in zip(percentages, percentages[1:])) <= 2
+    assert max(b - a for a, b in itertools.pairwise(percentages)) <= 2
 
 
 # Demos whose entire purpose is a time-derived reading (an elapsed duration,
