@@ -178,12 +178,16 @@ function createPanel(container, source) {
   return panel;
 }
 
-// Two demos cannot run under Pyodide at all: MultiBar starts a background
+// Threaded demos cannot run under Pyodide: MultiBar starts a background
 // thread and `Thread.start()` raises `RuntimeError: can't start new thread`
 // there, rendering nothing first. The worker returns a friendly message
 // rather than a traceback, but the Run button should not be offered in the
 // first place -- the message is defence in depth, not the control.
-const NON_RUNNABLE_DEMOS = new Set(['readme/multibar', 'howto/multibar']);
+const NON_RUNNABLE_DEMOS = new Set([
+  'readme/multibar',
+  'howto/multibar',
+  'howto/parallel-execution',
+]);
 
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof Terminal === 'undefined') return;

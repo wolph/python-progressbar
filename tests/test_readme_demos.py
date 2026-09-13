@@ -259,18 +259,18 @@ def test_render_svg_reduced_motion_rule_freezes_on_last_frame(
 def test_demo_description_strips_single_backtick_markup_from_real_docstring() -> (  # noqa: E501
     None
 ):
-    # docs/examples/howto/custom_widget.py's docstring uses RST's
+    # docs/examples/howto/redirect_stdout.py's docstring uses RST's
     # single-backtick inline-code style (`WidgetBase`) -- unlike the
     # widgets/*.py docstrings, which use double backticks (``Widget``).
     # Regression guard: an earlier version of demo_description only
     # stripped the double-backtick pattern, leaking single backticks
     # verbatim into 11 of the registry's 50 demos' <desc> text.
-    demo = demos.DEMOS_BY_NAME['howto/custom-widget']
+    demo = demos.DEMOS_BY_NAME['howto/redirect-stdout']
 
     description = demos.demo_description(demo)
 
     assert '`' not in description
-    assert 'WidgetBase' in description
+    assert 'print()' in description
 
 
 def test_demo_description_strips_double_and_single_backtick_markup(
@@ -395,6 +395,142 @@ def test_parse_frames_groups_multibar_redraws_by_offset() -> None:
         ['build 10%'],
         ['build 10%', 'test 5%'],
         ['build 20%', 'test 5%'],
+    ]
+
+
+def test_parse_frames_groups_repeated_manual_line_offsets() -> None:
+    output: str = (
+        '\x1b[F\x1b[F\rbuild 10%\x1b[B\x1b[B'
+        '\x1b[F\rtest 5%\x1b[B'
+        '\x1b[F\x1b[F\rbuild 20%\x1b[B\x1b[B'
+        '\x1b[F\x1b[F\r\x1b[B\x1b[B'
+    )
+    assert demos.parse_frames(output) == [
+        ['build 10%'],
+        ['build 10%', 'test 5%'],
+        ['build 20%', 'test 5%'],
+    ]
+
+
+def test_multibar_clear_removes_only_the_retired_row() -> None:
+    output: str = (
+        '\x1b[2Fbuild 100%\x1b[2E'
+        '\x1b[1Ftest 50%\x1b[1E'
+        '\x1b[2F\x1b[2K\x1b[2E'
+    )
+    assert demos.parse_frames(output)[-1] == ['test 50%']
+
+
+def test_manual_line_offset_capture_shows_four_actual_rows() -> None:
+    frames: list[list[str]] = demos.capture_demo(
+        demos.DEMOS_BY_NAME['howto/multibar-line-offset']
+    )
+    assert any(
+        len(frame) == 4 and all(_has_bar(line) for line in frame)
+        for frame in frames
+    )
+    assert len(frames[-1]) == 4
+    assert all(
+        '(20 of 20)' in demos.ANSI_SGR_RE.sub('', line)
+        for line in frames[-1]
+    )
+    assert min(_bar_widths(frames)) >= 20
+
+
+def test_parallel_execution_capture_shows_three_active_workers() -> None:
+    frames: list[list[str]] = demos.capture_demo(
+        demos.DEMOS_BY_NAME['howto/parallel-execution']
+    )
+    active_workers: set[str]
+    frame: list[str]
+    for frame in frames:
+        active_workers = set()
+        line: str
+        for line in frame:
+            plain_line: str = demos.ANSI_SGR_RE.sub('', line)
+            match: re.Match[str] | None = demos.PERCENT_RE.search(plain_line)
+            if match and 0 < int(match.group()[:-1]) < 100:
+                active_workers.add(plain_line[:match.start()].strip())
+        if len(active_workers) >= 3:
+            break
+    else:
+        pytest.fail('No frame shows three workers making progress together')
+    last_frame: str = demos.ANSI_SGR_RE.sub('', '\n'.join(frames[-1]))
+    assert 'Total' in last_frame
+    assert '3 of 3 files' in last_frame
+
+
+def test_parallel_worker_keeps_filename_after_early_render(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import io
+    from collections.abc import Callable
+
+    import progressbar
+
+    module: types.ModuleType = demos.load_example(
+        demos.DEMOS_BY_NAME['howto/parallel-execution']
+    )
+
+    def render_before_worker(
+        function: Callable[[str], str],
+        filenames: list[str],
+        *,
+        bar: progressbar.MultiBar,
+        **kwargs: object,
+    ) -> list[str]:
+        bar.fd = io.StringIO()
+        task_bar: progressbar.ProgressBar = progressbar.ProgressBar(
+            max_value=progressbar.UnknownLength
+        )
+        bar[filenames[0]] = task_bar
+        task_bar.start()
+        bar.render(force=True)
+        monkeypatch.setattr(progressbar, 'current_task_bar', lambda: task_bar)
+        function(filenames[0])
+        assert task_bar._format_line().count(filenames[0]) == 1
+        return filenames
+
+    monkeypatch.setattr(progressbar, 'map', render_before_worker)
+    monkeypatch.setattr(module.time, 'sleep', lambda _: None)
+    module.main()
+
+
+def test_non_tty_capture_keeps_increasing_updates_in_history() -> None:
+    frames: list[list[str]] = demos.capture_demo(
+        demos.DEMOS_BY_NAME['howto/non-tty']
+    )
+    percentages: list[list[int]] = [
+        [
+            int(match.group()[:-1])
+            for line in frame
+            if (match := demos.PERCENT_RE.search(
+                demos.ANSI_SGR_RE.sub('', line)
+            ))
+        ]
+        for frame in frames
+    ]
+    assert max(map(len, frames)) == 4
+    assert any(
+        len(values) == 4
+        and all(a < b for a, b in zip(values, values[1:]))
+        for values in percentages
+    )
+    assert percentages[-1][-1] == 100
+
+
+def test_history_keeps_newlines_but_replaces_carriage_return_updates() -> None:
+    frames: list[list[str]] = demos.parse_frames(
+        'first\r\n0%\r10%\r\n20%\r\n30%\r\n40%',
+        history_lines=3,
+    )
+    assert frames == [
+        ['first'],
+        ['first', '0%'],
+        ['first', '10%'],
+        ['first', '10%', '20%'],
+        ['10%', '20%', '30%'],
+        ['20%', '30%', '40%'],
     ]
 
 
@@ -653,6 +789,8 @@ def test_capture_demo_reports_a_crashing_example_clearly(
         term_width=80,
         log_lines=0,
         max_frames=24,
+        capture_real_time=False,
+        history_lines=0,
     )
 
     with pytest.raises(SystemExit) as error:
@@ -683,6 +821,8 @@ def test_capture_demo_reports_a_hanging_example_clearly(
         term_width=80,
         log_lines=0,
         max_frames=24,
+        capture_real_time=False,
+        history_lines=0,
     )
 
     with pytest.raises(SystemExit) as error:

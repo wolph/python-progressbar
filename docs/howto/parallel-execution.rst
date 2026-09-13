@@ -18,6 +18,14 @@ exps)``), and the bar counts completed items. The bar keeps animating
 -- ETA, timers, spinners -- even while long tasks are running with
 nothing finishing.
 
+.. demo:: howto/parallel-execution
+
+Three threads process the files concurrently. Each worker gets its own
+bar from ``current_task_bar()``, sets ``max_value`` to its hundred
+blocks, and updates that bar after each block. The percentages on the
+file rows advance while the overall count waits for completed files.
+The small sleeps stand in for time spent processing each block.
+
 Choosing where the work runs
 ============================
 

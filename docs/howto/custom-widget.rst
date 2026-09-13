@@ -3,10 +3,14 @@ Write a custom widget
 =====================
 
 The built-in widgets cover percentages, timers, and transfer speeds, but
-not every readout fits that mold -- naming the current phase of a job
-("starting", "working", "finishing") isn't something any of them do.
+a job may also need a named phase. The custom widget below shows
+"preparing", "processing", and "finishing" as the work advances.
 
 .. demo:: howto/custom-widget
+
+The phase appears before the bar. ``Stage`` returns a label padded to
+ten characters, so switching from "preparing" to "processing" keeps
+the percentage and bar aligned.
 
 A widget is any callable matching ``WidgetBase.__call__(self, progress,
 data)``, returning the text to render for one redraw. Subclass

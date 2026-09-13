@@ -113,15 +113,15 @@ Manage several jobs
 
    .. rubric:: :doc:`Run a batch in parallel <parallel-execution>`
 
-   Apply a function to several items with ``progressbar.map`` and track the
-   completed work. Choose threads, processes or asyncio, with one overall bar
-   or a bar per task. Run these examples locally.
+   Watch three files advance at different speeds with ``progressbar.map``.
+   Each worker reports its own progress, while the overall bar counts finished
+   files. Run this example locally.
 
    .. only:: html and not epub
 
       .. container:: guide-preview
 
-         .. image:: /_static/demos/readme-parallel.svg
+         .. image:: /_static/demos/howto-parallel-execution.svg
             :target: parallel-execution.html
             :alt: progressbar.map running a batch with a separate bar for each active task.
 
@@ -195,8 +195,9 @@ Customise the display
 
    .. rubric:: :doc:`Display your own widget <custom-widget>`
 
-   Show a job's current phase alongside the built-in widgets. Write a callable
-   that returns the text for each redraw and add it to the widget list.
+   Show ``Phase: preparing``, ``processing`` and ``finishing`` as the job
+   advances. Write a callable that supplies that text and place it before
+   the bar.
 
    .. only:: html and not epub
 
@@ -210,8 +211,9 @@ Customise the display
 
    .. rubric:: :doc:`Show a value from your loop <dynamic-messages>`
 
-   Display an extra value that your loop computes. A ``Variable`` widget picks
-   up its named value from each call to ``bar.update()``.
+   Count errors while scanning log records. ``Errors`` increases only when a
+   record contains an error, while the bar tracks every record scanned.
+   A ``Variable`` widget reads that count from ``bar.update()``.
 
    .. only:: html and not epub
 
@@ -219,15 +221,15 @@ Customise the display
 
          .. image:: /_static/demos/howto-dynamic-messages.svg
             :target: dynamic-messages.html
-            :alt: A named variable changing alongside the progress bar.
+            :alt: An error count increasing separately from the percentage of records scanned.
 
 .. container:: guide-card
 
    .. rubric:: :doc:`Put live values in labels <prefix-suffix>`
 
-   Show changing values before or after the bar. Put fields such as ``{value}``
-   or a custom variable in a prefix or suffix template to refresh them on each
-   redraw.
+   Show the current filename and file number before the bar, with the processed
+   block count after it. Each file advances in twenty small steps, so you can
+   watch the labels change as the work moves from one file to the next.
 
    .. only:: html and not epub
 

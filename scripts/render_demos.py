@@ -91,11 +91,14 @@ SLUG_RE = re.compile(r'[^a-z0-9]+')
 # cursor up n lines to column 0) to that bar's row, the freshly rendered
 # text, then NEXT_LINE(offset) (``ESC[<n>E``) back down to the shared
 # baseline below every bar (progressbar/multi.py's ``render``/``print``).
-# See ``_parse_multibar_frames`` for how ``offset`` is used.
+# Manual line offsets repeat F/B once per row. Accept both forms and sum
+# the upward movements to recover the row above the shared baseline.
 MULTIBAR_REPOSITION_RE = re.compile(
-    r'\x1b\[(\d*)F\r?(.*?)\x1b\[\d*E',
+    r'(?P<up>(?:\x1b\[\d*[FA])+)\r?'
+    r'(?P<text>.*?)(?P<down>(?:\x1b\[\d*[EB])+)',
     re.DOTALL,
 )
+CURSOR_UP_RE: re.Pattern[str] = re.compile(r'\x1b\[(\d*)[FA]')
 # Default per-frame duration. Registry entries can override it (and add a
 # final-frame hold) via ``Demo.frame_seconds``/``Demo.end_hold_seconds``;
 # the README demos do, since they pace as a first impression rather than
@@ -116,7 +119,7 @@ CAPTURE_CLOCK_INSTANT = '2024-03-14T09:41:17'
 def _demo_argv(demo: Demo) -> list[str]:
     """Build the argv used to run ``demo`` under capture.
 
-    Every demo runs through a small ``-c`` bootstrap that freezes the clock
+    By default, a demo runs through a ``-c`` bootstrap that freezes the clock
     (via freezegun, already a test dependency) and makes ``time.sleep``
     advance it by exactly the requested amount instead of actually
     blocking, before executing the module. This lives entirely in the
@@ -169,10 +172,21 @@ def _demo_argv(demo: Demo) -> list[str]:
        concurrent ticks would corrupt freezegun's state; such demos
        remain scheduling-dependent and keep ``drift_check=False``.
 
+    Demos with ``capture_real_time`` keep normal clocks and thread
+    scheduling so workers can visibly advance concurrently.
+
     Capture disables the minimum redraw interval so real intermediate
     updates reach the recording. Playback timing comes from the registry.
     The example source and normal library redraw limits stay unchanged.
     """
+    if demo.capture_real_time:
+        bootstrap: str = (
+            'import runpy, progressbar\n'
+            'progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL = 0.0\n'
+            f"runpy.run_path({str(demo.path)!r}, run_name='__main__')\n"
+        )
+        return [sys.executable, '-c', bootstrap]
+
     bootstrap = (
         'import threading, time, runpy, freezegun\n'
         'import progressbar.multi\n'
@@ -283,7 +297,7 @@ def capture_demo(demo: Demo) -> list[list[str]]:
     finally:
         os.close(controller)
 
-    frames = parse_frames(output)
+    frames = parse_frames(output, history_lines=demo.history_lines)
     if demo.log_lines:
         frames = keep_recent_logs_with_progress(frames, demo.log_lines)
     frames = dedupe_consecutive_frames(frames)
@@ -312,11 +326,18 @@ def normalize_terminal_line(line: str) -> str:
     return STRAY_CSI_RE.sub('', line)
 
 
-def parse_frames(output: str) -> list[list[str]]:
+def parse_frames(
+    output: str,
+    *,
+    history_lines: int = 0,
+) -> list[list[str]]:
     output = output.replace('\x1b[2K', '')
 
     if MULTIBAR_REPOSITION_RE.search(output):
         return _parse_multibar_frames(output)
+
+    if history_lines:
+        return _parse_history_frames(output, history_lines)
 
     frames: list[list[str]] = []
     if '\f' in output:
@@ -344,6 +365,27 @@ def parse_frames(output: str) -> list[list[str]]:
     return frames
 
 
+def _parse_history_frames(
+    output: str,
+    history_lines: int,
+) -> list[list[str]]:
+    """Retain newline output while carriage returns replace the active row."""
+    history: list[str] = []
+    frames: list[list[str]] = []
+    raw_line: str
+    for raw_line in output.replace('\r\n', '\n').split('\n'):
+        last_line: str = ''
+        part: str
+        for part in raw_line.split('\r'):
+            line: str = normalize_terminal_line(part.strip())
+            if line:
+                frames.append((history + [line])[-history_lines:])
+                last_line = line
+        if last_line:
+            history = (history + [last_line])[-history_lines:]
+    return frames
+
+
 def _parse_multibar_frames(output: str) -> list[list[str]]:
     """Reconstruct ``MultiBar``'s per-bar redraws into combined frames.
 
@@ -362,9 +404,16 @@ def _parse_multibar_frames(output: str) -> list[list[str]]:
     lines_by_offset: dict[int, str] = {}
     frames: list[list[str]] = []
     for match in MULTIBAR_REPOSITION_RE.finditer(output):
-        offset = int(match.group(1) or 1)
-        text = normalize_terminal_line(match.group(2).strip())
+        offset: int = sum(
+            int(count or 1)
+            for count in CURSOR_UP_RE.findall(match.group('up'))
+        )
+        text: str = normalize_terminal_line(match.group('text').strip())
         if not text:
+            # Manual offsets also wrap the empty write from finish().
+            # That write moves the cursor without erasing the bar.
+            if match.group('down').endswith('B'):
+                continue
             # An empty body at an offset is MultiBar clearing that row --
             # its `render` erases the line of a bar that vanished since
             # the previous frame (e.g. the parallel display deletes each

@@ -1,36 +1,43 @@
-"""Recognize `DynamicMessage` in old code as today's `Variable`.
+"""Count errors while scanning log records with a Variable widget.
 
-Older code may still import `DynamicMessage` -- it is a plain subclass of
-`Variable` kept for compatibility, not a different widget. Prefer
-`Variable` in new code; this example updates one of each, side by side
-from the same value, to show they behave identically.
+The bar counts inspected records. The named variable counts only the
+records that contain an error, so the two readings describe different
+parts of the same job.
 """
 
-import random
 import time
 
 import progressbar
+from progressbar.widgets import WidgetBase
 
-random.seed(0)
-
-STEPS = 24
+RECORDS: list[str] = [
+    'INFO request received',
+    'INFO cache hit',
+    'ERROR request timed out',
+    'INFO response sent',
+    'INFO connection closed',
+] * 20
 
 
 def main() -> None:
-    widgets = [
+    widgets: list[str | WidgetBase] = [
+        progressbar.Variable('errors', format='Errors: {value:2.0f}'),
+        ' | Scanned ',
         progressbar.Percentage(),
         ' ',
         progressbar.Bar(),
-        ' ',
-        progressbar.Variable('current'),
-        ' ',
-        progressbar.DynamicMessage('legacy'),
     ]
-    with progressbar.ProgressBar(max_value=STEPS, widgets=widgets) as bar:
-        for step in range(STEPS):
-            value = random.random()
-            bar.update(step + 1, current=value, legacy=value)
-            time.sleep(0.005)
+    errors: int = 0
+    bar: progressbar.ProgressBar
+    step: int
+    record: str
+    with progressbar.ProgressBar(
+        max_value=len(RECORDS), widgets=widgets, variables={'errors': 0}
+    ) as bar:
+        for step, record in enumerate(RECORDS, start=1):
+            errors += record.startswith('ERROR')
+            time.sleep(0.02)
+            bar.update(step, errors=errors)
 
 
 if __name__ == '__main__':

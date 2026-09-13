@@ -2,19 +2,22 @@
 Show a custom value next to the bar
 ===================================
 
-Sometimes the bar's own progress isn't the only number worth showing --
-a current filename, a running total, or any other value your loop
-computes -- and that value doesn't come from ``value``/``max_value`` at
-all.
+When you scan a log, the number of errors matters alongside the number
+of records inspected. A ``Variable`` widget displays the error count
+while the percentage tracks the scan:
 
 .. demo:: howto/dynamic-messages
 
-``Variable(name)`` renders a named entry from ``bar.update()``'s keyword
-arguments: pass ``current=some_value`` to ``update()`` and a
-``Variable('current')`` widget picks it up on the next redraw. You don't
-need to seed it in advance -- the bar scans its widget list at
-construction and registers a placeholder for every named variable that
-isn't already supplied, so the first render shows dashes rather than
-raising. Older code may import ``DynamicMessage`` instead: it is a plain
-subclass of ``Variable``, kept only so existing imports keep working, and
-behaves identically -- prefer ``Variable`` in anything new.
+``Variable('errors')`` reads the ``errors=`` keyword passed to
+``bar.update()``. The example increments that count only when a record
+starts with ``ERROR``. The scan finishes at 100% with 20 errors found
+among 100 records. Placing the count first keeps it beside the scan
+percentage as the bar stretches to fill the remaining width.
+
+``variables={'errors': 0}`` supplies the initial reading. Without an
+initial value, the bar registers a placeholder for each ``Variable``
+in its widget list and displays dashes until the first update.
+
+Older code may import ``DynamicMessage``. It is a plain subclass of
+``Variable``, kept for compatibility, and behaves identically. Use
+``Variable`` in new code.
