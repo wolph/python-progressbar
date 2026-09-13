@@ -11,7 +11,7 @@ includes the complete Python source and an example you can run in your browser.
    The recordings below show the output of each step. Scroll a recording
    horizontally if the terminal is wider than your screen.
 
-.. container:: tutorial-step
+.. container:: guide-card
 
    .. rubric:: :doc:`1. Turn a loop into a progress bar <step1>`
 
@@ -21,13 +21,13 @@ includes the complete Python source and an example you can run in your browser.
 
    .. only:: html and not epub
 
-      .. container:: tutorial-preview
+      .. container:: guide-preview
 
          .. image:: /_static/demos/tutorial-step1.svg
             :target: step1.html
             :alt: A loop reaching 100%, with an elapsed time and an ETA.
 
-.. container:: tutorial-step
+.. container:: guide-card
 
    .. rubric:: :doc:`2. Decide when progress moves <step2>`
 
@@ -36,13 +36,13 @@ includes the complete Python source and an example you can run in your browser.
 
    .. only:: html and not epub
 
-      .. container:: tutorial-preview
+      .. container:: guide-preview
 
          .. image:: /_static/demos/tutorial-step2.svg
             :target: step2.html
             :alt: An activity indicator and elapsed time, without a percentage.
 
-.. container:: tutorial-step
+.. container:: guide-card
 
    .. rubric:: :doc:`3. Show how much work is left <step3>`
 
@@ -52,13 +52,13 @@ includes the complete Python source and an example you can run in your browser.
 
    .. only:: html and not epub
 
-      .. container:: tutorial-preview
+      .. container:: guide-preview
 
          .. image:: /_static/demos/tutorial-step3.svg
             :target: step3.html
             :alt: Progress measured against a known total, with a percentage and ETA.
 
-.. container:: tutorial-step
+.. container:: guide-card
 
    .. rubric:: :doc:`4. Choose what your bar shows <step4>`
 
@@ -68,13 +68,13 @@ includes the complete Python source and an example you can run in your browser.
 
    .. only:: html and not epub
 
-      .. container:: tutorial-preview
+      .. container:: guide-preview
 
          .. image:: /_static/demos/tutorial-step4.svg
             :target: step4.html
             :alt: A custom display containing only a percentage, a bar and an ETA.
 
-.. container:: tutorial-step
+.. container:: guide-card
 
    .. rubric:: :doc:`5. Print messages above the bar <step5>`
 
@@ -84,7 +84,7 @@ includes the complete Python source and an example you can run in your browser.
 
    .. only:: html and not epub
 
-      .. container:: tutorial-preview
+      .. container:: guide-preview
 
          .. image:: /_static/demos/tutorial-step5.svg
             :target: step5.html
