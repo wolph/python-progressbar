@@ -5,8 +5,11 @@
 {% if pagename == 'index' and builder == 'html' %}
 <link rel="stylesheet" href="{{ pathto('_static/home.css', 1) }}">
 {% endif %}
-{% if pagename in ('tutorial/index', 'howto/index') and builder == 'html' %}
+{% if pagename in ('tutorial/index', 'howto/index', 'reference/index', 'explanation/index', 'installation') and builder == 'html' %}
 <link rel="stylesheet" href="{{ pathto('_static/guide-cards.css', 1) }}">
+{% endif %}
+{% if pagename in ('reference/index', 'explanation/index', 'installation') and builder == 'html' %}
+<link rel="stylesheet" href="{{ pathto('_static/section-pages.css', 1) }}">
 {% endif %}
 {% endblock %}
 
