@@ -17,7 +17,7 @@ import typing
 from docutils import nodes
 from docutils.parsers.rst import Directive
 from sphinx.application import Sphinx
-from sphinx.errors import NoUri
+from sphinx.errors import ExtensionError, NoUri
 from sphinx.util.osutil import relative_uri
 
 if typing.TYPE_CHECKING:
@@ -155,8 +155,21 @@ def copy_example_sources(app: Sphinx, exception: Exception | None) -> None:
         )
 
 
+def validate_showcase_assets(_app: Sphinx) -> None:
+    """Check recordings embedded as raw HTML on the documentation homepage."""
+    name: str
+    for name in ('readme/colors', 'readme/multibar', 'readme/hero'):
+        svg_path: pathlib.Path = DEMOS_BY_NAME[name].svg_path
+        if not svg_path.is_file():
+            raise ExtensionError(
+                f'showcase animation not rendered: {name} '
+                f'(run: python scripts/render_demos.py --only {name})'
+            )
+
+
 def setup(app: Sphinx) -> dict[str, typing.Any]:
     app.add_directive('demo', DemoDirective)
+    app.connect('builder-inited', validate_showcase_assets)
     app.connect('build-finished', copy_example_sources)
     app.add_css_file('vendor/xterm.css')
     app.add_css_file('livecode/livecode.css')

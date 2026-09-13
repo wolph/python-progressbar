@@ -130,11 +130,11 @@ def deltas_to_seconds(
 def no_color(value: StringT) -> StringT:
     """Return the `value` without ANSI escape codes.
 
-    >>> no_color(b'\u001b[1234]abc')
+    >>> no_color(b'\\x1b[1234]abc')
     b'abc'
-    >>> str(no_color('\u001b[1234]abc'))
+    >>> str(no_color('\\x1b[1234]abc'))
     'abc'
-    >>> str(no_color('\u001b[1234]abc'))
+    >>> str(no_color('\\x1b[1234]abc'))
     'abc'
     >>> no_color(123)
     Traceback (most recent call last):
@@ -160,11 +160,11 @@ def no_color(value: StringT) -> StringT:
 def len_color(value: types.StringTypes) -> int:
     """Return the length of `value` without ANSI escape codes.
 
-    >>> len_color(b'\u001b[1234]abc')
+    >>> len_color(b'\\x1b[1234]abc')
     3
-    >>> len_color('\u001b[1234]abc')
+    >>> len_color('\\x1b[1234]abc')
     3
-    >>> len_color('\u001b[1234]abc')
+    >>> len_color('\\x1b[1234]abc')
     3
     """
     return len(no_color(value))

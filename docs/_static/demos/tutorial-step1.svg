@@ -7,7 +7,7 @@
   viewBox="0 0 1080 96"
 >
   <title id="demo-wrap-an-iterable-title">Wrap an iterable</title>
-  <desc id="demo-wrap-an-iterable-desc">The first progress bar: wrap a range with progressbar.progressbar.</desc>
+  <desc id="demo-wrap-an-iterable-desc">Wrap an iterable to show its progress.</desc>
   <style>
     .terminal-bg { fill: #101418; }
     .terminal-title {

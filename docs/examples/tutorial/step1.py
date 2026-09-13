@@ -1,9 +1,4 @@
-"""The first progress bar: wrap a `range` with `progressbar.progressbar`.
-
-`progressbar.progressbar(iterable)` turns any `for` loop into a progress
-bar with no other change to the loop -- start, update and finish all
-happen for you.
-"""
+"""Wrap an iterable to show its progress."""
 
 import time
 

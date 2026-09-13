@@ -98,7 +98,7 @@ master_doc = 'index'
 # General information about the project.
 project = 'Progress Bar'
 project_slug: str = ''.join(project.capitalize().split())
-copyright = f'{datetime.date.today().year},  <a href="http://wol.ph/">{metadata.__author__}</a>'
+copyright: str = f'{datetime.date.today().year}, {metadata.__author__}'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -158,7 +158,25 @@ html_theme = 'furo'
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
+html_title: str = 'progressbar2 documentation'
+html_css_files: list[str] = ['brand.css']
+
 html_theme_options: dict[str, object] = {
+    'light_css_variables': {
+        'color-brand-primary': '#6550b5',
+        'color-brand-content': '#6550b5',
+        'color-background-primary': '#f8f7f4',
+        'color-background-secondary': '#efece5',
+        'color-background-border': '#dedbd3',
+        'font-stack': 'system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+    },
+    'dark_css_variables': {
+        'color-brand-primary': '#b9a5f0',
+        'color-brand-content': '#b9a5f0',
+        'color-background-primary': '#1c1b1f',
+        'color-background-secondary': '#252429',
+        'color-background-border': '#49454f',
+    },
     'source_repository': 'https://github.com/wolph/python-progressbar/',
     'source_branch': 'develop',
     'source_directory': 'docs/',
