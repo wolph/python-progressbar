@@ -28,10 +28,10 @@ class Demo:
     #: Upper bound on animation frames; excess frames are sampled evenly.
     max_frames: int = 24
     #: Seconds each animation frame stays visible in the rendered SVG.
-    frame_seconds: float = 0.08
+    frame_seconds: float = 0.25
     #: Extra seconds the final frame stays visible before the loop
     #: restarts, so the finished state registers before the reset.
-    end_hold_seconds: float = 0.0
+    end_hold_seconds: float = 2.0
     #: Whether ``scripts/render_demos.py --check`` compares this demo's
     #: committed SVG against a fresh render. ``False`` is reserved for
     #: demos whose capture is not byte-stable across runs for reasons the
@@ -69,10 +69,8 @@ DEMOS: tuple[Demo, ...] = (
     Demo('howto/redirect-stdout', 'print() above the bar', log_lines=2),
     Demo('howto/tqdm-style', 'tqdm-style keyword arguments'),
     Demo('howto/unknown-length', 'UnknownLength with an animated marker'),
-    # The README demos pace slower than the in-docs ones: they are the
-    # first thing a visitor sees and have to read as a demonstration, not
-    # a flicker. Each frame gets a quarter second and the finished state
-    # holds for two before the loop restarts.
+    # Keep the README pacing explicit: a quarter second per frame, then
+    # two seconds to read the finished state before the loop restarts.
     Demo(
         'readme/cli',
         'progressbar data.bin -o copy.bin',
