@@ -12,6 +12,8 @@ If the package saved you an afternoon, a tip covers an hour of issue triage.
 
 - `Ko-fi <https://ko-fi.com/wolph_gh>`_ for a one-off tip
 - `GitHub Sponsors <https://github.com/sponsors/wolph>`_ for a recurring one
+- `thanks.dev <https://thanks.dev/u/gh/wolph>`_ if your employer funds its
+  dependency tree
 
 Nothing here buys a response time or a support contract. It buys hours on the
 parts of the package nobody else wants to look at.
