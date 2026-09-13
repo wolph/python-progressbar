@@ -26,9 +26,9 @@ class Demo:
     #: How many preceding log lines to keep visible above the bar.
     log_lines: int = 0
     #: Upper bound on animation frames; excess frames are sampled evenly.
-    max_frames: int = 24
+    max_frames: int = 120
     #: Seconds each animation frame stays visible in the rendered SVG.
-    frame_seconds: float = 0.25
+    frame_seconds: float = 0.04
     #: Extra seconds the final frame stays visible before the loop
     #: restarts, so the finished state registers before the reset.
     end_hold_seconds: float = 2.0
@@ -74,12 +74,14 @@ DEMOS: tuple[Demo, ...] = (
     Demo(
         'readme/cli',
         'progressbar data.bin -o copy.bin',
+        max_frames=24,
         frame_seconds=0.25,
         end_hold_seconds=2.0,
     ),
     Demo(
         'readme/colors',
         'Gradients, colors and animated markers',
+        max_frames=24,
         frame_seconds=0.25,
         end_hold_seconds=2.0,
     ),
@@ -87,18 +89,21 @@ DEMOS: tuple[Demo, ...] = (
         'readme/hero',
         'Progress with clean logs',
         log_lines=2,
+        max_frames=24,
         frame_seconds=0.25,
         end_hold_seconds=2.0,
     ),
     Demo(
         'readme/multibar',
         'Multiple active jobs',
+        max_frames=24,
         frame_seconds=0.25,
         end_hold_seconds=2.0,
     ),
     Demo(
         'readme/parallel',
         'progressbar.map with per-task bars',
+        max_frames=24,
         frame_seconds=0.25,
         end_hold_seconds=2.0,
         # Worker threads update their own bars, so which redraws land in
@@ -109,6 +114,7 @@ DEMOS: tuple[Demo, ...] = (
     Demo(
         'readme/unknown-length',
         'Unknown length',
+        max_frames=24,
         frame_seconds=0.25,
         end_hold_seconds=2.0,
     ),
