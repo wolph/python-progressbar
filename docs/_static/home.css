@@ -79,12 +79,15 @@
 .home-quickstart .demo-animation { display: none; }
 .home-quickstart .demo-source { max-height: 330px; overflow: auto; }
 .home-quickstart .demo-source pre { font-size: 12px; }
-.home-quickstart .demo:has(.demo-editor) .demo-source { display: none; }
+.home-quickstart .demo:has(.demo-editor:not([hidden])) .demo-source { display: none; }
+.home-quickstart .demo-editor[hidden] { display: none; }
 .home-quickstart .demo-editor { font-size: 12px; line-height: 1.6; max-height: 400px; }
 .home-quickstart .demo-terminal { display: none; }
 .home-quickstart .demo-run[data-started] .demo-terminal { display: block; }
 .home-quickstart .demo-controls { border-top: 0; padding: 11px 14px; }
 .home-quickstart .demo-button { padding: 6px 16px; font: 13px var(--font-stack); }
+.home-quickstart .demo-edit { padding: 6px 12px; font: 13px var(--font-stack); border: 1px solid var(--color-background-border); border-radius: 4px; background: var(--color-background-primary); color: var(--color-foreground-primary); cursor: pointer; }
+.home-quickstart .demo-edit:hover { border-color: var(--home-accent); }
 .home-quickstart .demo-run:not(:has(.demo-editor)) { padding: 12px; font-size: 13px; }
 .home-guide-links { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 48px 40px 42px; padding-top: 27px; border-top: 1px solid var(--color-background-border); }
 .home-guide-links a { text-decoration: none; }

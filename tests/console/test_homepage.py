@@ -44,11 +44,51 @@ def test_homepage_loads_python_only_after_run(
     browser_page.goto(f'{server}/index.html')
     button: Locator = browser_page.locator('.home-quickstart .demo-button')
     playwright_api.expect(button).to_be_visible()
+    source: Locator = browser_page.locator('.home-quickstart .demo-source')
+    playwright_api.expect(source).to_be_visible()
+    theme: str
+    for theme in ('light', 'dark'):
+        browser_page.locator('body').evaluate(
+            '(body, theme) => body.dataset.theme = theme', theme
+        )
+        assert source.locator('.kn').first.evaluate(
+            '(node) => getComputedStyle(node).color'
+        ) != source.locator('pre').evaluate(
+            '(node) => getComputedStyle(node).color'
+        )
     assert _worker_count(browser_page) == 0
     assert not downloads
     button.click()
     _wait_for_terminal_text(browser_page, '100%', BOOT_TIMEOUT_MS)
     assert _worker_count(browser_page) == 1
+    assert not page[1]
+
+
+def test_homepage_can_edit_run_and_reset_the_example(
+    server: str,
+    page: tuple[Page, list[str]],
+) -> None:
+    browser_page: Page = page[0]
+    browser_page.goto(f'{server}/index.html')
+    source: Locator = browser_page.locator('.home-quickstart .demo-source')
+    editor: Locator = browser_page.get_by_role(
+        'textbox', name='Python example source'
+    )
+    edit: Locator = browser_page.get_by_role('button', name='Edit code')
+    edit.click()
+    playwright_api.expect(editor).to_be_focused()
+    playwright_api.expect(source).to_be_hidden()
+    original: str = editor.input_value()
+    editor.fill("print('Edited example ran')")
+    browser_page.get_by_role('button', name='Run', exact=True).click()
+    _wait_for_terminal_text(
+        browser_page, 'Edited example ran', BOOT_TIMEOUT_MS
+    )
+    browser_page.get_by_role('button', name='Reset example').click()
+    playwright_api.expect(source).to_be_visible()
+    playwright_api.expect(editor).to_be_hidden()
+    playwright_api.expect(edit).to_be_focused()
+    assert browser_page.locator('.demo-editor').input_value() == original
     assert not page[1]
 
 

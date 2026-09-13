@@ -91,6 +91,38 @@ function finishRun() {
   if (activePanel) activePanel.setStatus('idle');
 }
 
+/**
+ * @param {HTMLElement} container
+ * @param {HTMLTextAreaElement} editor
+ * @param {HTMLElement} controls
+ * @param {string} source
+ */
+function keepHighlightedHomepageSource(container, editor, controls, source) {
+  if (!container.closest('.home-quickstart')) return;
+
+  editor.hidden = true;
+  editor.id = 'home-example-editor';
+  /** @type {HTMLButtonElement} */
+  const edit = document.createElement('button');
+  edit.className = 'demo-edit';
+  edit.type = 'button';
+  edit.textContent = 'Edit code';
+  edit.setAttribute('aria-controls', editor.id);
+  edit.setAttribute('aria-expanded', 'false');
+  edit.addEventListener('click', () => {
+    editor.hidden = !editor.hidden;
+    edit.textContent = editor.hidden ? 'Edit code' : 'Reset example';
+    edit.setAttribute('aria-expanded', String(!editor.hidden));
+    if (editor.hidden) {
+      editor.value = source;
+      edit.focus();
+    } else {
+      editor.focus();
+    }
+  });
+  controls.append(edit);
+}
+
 function createPanel(container, source) {
   const editor = document.createElement('textarea');
   editor.className = 'demo-editor';
@@ -114,7 +146,9 @@ function createPanel(container, source) {
 
   const controls = document.createElement('div');
   controls.className = 'demo-controls';
-  controls.append(button, status);
+  controls.append(button);
+  keepHighlightedHomepageSource(container, editor, controls, source);
+  controls.append(status);
   container.append(controls, editor, screen);
 
   const terminal = new Terminal({
