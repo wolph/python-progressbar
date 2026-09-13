@@ -433,6 +433,22 @@ def test_every_demo_animates_across_at_least_two_frames(
     )
 
 
+def test_tutorial_recording_preserves_intermediate_progress() -> None:
+    frames: list[list[str]] = demos.capture_demo(
+        demos.DEMOS_BY_NAME['tutorial/step1']
+    )
+    percentages: list[int] = [
+        int(match.group()[:-1])
+        for frame in frames
+        for line in frame
+        if (match := demos.PERCENT_RE.search(line))
+    ]
+    assert percentages[0] == 0
+    assert percentages[-1] == 100
+    assert len(set(percentages)) >= 80
+    assert max(b - a for a, b in zip(percentages, percentages[1:])) <= 2
+
+
 # Demos whose entire purpose is a time-derived reading (an elapsed duration,
 # a countdown, a projected clock time, the time of day) rather than a demo
 # that merely happens to show elapsed/ETA text as part of ProgressBar's

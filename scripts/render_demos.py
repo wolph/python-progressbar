@@ -168,10 +168,15 @@ def _demo_argv(demo: Demo) -> list[str]:
        threads of their own (``howto/multibar-line-offset``), where
        concurrent ticks would corrupt freezegun's state; such demos
        remain scheduling-dependent and keep ``drift_check=False``.
+
+    Capture disables the minimum redraw interval so real intermediate
+    updates reach the recording. Playback timing comes from the registry.
+    The example source and normal library redraw limits stay unchanged.
     """
     bootstrap = (
         'import threading, time, runpy, freezegun\n'
         'import progressbar.multi\n'
+        'progressbar.ProgressBar._MINIMUM_UPDATE_INTERVAL = 0.0\n'
         '_frozen = freezegun.freeze_time('
         f'{CAPTURE_CLOCK_INSTANT!r}).start()\n'
         '_tick_lock = threading.Lock()\n'
@@ -209,6 +214,7 @@ def capture_demo(demo: Demo) -> list[list[str]]:
     env['COLUMNS'] = str(demo.term_width)
     env['PYTHONPATH'] = str(ROOT)
     env['PYTHONIOENCODING'] = 'utf-8'
+    env['PROGRESSBAR_MINIMUM_UPDATE_INTERVAL'] = '0'
 
     controller, worker = pty.openpty()
     try:
