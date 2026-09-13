@@ -41,6 +41,28 @@ from . import (
 )
 from .terminal import os_specific
 
+_PACKAGE_DIR: str = os.path.dirname(os.path.abspath(__file__))
+
+
+def _caller_stacklevel() -> int:
+    """Return the `stacklevel` that points a warning at the first frame
+    outside progressbar.
+
+    `warnings.warn()` counts level 1 as the function that calls it, so the
+    walk starts at this helper's caller and climbs until the code is not
+    ours. A fixed level would break as soon as a subclass adds an
+    `__init__` between the user and `ProgressBar.__init__`.
+    """
+    frame: FrameType | None = sys._getframe(1)
+    level: int = 1
+    while frame is not None and frame.f_code.co_filename.startswith(
+        _PACKAGE_DIR
+    ):
+        frame = frame.f_back
+        level += 1
+    return level
+
+
 try:
     # Optional native accelerator, shipped as the ``progressbar2[fast]`` extra
     # (the separate ``speedups`` package). When importable, the iterator path
@@ -904,7 +926,7 @@ class ProgressBar(
                 'The usage of `maxval` is deprecated, please use '
                 '`max_value` instead',
                 DeprecationWarning,
-                stacklevel=1,
+                stacklevel=_caller_stacklevel(),
             )
             max_value = kwargs.get('maxval')
 
@@ -913,7 +935,7 @@ class ProgressBar(
                 'The usage of `poll` is deprecated, please use '
                 '`poll_interval` instead',
                 DeprecationWarning,
-                stacklevel=1,
+                stacklevel=_caller_stacklevel(),
             )
             poll_interval = kwargs.get('poll')
 
@@ -1738,7 +1760,7 @@ class ProgressBar(
         warnings.warn(
             'The usage of `currval` is deprecated, please use `value` instead',
             DeprecationWarning,
-            stacklevel=1,
+            stacklevel=_caller_stacklevel(),
         )
         return self.value
 
