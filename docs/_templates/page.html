@@ -1,0 +1,64 @@
+{% extends "!page.html" %}
+
+{% block extra_styles %}
+{{ super() }}
+{% if pagename == 'index' and builder == 'html' %}
+<link rel="stylesheet" href="{{ pathto('_static/home.css', 1) }}">
+{% endif %}
+{% endblock %}
+
+{% block body %}
+{% if pagename == 'index' and builder == 'html' %}
+<script>
+  document.body.dataset.theme = "auto";
+  try {
+    document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+  } catch {
+    // Keep the system colour theme when browser storage is unavailable.
+  }
+</script>
+{% include "partials/icons.html" %}
+<a class="skip-to-content" href="#furo-main-content">Skip to content</a>
+<div class="home-page">
+  <header class="home-header">
+    <a class="home-brand" href="{{ pathto('index') }}">progressbar2</a>
+    <nav class="home-nav" aria-label="Main navigation">
+      <a href="{{ pathto('tutorial/index') }}">Documentation</a>
+      <a href="{{ pathto('widgets/index') }}">Widgets</a>
+      <a href="https://github.com/wolph/python-progressbar">GitHub</a>
+    </nav>
+    <div class="home-tools">
+      <form class="home-search" action="{{ pathto('search') }}" method="get" role="search">
+        <label class="visually-hidden" for="home-search">Search documentation</label>
+        <input id="home-search" type="search" name="q" placeholder="Search docs">
+      </form>
+      <a class="home-version" href="https://readthedocs.org/projects/progressbar-2/versions/" aria-label="Documentation versions, current package version {{ release|e }}">v{{ release|e }}</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle Light / Dark / Auto colour theme" title="Light / Dark / Auto colour theme">
+        <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+        <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+        <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+        <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+      </button>
+    </div>
+  </header>
+  <main id="furo-main-content">{{ body }}</main>
+  <footer class="home-footer">
+    <span>progressbar2 documentation</span>
+    <nav aria-label="Project links">
+      <a href="{{ pathto('contributing') }}">Contribute</a>
+      <a href="{{ pathto('history') }}">Release history</a>
+      <a href="{{ pathto('sponsor') }}">Support the project</a>
+    </nav>
+  </footer>
+</div>
+{% else %}
+{{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% if pagename == 'index' and builder == 'html' %}
+<script src="{{ pathto('_static/showcase.js', 1) }}" defer></script>
+{% endif %}
+{% endblock %}

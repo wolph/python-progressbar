@@ -1,0 +1,41 @@
+/* Shared typography and controls for the homepage and Furo documentation. */
+body {
+  --home-accent: #6550b5;
+  --home-card-transfer: #e1f0ee;
+  --home-card-jobs: #eee5f7;
+  --home-card-logs: #f8edcf;
+  --home-surface: #efece5;
+}
+body[data-theme="dark"] {
+  --home-accent: #b9a5f0;
+  --home-card-transfer: #203a37;
+  --home-card-jobs: #352c44;
+  --home-card-logs: #403922;
+  --home-surface: #28272b;
+}
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"]) {
+    --home-accent: #b9a5f0;
+    --home-card-transfer: #203a37;
+    --home-card-jobs: #352c44;
+    --home-card-logs: #403922;
+    --home-surface: #28272b;
+  }
+}
+a { text-underline-offset: 0.18em; }
+a:focus-visible, button:focus-visible, input:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid #b87917;
+  outline-offset: 4px;
+}
+.sidebar-brand-text { font-weight: 750; letter-spacing: -0.035em; }
+.demo-button { background: #6550b5; color: #fff; }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

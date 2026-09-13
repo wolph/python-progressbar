@@ -95,8 +95,10 @@ function createPanel(container, source) {
   const editor = document.createElement('textarea');
   editor.className = 'demo-editor';
   editor.value = source;
-  editor.rows = source.split('\n').length;
+  editor.rows = source.trimEnd().split('\n').length;
+  editor.wrap = 'off';
   editor.spellcheck = false;
+  editor.setAttribute('aria-label', 'Python example source');
 
   const button = document.createElement('button');
   button.className = 'demo-button';
@@ -105,6 +107,7 @@ function createPanel(container, source) {
 
   const status = document.createElement('span');
   status.className = 'demo-status';
+  status.setAttribute('role', 'status');
 
   const screen = document.createElement('div');
   screen.className = 'demo-terminal';
@@ -138,6 +141,7 @@ function createPanel(container, source) {
   };
 
   button.addEventListener('click', async () => {
+    container.dataset.started = 'true';
     activePanel = panel;
     panel.setStatus('loading');
     terminal.reset();
@@ -192,7 +196,10 @@ document.addEventListener('DOMContentLoaded', () => {
       continue;
     }
     fetch(container.dataset.source)
-      .then((response) => response.text())
+      .then((response) => {
+        if (!response.ok) throw new Error('Example source unavailable.');
+        return response.text();
+      })
       .then((source) => createPanel(container, source))
       .catch(() => {
         container.textContent = 'Live console unavailable.';
