@@ -8,8 +8,9 @@ the wrapper from the previous step and drives a ``ProgressBar`` by hand.
 
 .. demo:: tutorial/step2
 
-The default spinner cycles through colours as it rotates. The bouncing
-marker and counter also get their colours from the default widgets.
+The default spinner walks slowly around the rainbow as it rotates. The
+bouncing marker and counter also get their colours from the default
+widgets.
 
 The previous step gave ``range(100)`` to ``progressbar.progressbar()`` and
 let it manage everything. Here, the loop opens the bar as a context

@@ -1122,23 +1122,25 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
 
 
 class AnimatedMarker(TimeSensitiveWidgetBase):
-    """An animated marker that cycles through frames and colours by default."""
+    """An animated marker that cycles through frames and colours by default.
+
+    Every redraw advances the frame by one character and the colour by
+    one step around `colors.rainbow`, taking `color_cycle` redraws for
+    a full lap. The colour follows the redraw count, not progress, so
+    it keeps moving on indeterminate bars too.
+    """
 
     _gradient_colors: TGradientColors = TGradientColors(
-        fg=terminal.ColorGradient(
-            colors.cyan1, colors.magenta1, colors.yellow
-        ),
+        fg=colors.rainbow,
         bg=None,
     )
-    _colour_cycle: int = 3
+    #: Redraws per full lap around the colour gradient.
+    color_cycle: int = 30
 
     def _apply_colors(self, text: str, data: Data) -> str:
-        """Cycle colours independently of progress and frame count."""
+        """Colour by redraw count instead of by progress."""
         percentage: float = (
-            data['updates']
-            % self._colour_cycle
-            / (self._colour_cycle - 1)
-            * 100
+            data['updates'] % self.color_cycle / self.color_cycle * 100
         )
         return super()._apply_colors(text, dict(data, percentage=percentage))
 
@@ -1149,6 +1151,7 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         fill: str = '',
         marker_wrap: str | tuple[str | None, str | None] | None = None,
         fill_wrap: str | tuple[str | None, str | None] | None = None,
+        color_cycle: int | None = None,
         **kwargs: typing.Any,
     ):
         """Create an `AnimatedMarker`.
@@ -1163,9 +1166,18 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
             marker_wrap: Begin/end strings or template wrapped around
                 the marker frame (see `create_wrapper`).
             fill_wrap: Same as `marker_wrap`, for the fill.
+            color_cycle: Redraws per full lap around the colour
+                gradient. Defaults to the class-level `color_cycle`
+                (30, twelve degrees of hue per redraw).
             **kwargs: Forwarded to the next class in the cooperative
                 `__init__` chain.
         """
+        if color_cycle is not None:
+            self.color_cycle = color_cycle
+        if self.color_cycle < 1:
+            raise ValueError(
+                f'color_cycle must be at least 1, got {self.color_cycle!r}'
+            )
         self.markers: str = converters.to_unicode(markers)
         self.marker_wrap = create_wrapper(marker_wrap)
         self.default = default or self.markers[0]

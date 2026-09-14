@@ -19,8 +19,10 @@ Example
 
 .. demo:: widgets/animated-marker
 
-The default spinner changes both its character and colour on redraws.
-No colour configuration is needed.
+The default spinner advances one character and one step around the
+rainbow on every redraw, a full lap every 30 redraws. Pass
+``color_cycle`` to make the lap longer or shorter. No colour
+configuration is needed.
 
 See also
 --------------------------------------------------------------------------------

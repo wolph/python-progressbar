@@ -70,7 +70,44 @@ def test_spinner_cycles_colours_without_changing_its_frames(
         for code in re.findall(r'\x1b\[38;[^m]+m', frame)
     }
     assert len(foregrounds) >= 3
-    assert widget(bar, {'updates': 12}) == frames[0]
+    wrapped: str = widget(bar, {'updates': widget.color_cycle})
+    assert re.findall(r'\x1b\[38;[^m]+m', wrapped) == re.findall(
+        r'\x1b\[38;[^m]+m', frames[0]
+    )
+
+
+def test_spinner_walks_the_rainbow_one_step_per_redraw() -> None:
+    widget: widgets.AnimatedMarker = widgets.AnimatedMarker()
+    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO(), max_value=progressbar.UnknownLength
+    )
+    assert widget.color_cycle == 30
+    update: int
+    for update in range(31):
+        expected: str = colors.rainbow.get_color(update / 30).fg(
+            widget.markers[update % 4]
+        )
+        assert widget(bar, {'updates': update}) == expected
+
+
+def test_spinner_color_cycle_override() -> None:
+    widget: widgets.AnimatedMarker = widgets.AnimatedMarker(
+        markers='.', color_cycle=4
+    )
+    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO(), max_value=progressbar.UnknownLength
+    )
+    frames: list[str] = [
+        widget(bar, {'updates': update}) for update in range(5)
+    ]
+    assert len(set(frames[:4])) == 4
+    assert frames[4] == frames[0]
+
+
+@pytest.mark.parametrize('color_cycle', [0, -1])
+def test_spinner_color_cycle_must_be_positive(color_cycle: int) -> None:
+    with pytest.raises(ValueError, match='color_cycle'):
+        widgets.AnimatedMarker(color_cycle=color_cycle)
 
 
 def test_spinner_widget_colour_opt_out() -> None:

@@ -224,6 +224,50 @@ def test_color_gradient() -> None:
     assert gradient.get_color(0.5) == colors.red
 
 
+def test_hue_gradient_wraps_around_the_color_wheel() -> None:
+    gradient: terminal.HueGradient = terminal.HueGradient()
+    assert gradient.get_color(0) == gradient.get_color(1)
+    assert gradient.get_color(0.25) == gradient.get_color(1.25)
+    assert gradient.get_color(0).rgb == terminal.RGB(255, 51, 51)
+    assert gradient.get_color(1 / 3).rgb == terminal.RGB(51, 255, 51)
+    assert gradient.get_color(2 / 3).rgb == terminal.RGB(51, 51, 255)
+
+
+def test_hue_gradient_saturation_and_lightness() -> None:
+    gradient: terminal.HueGradient = terminal.HueGradient(
+        saturation=100, lightness=50
+    )
+    assert gradient.get_color(0).rgb == terminal.RGB(255, 0, 0)
+    assert gradient.get_color(0).hls == terminal.HSL(0, 100, 50)
+    assert gradient.get_color(0.5).hls == terminal.HSL(180, 100, 50)
+
+
+def test_hue_gradient_colors_carry_no_xterm_index(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    color: Color = terminal.HueGradient().get_color(0.5)
+    assert color.xterm is None
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_256)
+    assert color.ansi == f'5;{color.rgb.to_ansi_256}'
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_TRUECOLOR)
+    assert color.ansi == '2;51;255;255'
+
+
+def test_hue_gradient_resolves_through_apply_colors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_TRUECOLOR)
+    gradient: terminal.HueGradient = terminal.HueGradient()
+    assert apply_colors('x', 50, fg=gradient) == gradient.get_color(0.5).fg(
+        'x'
+    )
+
+
+def test_rainbow_is_a_hue_gradient() -> None:
+    assert isinstance(colors.rainbow, terminal.HueGradient)
+    assert colors.rainbow.get_color(0).rgb == terminal.RGB(255, 51, 51)
+
+
 @pytest.mark.parametrize(
     'widget',
     [

@@ -12,7 +12,13 @@ from __future__ import annotations
 # Based on: https://www.ditig.com/256-colors-cheat-sheet
 import os
 
-from progressbar.terminal.base import HSL, RGB, ColorGradient, Colors
+from progressbar.terminal.base import (
+    HSL,
+    RGB,
+    ColorGradient,
+    Colors,
+    HueGradient,
+)
 
 black = Colors.register(RGB(0, 0, 0), HSL(0, 0, 0), 'Black', 0)
 maroon = Colors.register(RGB(128, 0, 0), HSL(0, 100, 25), 'Maroon', 1)
@@ -1087,6 +1093,10 @@ light_gradient: ColorGradient = ColorGradient(
     green3,
 )
 bg_gradient: ColorGradient = ColorGradient(black)
+
+#: The full hue wheel, for colours that cycle instead of tracking progress
+#: (the default `AnimatedMarker` spinner).
+rainbow: HueGradient = HueGradient()
 
 # Check if the background is light or dark. This is by no means a foolproof
 # method, but there is no reliable way to detect this.

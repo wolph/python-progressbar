@@ -781,6 +781,64 @@ class ColorGradient:
         return color
 
 
+class HueGradient(ColorGradient):
+    """A gradient around the full hue wheel, for colours that cycle.
+
+    `get_color` maps a 0-1 value onto hue 0-360 at a fixed
+    `saturation` and `lightness`, and wraps: 0 and 1 are both red,
+    so a widget that keeps cycling through the gradient never jumps
+    at the seam. Values outside 0-1 wrap the same way (1.25 is 0.25).
+
+    The colours carry no xterm palette index, so a truecolor terminal
+    renders the exact RGB and a 256-colour terminal the nearest cube
+    entry (`RGB.to_ansi_256`), instead of snapping to a registered
+    endpoint the way a `ColorGradient` blend of named colours does.
+    """
+
+    saturation: float
+    lightness: float
+
+    def __init__(
+        self,
+        saturation: float = 100,
+        lightness: float = 60,
+    ) -> None:
+        """Store the wheel's saturation and lightness.
+
+        Args:
+            saturation: HSL saturation, 0-100.
+            lightness: HSL lightness, 0-100. The default of 60 keeps
+                pure blue readable on a dark background.
+        """
+        self.saturation = saturation
+        self.lightness = lightness
+        # `colors` lists the six sextant colours the wheel passes through,
+        # for introspection only: `get_color` computes analytically.
+        super().__init__(*(self.get_color(step / 6) for step in range(6)))
+
+    def get_color(self, value: float) -> Color:
+        """Return the colour at `value` (0-1) around the hue wheel.
+
+        Args:
+            value: Position around the wheel, wrapped into 0-1.
+
+        Returns:
+            The colour at that hue, with no name or xterm index.
+        """
+        hue: float = (value % 1) * 360
+        red, green, blue = colorsys.hls_to_rgb(
+            hue / 360,
+            self.lightness / 100,
+            self.saturation / 100,
+        )
+        return Color(
+            RGB(round(red * 255), round(green * 255), round(blue * 255)),
+            HSL(hue, self.saturation, self.lightness),
+            None,
+            None,
+        )
+
+
 #: A `Color`, a `ColorGradient` to resolve one from, or no color.
 OptionalColor = Color | ColorGradient | None
 
