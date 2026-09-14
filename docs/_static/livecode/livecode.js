@@ -123,6 +123,29 @@ function keepHighlightedHomepageSource(container, editor, controls, source) {
   controls.append(edit);
 }
 
+/**
+ * @param {Terminal} terminal
+ * @param {HTMLElement} host
+ * @returns {() => void}
+ */
+function fitTerminalWidth(terminal, host) {
+  /** @type {FitAddon.FitAddon} */
+  const addon = new FitAddon.FitAddon();
+  terminal.loadAddon(addon);
+  /** @type {() => void} */
+  const fit = () => {
+    /** @type {{cols: number, rows: number} | undefined} */
+    const dimensions = addon.proposeDimensions();
+    if (dimensions && dimensions.cols !== terminal.cols) {
+      terminal.resize(dimensions.cols, terminal.rows);
+    }
+  };
+  /** @type {ResizeObserver} */
+  const observer = new ResizeObserver(fit);
+  observer.observe(host);
+  return fit;
+}
+
 function createPanel(container, source) {
   const editor = document.createElement('textarea');
   editor.className = 'demo-editor';
@@ -143,6 +166,9 @@ function createPanel(container, source) {
 
   const screen = document.createElement('div');
   screen.className = 'demo-terminal';
+  /** @type {HTMLDivElement} */
+  const terminalHost = document.createElement('div');
+  screen.append(terminalHost);
 
   const controls = document.createElement('div');
   controls.className = 'demo-controls';
@@ -153,12 +179,14 @@ function createPanel(container, source) {
 
   const terminal = new Terminal({
     cols: COLUMNS,
-    rows: 12,
+    rows: container.closest('.home-quickstart') ? 3 : 12,
     convertEol: true,
     fontSize: 13,
     theme: {background: '#101418', foreground: '#d6e2ef'},
   });
-  terminal.open(screen);
+  terminal.open(terminalHost);
+  /** @type {() => void} */
+  const fitWidth = fitTerminalWidth(terminal, terminalHost);
 
   const panel = {
     terminal,
@@ -195,6 +223,8 @@ function createPanel(container, source) {
       panel.setStatus('idle');
       return;
     }
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    fitWidth();
     panel.setStatus('ready');
     timeoutHandle = setTimeout(() => {
       terminal.write('\r\n\x1b[33mStopped after 30 seconds.\x1b[0m\r\n');
@@ -204,7 +234,7 @@ function createPanel(container, source) {
     worker.postMessage({
       type: 'run',
       code: editor.value,
-      columns: COLUMNS,
+      columns: terminal.cols,
     });
   });
 
@@ -224,7 +254,7 @@ const NON_RUNNABLE_DEMOS = new Set([
 ]);
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof Terminal === 'undefined') return;
+  if (typeof Terminal === 'undefined' || typeof FitAddon === 'undefined') return;
   for (const container of document.querySelectorAll('.demo-run')) {
     if (NON_RUNNABLE_DEMOS.has(container.dataset.demo)) {
       container.textContent =
