@@ -3,12 +3,12 @@
 The fastest progress bar in Python, maintained since 2012.
 
 <p align="center">
-  <a href="https://github.com/wolph/python-progressbar/actions"><img src="https://github.com/wolph/python-progressbar/actions/workflows/main.yml/badge.svg" alt="test status"></a>
-  <a href="https://coveralls.io/r/wolph/python-progressbar?branch=master"><img src="https://coveralls.io/repos/wolph/python-progressbar/badge.svg?branch=master" alt="coverage status"></a>
+  <a href="https://github.com/wolph/python-progressbar/actions/workflows/main.yml?query=branch%3Amaster"><img src="https://github.com/wolph/python-progressbar/actions/workflows/main.yml/badge.svg?branch=master" alt="test status"></a>
+  <a href="https://coveralls.io/r/WoLpH/python-progressbar?branch=master"><img src="https://coveralls.io/repos/WoLpH/python-progressbar/badge.svg?branch=master" alt="coverage status"></a>
   <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/v/progressbar2" alt="PyPI version"></a>
   <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/dm/progressbar2" alt="PyPI downloads per month"></a>
   <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/pyversions/progressbar2" alt="supported Python versions"></a>
-  <a href="https://github.com/wolph/python-progressbar/blob/develop/LICENSE"><img src="https://img.shields.io/pypi/l/progressbar2" alt="license"></a>
+  <a href="https://github.com/wolph/python-progressbar/blob/master/LICENSE"><img src="https://img.shields.io/pypi/l/progressbar2" alt="license"></a>
 </p>
 
 Wrapping a fast loop in a progress bar can cost more than the loop
