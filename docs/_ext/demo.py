@@ -174,5 +174,6 @@ def setup(app: Sphinx) -> dict[str, typing.Any]:
     app.add_css_file('vendor/xterm.css')
     app.add_css_file('livecode/livecode.css')
     app.add_js_file('vendor/xterm.js')
+    app.add_js_file('vendor/addon-fit.js')
     app.add_js_file('livecode/livecode.js')
     return {'parallel_read_safe': True, 'parallel_write_safe': True}

@@ -100,6 +100,45 @@ def test_homepage_can_edit_run_and_reset_the_example(
     assert not page[1]
 
 
+def test_homepage_output_has_colour_and_fits_after_resizing(
+    server: str,
+    page: tuple[Page, list[str]],
+) -> None:
+    browser_page: Page = page[0]
+    browser_page.goto(f'{server}/index.html')
+    width: int
+    for width in (1440, 768, 375):
+        browser_page.set_viewport_size({'width': width, 'height': 1000})
+        browser_page.get_by_role('button', name='Run', exact=True).click()
+        _wait_for_terminal_text(browser_page, '100%', BOOT_TIMEOUT_MS)
+        browser_page.wait_for_function("""() => {
+            const term = window.__consoleTestTerminal;
+            const line = term.buffer.active.getLine(0);
+            return [...Array(term.cols).keys()].some(x => {
+                const cell = line.getCell(x);
+                return cell.getChars() === '#' && !cell.isFgDefault();
+            });
+        }""")
+        geometry: dict[str, float | str] = browser_page.locator(
+            '.home-quickstart .demo-terminal'
+        ).evaluate("""panel => {
+            const viewport = panel.querySelector('.xterm-viewport');
+            return {
+                width: panel.clientWidth,
+                scrollWidth: panel.scrollWidth,
+                height: panel.clientHeight,
+                viewportHeight: viewport.clientHeight,
+                scrollHeight: viewport.scrollHeight,
+                overflowY: getComputedStyle(viewport).overflowY,
+            };
+        }""")
+        assert geometry['scrollWidth'] <= geometry['width']
+        assert geometry['scrollHeight'] <= geometry['viewportHeight']
+        assert geometry['height'] < 100
+        assert geometry['overflowY'] == 'auto'
+    assert not page[1]
+
+
 def test_showcase_keyboard_updates_recording_title_and_guide(
     server: str,
     page: tuple[Page, list[str]],
@@ -203,7 +242,7 @@ def test_homepage_source_failure_keeps_readable_example(
     page: tuple[Page, list[str]],
 ) -> None:
     browser_page: Page = page[0]
-    browser_page.route('**/_static/examples/tutorial-step1.py', _missing)
+    browser_page.route('**/_static/examples/homepage-quickstart.py', _missing)
     browser_page.goto(f'{server}/index.html')
     playwright_api.expect(
         browser_page.locator('.home-quickstart .demo-run')

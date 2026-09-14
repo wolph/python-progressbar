@@ -74,7 +74,7 @@ progressbar2
           <h3>Try a complete example</h3>
           <p class="home-code-note">Run this example in your browser. Python downloads when you press Run.</p>
 
-   .. demo:: tutorial/step1
+   .. demo:: homepage/quickstart
 
    .. raw:: html
 
@@ -95,7 +95,7 @@ progressbar2
 
    Wrap an iterable to show its progress:
 
-   .. demo:: tutorial/step1
+   .. demo:: homepage/quickstart
 
    The :doc:`tutorial/index` builds from this loop to custom widgets.
    :doc:`howto/index` covers file transfers, several bars at once and printing
