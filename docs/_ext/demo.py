@@ -178,5 +178,9 @@ def setup(app: Sphinx) -> dict[str, typing.Any]:
     app.add_css_file('livecode/livecode.css')
     app.add_js_file('vendor/xterm.js')
     app.add_js_file('vendor/addon-fit.js')
-    app.add_js_file('livecode/livecode.js')
+    worker_path: pathlib.Path = REPO_ROOT / 'docs/_static/livecode/worker.js'
+    worker_hash: str = hashlib.sha256(worker_path.read_bytes()).hexdigest()
+    app.add_js_file(
+        'livecode/livecode.js', **{'data-worker-version': worker_hash}
+    )
     return {'parallel_read_safe': True, 'parallel_write_safe': True}

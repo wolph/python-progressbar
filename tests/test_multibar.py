@@ -555,7 +555,9 @@ def test_multibar_exception_in_context_exits_promptly() -> None:
         holder['multibar']._thread_finished.set()
 
 
+@pytest.mark.no_freezegun
 def test_multibar_concurrent_mutation() -> None:
+    # Real sleeps let the renderer yield while the main thread mutates bars.
     # Regression: D2 - the render thread iterated self.values() without a
     # snapshot while other threads add/remove bars.
     errors: list[threading.ExceptHookArgs] = []

@@ -18,8 +18,6 @@ Example
 
 .. demo:: widgets/counter
 
-The format string colours the changing count cyan and leaves the label plain.
-
 See also
 --------------------------------------------------------------------------------
 

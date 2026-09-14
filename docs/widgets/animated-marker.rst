@@ -2,7 +2,7 @@
 AnimatedMarker
 ==============
 
-``AnimatedMarker`` cycles through characters to show a spinner.
+``AnimatedMarker`` cycles through characters and colours to show a spinner.
 
 Reach for it for indeterminate work where there is nothing to measure a
 percentage against, just a signal that the process is still alive.
@@ -19,8 +19,8 @@ Example
 
 .. demo:: widgets/animated-marker
 
-``marker_wrap`` colours each moving frame cyan. ``default`` supplies
-a coloured marker for the finished state.
+The default spinner changes both its character and colour on redraws.
+No colour configuration is needed.
 
 See also
 --------------------------------------------------------------------------------

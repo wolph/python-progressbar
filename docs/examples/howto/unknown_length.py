@@ -8,7 +8,6 @@ ETA to show without a known total to measure against.
 import time
 
 import progressbar
-from progressbar.terminal import colors
 
 STEPS = 24
 
@@ -16,10 +15,7 @@ STEPS = 24
 def main() -> None:
     widgets = [
         'Scanning: ',
-        progressbar.AnimatedMarker(
-            marker_wrap=colors.cyan1.fg('{}'),
-            default=colors.cyan1.fg('|'),
-        ),
+        progressbar.AnimatedMarker(),
         ' ',
         progressbar.Counter(),
         ' files found',

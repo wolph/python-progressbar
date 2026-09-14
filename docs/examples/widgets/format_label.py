@@ -8,7 +8,6 @@ none of the built-in widgets already say it the way you want.
 import time
 
 import progressbar
-from progressbar.terminal import colors
 
 STEPS = 24
 
@@ -16,7 +15,7 @@ STEPS = 24
 def main() -> None:
     widgets = [
         progressbar.FormatLabel(
-            colors.cyan1.fg('Processed: %(value)d lines (in: %(elapsed)s)')
+            'Processed: %(value)d lines (in: %(elapsed)s)'
         ),
     ]
     with progressbar.ProgressBar(max_value=STEPS, widgets=widgets) as bar:

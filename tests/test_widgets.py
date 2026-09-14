@@ -197,7 +197,7 @@ def test_unit_progress_scales_values() -> None:
     bar.start()
     bar.update(1024, force=True)
     output = ''.join(bar._format_widgets())
-    assert output == '1.0 KiB of 2.0 KiB'
+    assert progressbar.utils.no_color(output) == '1.0 KiB of 2.0 KiB'
 
 
 def test_unit_progress_uses_progress_units_by_default() -> None:
@@ -212,7 +212,7 @@ def test_unit_progress_uses_progress_units_by_default() -> None:
     bar.start()
     bar.update(1024, force=True)
     output = ''.join(bar._format_widgets())
-    assert output == '1.0 KiB of 2.0 KiB'
+    assert progressbar.utils.no_color(output) == '1.0 KiB of 2.0 KiB'
 
 
 def test_format_widget() -> None:
@@ -459,6 +459,7 @@ def test_animated_marker_wraps_marker() -> None:
     widget = progressbar.AnimatedMarker(markers='|/-\\', marker_wrap='<{}>')
     rendered = widget(bar, data, width=10)
     assert isinstance(rendered, str), repr(rendered)
+    rendered = progressbar.utils.no_color(rendered)
     assert len(rendered) == 3, repr(rendered)
     assert rendered[0] == '<' and rendered[-1] == '>', repr(rendered)
     assert rendered[1] in '|/-\\'

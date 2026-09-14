@@ -13,7 +13,7 @@ const SCRIPT_ELEMENT =
   document.currentScript ||
   document.querySelector('script[src$="livecode/livecode.js"]');
 const STATIC_ROOT = new URL('../', SCRIPT_ELEMENT.src).href;
-const WORKER_URL = `${STATIC_ROOT}livecode/worker.js`;
+const WORKER_URL = `${STATIC_ROOT}livecode/worker.js?v=${SCRIPT_ELEMENT.dataset.workerVersion}`;
 const WHEELS_URL = `${STATIC_ROOT}wheels/`;
 
 let worker = null;

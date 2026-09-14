@@ -459,14 +459,28 @@ class TimeSensitiveWidgetBase(WidgetBase, metaclass=abc.ABCMeta):
     INTERVAL = datetime.timedelta(milliseconds=100)
 
 
-class FormatLabel(FormatWidgetMixin, WidgetBase):
+class ColoredMixin:
+    """Yellow and progress-gradient defaults for numeric and label widgets."""
+
+    # See ``WidgetBase``: class-level defaults, overridable per instance.
+    _fixed_colors: TFixedColors = TFixedColors(
+        fg_none=colors.yellow,
+        bg_none=None,
+    )
+    _gradient_colors: TGradientColors = TGradientColors(
+        fg=colors.gradient,
+        bg=None,
+    )
+
+
+class FormatLabel(FormatWidgetMixin, ColoredMixin, WidgetBase):
     """Displays a formatted label.
 
     >>> label = FormatLabel('%(value)s', min_width=5, max_width=10)
     >>> class Progress:
     ...     pass
     >>> label = FormatLabel('{value} :: {value:^6}', new_style=True)
-    >>> str(label(Progress, dict(value='test')))
+    >>> utils.no_color(label(Progress, dict(value='test')))
     'test ::  test '
 
     """
@@ -507,7 +521,8 @@ class FormatLabel(FormatWidgetMixin, WidgetBase):
                 with contextlib.suppress(ValueError, IndexError):
                     data[name] = transform(data[key])
 
-        return FormatWidgetMixin.__call__(self, progress, data, format)
+        output: str = FormatWidgetMixin.__call__(self, progress, data, format)
+        return self._apply_colors(output, data)
 
 
 class Timer(FormatLabel, TimeSensitiveWidgetBase):
@@ -1107,7 +1122,25 @@ class AdaptiveTransferSpeed(FileTransferSpeed, SamplesMixin):
 
 
 class AnimatedMarker(TimeSensitiveWidgetBase):
-    """An animated marker that defaults to appearing as if it were rotating."""
+    """An animated marker that cycles through frames and colours by default."""
+
+    _gradient_colors: TGradientColors = TGradientColors(
+        fg=terminal.ColorGradient(
+            colors.cyan1, colors.magenta1, colors.yellow
+        ),
+        bg=None,
+    )
+    _colour_cycle: int = 3
+
+    def _apply_colors(self, text: str, data: Data) -> str:
+        """Cycle colours independently of progress and frame count."""
+        percentage: float = (
+            data['updates']
+            % self._colour_cycle
+            / (self._colour_cycle - 1)
+            * 100
+        )
+        return super()._apply_colors(text, dict(data, percentage=percentage))
 
     def __init__(
         self,
@@ -1133,9 +1166,9 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
             **kwargs: Forwarded to the next class in the cooperative
                 `__init__` chain.
         """
-        self.markers = markers
+        self.markers: str = converters.to_unicode(markers)
         self.marker_wrap = create_wrapper(marker_wrap)
-        self.default = default or markers[0]
+        self.default = default or self.markers[0]
         self.fill_wrap = create_wrapper(fill_wrap)
         self.fill = create_marker(fill, self.fill_wrap) if fill else None
         super().__init__(**kwargs)
@@ -1147,8 +1180,10 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
             # collapsing to a single character. A plain marker has no fill
             # so it falls back to its default character.
             if self.fill:
-                return self.fill(progress, data, width)
-            return self.default
+                return self._apply_colors(
+                    self.fill(progress, data, width), data
+                )
+            return self._apply_colors(self.default, data)
 
         marker = self.markers[data['updates'] % len(self.markers)]
         if self.marker_wrap:
@@ -1164,15 +1199,7 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
         else:
             fill = ''
 
-        # Python 3 returns an int when indexing bytes
-        if isinstance(marker, int):  # pragma: no cover
-            marker = bytes(marker)
-            fill = fill.encode()
-        else:
-            # cast fill to the same type as marker
-            fill = type(marker)(fill)
-
-        return fill + marker  # type: ignore
+        return self._apply_colors(converters.to_unicode(fill) + marker, data)
 
 
 # Legacy alias for `AnimatedMarker`, kept for backwards compatibility. Kept as
@@ -1180,7 +1207,7 @@ class AnimatedMarker(TimeSensitiveWidgetBase):
 RotatingMarker = AnimatedMarker
 
 
-class Counter(FormatWidgetMixin, WidgetBase):
+class Counter(FormatWidgetMixin, ColoredMixin, WidgetBase):
     """Displays the current count."""
 
     def __init__(self, format='%(value)d', **kwargs: typing.Any):
@@ -1196,21 +1223,8 @@ class Counter(FormatWidgetMixin, WidgetBase):
         format=None,
     ):
         """Render `self.format` (or `format`, if given) against `data`."""
-        return FormatWidgetMixin.__call__(self, progress, data, format)
-
-
-class ColoredMixin:
-    """Yellow/gradient color defaults for `Percentage`/`SimpleProgress`."""
-
-    # See ``WidgetBase``: class-level defaults, overridable per instance.
-    _fixed_colors: TFixedColors = TFixedColors(
-        fg_none=colors.yellow,
-        bg_none=None,
-    )
-    _gradient_colors: TGradientColors = TGradientColors(
-        fg=colors.gradient,
-        bg=None,
-    )
+        output: str = FormatWidgetMixin.__call__(self, progress, data, format)
+        return self._apply_colors(output, data)
 
 
 class Percentage(FormatWidgetMixin, ColoredMixin, WidgetBase):
@@ -1279,7 +1293,7 @@ def format_unit_value(
     return f'{value} {unit}'
 
 
-class UnitProgress(WidgetBase):
+class UnitProgress(ColoredMixin, WidgetBase):
     """Displays progress as a count with an optional unit and 1024 scaling."""
 
     def __init__(
@@ -1319,7 +1333,7 @@ class UnitProgress(WidgetBase):
             unit_scale = self.unit_scale
         value = format_unit_value(data.get('value'), unit, unit_scale)
         max_value = format_unit_value(data.get('max_value'), unit, unit_scale)
-        return f'{value} of {max_value}'
+        return self._apply_colors(f'{value} of {max_value}', data)
 
 
 class SimpleProgress(FormatWidgetMixin, ColoredMixin, WidgetBase):
@@ -1541,6 +1555,11 @@ class ReverseBar(Bar):
 class BouncingBar(Bar, TimeSensitiveWidgetBase):
     """A bar which has a marker which bounces from side to side."""
 
+    _fixed_colors: TFixedColors = TFixedColors(
+        fg_none=colors.cyan1,
+        bg_none=None,
+    )
+
     INTERVAL = datetime.timedelta(milliseconds=100)
 
     def __call__(
@@ -1556,7 +1575,8 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
 
         fill = converters.to_unicode(self.fill(progress, data, width))
 
-        if width:  # pragma: no branch
+        width = max(0, width - progress.custom_len(marker) + 1)
+        if width:
             value = int(
                 data['total_seconds_elapsed'] / self.INTERVAL.total_seconds(),
             )
@@ -1571,6 +1591,8 @@ class BouncingBar(Bar, TimeSensitiveWidgetBase):
             else:
                 marker = b * fill + marker + a * fill
 
+        if color:
+            marker = self._apply_colors(marker, data)
         return left + marker + right
 
 

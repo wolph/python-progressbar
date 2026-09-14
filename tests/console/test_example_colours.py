@@ -92,6 +92,14 @@ def test_every_runnable_example_has_colour(
             "window.__consoleTestEvents.some(event => event.type === 'error')"
         ), panel.inner_text()
         page.wait_for_function('window.__consoleTestHasColour', timeout=3000)
+        if name in {
+            'tutorial/step2',
+            'howto/unknown-length',
+            'widgets/animated-marker',
+        }:
+            assert (
+                page.evaluate('window.__consoleTestSpinnerColours.length') >= 3
+            )
         assert not errors
     finally:
         page.close()

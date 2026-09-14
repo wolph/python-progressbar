@@ -9,13 +9,12 @@ byte value rather than a count against a total.
 import time
 
 import progressbar
-from progressbar.terminal import colors
 
 STEPS = 24
 
 
 def main() -> None:
-    widgets = [progressbar.UnitProgress(unit=colors.cyan1.fg('files'))]
+    widgets = [progressbar.UnitProgress(unit='files')]
     with progressbar.ProgressBar(max_value=STEPS, widgets=widgets) as bar:
         for step in range(STEPS):
             bar.update(step + 1)
