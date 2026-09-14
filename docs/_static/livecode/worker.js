@@ -122,7 +122,7 @@ def _install_bridge(columns):
 `;
 
 async function fetchJSON(url) {
-  const response = await fetch(url);
+  const response = await fetch(url, {cache: 'no-cache'});
   if (!response.ok) {
     throw new Error(`failed to fetch ${url}: ${response.status} ${response.statusText}`);
   }

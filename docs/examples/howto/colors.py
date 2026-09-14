@@ -1,17 +1,15 @@
-"""Color a bar with a fixed color or a gradient that shifts with progress.
+"""Choose a progress gradient and a solid colour for an animated spinner.
 
-`gradient_colors` interpolates between colors as `percentage` moves from 0
-to 100 -- only meaningful once a `max_value` gives the bar something to
-compute a percentage against. `fixed_colors` is for the opposite case: an
-indeterminate bar, which never has a percentage, uses `fg_none`/`bg_none`
-as a single unchanging color instead.
+The bar follows its percentage. The spinner normally cycles through
+colours with its frames. Passing one colour instead of a gradient
+keeps it blue throughout the animation.
 """
 
 import time
 
 import progressbar
 from progressbar.terminal import ColorGradient, colors
-from progressbar.widgets import TFixedColors, TGradientColors
+from progressbar.widgets import TGradientColors
 
 STEPS = 24
 
@@ -33,9 +31,8 @@ def main() -> None:
 
     spinner_widgets = [
         'Scanning: ',
-        progressbar.Bar(
-            marker=progressbar.AnimatedMarker(),
-            fixed_colors=TFixedColors(fg_none=colors.blue, bg_none=None),
+        progressbar.AnimatedMarker(
+            gradient_colors=TGradientColors(fg=colors.blue, bg=None),
         ),
     ]
     with progressbar.ProgressBar(

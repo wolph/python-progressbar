@@ -2,9 +2,9 @@
 
 `gradient_colors` shifts a bar's fill color as its percentage grows, so
 the download bar sweeps red through gold to green and the render bar
-sweeps sky blue into fuchsia. The scan bar has no percentage to sweep
-(its length is unknown), so `fixed_colors` gives its animated marker one
-unchanging cyan instead.
+sweeps sky blue into fuchsia. The scan spinner normally cycles through
+colours with its frames. Passing a single cyan colour keeps its colour
+unchanged while the marker spins.
 """
 
 import sys
@@ -12,7 +12,7 @@ import time
 
 import progressbar
 from progressbar.terminal import ColorGradient, colors
-from progressbar.widgets import TFixedColors, TGradientColors
+from progressbar.widgets import TGradientColors
 
 STEPS = 24
 
@@ -45,11 +45,8 @@ def main() -> None:
         multibar['scan'] = progressbar.ProgressBar(
             max_value=progressbar.UnknownLength,
             widgets=[
-                progressbar.Bar(
-                    marker=progressbar.AnimatedMarker(),
-                    fixed_colors=TFixedColors(
-                        fg_none=colors.cyan1, bg_none=None
-                    ),
+                progressbar.AnimatedMarker(
+                    gradient_colors=TGradientColors(fg=colors.cyan1, bg=None),
                 ),
             ],
         )

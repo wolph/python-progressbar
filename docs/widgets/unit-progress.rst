@@ -18,8 +18,6 @@ Example
 
 .. demo:: widgets/unit-progress
 
-The unit label is cyan for both the current count and the total.
-
 See also
 --------------------------------------------------------------------------------
 

@@ -13,6 +13,7 @@ where it can be noticed (locally or on Read the Docs) before publish.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import shutil
@@ -75,6 +76,12 @@ def _strip_stray_modules(wheel: pathlib.Path) -> None:
     )
 
 
+def wheel_url(wheel: pathlib.Path) -> str:
+    """Keep the wheel filename while giving each build its own cache entry."""
+    digest: str = hashlib.sha256(wheel.read_bytes()).hexdigest()
+    return f'{wheel.name}?sha256={digest}'
+
+
 def main() -> None:
     if TARGET.exists():
         shutil.rmtree(TARGET)
@@ -131,7 +138,11 @@ def main() -> None:
         _strip_stray_modules(TARGET / wheel)
 
     (TARGET / 'wheels.json').write_text(
-        json.dumps({'wheels': wheels}, indent=2) + '\n',
+        json.dumps(
+            {'wheels': [wheel_url(TARGET / wheel) for wheel in wheels]},
+            indent=2,
+        )
+        + '\n',
         encoding='utf-8',
     )
 

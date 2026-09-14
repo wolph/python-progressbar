@@ -107,6 +107,7 @@ window.__consoleTestEvents = [];
 window.__consoleTestWorkerCount = 0;
 window.__consoleTestTerminal = null;
 window.__consoleTestHasColour = false;
+window.__consoleTestSpinnerColours = [];
 (() => {
   const OriginalWorker = window.Worker;
   window.Worker = new Proxy(OriginalWorker, {
@@ -140,7 +141,14 @@ window.__consoleTestHasColour = false;
                 const cell = line.getCell(x);
                 if (cell.getChars().trim() && !cell.isFgDefault()) {
                   window.__consoleTestHasColour = true;
-                  return;
+                  const character = cell.getChars().codePointAt(0);
+                  if ([124, 47, 45, 92].includes(character)) {
+                    const colour = cell.getFgColorMode() + ':'
+                      + cell.getFgColor();
+                    if (!window.__consoleTestSpinnerColours.includes(colour)) {
+                      window.__consoleTestSpinnerColours.push(colour);
+                    }
+                  }
                 }
               }
             }

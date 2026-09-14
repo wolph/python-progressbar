@@ -227,17 +227,19 @@ def test_color_gradient() -> None:
 @pytest.mark.parametrize(
     'widget',
     [
-        progressbar.Counter,
+        progressbar.FormatCustomText,
     ],
 )
 def test_no_color_widgets(widget) -> None:
-    assert not widget().uses_colors
+    assert not widget(format='text').uses_colors
     print(f'{widget} has colors? {widget.uses_colors}')
 
     assert widget(
+        format='text',
         fixed_colors=_TestFixedColorSupport._fixed_colors,
     ).uses_colors
     assert widget(
+        format='text',
         gradient_colors=_TestFixedGradientSupport._gradient_colors,
     ).uses_colors
 
