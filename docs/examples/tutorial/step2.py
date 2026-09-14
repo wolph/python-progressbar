@@ -9,10 +9,13 @@ loop itself to a wrapper.
 import time
 
 import progressbar
+from progressbar.terminal import colors
 
 
 def main() -> None:
-    with progressbar.ProgressBar() as bar:
+    with progressbar.ProgressBar(
+        widget_kwargs={'marker_wrap': colors.cyan1.fg('{}')},
+    ) as bar:
         for i in range(100):
             time.sleep(0.01)
             bar.update(i + 1)

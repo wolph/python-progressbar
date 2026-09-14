@@ -10,12 +10,15 @@ the wrapper from the previous step and drives a ``ProgressBar`` by hand.
 
 The previous step gave ``range(100)`` to ``progressbar.progressbar()`` and
 let it manage everything. Here, the loop opens the bar as a context
-manager with ``with progressbar.ProgressBar() as bar:`` and, on each pass
+manager with ``with progressbar.ProgressBar(...) as bar:`` and, on each pass
 through its own ``for`` loop, calls ``bar.update(i + 1)`` to report the
 new value itself. The ``with`` block starts the bar on entry and finishes
 it on exit, just as ``progressbar.progressbar()`` did implicitly in step
 1. The difference is that *this* code decides when ``update()`` is called,
 so it works just as well when progress doesn't come from iterating a
 sequence at all.
+
+``marker_wrap`` colours the moving markers cyan. This bar has no known
+total, so a fixed colour stays visible without a percentage gradient.
 
 Next: :doc:`step3`.

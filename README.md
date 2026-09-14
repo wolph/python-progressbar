@@ -350,11 +350,13 @@ with a counter instead of a percentage:
 import time
 
 import progressbar
+from progressbar.terminal import colors
 
 
 def main() -> None:
     with progressbar.ProgressBar(
         max_value=progressbar.UnknownLength,
+        widget_kwargs={'marker_wrap': colors.cyan1.fg('{}')},
     ) as bar:
         for value in range(0, 120, 10):
             bar.update(value)

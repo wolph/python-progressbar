@@ -20,6 +20,8 @@ Example
 
 .. demo:: widgets/bouncing-bar
 
+``marker_wrap`` colours the bouncing marker cyan, including its final position.
+
 See also
 --------------------------------------------------------------------------------
 

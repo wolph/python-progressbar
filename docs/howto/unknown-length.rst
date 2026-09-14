@@ -8,6 +8,9 @@ such as scanning a filesystem or reading a stream.
 
 .. demo:: howto/unknown-length
 
+Each spinner frame is coloured cyan. Its colour stays fixed because
+there is no percentage to drive a gradient.
+
 Pass ``max_value=progressbar.UnknownLength`` and include an
 ``AnimatedMarker`` (or another marker-style widget) so there is still
 something visibly moving even without a percentage to report. A

@@ -135,7 +135,8 @@ function fitTerminalWidth(terminal, host) {
   const fit = () => {
     /** @type {{cols: number, rows: number} | undefined} */
     const dimensions = addon.proposeDimensions();
-    if (dimensions && dimensions.cols !== terminal.cols) {
+    if (dimensions && Number.isInteger(dimensions.cols)
+        && dimensions.cols > 0 && dimensions.cols !== terminal.cols) {
       terminal.resize(dimensions.cols, terminal.rows);
     }
   };

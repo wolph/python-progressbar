@@ -106,6 +106,7 @@ CONSOLE_TEST_INIT_SCRIPT = """
 window.__consoleTestEvents = [];
 window.__consoleTestWorkerCount = 0;
 window.__consoleTestTerminal = null;
+window.__consoleTestHasColour = false;
 (() => {
   const OriginalWorker = window.Worker;
   window.Worker = new Proxy(OriginalWorker, {
@@ -131,6 +132,19 @@ window.__consoleTestTerminal = null;
         construct(target, args) {
           const instance = new target(...args);
           window.__consoleTestTerminal = instance;
+          instance.onWriteParsed(() => {
+            const buffer = instance.buffer.active;
+            for (let y = 0; y < buffer.length; y++) {
+              const line = buffer.getLine(y);
+              for (let x = 0; x < instance.cols; x++) {
+                const cell = line.getCell(x);
+                if (cell.getChars().trim() && !cell.isFgDefault()) {
+                  window.__consoleTestHasColour = true;
+                  return;
+                }
+              }
+            }
+          });
           return instance;
         },
       });
