@@ -13,7 +13,7 @@ import progressbar
 
 def main() -> None:
     with progressbar.ProgressBar() as bar:
-        for i in range(100):
+        for i in range(1000):
             time.sleep(0.01)
             bar.update(i + 1)
 

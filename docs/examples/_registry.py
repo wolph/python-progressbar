@@ -58,7 +58,9 @@ class Demo:
 
 DEMOS: tuple[Demo, ...] = (
     Demo(
-        'homepage/quickstart', 'A percentage and a coloured bar', term_width=60
+        'homepage/quickstart',
+        'A working progress bar in one line',
+        term_width=80,
     ),
     Demo('howto/colors', 'Fixed and gradient bar colors'),
     Demo('howto/custom-widget', 'The current job phase', term_width=60),
