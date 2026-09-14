@@ -576,7 +576,7 @@ def test_tutorial_recording_preserves_intermediate_progress() -> None:
         int(match.group()[:-1])
         for frame in frames
         for line in frame
-        if (match := demos.PERCENT_RE.search(line))
+        if (match := demos.PERCENT_RE.search(demos.ANSI_SGR_RE.sub('', line)))
     ]
     assert percentages[0] == 0
     assert percentages[-1] == 100
