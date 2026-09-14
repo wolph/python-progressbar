@@ -3,12 +3,12 @@
 The fastest progress bar in Python, maintained since 2012.
 
 <p align="center">
-  <a href="https://github.com/wolph/python-progressbar/actions/workflows/main.yml?query=branch%3Amaster"><img src="https://github.com/wolph/python-progressbar/actions/workflows/main.yml/badge.svg?branch=master" alt="test status"></a>
-  <a href="https://coveralls.io/github/wolph/python-progressbar?branch=master"><img src="https://coveralls.io/repos/github/wolph/python-progressbar/badge.svg?branch=master" alt="Coverage on master"></a>
-  <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/v/progressbar2?style=plastic" alt="PyPI version"></a>
-  <a href="https://pepy.tech/projects/progressbar2"><img src="https://static.pepy.tech/badge/progressbar2/month" alt="Monthly downloads"></a>
-  <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/pyversions/progressbar2?style=plastic" alt="supported Python versions"></a>
-  <a href="https://github.com/wolph/python-progressbar/blob/master/LICENSE"><img src="https://img.shields.io/pypi/l/progressbar2?style=plastic" alt="license"></a>
+  <a href="https://github.com/wolph/python-progressbar/actions/workflows/main.yml?query=branch%3Amaster"><img src="https://img.shields.io/github/actions/workflow/status/wolph/python-progressbar/main.yml?branch=master&label=CI&style=flat-square&labelColor=555" alt="test status"></a>
+  <a href="https://coveralls.io/github/wolph/python-progressbar?branch=master"><img src="https://img.shields.io/coverallsCoverage/github/wolph/python-progressbar?branch=master&style=flat-square&labelColor=555" alt="Coverage on master"></a>
+  <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/v/progressbar2?style=flat-square&labelColor=555&color=007ec6" alt="PyPI version"></a>
+  <a href="https://pepy.tech/projects/progressbar2"><img src="https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fapi.pepy.tech%2Fbadge%2Fprogressbar2%2Fmonth&query=%28%2F%2F%2A%5Blocal-name%28%29%3D%22text%22%5D%29%5Blast%28%29%5D&label=downloads%2Fmonth&style=flat-square&labelColor=555&color=007ec6" alt="Monthly downloads"></a>
+  <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/pyversions/progressbar2?style=flat-square&labelColor=555&color=007ec6" alt="supported Python versions"></a>
+  <a href="https://github.com/wolph/python-progressbar/blob/master/LICENSE"><img src="https://img.shields.io/pypi/l/progressbar2?style=flat-square&labelColor=555&color=007ec6" alt="license"></a>
 </p>
 
 Wrapping a fast loop in a progress bar can cost more than the loop
