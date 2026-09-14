@@ -38,6 +38,13 @@ def _stale_home_styles(route: Route) -> None:
     )
 
 
+def _stale_example_source(route: Route) -> None:
+    route.fulfill(
+        content_type='text/plain',
+        body="print('Cached example from an earlier build')",
+    )
+
+
 def test_homepage_loads_python_only_after_run(
     server: str,
     page: tuple[Page, list[str]],
@@ -155,12 +162,14 @@ def test_guide_example_has_one_code_view_and_coloured_output(
     path: str,
 ) -> None:
     browser_page: Page = page[0]
+    browser_page.route('**/_static/examples/*.py', _stale_example_source)
     browser_page.goto(f'{server}/{path}')
     source: Locator = browser_page.locator('.demo-source')
     editor: Locator = browser_page.locator('.demo-editor')
     playwright_api.expect(editor).to_be_attached()
     playwright_api.expect(source).to_be_visible()
     playwright_api.expect(editor).to_be_hidden()
+    assert editor.input_value().strip() == source.inner_text().strip()
     browser_page.get_by_role('button', name='Run', exact=True).click()
     _wait_for_terminal_text(browser_page, '100%', BOOT_TIMEOUT_MS)
     browser_page.wait_for_function(
@@ -286,7 +295,7 @@ def test_homepage_source_failure_keeps_readable_example(
     page: tuple[Page, list[str]],
 ) -> None:
     browser_page: Page = page[0]
-    browser_page.route('**/_static/examples/homepage-quickstart.py', _missing)
+    browser_page.route('**/_static/examples/homepage-quickstart.py*', _missing)
     browser_page.goto(f'{server}/index.html')
     playwright_api.expect(
         browser_page.locator('.home-quickstart .demo-run')
