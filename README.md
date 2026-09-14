@@ -4,7 +4,7 @@ The fastest progress bar in Python, maintained since 2012.
 
 <p align="center">
   <a href="https://github.com/wolph/python-progressbar/actions/workflows/main.yml?query=branch%3Amaster"><img src="https://github.com/wolph/python-progressbar/actions/workflows/main.yml/badge.svg?branch=master" alt="test status"></a>
-  <a href="https://coveralls.io/github/WoLpH/python-progressbar?branch=master"><img src="https://coveralls.io/repos/github/WoLpH/python-progressbar/badge.svg?branch=master" alt="Coverage on master"></a>
+  <a href="https://coveralls.io/github/wolph/python-progressbar?branch=master"><img src="https://coveralls.io/repos/github/wolph/python-progressbar/badge.svg?branch=master" alt="Coverage on master"></a>
   <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/v/progressbar2" alt="PyPI version"></a>
   <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/dm/progressbar2" alt="PyPI downloads per month"></a>
   <a href="https://pypi.org/project/progressbar2/"><img src="https://img.shields.io/pypi/pyversions/progressbar2" alt="supported Python versions"></a>
