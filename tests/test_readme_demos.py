@@ -236,25 +236,20 @@ def test_render_svg_labels_root_for_accessibility(tmp_path: Path) -> None:
     )
 
 
-def test_render_svg_reduced_motion_rule_freezes_on_last_frame(
+def test_render_svg_animates_regardless_of_reduced_motion(
     tmp_path: Path,
 ) -> None:
+    # The demos must animate for everyone. A prefers-reduced-motion rule
+    # froze them on the last frame for anyone with OS animations turned
+    # off (e.g. Windows "Animation effects"), which read as broken SVGs.
     output = tmp_path / 'demo.svg'
     demos.render_svg(output, title='Demo', frames=[['a'], ['b'], ['c']])
     text = output.read_text(encoding='utf-8')
 
-    assert '@media (prefers-reduced-motion: reduce)' in text
-    assert 'animate { display: none; }' in text
-    # The override must be strong enough (!important) to beat the SMIL
-    # animation, and must land on the *last* frame group, not the first --
-    # confirmed live in a browser (see task-9-report.md) that a plain,
-    # non-!important opacity override is silently outranked by the still-
-    # running animated value every frame, and that landing on the last
-    # frame (not the first) shows a finished bar rather than an empty one.
-    assert 'g { display: none !important; opacity: 0 !important; }' in text
-    assert (
-        'g:last-of-type { display: inline !important; opacity: 1 !important; }'
-    ) in text
+    assert 'prefers-reduced-motion' not in text
+    assert '@media' not in text
+    assert '!important' not in text
+    assert text.count('<animate ') == 3
 
 
 def test_demo_description_strips_single_backtick_markup_from_real_docstring() -> (  # noqa: E501

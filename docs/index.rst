@@ -41,7 +41,7 @@ progressbar2
             <button id="showcase-pause" type="button" disabled>Pause recording</button>
           </div>
         </div>
-        <p class="home-caption">Recorded progressbar2 output. <a id="showcase-guide" href="howto/colors.html">Read the guide and run the source locally.</a> <span class="home-motion-note">Reduced motion: showing the final frame.</span></p>
+        <p class="home-caption">Recorded progressbar2 output. <a id="showcase-guide" href="howto/colors.html">Read the guide and run the source locally.</a></p>
       </section>
       <section class="home-use-cases" aria-labelledby="use-cases-title">
         <h2 id="use-cases-title">What are you working on?</h2>

@@ -856,25 +856,6 @@ def svg_document(
     .dot-red {{ fill: #ff5f57; }}
     .dot-yellow {{ fill: #ffbd2e; }}
     .dot-green {{ fill: #28c840; }}
-    @media (prefers-reduced-motion: reduce) {{
-      /* Setting display: none on the animate elements does not stop
-         their SMIL animation from running in every browser tested --
-         confirmed empirically, Chromium 2026-08: with only that rule in
-         place, every frame group's computed opacity kept cycling on its
-         original schedule. A SMIL-driven value sits in the CSS cascade's
-         animation layer, above normal author declarations but below
-         !important ones, so overriding opacity (and display, for
-         belt-and-suspenders) with !important here is load-bearing, not
-         decorative -- removing it silently reintroduces the animation.
-         The last frame is selected, not the first: a finished bar is more
-         informative at rest than the empty starting state. Every frame
-         group is a direct child of the root element and no other group
-         element appears in this document, so last-of-type unambiguously
-         selects the final frame. */
-      animate {{ display: none; }}
-      g {{ display: none !important; opacity: 0 !important; }}
-      g:last-of-type {{ display: inline !important; opacity: 1 !important; }}
-    }}
   </style>
   <rect class="terminal-bg" width="100%" height="100%" rx="10" />
   <circle class="dot-red" cx="28" cy="26" r="6" />

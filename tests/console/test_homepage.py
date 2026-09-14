@@ -308,23 +308,29 @@ def test_homepage_source_failure_keeps_readable_example(
     ).to_be_visible()
 
 
-def test_showcase_reduced_motion_and_failed_recording_keep_guides(
+def test_showcase_animates_under_reduced_motion_and_failed_recording_keep_guides(  # noqa: E501
     server: str,
     page: tuple[Page, list[str]],
 ) -> None:
     browser_page: Page = page[0]
+    # The recording must keep playing even when the visitor's OS asks for
+    # reduced motion (e.g. Windows with "Animation effects" turned off).
     browser_page.emulate_media(reduced_motion='reduce')
     browser_page.goto(f'{server}/index.html')
     playwright_api.expect(
-        browser_page.get_by_role('button', name='Reduced motion')
-    ).to_be_disabled()
+        browser_page.get_by_role('button', name='Pause recording')
+    ).to_be_enabled()
     browser_page.wait_for_function(
         """() => {
             const root = document.querySelector('#showcase-recording')
                 .contentDocument.documentElement;
-            const groups = root.querySelectorAll('g');
-            return getComputedStyle(groups[0]).display === 'none'
-                && getComputedStyle(groups[groups.length - 1]).opacity === '1';
+            const groups = Array.from(root.querySelectorAll('g'));
+            const visible = groups.filter(
+                (group) => getComputedStyle(group).opacity === '1');
+            return !root.animationsPaused()
+                && root.getCurrentTime() > 1
+                && visible.length === 1
+                && visible[0] !== groups[groups.length - 1];
         }"""
     )
     browser_page.route('**/readme-multibar.svg', _missing)

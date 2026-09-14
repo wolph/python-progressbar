@@ -12,7 +12,7 @@ is simulated: the only inputs are the measured totals in results.json.
 1.8 s total would compress every other lane into the first frame.
 
 Reuses ``scripts.render_demos``'s SVG emitter so the race shares the
-exact terminal chrome, fonts, and reduced-motion handling of every other
+exact terminal chrome, fonts, and animation timing of every other
 demo, and is gated the same way: ``--check`` fails when the committed
 SVG differs from a fresh render of the current results.json.
 """

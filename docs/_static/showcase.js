@@ -22,8 +22,6 @@
   const tabs = Array.from(controls.querySelectorAll('button[role="tab"]'))
     .filter(/** @param {Element} tab */ (tab) => tab instanceof HTMLButtonElement);
   if (!tabs.length) return;
-  /** @type {MediaQueryList} */
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   /** @type {boolean} */
   let paused = false;
 
@@ -42,15 +40,13 @@
   function updatePlayback() {
     /** @type {SVGSVGElement | null} */
     const root = svgRoot();
-    pause.disabled = !root || reducedMotion.matches;
-    pause.textContent = reducedMotion.matches
-      ? 'Reduced motion'
-      : paused ? 'Resume recording' : 'Pause recording';
+    pause.disabled = !root;
+    pause.textContent = paused ? 'Resume recording' : 'Pause recording';
     if (!root) return;
     /** @type {DOMRect} */
     const bounds = root.viewBox.baseVal;
     recording.style.aspectRatio = `${bounds.width} / ${bounds.height}`;
-    if (paused || reducedMotion.matches) root.pauseAnimations();
+    if (paused) root.pauseAnimations();
     else root.unpauseAnimations();
   }
 
@@ -116,7 +112,6 @@
   recording.addEventListener('error', /** @returns {void} */ () => {
     pause.disabled = true;
   });
-  reducedMotion.addEventListener('change', updatePlayback);
   panel.setAttribute('role', 'tabpanel');
   panel.setAttribute('aria-labelledby', tabs[0].id);
   controls.hidden = false;
