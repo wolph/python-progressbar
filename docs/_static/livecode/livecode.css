@@ -17,6 +17,11 @@
   border-top: 1px solid var(--color-background-border);
 }
 
+.demo:has(.demo-editor:not([hidden])) .demo-source,
+.demo-editor[hidden] {
+  display: none;
+}
+
 .demo .demo-run:empty {
   display: none;
 }
@@ -51,6 +56,21 @@
   cursor: default;
 }
 
+.demo-edit {
+  padding: 0.25rem 0.75rem;
+  font: inherit;
+  font-size: 0.85em;
+  border: 1px solid var(--color-background-border);
+  border-radius: 4px;
+  background: var(--color-background-primary);
+  color: var(--color-foreground-primary);
+  cursor: pointer;
+}
+
+.demo-edit:hover {
+  border-color: var(--home-accent);
+}
+
 .demo-status {
   font-size: 0.85em;
   color: var(--color-foreground-secondary);
@@ -70,9 +90,14 @@
 }
 
 .demo-terminal {
+  display: none;
   background: #101418;
   padding: 0.5rem;
   overflow-x: auto;
+}
+
+.demo-run[data-started] .demo-terminal {
+  display: block;
 }
 
 .demo-terminal .xterm-viewport {

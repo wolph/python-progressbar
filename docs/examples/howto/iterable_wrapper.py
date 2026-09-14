@@ -14,7 +14,7 @@ STEPS = 24
 
 
 def main() -> None:
-    for _ in progressbar.progressbar(range(STEPS)):
+    for _ in progressbar.progressbar(range(STEPS), fast=False):
         time.sleep(0.005)
 
     bar = progressbar.ProgressBar(prefix='Second pass: ')

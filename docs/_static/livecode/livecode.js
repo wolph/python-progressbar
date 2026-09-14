@@ -20,6 +20,8 @@ let worker = null;
 let booting = null;
 let activePanel = null;
 let timeoutHandle = null;
+/** @type {number} */
+let editorCount = 0;
 
 function bootWorker() {
   if (booting) return booting;
@@ -92,16 +94,13 @@ function finishRun() {
 }
 
 /**
- * @param {HTMLElement} container
  * @param {HTMLTextAreaElement} editor
  * @param {HTMLElement} controls
  * @param {string} source
  */
-function keepHighlightedHomepageSource(container, editor, controls, source) {
-  if (!container.closest('.home-quickstart')) return;
-
+function keepHighlightedSource(editor, controls, source) {
   editor.hidden = true;
-  editor.id = 'home-example-editor';
+  editor.id = `demo-editor-${++editorCount}`;
   /** @type {HTMLButtonElement} */
   const edit = document.createElement('button');
   edit.className = 'demo-edit';
@@ -173,7 +172,7 @@ function createPanel(container, source) {
   const controls = document.createElement('div');
   controls.className = 'demo-controls';
   controls.append(button);
-  keepHighlightedHomepageSource(container, editor, controls, source);
+  keepHighlightedSource(editor, controls, source);
   controls.append(status);
   container.append(controls, editor, screen);
 
