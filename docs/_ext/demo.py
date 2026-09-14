@@ -7,6 +7,7 @@ upgrades into a Run button.
 
 from __future__ import annotations
 
+import hashlib
 import html
 import importlib.util
 import pathlib
@@ -116,6 +117,8 @@ class DemoDirective(Directive):
             here = ''
         svg_uri = relative_uri(here, f'_static/demos/{demo.svg_path.name}')
         source_uri = relative_uri(here, f'_static/examples/{stem}.py')
+        source_hash: str = hashlib.sha256(source.encode('utf-8')).hexdigest()
+        source_uri += f'?v={source_hash}'
 
         container = nodes.container(classes=['demo'])
         container += nodes.raw(
