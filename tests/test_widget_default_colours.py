@@ -8,8 +8,14 @@ import re
 import pytest
 
 import progressbar
-from progressbar import utils, widgets
+from progressbar import env, utils, widgets
 from progressbar.terminal import colors
+
+
+@pytest.fixture(autouse=True)
+def ansi_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise ANSI output independently of the runner's console support."""
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_256)
 
 
 @pytest.mark.parametrize(
