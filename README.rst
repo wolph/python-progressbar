@@ -10,9 +10,9 @@ unknown-length progress, and pipe-friendly CLI usage.
     :alt: python-progressbar test status
     :target: https://github.com/wolph/python-progressbar/actions/workflows/main.yml?query=branch%3Amaster
 
-.. image:: https://coveralls.io/repos/github/WoLpH/python-progressbar/badge.svg?branch=master
+.. image:: https://coveralls.io/repos/github/wolph/python-progressbar/badge.svg?branch=master
     :alt: coverage status
-    :target: https://coveralls.io/github/WoLpH/python-progressbar?branch=master
+    :target: https://coveralls.io/github/wolph/python-progressbar?branch=master
 
 Install
 ==============================================================================
