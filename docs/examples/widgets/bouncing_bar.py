@@ -12,12 +12,16 @@ run ends.
 import time
 
 import progressbar
+from progressbar.terminal import colors
 
 STEPS = 40
 
 
 def main() -> None:
-    widgets = ['Working: ', progressbar.BouncingBar()]
+    widgets = [
+        'Working: ',
+        progressbar.BouncingBar(marker_wrap=colors.cyan1.fg('{}')),
+    ]
     with progressbar.ProgressBar(
         max_value=progressbar.UnknownLength,
         widgets=widgets,

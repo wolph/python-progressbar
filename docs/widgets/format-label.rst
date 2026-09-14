@@ -18,6 +18,8 @@ Example
 
 .. demo:: widgets/format-label
 
+Colouring the format string makes the whole live label cyan.
+
 See also
 --------------------------------------------------------------------------------
 

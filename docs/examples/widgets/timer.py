@@ -14,12 +14,15 @@ widget exists to show would never move.
 import time
 
 import progressbar
+from progressbar.terminal import colors
 
 STEPS = 24
 
 
 def main() -> None:
-    widgets = [progressbar.Timer()]
+    widgets = [
+        progressbar.Timer(format=colors.cyan1.fg('Elapsed Time: %(elapsed)s')),
+    ]
     with progressbar.ProgressBar(max_value=STEPS, widgets=widgets) as bar:
         for step in range(STEPS):
             bar.update(step + 1)

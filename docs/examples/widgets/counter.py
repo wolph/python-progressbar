@@ -9,12 +9,17 @@ should carry a unit label.
 import time
 
 import progressbar
+from progressbar.terminal import colors
 
 STEPS = 24
 
 
 def main() -> None:
-    widgets = ['Processed: ', progressbar.Counter(), ' lines']
+    widgets = [
+        'Processed: ',
+        progressbar.Counter(format=colors.cyan1.fg('%(value)d')),
+        ' lines',
+    ]
     with progressbar.ProgressBar(max_value=STEPS, widgets=widgets) as bar:
         for step in range(STEPS):
             bar.update(step + 1)

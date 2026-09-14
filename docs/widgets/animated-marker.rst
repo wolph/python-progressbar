@@ -19,6 +19,9 @@ Example
 
 .. demo:: widgets/animated-marker
 
+``marker_wrap`` colours each moving frame cyan. ``default`` supplies
+a coloured marker for the finished state.
+
 See also
 --------------------------------------------------------------------------------
 

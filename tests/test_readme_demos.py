@@ -1019,7 +1019,11 @@ def test_bouncing_bar_demo_respects_narrow_term_width() -> None:
     assert demo.term_width == 30
 
     frames = demos.capture_demo(demo)
-    widths = [len(line) for frame in frames for line in frame]
+    widths: list[int] = [
+        len(demos.ANSI_SGR_RE.sub('', line))
+        for frame in frames
+        for line in frame
+    ]
 
     assert widths
     assert max(widths) <= demo.term_width

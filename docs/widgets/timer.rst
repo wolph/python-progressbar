@@ -20,6 +20,8 @@ Example
 
 .. demo:: widgets/timer
 
+The format string keeps the elapsed time cyan throughout the run.
+
 See also
 --------------------------------------------------------------------------------
 
