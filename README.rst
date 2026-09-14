@@ -6,13 +6,13 @@ A typed terminal progress bar library for Python. It handles custom
 widgets, clean output around prints and logs, multiple concurrent bars,
 unknown-length progress, and pipe-friendly CLI usage.
 
-.. image:: https://github.com/WoLpH/python-progressbar/actions/workflows/main.yml/badge.svg?branch=master
+.. image:: https://github.com/wolph/python-progressbar/actions/workflows/main.yml/badge.svg?branch=master
     :alt: python-progressbar test status
     :target: https://github.com/wolph/python-progressbar/actions/workflows/main.yml?query=branch%3Amaster
 
-.. image:: https://coveralls.io/repos/WoLpH/python-progressbar/badge.svg?branch=master
+.. image:: https://coveralls.io/repos/github/WoLpH/python-progressbar/badge.svg?branch=master
     :alt: coverage status
-    :target: https://coveralls.io/r/WoLpH/python-progressbar?branch=master
+    :target: https://coveralls.io/github/WoLpH/python-progressbar?branch=master
 
 Install
 ==============================================================================

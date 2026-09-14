@@ -87,6 +87,16 @@ jobs:
         # showing the failing step in the logs
         continue-on-error: ${{ matrix.experimental || false }}
         run: tox -e ${{ matrix.tox-env }}
+      - name: Export coverage
+        if: matrix.tox-env == 'py313'
+        run: .tox/py313/bin/python -m coverage lcov -o coverage.lcov
+      - name: Upload coverage to Coveralls
+        if: matrix.tox-env == 'py313' && github.event_name != 'pull_request' && startsWith(github.ref, 'refs/heads/')
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          file: coverage.lcov
+          format: lcov
+          fail-on-error: true
 
   windows:
     name: tox (windows / py312)
