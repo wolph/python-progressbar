@@ -6,7 +6,7 @@ import progressbar
 
 
 def main() -> None:
-    for _ in progressbar.progressbar(range(100)):
+    for _ in progressbar.progressbar(range(100), fast=False):
         time.sleep(0.01)
 
 

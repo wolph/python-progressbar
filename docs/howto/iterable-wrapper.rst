@@ -8,6 +8,9 @@ with a known length.
 
 .. demo:: howto/iterable-wrapper
 
+``fast=False`` gives the first pass the same coloured widget renderer as
+the explicit ``ProgressBar`` used for the second pass.
+
 ``progressbar.progressbar(iterable)`` wraps any iterable and returns an
 iterator that updates a fresh bar on every step, sized from
 ``len(iterable)`` when available. If you already built a ``ProgressBar``

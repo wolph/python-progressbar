@@ -17,6 +17,9 @@ an iterable, hands back an iterator over the same values, and starts,
 updates and finishes a bar behind the scenes as that iterator is consumed.
 There is no separate call to make the bar advance or to mark it done.
 
+``fast=False`` selects the widget renderer with its default colours.
+Without it, this simple loop uses the faster, uncoloured renderer.
+
 That convenience comes from hiding the bar object entirely. The library
 also exposes it directly as the ``ProgressBar`` class, which you construct
 and update yourself when progress does not come from iterating something.

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import typing
 
+import pytest
+
 from .test_console import (
     BOOT_TIMEOUT_MS,
     _wait_for_terminal_text,
@@ -136,6 +138,48 @@ def test_homepage_output_has_colour_and_fits_after_resizing(
         assert geometry['scrollHeight'] <= geometry['viewportHeight']
         assert geometry['height'] < 100
         assert geometry['overflowY'] == 'auto'
+    assert not page[1]
+
+
+@pytest.mark.parametrize(
+    'path',
+    [
+        'tutorial/step1.html',
+        'howto/iterable-wrapper.html',
+        'widgets/bar.html',
+    ],
+)
+def test_guide_example_has_one_code_view_and_coloured_output(
+    server: str,
+    page: tuple[Page, list[str]],
+    path: str,
+) -> None:
+    browser_page: Page = page[0]
+    browser_page.goto(f'{server}/{path}')
+    source: Locator = browser_page.locator('.demo-source')
+    editor: Locator = browser_page.locator('.demo-editor')
+    playwright_api.expect(editor).to_be_attached()
+    playwright_api.expect(source).to_be_visible()
+    playwright_api.expect(editor).to_be_hidden()
+    browser_page.get_by_role('button', name='Run', exact=True).click()
+    _wait_for_terminal_text(browser_page, '100%', BOOT_TIMEOUT_MS)
+    browser_page.wait_for_function(
+        """() => {
+        const term = window.__consoleTestTerminal;
+        const line = term.buffer.active.getLine(0);
+        return [...Array(term.cols).keys()].some(x => {
+            const cell = line.getCell(x);
+            return cell.getChars() === '#' && !cell.isFgDefault();
+        });
+    }""",
+        timeout=5000,
+    )
+    browser_page.get_by_role('button', name='Edit code').click()
+    playwright_api.expect(source).to_be_hidden()
+    playwright_api.expect(editor).to_be_focused()
+    browser_page.get_by_role('button', name='Reset example').click()
+    playwright_api.expect(source).to_be_visible()
+    playwright_api.expect(editor).to_be_hidden()
     assert not page[1]
 
 
