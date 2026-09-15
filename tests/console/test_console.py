@@ -357,3 +357,34 @@ def test_boot_failure_retries_with_a_fresh_worker(
     # and not a hang. `resetWorker()` nulling out the cached `booting`
     # promise is what makes this 2 instead of 1.
     assert _worker_count(browser_page) == 2
+
+
+def test_sleep_in_the_console_keeps_to_its_duration(
+    server: str,
+    page: tuple[Page, list[str]],
+) -> None:
+    """Pyodide's own ``time.sleep`` costs about 80ms per 10ms call in
+    Chromium on macOS, which pushed a 1000-item tutorial run past the
+    console's 30s stop. The worker installs its own sleep, so a call
+    must cost close to what it asks for on every platform.
+    """
+    browser_page, errors = page
+    browser_page.goto(f'{server}/tutorial/step2.html')
+    browser_page.get_by_role('button', name='Edit code').click()
+    browser_page.locator('.demo-editor').fill(
+        'import time\n'
+        'started = time.perf_counter()\n'
+        'for _ in range(20):\n'
+        '    time.sleep(0.01)\n'
+        'per_call_ms = (time.perf_counter() - started) / 20 * 1000\n'
+        "print(f'per call: {per_call_ms:.1f} ms')\n"
+    )
+    browser_page.click('.demo-button')
+    _wait_for_terminal_text(browser_page, 'per call:', BOOT_TIMEOUT_MS)
+    text: str = browser_page.evaluate(
+        'window.__consoleTestTerminal.buffer.active.getLine(0)'
+        '.translateToString(true)'
+    )
+    per_call_ms: float = float(text.split('per call:')[1].split('ms')[0])
+    assert 8 <= per_call_ms <= 25, text
+    assert not errors

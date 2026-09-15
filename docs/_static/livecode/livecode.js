@@ -4,6 +4,12 @@
 // click, so a reader who never runs anything never downloads Pyodide.
 
 const COLUMNS = 80;
+// Narrowest terminal the fit may produce. progressbar's default widget set
+// needs about 57 columns before the bar itself gets any room, so a phone
+// width host shrinks the font instead of the column count.
+const MIN_COLUMNS = 60;
+const FONT_SIZE = 13;
+const MIN_FONT_SIZE = 6;
 const RUN_TIMEOUT_MS = 30000;
 
 // Read the Docs serves the site under `/en/<version>/`, so root-absolute
@@ -133,8 +139,19 @@ function fitTerminalWidth(terminal, host) {
   terminal.loadAddon(addon);
   /** @type {() => void} */
   const fit = () => {
+    // Measure at the full font first so a host that grows back gets its
+    // original size, then shrink the font until MIN_COLUMNS fit.
+    terminal.options.fontSize = FONT_SIZE;
     /** @type {{cols: number, rows: number} | undefined} */
-    const dimensions = addon.proposeDimensions();
+    let dimensions = addon.proposeDimensions();
+    if (dimensions && Number.isInteger(dimensions.cols)
+        && dimensions.cols > 0 && dimensions.cols < MIN_COLUMNS) {
+      terminal.options.fontSize = Math.max(
+        MIN_FONT_SIZE,
+        Math.floor(FONT_SIZE * dimensions.cols / MIN_COLUMNS),
+      );
+      dimensions = addon.proposeDimensions();
+    }
     if (dimensions && Number.isInteger(dimensions.cols)
         && dimensions.cols > 0 && dimensions.cols !== terminal.cols) {
       terminal.resize(dimensions.cols, terminal.rows);
@@ -181,7 +198,7 @@ function createPanel(container, source) {
     cols: COLUMNS,
     rows: container.closest('.home-quickstart') ? 3 : 12,
     convertEol: true,
-    fontSize: 13,
+    fontSize: FONT_SIZE,
     theme: {background: '#101418', foreground: '#d6e2ef'},
   });
   terminal.open(terminalHost);

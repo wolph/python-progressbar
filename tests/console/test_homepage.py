@@ -119,6 +119,11 @@ def test_homepage_output_has_colour_and_fits_after_resizing(
     for width in (1440, 768, 375):
         browser_page.set_viewport_size({'width': width, 'height': 1000})
         browser_page.get_by_role('button', name='Run', exact=True).click()
+        # The default widget set needs about 57 columns before the bar
+        # gets any room, so the console must never fit narrower than that.
+        browser_page.wait_for_function(
+            '() => window.__consoleTestTerminal.cols >= 60', timeout=5000
+        )
         _wait_for_terminal_text(browser_page, '100%', BOOT_TIMEOUT_MS)
         browser_page.wait_for_function("""() => {
             const term = window.__consoleTestTerminal;
