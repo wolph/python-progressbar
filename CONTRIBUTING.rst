@@ -161,3 +161,15 @@ To run a subset of tests::
     $ uv run pytest tests/some_test.py
 
 .. _git-flow-avh: https://github.com/petervanderdoes/gitflow
+
+Automatic formatting
+--------------------
+
+Pull requests apply Ruff fixes before the lint check. With the autofix.ci
+app installed for this repository, those fixes are committed to the pull
+request branch, including forks. Findings Ruff cannot fix still fail CI.
+Push builds check the committed files without applying fixes.
+
+Apply the same fixes locally with::
+
+    uvx --with tox-uv tox -e ruff-fix

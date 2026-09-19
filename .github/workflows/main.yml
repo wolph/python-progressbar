@@ -89,7 +89,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip tox
+      - name: Apply Ruff fixes to pull requests
+        if: github.event_name == 'pull_request' && matrix.tox-env == 'ruff'
+        run: tox -e ruff-fix
       - name: Test with tox
+        env:
+          RUFF_OUTPUT_FORMAT: >-
+            ${{ github.event_name == 'pull_request' && 'github' || 'full' }}
         # Step-level continue-on-error keeps the job green for
         # experimental (pre-release Python) environments while still
         # showing the failing step in the logs
