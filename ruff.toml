@@ -39,6 +39,7 @@ ignore = [
     'ISC001', # String concatenation with implicit str conversion
     'SIM108', # Ternary operators are not always more readable
     'RUF100', # Unused noqa directives. Due to multiple Python versions, we need to keep them
+    'ICN001', # ruff 0.17.1 wants `import datetime as dt`; the codebase uses `datetime.`
 ]
 
 select = [
