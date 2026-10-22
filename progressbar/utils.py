@@ -18,6 +18,7 @@ import logging
 import os
 import re
 import sys
+import threading
 import typing
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from types import TracebackType
@@ -183,6 +184,7 @@ class WrappingIO:
     target: base.IO
     capturing: bool
     listeners: set[_ProgressListener]
+    lock: threading.Lock
     needs_clear: bool = False
 
     def __init__(
@@ -190,6 +192,7 @@ class WrappingIO:
         target: base.IO,
         capturing: bool = False,
         listeners: set[_ProgressListener] | None = None,
+        lock: threading.Lock | None = None,
     ) -> None:
         """Wrap `target` so writes can be buffered while `capturing`.
 
@@ -202,12 +205,32 @@ class WrappingIO:
                 write completes a line. Typically shared with
                 `StreamWrapper.listeners` by the caller, so every
                 wrapped stream notifies the same bars.
+            lock: The lock that guards the `listeners` set and nothing
+                else. `StreamWrapper` passes its `listeners_lock`, so
+                the snapshot taken in `write()` cannot race with
+                `start_capturing()` and `stop_capturing()` on another
+                thread (a real race on free-threaded builds). It is
+                never held while calling out, so it cannot take part
+                in a lock-order cycle with a logging handler or a
+                locking target stream. Defaults to a private lock.
         """
         self.buffer = io.StringIO()
         self.target = target
         self.capturing = capturing
-        self.listeners = listeners or set()
+        self.listeners = listeners if listeners is not None else set()
+        self.lock = lock if lock is not None else threading.Lock()
         self.needs_clear = False
+
+    def __getstate__(self) -> dict[str, typing.Any]:
+        """Pickle everything but the lock, which is recreated on load."""
+        state: dict[str, typing.Any] = self.__dict__.copy()
+        state.pop('lock', None)
+        return state
+
+    def __setstate__(self, state: dict[str, typing.Any]) -> None:
+        """Restore the state with a fresh, private lock."""
+        self.__dict__.update(state)
+        self.lock = threading.Lock()
 
     def write(self, value: str) -> int:
         """Write `value`, buffering it in memory while `capturing`.
@@ -230,7 +253,12 @@ class WrappingIO:
             ret += self.buffer.write(value)
             if '\n' in value:  # pragma: no branch
                 self.needs_clear = True
-                for listener in self.listeners:  # pragma: no branch
+                # Iterate a snapshot taken under the lock: a listener's
+                # update() may finish its bar, which removes it from this
+                # shared set, and another thread may be mutating it
+                with self.lock:
+                    listeners = tuple(self.listeners)
+                for listener in listeners:  # pragma: no branch
                     listener.update()
         else:
             ret += self.target.write(value)
@@ -374,10 +402,33 @@ class StreamWrapper:
     wrapped_stdout: int = 0
     wrapped_stderr: int = 0
     wrapped_logging: int = 0
-    wrapped_excepthook: int = 0
+    wrapped_excepthook: bool = False
     logging_handlers: list[tuple[logging.StreamHandler[base.IO], base.IO]]
     capturing: int = 0
     listeners: set[_ProgressListener]
+    #: Guards every wrap/unwrap/capture transition. Reentrant, because
+    #: wrap_stdout() calls wrap_excepthook() and update_capturing() calls
+    #: flush() while holding it. The class-level default keeps a subclass
+    #: that skips `super().__init__()` working, as every counter above.
+    lock: threading.RLock = threading.RLock()
+    #: Guards `listeners` only. Shared with every `WrappingIO` this
+    #: wrapper installs, and never held while calling out, so a captured
+    #: `write()` on one thread cannot wait for `lock` (which is held
+    #: across flushes into the original stream, logging included).
+    listeners_lock: threading.Lock = threading.Lock()
+
+    def __getstate__(self) -> dict[str, typing.Any]:
+        """Pickle everything but the locks, which are recreated on load."""
+        state: dict[str, typing.Any] = self.__dict__.copy()
+        state.pop('lock', None)
+        state.pop('listeners_lock', None)
+        return state
+
+    def __setstate__(self, state: dict[str, typing.Any]) -> None:
+        """Restore the state with fresh, unlocked locks."""
+        self.__dict__.update(state)
+        self.lock = threading.RLock()
+        self.listeners_lock = threading.Lock()
 
     def __init__(self) -> None:
         """Capture the *current* `sys.stdout`/`sys.stderr` as "real".
@@ -397,10 +448,12 @@ class StreamWrapper:
         self.wrapped_stdout = 0
         self.wrapped_stderr = 0
         self.wrapped_logging = 0
-        self.wrapped_excepthook = 0
+        self.wrapped_excepthook = False
         self.logging_handlers = []
         self.capturing = 0
         self.listeners = set()
+        self.lock = threading.RLock()
+        self.listeners_lock = threading.Lock()
 
         if env.env_flag('WRAP_STDOUT', default=False):  # pragma: no cover
             self.wrap_stdout()
@@ -416,11 +469,13 @@ class StreamWrapper:
                 when captured output completes a line. Omit to just
                 bump the refcount without listening.
         """
-        if bar:  # pragma: no branch
-            self.listeners.add(bar)
+        with self.lock:
+            if bar:  # pragma: no branch
+                with self.listeners_lock:
+                    self.listeners.add(bar)
 
-        self.capturing += 1
-        self.update_capturing()
+            self.capturing += 1
+            self.update_capturing()
 
     def stop_capturing(self, bar: _ProgressListener | None = None) -> None:
         """Unregister `bar` and drop the shared capturing refcount.
@@ -429,12 +484,15 @@ class StreamWrapper:
             bar: The listener to remove, if it was registered via
                 `start_capturing`.
         """
-        if bar:  # pragma: no branch
-            with contextlib.suppress(KeyError):
-                self.listeners.remove(bar)
+        with self.lock:
+            if bar:  # pragma: no branch
+                with self.listeners_lock, contextlib.suppress(KeyError):
+                    self.listeners.remove(bar)
 
-        self.capturing -= 1
-        self.update_capturing()
+            # Never go negative: an unmatched stop would otherwise make
+            # the next start_capturing() a no-op
+            self.capturing = max(self.capturing - 1, 0)
+            self.update_capturing()
 
     def update_capturing(self) -> None:  # pragma: no cover
         """Propagate the capturing refcount to the wrapped streams.
@@ -444,14 +502,15 @@ class StreamWrapper:
         as the last bar stops capturing, rather than sitting there
         until something else happens to trigger a flush.
         """
-        if isinstance(self.stdout, WrappingIO):
-            self.stdout.capturing = self.capturing > 0
+        with self.lock:
+            if isinstance(self.stdout, WrappingIO):
+                self.stdout.capturing = self.capturing > 0
 
-        if isinstance(self.stderr, WrappingIO):
-            self.stderr.capturing = self.capturing > 0
+            if isinstance(self.stderr, WrappingIO):
+                self.stderr.capturing = self.capturing > 0
 
-        if self.capturing <= 0:
-            self.flush()
+            if self.capturing <= 0:
+                self.flush()
 
     def wrap(self, stdout: bool = False, stderr: bool = False) -> None:
         """Wrap `stdout` and/or `stderr`, per the given flags."""
@@ -475,16 +534,18 @@ class StreamWrapper:
             The installed `WrappingIO`, the same instance on every
             call until it's fully unwrapped.
         """
-        self.wrap_excepthook()
+        with self.lock:
+            self.wrap_excepthook()
 
-        if not self.wrapped_stdout:
-            self.stdout = sys.stdout = WrappingIO(  # type: ignore
-                self.original_stdout,
-                listeners=self.listeners,
-            )
-        self.wrapped_stdout += 1
+            if not self.wrapped_stdout:
+                self.stdout = sys.stdout = WrappingIO(  # type: ignore
+                    self.original_stdout,
+                    listeners=self.listeners,
+                    lock=self.listeners_lock,
+                )
+            self.wrapped_stdout += 1
 
-        return sys.stdout  # type: ignore
+            return sys.stdout  # type: ignore
 
     def wrap_stderr(self) -> WrappingIO:
         """Install a `WrappingIO` over `sys.stderr`, or share it.
@@ -496,16 +557,18 @@ class StreamWrapper:
             The installed `WrappingIO`, the same instance on every
             call until it's fully unwrapped.
         """
-        self.wrap_excepthook()
+        with self.lock:
+            self.wrap_excepthook()
 
-        if not self.wrapped_stderr:
-            self.stderr = sys.stderr = WrappingIO(  # type: ignore
-                self.original_stderr,
-                listeners=self.listeners,
-            )
-        self.wrapped_stderr += 1
+            if not self.wrapped_stderr:
+                self.stderr = sys.stderr = WrappingIO(  # type: ignore
+                    self.original_stderr,
+                    listeners=self.listeners,
+                    lock=self.listeners_lock,
+                )
+            self.wrapped_stderr += 1
 
-        return sys.stderr  # type: ignore
+            return sys.stderr  # type: ignore
 
     def wrap_logging(self) -> None:
         """Retarget every `StreamHandler` in the logger tree to the wrapper.
@@ -634,9 +697,10 @@ class StreamWrapper:
 
     def unwrap_excepthook(self) -> None:
         """Restore the original `sys.excepthook`, if currently wrapped."""
-        if self.wrapped_excepthook:
-            self.wrapped_excepthook -= 1
-            sys.excepthook = self.original_excepthook
+        with self.lock:
+            if self.wrapped_excepthook:
+                self.wrapped_excepthook = False
+                sys.excepthook = self.original_excepthook
 
     def wrap_excepthook(self) -> None:
         """Install the shared excepthook that flushes buffered output.
@@ -645,10 +709,11 @@ class StreamWrapper:
         both call this unconditionally, and either one may already have
         wrapped it.
         """
-        if not self.wrapped_excepthook:
-            logger.debug('wrapping excepthook')
-            self.wrapped_excepthook += 1
-            sys.excepthook = self.excepthook
+        with self.lock:
+            if not self.wrapped_excepthook:
+                logger.debug('wrapping excepthook')
+                self.wrapped_excepthook = True
+                sys.excepthook = self.excepthook
 
     def unwrap(self, stdout: bool = False, stderr: bool = False) -> None:
         """Unwrap `stdout` and/or `stderr`, per the given flags."""
@@ -657,6 +722,25 @@ class StreamWrapper:
 
         if stderr:
             self.unwrap_stderr()
+
+    @staticmethod
+    def _deliver_dropped(dropped: WrappingIO) -> None:
+        """Stop buffering in a dropped wrapper and deliver what it holds.
+
+        A stale reference to the wrapper must not swallow output. The
+        delivery touches the original stream, so a stream that cannot
+        take it (no `flush()`, closed, a broken pipe, a GUI widget that
+        is gone) is logged and otherwise ignored: unwrapping never
+        raises for it, as it did not before the flush was added.
+        """
+        dropped.capturing = False
+        try:
+            dropped._flush()
+        except Exception:
+            logger.debug(
+                'Could not deliver buffered output on unwrap',
+                exc_info=True,
+            )
 
     def unwrap_stdout(self) -> None:
         """Undo one `wrap_stdout()` call, restoring at refcount zero.
@@ -668,13 +752,18 @@ class StreamWrapper:
         excepthook once `stderr` is back to its original too, since
         it's shared between the two.
         """
-        if self.wrapped_stdout > 1:
-            self.wrapped_stdout -= 1
-        else:
+        with self.lock:
+            if self.wrapped_stdout > 1:
+                self.wrapped_stdout -= 1
+                return
+
+            dropped: object = self.stdout
             # Also reset our own reference so needs_clear() and
             # update_capturing() don't act on a stale wrapper
             self.stdout = sys.stdout = self.original_stdout
             self.wrapped_stdout = 0
+            if isinstance(dropped, WrappingIO):
+                self._deliver_dropped(dropped)
             if not self.wrapped_stderr:
                 self.unwrap_excepthook()
 
@@ -686,13 +775,18 @@ class StreamWrapper:
         excepthook is unwrapped once `stdout` is back to its original
         too.
         """
-        if self.wrapped_stderr > 1:
-            self.wrapped_stderr -= 1
-        else:
+        with self.lock:
+            if self.wrapped_stderr > 1:
+                self.wrapped_stderr -= 1
+                return
+
+            dropped: object = self.stderr
             # Also reset our own reference so needs_clear() and
             # update_capturing() don't act on a stale wrapper
             self.stderr = sys.stderr = self.original_stderr
             self.wrapped_stderr = 0
+            if isinstance(dropped, WrappingIO):
+                self._deliver_dropped(dropped)
             if not self.wrapped_stdout:
                 self.unwrap_excepthook()
 
