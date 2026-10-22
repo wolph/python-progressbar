@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import os
 import pathlib
 import sys
 import time
 import typing
 from pathlib import Path
-from typing import IO, BinaryIO, TextIO
+from typing import IO
 
 import progressbar
 
@@ -386,8 +387,176 @@ def _sleep_for_rate_limit(
         time.sleep(delay)
 
 
-def main(argv: list[str] | None = None) -> None:  # noqa: C901
+#: Exit status after an interrupted transfer (128 + SIGINT, as shells do).
+EXIT_INTERRUPTED: int = 130
+
+
+def _parse_size_option(
+    parser: argparse.ArgumentParser,
+    option: str,
+    value: str,
+    minimum: int,
+) -> int:
+    """Parse a size option, exiting through `parser.error` when invalid.
+
+    Args:
+        parser: The parser used to report the error (exit status 2).
+        option: The flag name, used in the error message.
+        value: The raw option value.
+        minimum: The smallest accepted value in bytes.
+
+    Returns:
+        The size in bytes.
+    """
+    try:
+        size: int = size_to_bytes(value)
+    except (ValueError, IndexError, OSError) as exception:
+        parser.error(f'invalid {option} value {value!r}: {exception}')
+    if size < minimum:
+        parser.error(f'{option} must be at least {minimum}, got {value!r}')
+    return size
+
+
+def _collect_inputs(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+) -> tuple[list[IO[typing.Any] | Path], int, bool]:
+    """Validate the input arguments without opening any file.
+
+    Returns:
+        The inputs (stdin streams or paths), the summed file size and
+        whether a total size is known.
+    """
+    inputs: list[IO[typing.Any] | Path] = []
+    total_size: int = 0
+    filesize_available: bool = True
+    for filename in args.input:
+        if filename == '-':
+            inputs.append(sys.stdin if args.line_mode else sys.stdin.buffer)
+            filesize_available = False
+            continue
+
+        input_path: Path = pathlib.Path(filename)
+        if not input_path.exists():
+            parser.error(f'File not found: {filename}')
+        if input_path.is_dir():
+            parser.error(f'Is a directory: {filename}')
+        total_size += input_path.stat().st_size
+        inputs.append(input_path)
+    return inputs, total_size, filesize_available
+
+
+def _check_output_path(
+    parser: argparse.ArgumentParser,
+    output: str | None,
+    inputs: typing.Sequence[IO[typing.Any] | Path],
+) -> None:
+    """Reject an output path that is a directory or one of the inputs.
+
+    Runs before the output is opened, because opening it truncates it.
+    """
+    if not output or output == '-':
+        return
+    output_path: Path = pathlib.Path(output)
+    if not output_path.exists():
+        return
+    if output_path.is_dir():
+        parser.error(f'Output is a directory: {output}')
+    if not output_path.is_file():
+        # Devices (two names of one tty, /dev/null) share an inode without
+        # sharing data, so only a regular file can be truncated away
+        return
+    for input_path in inputs:
+        if isinstance(input_path, Path) and output_path.samefile(input_path):
+            parser.error(f'Output file is also an input: {output}')
+
+
+def _open_input(
+    input_path: IO[typing.Any] | Path,
+    line_mode: bool,
+) -> typing.ContextManager[IO[typing.Any]]:
+    """Open a path input, or wrap a stdin stream without closing it."""
+    if isinstance(input_path, Path):
+        if line_mode:
+            # newline='' disables universal-newline translation so the
+            # byte count matches the file size for CRLF files as well
+            return input_path.open('r', newline='')
+        return input_path.open('rb')
+    return contextlib.nullcontext(input_path)
+
+
+def _copy_stream(
+    input_stream: IO[typing.Any],
+    output_stream: IO[typing.Any],
+    bar: progressbar.ProgressBar,
+    line_mode: bool,
+    buffer_size: int,
+    rate_limit: int | None,
+    started_at: float,
+    transferred: int,
+) -> int:
+    """Copy one input to the output, updating `bar`.
+
+    Returns:
+        The running total of bytes transferred.
+    """
+    while True:
+        data: str | bytes
+        if line_mode:
+            data = input_stream.readline(buffer_size)
+        else:
+            data = input_stream.read(buffer_size)
+
+        if not data:
+            return transferred
+
+        output_stream.write(data)
+        if isinstance(data, str):
+            # The total size is measured in bytes, so progress must be
+            # tracked in bytes as well
+            encoding: str = getattr(input_stream, 'encoding', None) or 'utf-8'
+            transferred += len(data.encode(encoding, errors='replace'))
+        else:
+            transferred += len(data)
+
+        bar.update(transferred)
+        _sleep_for_rate_limit(rate_limit, transferred, started_at)
+
+
+def _discard_broken_stdout() -> None:
+    """Point fd 1 at `os.devnull` after a broken pipe on stdout.
+
+    The copy loop has already stopped, but the interpreter flushes
+    `sys.stdout` once more at exit, and that flush would raise the same
+    `BrokenPipeError` again (status 120, "Exception ignored on flushing
+    sys.stdout"). Redirecting the descriptor makes that last flush
+    succeed, which is what the Python docs recommend for a pipeline
+    whose reader went away.
+    """
+    try:
+        fd: int = sys.stdout.fileno()
+    except (OSError, ValueError, AttributeError):
+        return  # not descriptor-backed (io.StringIO under a test runner)
+    if fd != 1:
+        return  # a replacement stdout owns that descriptor, leave it alone
+    try:
+        devnull: int = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(devnull, fd)
+        finally:
+            os.close(devnull)
+    except OSError:  # pragma: no cover
+        pass
+
+
+def main(argv: list[str] | None = None) -> None:
     """Run the `progressbar` command.
+
+    All arguments are validated before the output file is opened, so an
+    invalid invocation exits with status 2 and leaves `-o` untouched. An
+    interrupted transfer (Ctrl-C) exits with status 130 after the bar
+    is finished. A downstream pipe that closes early ends the copy
+    quietly with status 0, so `... | head` stays clean under pipefail.
 
     Args:
         argv: Command-line arguments. Defaults to `sys.argv[1:]`.
@@ -395,108 +564,70 @@ def main(argv: list[str] | None = None) -> None:  # noqa: C901
     parser: argparse.ArgumentParser = create_argument_parser()
     args: argparse.Namespace = parser.parse_args(argv)
 
+    inputs, total_size, filesize_available = _collect_inputs(parser, args)
+    if args.size:
+        total_size = _parse_size_option(parser, '--size', args.size, 0)
+        filesize_available = True
+    buffer_size: int = (
+        _parse_size_option(parser, '--buffer-size', args.buffer_size, 1)
+        if args.buffer_size
+        else 1024
+    )
+    rate_limit: int | None = (
+        _parse_size_option(parser, '--rate-limit', args.rate_limit, 0)
+        if args.rate_limit
+        else None
+    )
+    _check_output_path(parser, args.output, inputs)
+
+    widgets = _build_widgets(args, filesize_available)
+    progress_bar_class: type[progressbar.ProgressBar] = (
+        progressbar.NullBar if args.quiet else progressbar.ProgressBar
+    )
+    exit_status: int = 0
+
     with contextlib.ExitStack() as stack:
         output_stream: typing.IO[typing.Any] = _get_output_stream(
             args.output, args.line_mode, stack
         )
-
-        input_paths: list[BinaryIO | TextIO | Path | IO[typing.Any]] = []
-        total_size: int = 0
-        filesize_available: bool = True
-        for filename in args.input:
-            input_path: typing.IO[typing.Any] | pathlib.Path
-            if filename == '-':
-                if args.line_mode:
-                    input_path = sys.stdin
-                else:
-                    input_path = sys.stdin.buffer
-
-                filesize_available = False
-            else:
-                input_path = pathlib.Path(filename)
-                if not input_path.exists():
-                    parser.error(f'File not found: {filename}')
-
-                if not args.size:
-                    total_size += input_path.stat().st_size
-
-            input_paths.append(input_path)
-
-        # Determine the size for the progress bar (if provided)
-        if args.size:
-            total_size = size_to_bytes(args.size)
-            filesize_available = True
-
-        widgets = _build_widgets(args, filesize_available)
-        progress_bar_class: type[progressbar.ProgressBar] = (
-            progressbar.NullBar if args.quiet else progressbar.ProgressBar
-        )
-
         bar = progress_bar_class(
             widgets=widgets,
             max_value=total_size if filesize_available else None,
             max_error=False,
             line_breaks=True if args.numeric else None,
         )
-
-        buffer_size = (
-            size_to_bytes(args.buffer_size) if args.buffer_size else 1024
-        )
-        rate_limit = (
-            size_to_bytes(args.rate_limit) if args.rate_limit else None
-        )
-        started_at = time.monotonic()
-        total_transferred = 0
+        started_at: float = time.monotonic()
+        transferred: int = 0
 
         bar.start()
-        with contextlib.suppress(KeyboardInterrupt, BrokenPipeError):
-            for input_path in input_paths:
-                if isinstance(input_path, pathlib.Path):
-                    if args.line_mode:
-                        # newline='' disables universal-newline
-                        # translation so the byte count matches the file
-                        # size for CRLF files as well
-                        input_stream = stack.enter_context(
-                            input_path.open('r', newline=''),
-                        )
-                    else:
-                        input_stream = stack.enter_context(
-                            input_path.open('rb'),
-                        )
-                else:
-                    input_stream = input_path
-
-                while True:
-                    data: str | bytes
-                    if args.line_mode:
-                        data = input_stream.readline(buffer_size)
-                    else:
-                        data = input_stream.read(buffer_size)
-
-                    if not data:
-                        break
-
-                    output_stream.write(data)
-                    if isinstance(data, str):
-                        # The total size is measured in bytes, so progress
-                        # must be tracked in bytes as well
-                        encoding = (
-                            getattr(input_stream, 'encoding', None) or 'utf-8'
-                        )
-                        total_transferred += len(
-                            data.encode(encoding, errors='replace'),
-                        )
-                    else:
-                        total_transferred += len(data)
-
-                    bar.update(total_transferred)
-                    _sleep_for_rate_limit(
+        try:
+            for input_path in inputs:
+                with _open_input(input_path, args.line_mode) as input_stream:
+                    transferred = _copy_stream(
+                        input_stream,
+                        output_stream,
+                        bar,
+                        args.line_mode,
+                        buffer_size,
                         rate_limit,
-                        total_transferred,
                         started_at,
+                        transferred,
                     )
+        except KeyboardInterrupt:
+            exit_status = EXIT_INTERRUPTED
+        except BrokenPipeError:
+            # The reader went away (`... | head`): finish quietly with
+            # status 0, as 4.6.0 did and as a pipeline under pipefail
+            # expects
+            if output_stream is sys.stdout or output_stream is getattr(
+                sys.stdout, 'buffer', None
+            ):
+                _discard_broken_stdout()
 
         bar.finish(dirty=True)
+
+    if exit_status:
+        raise SystemExit(exit_status)
 
 
 def _get_output_stream(
