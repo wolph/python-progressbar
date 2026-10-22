@@ -48,3 +48,11 @@ docs/_build/
 
 # Built at docs build time for the in-browser console
 docs/_static/wheels/
+
+# Local secrets and environments
+.env
+.env.*
+.venv/
+*.pem
+*.key
+.pypirc

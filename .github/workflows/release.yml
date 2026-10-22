@@ -10,6 +10,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build distributions
@@ -18,15 +21,71 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref || github.ref }}
+      - name: Verify the ref is a release tag matching __version__
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            ref="$INPUT_REF"
+          else
+            ref="$EVENT_REF"
+          fi
+          case "$ref" in
+            refs/tags/v*) tag="${ref#refs/tags/}" ;;
+            v*)
+              if [ "$EVENT_NAME" != "workflow_dispatch" ]; then
+                echo "::error::ref '$ref' is not a tag ref"
+                exit 1
+              fi
+              tag="$ref"
+              ;;
+            *)
+              echo "::error::ref '$ref' is not a v* release tag"
+              exit 1
+              ;;
+          esac
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+[0-9A-Za-z.+-]*$ ]]; then
+            echo "::error::tag '$tag' does not look like vX.Y.Z"
+            exit 1
+          fi
+          version="$(sed -n "s/^__version__ = ['\"]\([^'\"]*\)['\"].*/\1/p" progressbar/__about__.py)"
+          if [ -z "$version" ]; then
+            echo "::error::could not read __version__ from progressbar/__about__.py"
+            exit 1
+          fi
+          if [ "$tag" != "v$version" ]; then
+            echo "::error::tag '$tag' does not match __version__ '$version'"
+            exit 1
+          fi
+          tag_commit="$(git rev-parse --verify --quiet "refs/tags/$tag^{commit}")" || {
+            echo "::error::tag '$tag' is not present in the checkout"
+            exit 1
+          }
+          if [ "$tag_commit" != "$(git rev-parse HEAD)" ]; then
+            echo "::error::checked-out commit is not the commit of tag '$tag'"
+            exit 1
+          fi
+          echo "Releasing $tag ($tag_commit)"
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - name: Build sdist and wheel
         run: uv build --no-sources
-      - name: Verify wheel contains only the progressbar package
+      - name: Verify distribution contents
         run: |
+          set -euo pipefail
           unpacked="$(unzip -Z1 dist/*.whl | cut -d/ -f1 | sort -u)"
           echo "$unpacked"
           test "$(echo "$unpacked" | grep -cvE '^progressbar$|^progressbar2-.*\.dist-info$')" -eq 0
+          sdist="$(tar tzf dist/*.tar.gz)"
+          echo "$sdist"
+          stray_pattern='\.sync-conflict-|\.orig|\.rej|\.bak'
+          if { unzip -Z1 dist/*.whl; echo "$sdist"; } | grep -E "$stray_pattern"; then
+            echo "::error::distribution contains stray conflict or backup files"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v6
         with:
           name: dist
