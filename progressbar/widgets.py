@@ -8,12 +8,14 @@ widget implements.
 
 from __future__ import annotations
 
+import _string  # type: ignore[import-not-found]
 import abc
 import collections.abc
 import contextlib
 import datetime
 import functools
 import logging
+import string
 import typing
 from typing import ClassVar
 
@@ -26,6 +28,61 @@ if typing.TYPE_CHECKING:
     from .bar import NumberT, ProgressBarMixinBase
 
 logger = logging.getLogger(__name__)
+
+
+class _SafeFormatter(string.Formatter):
+    """`str.format` over widget data that refuses dunder attribute walks.
+
+    Format templates may come from text the application did not write
+    (a `prefix`, a `Variable` format). A field such as
+    `{variables.__class__.__init__.__globals__}` would otherwise reach
+    module globals, so any attribute segment starting with `__` raises
+    `ValueError` before it is looked up. A single leading underscore is
+    allowed: `{variables._my_var}` is a documented way to reach a
+    variable, and a user object's own `_private` attribute is the
+    user's business.
+    """
+
+    def get_field(
+        self,
+        field_name: str,
+        args: typing.Sequence[typing.Any],
+        kwargs: typing.Mapping[str, typing.Any],
+    ) -> tuple[typing.Any, str]:
+        rest: typing.Iterable[tuple[bool, typing.Any]]
+        _first, rest = _string.formatter_field_name_split(field_name)
+        for is_attr, name in rest:
+            if is_attr and str(name).startswith('__'):
+                raise ValueError(
+                    f'attribute {name!r} is not allowed in a format template',
+                )
+        return super().get_field(field_name, args, kwargs)
+
+
+_SAFE_FORMATTER: _SafeFormatter = _SafeFormatter()
+
+
+def _safe_format(
+    template: object,
+    data: typing.Mapping[str, typing.Any],
+) -> str:
+    """Render `template` with `data` through the safe formatter.
+
+    `string.Formatter` needs a real `str`, while `str.format` accepted
+    anything with a `format()` method. A translation proxy (the
+    `gettext_lazy` shape) is therefore rendered through `str()` first,
+    so it keeps working. Anything else that is not text (None, a list,
+    a number) is a `TypeError`, as it was before.
+    """
+    if not isinstance(template, str):
+        if not callable(getattr(template, 'format', None)):
+            raise TypeError(
+                'format template must be a str, got '
+                f'{type(template).__name__}',
+            )
+        template = str(template)
+    return _SAFE_FORMATTER.vformat(template, (), data)
+
 
 MAX_DATE = datetime.date.max
 MAX_TIME = datetime.time.max
@@ -198,14 +255,14 @@ class FormatWidgetMixin:
         format_ = self.get_format(progress, data, format)
         try:
             if self.new_style:
-                return format_.format(**data)
+                return _safe_format(format_, data)
             else:
                 return format_ % data
-        except (TypeError, KeyError):
+        except (TypeError, KeyError, IndexError, ValueError):
             logger.exception(
-                'Error while formatting %r with data: %r',
+                'Error while formatting %r with data keys: %r',
                 format_,
-                data,
+                list(data),
             )
             raise
 
@@ -2072,7 +2129,7 @@ class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
             else:
                 context['formatted_value'] = '-' * self.width
 
-        return self.format.format(**context)
+        return _safe_format(self.format, context)
 
 
 class DynamicMessage(Variable):

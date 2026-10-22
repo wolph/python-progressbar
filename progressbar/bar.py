@@ -76,6 +76,36 @@ except Exception:  # pragma: no cover - environmental (absent / ABI mismatch)
     _FastBarIterator = None
 
 
+@functools.lru_cache(maxsize=16)
+def _warn_bad_minimum_update_interval(raw: str) -> None:
+    """Warn once per distinct bad value, not once per bar."""
+    logger.warning(
+        'Ignoring PROGRESSBAR_MINIMUM_UPDATE_INTERVAL=%r: '
+        'not a non-negative finite number',
+        raw,
+    )
+
+
+def _env_minimum_update_interval() -> float:
+    """Read `PROGRESSBAR_MINIMUM_UPDATE_INTERVAL`, ignoring bad values.
+
+    A non-numeric, negative or non-finite value is logged as a warning
+    and falls back to 0, so a stray environment variable cannot stop a
+    bar from being built. An unset or empty variable is 0 silently.
+    """
+    raw: str = os.environ.get('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', '')
+    if not raw.strip():
+        return 0.0
+    try:
+        value: float = float(raw)
+    except ValueError:
+        value = -1.0
+    if not math.isfinite(value) or value < 0:
+        _warn_bad_minimum_update_interval(raw)
+        return 0.0
+    return value
+
+
 @functools.cache
 def _load_widgets() -> typing.Any:
     """Import the widgets module lazily (and once).
@@ -786,7 +816,9 @@ class ProgressBar(
         line_offset: The number of lines to offset the progressbar from
             your current line. This is useful if you have other output or
             multiple progressbars.
-        desc: tqdm-style alias for `prefix` (rendered as `f'{desc}: '`).
+        desc: tqdm-style description, rendered literally as
+            `f'{desc}: '` in front of the bar. Unlike `prefix` it is
+            never a format template: braces in a file name stay braces.
             Ignored if `prefix` is also given.
         total: tqdm-style alias for `max_value`. Ignored if `max_value` is
             also given.
@@ -872,8 +904,11 @@ class ProgressBar(
             # tqdm-style alias for `max_value`
             max_value = total
         if prefix is None and desc is not None:
-            # tqdm-style alias for `prefix`
+            # tqdm-style alias for `prefix`: `desc` is literal text, as in
+            # tqdm and as the fast path renders it. Remember the exact
+            # string, so a prefix assigned later is a template again.
             prefix = f'{desc}: '
+            self._literal_prefix: str | None = prefix
 
         if max_value and min_value > typing.cast(NumberT, max_value):
             raise ValueError(
@@ -986,7 +1021,7 @@ class ProgressBar(
         self.min_poll_interval = max(
             min_poll_interval or self._MINIMUM_UPDATE_INTERVAL,
             self._MINIMUM_UPDATE_INTERVAL,
-            float(os.environ.get('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', 0)),
+            _env_minimum_update_interval(),
         )  # type: ignore
 
     def _seed_variables(self, variables: dict[str, typing.Any] | None) -> None:
@@ -1687,10 +1722,12 @@ class ProgressBar(
         if self.prefix:
             widgets = _load_widgets()
 
-            self.widgets.insert(
-                0,
-                widgets.FormatLabel(self.prefix, new_style=True),
+            label: typing.Any = (
+                self.prefix
+                if self.prefix is getattr(self, '_literal_prefix', None)
+                else widgets.FormatLabel(self.prefix, new_style=True)
             )
+            self.widgets.insert(0, label)
             self.prefix = None
 
     def _verify_max_value(self) -> None:
