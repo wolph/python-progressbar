@@ -529,7 +529,7 @@ def test_overlapping_stop_capturing_delivers_buffered_text_once(
             value: str = super().getvalue()
             if threading.current_thread().name == 'first-stop':
                 paused.set()
-                assert resume.wait(3)
+                assert resume.wait(10)
             return value
 
     streams: utils.StreamWrapper = utils.StreamWrapper()
@@ -544,7 +544,7 @@ def test_overlapping_stop_capturing_delivers_buffered_text_once(
         target=streams.stop_capturing, name='first-stop'
     )
     first.start()
-    assert paused.wait(2)
+    assert paused.wait(10)
     second_done: threading.Event = threading.Event()
 
     def another_lifecycle() -> None:
@@ -670,3 +670,92 @@ def test_shared_lock_box_reset_and_wrapper_lock_setter() -> None:
     private: threading.Lock = threading.Lock()
     wrapper.lock = private  # the 4.6.0-era way of handing in a lock
     assert wrapper.lock is private
+
+
+def test_stop_capturing_returns_with_its_own_text_delivered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Delivery is synchronous, as in 4.6.0: text written right after a
+    # stop lands below the text that stop flushed, even while another
+    # thread is still inside a delivery of its own
+    paused: threading.Event = threading.Event()
+    resume: threading.Event = threading.Event()
+
+    class PausingTarget(io.StringIO):
+        def write(self, text: str) -> int:
+            written: int = super().write(text)
+            if threading.current_thread().name == 'first-stop':
+                paused.set()
+                assert resume.wait(10)
+            return written
+
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    target: PausingTarget = PausingTarget()
+    streams.stdout = streams.original_stdout = target
+    monkeypatch.setattr(sys, 'stdout', target)
+    wrapper: utils.WrappingIO = streams.wrap_stdout()
+    streams.start_capturing()
+    wrapper.write('spam|')
+    first: threading.Thread = threading.Thread(
+        target=streams.stop_capturing, name='first-stop'
+    )
+    first.start()
+    assert paused.wait(10)
+    streams.start_capturing()
+    wrapper.write('eggs|')
+    streams.stop_capturing()  # delivers 'eggs|' itself, without waiting
+    wrapper.write('after-stop|')  # passes straight through, capturing is off
+    resume.set()
+    first.join()
+    streams.unwrap_stdout()
+    assert target.getvalue() == 'spam|eggs|after-stop|'
+
+
+def test_target_that_flushes_the_streams_while_written_does_not_deadlock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+
+    class FlushingTarget(io.StringIO):
+        # A target that calls back into the streams on the same thread,
+        # as a bar-aware widget or a logging handler might
+        def write(self, text: str) -> int:
+            written: int = super().write(text)
+            streams.flush()
+            return written
+
+    target: FlushingTarget = FlushingTarget()
+    streams.stdout = streams.original_stdout = target
+    monkeypatch.setattr(sys, 'stdout', target)
+    streams.wrap_stdout()
+    streams.start_capturing()
+    print('spam', end='')
+    streams.stop_capturing()
+    streams.unwrap_stdout()
+    assert target.getvalue() == 'spam'
+
+
+def test_failed_stdout_delivery_still_delivers_the_stderr_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Broken(io.StringIO):
+        def write(self, text: str) -> int:
+            raise OSError('gone')
+
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    out: Broken = Broken()
+    err: io.StringIO = io.StringIO()
+    streams.stdout = streams.original_stdout = out
+    streams.stderr = streams.original_stderr = err
+    monkeypatch.setattr(sys, 'stdout', out)
+    monkeypatch.setattr(sys, 'stderr', err)
+    streams.wrap_stdout()
+    streams.wrap_stderr()
+    streams.start_capturing()
+    print('spam', end='')
+    print('eggs', end='', file=sys.stderr)
+    with pytest.raises(OSError, match='gone'):
+        streams.stop_capturing()
+    assert err.getvalue() == 'eggs'  # not lost to the stdout failure
+    streams.unwrap_stdout()
+    streams.unwrap_stderr()

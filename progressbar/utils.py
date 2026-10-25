@@ -628,9 +628,31 @@ class StreamWrapper:
         warning is logged. `sys.stdout`/`sys.stderr` are left installed
         as-is: only further flush attempts are skipped, not the wrapping
         itself.
+
+        Any other exception from a stream propagates to the caller, but
+        only after the other stream's text has been delivered too: the
+        text was already taken from the buffers, so a stdout that fails
+        must not cost the stderr lines of the same round.
         """
+        failure: BaseException | None = None
         for name, wrapper, text in pending:
+            exception: BaseException | None = self._deliver_guarded(
+                name, wrapper, text
+            )
+            if failure is None:
+                failure = exception
+        if failure is not None:
+            raise failure
+
+    def _deliver_guarded(
+        self, name: str, wrapper: WrappingIO, text: str
+    ) -> BaseException | None:
+        """Deliver one wrapper's text, returning what it raised."""
+        try:
             self._deliver_one(name, wrapper, text)
+        except BaseException as exception:  # noqa: BLE001
+            return exception
+        return None
 
     def _deliver_one(self, name: str, wrapper: WrappingIO, text: str) -> None:
         """Deliver one wrapper's text, disabling its redirection on failure."""
