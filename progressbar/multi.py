@@ -10,6 +10,7 @@ contract.
 from __future__ import annotations
 
 import collections.abc
+import contextlib
 import enum
 import importlib
 import io
@@ -456,17 +457,28 @@ class MultiBar(dict[str, bar.ProgressBar]):
         Returns:
             Zero lines (dropped or hidden) or one rendered line.
         """
-        if bar_ not in self._finished_at:
-            self._finished_at[bar_] = now
+        if self.get(bar_.label) is not bar_:
+            # Removed between the render snapshot and now (a task
+            # finished on another thread): nothing to draw, and nothing
+            # to remember about it
+            return
+        finished_at: float | None = self._finished_at.get(bar_)
+        if finished_at is None:
+            finished_at = self._finished_at.setdefault(bar_, now)
+            if self.get(bar_.label) is not bar_:  # pragma: no cover
+                # Removed while we stamped it: undo the stamp
+                self._finished_at.pop(bar_, None)
+                return
             # Force update to get the finished format
             update(write=False)
 
         if (
             self.remove_finished
             and expired is not None
-            and expired >= self._finished_at[bar_]
+            and expired >= finished_at
         ):
-            del self[bar_.label]
+            with contextlib.suppress(KeyError):  # removed concurrently
+                del self[bar_.label]
             return
 
         if not self.show_finished:

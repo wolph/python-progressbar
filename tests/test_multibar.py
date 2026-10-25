@@ -577,3 +577,21 @@ def test_multibar_concurrent_mutation() -> None:
 
     assert not errors
     assert not multibar._thread or not multibar._thread.is_alive()
+
+
+def test_render_of_a_bar_removed_mid_frame_does_not_leak() -> None:
+    # The render thread snapshots the bars, then a worker deletes one
+    # (task_finished); the finished-bar path must not stamp it back
+    # into _finished_at after __delitem__ popped it.
+    multibar = progressbar.MultiBar(fd=io.StringIO())
+    bar_ = multibar['gone']
+    bar_.start()
+    bar_.finish()
+    del multibar['gone']
+    lines = list(
+        multibar._render_finished_bar(
+            bar_, time.monotonic(), None, lambda **kw: None
+        )
+    )
+    assert lines == []
+    assert bar_ not in multibar._finished_at
