@@ -51,7 +51,7 @@ jobs:
             echo "::error::tag '$tag' does not look like vX.Y.Z"
             exit 1
           fi
-          version="$(sed -n "s/^__version__ = ['\"]\([^'\"]*\)['\"].*/\1/p" progressbar/__about__.py)"
+          version="$(sed -n -E "s/^__version__(: *str)? = ['\"]([^'\"]*)['\"].*/\2/p" progressbar/__about__.py)"
           if [ -z "$version" ]; then
             echo "::error::could not read __version__ from progressbar/__about__.py"
             exit 1
@@ -81,7 +81,7 @@ jobs:
           test "$(echo "$unpacked" | grep -cvE '^progressbar$|^progressbar2-.*\.dist-info$')" -eq 0
           sdist="$(tar tzf dist/*.tar.gz)"
           echo "$sdist"
-          stray_pattern='\.sync-conflict-|\.orig|\.rej|\.bak'
+          stray_pattern='\.sync-conflict-|\.(orig|rej|bak)$'
           if { unzip -Z1 dist/*.whl; echo "$sdist"; } | grep -E "$stray_pattern"; then
             echo "::error::distribution contains stray conflict or backup files"
             exit 1
