@@ -76,9 +76,29 @@ except Exception:  # pragma: no cover - environmental (absent / ABI mismatch)
     _FastBarIterator = None
 
 
-@functools.lru_cache(maxsize=16)
+_bad_interval_seen: set[str] = set()
+#: A shared lock box, so a forked child gets an unlocked lock
+_bad_interval_lock: utils._SharedLock = utils._SharedLock()
+
+
+def _reset_bad_interval_warnings() -> None:
+    """Forget the bad values warned about so far (for tests)."""
+    with _bad_interval_lock.lock:
+        _bad_interval_seen.clear()
+
+
 def _warn_bad_minimum_update_interval(raw: str) -> None:
-    """Warn once per distinct bad value, not once per bar."""
+    """Warn once per distinct bad value, not once per bar.
+
+    The value is recorded under a lock before the warning goes out, so
+    two bars constructed at the same moment on different threads
+    produce one record, and the warning itself is logged outside the
+    lock. Every distinct bad value seen in the process is remembered.
+    """
+    with _bad_interval_lock.lock:
+        if raw in _bad_interval_seen:
+            return
+        _bad_interval_seen.add(raw)
     logger.warning(
         'Ignoring PROGRESSBAR_MINIMUM_UPDATE_INTERVAL=%r: '
         'not a non-negative finite number',
@@ -903,12 +923,14 @@ class ProgressBar(
         if max_value is None and total is not None:
             # tqdm-style alias for `max_value`
             max_value = total
+        self._literal_prefix: str | None = None
         if prefix is None and desc is not None:
             # tqdm-style alias for `prefix`: `desc` is literal text, as in
             # tqdm and as the fast path renders it. Remember the exact
-            # string, so a prefix assigned later is a template again.
+            # string, so `_init_prefix` escapes its braces and a prefix
+            # assigned later is a template again.
             prefix = f'{desc}: '
-            self._literal_prefix: str | None = prefix
+            self._literal_prefix = prefix
 
         if max_value and min_value > typing.cast(NumberT, max_value):
             raise ValueError(
@@ -1722,12 +1744,13 @@ class ProgressBar(
         if self.prefix:
             widgets = _load_widgets()
 
-            label: typing.Any = (
-                self.prefix
-                if self.prefix is getattr(self, '_literal_prefix', None)
-                else widgets.FormatLabel(self.prefix, new_style=True)
+            template: str = self.prefix
+            if template is getattr(self, '_literal_prefix', None):
+                # A desc is literal text: escape its braces for the label
+                template = template.replace('{', '{{').replace('}', '}}')
+            self.widgets.insert(
+                0, widgets.FormatLabel(template, new_style=True)
             )
-            self.widgets.insert(0, label)
             self.prefix = None
 
     def _verify_max_value(self) -> None:

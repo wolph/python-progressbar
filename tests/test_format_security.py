@@ -167,7 +167,7 @@ def test_bad_minimum_update_interval_env_logs_a_warning(
 
     from progressbar import bar as bar_module
 
-    bar_module._warn_bad_minimum_update_interval.cache_clear()
+    bar_module._reset_bad_interval_warnings()
     monkeypatch.setenv('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', 'spam')
     with caplog.at_level(logging.WARNING, logger='progressbar.bar'):
         progressbar.ProgressBar(fd=io.StringIO(), max_value=10)
@@ -197,10 +197,93 @@ def test_bad_minimum_update_interval_env_warns_once_per_value(
 
     from progressbar import bar as bar_module
 
-    bar_module._warn_bad_minimum_update_interval.cache_clear()
+    bar_module._reset_bad_interval_warnings()
     monkeypatch.setenv('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', 'eggs')
     with caplog.at_level(logging.WARNING, logger='progressbar.bar'):
         for _ in range(3):
             progressbar.ProgressBar(fd=io.StringIO(), max_value=10)
     records = [r for r in caplog.records if 'eggs' in r.getMessage()]
     assert len(records) == 1
+
+
+def test_bad_interval_warning_is_once_per_value_beyond_sixteen_and_threadsafe(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    import logging
+    import threading
+
+    from progressbar import bar as bar_module
+
+    bar_module._reset_bad_interval_warnings()
+    with caplog.at_level(logging.WARNING, logger='progressbar.bar'):
+        for i in range(17):
+            bar_module._warn_bad_minimum_update_interval(f'bad-{i}')
+        bar_module._warn_bad_minimum_update_interval('bad-0')
+        barrier: threading.Barrier = threading.Barrier(4)
+
+        def warn() -> None:
+            barrier.wait()
+            bar_module._warn_bad_minimum_update_interval('concurrent')
+
+        threads: list[threading.Thread] = [
+            threading.Thread(target=warn) for _ in range(4)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    messages: list[str] = [r.getMessage() for r in caplog.records]
+    assert sum("'bad-0'" in m for m in messages) == 1
+    assert sum("'concurrent'" in m for m in messages) == 1
+    assert len(messages) == 18
+
+
+def test_desc_prefix_is_a_format_label_that_renders_literally() -> None:
+    fd: io.StringIO = io.StringIO()
+    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=fd,
+        max_value=10,
+        desc='{files}',
+        widgets=[progressbar.SimpleProgress()],
+    )
+    assert bar.prefix == '{files}: '  # read back unescaped, as in 4.6.0
+    bar.start()
+    assert isinstance(bar.widgets[0], progressbar.FormatLabel)  # as in 4.6.0
+    bar.update(4, force=True)
+    assert '{files}: 4 of 10' in fd.getvalue()
+
+
+def test_desc_with_braces_renders_literally_on_the_fast_path() -> None:
+    fd: io.StringIO = io.StringIO()
+    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=fd, max_value=10, desc='{files}'
+    )
+    bar.start()
+    bar.update(4, force=True)
+    assert '{files}: ' in fd.getvalue()
+    assert '{{files}}' not in fd.getvalue()
+    fast: progressbar.FastProgressBar = progressbar.FastProgressBar(
+        fd=io.StringIO(), max_value=10, desc='{files}'
+    )
+    assert fast.prefix == '{files}: '
+    from progressbar import fast as fast_module
+
+    line: str = fast_module._pure_format_fast_line(fast)
+    assert line.startswith('{files}: ')
+
+
+def test_frame_walks_are_refused_like_dunders() -> None:
+    import sys
+    import types
+
+    bar, data = _label_data()
+    frame: types.FrameType = sys._getframe()
+    data['variables'] = progressbar.utils.AttributeDict(frame=frame)
+    for template in (
+        '{variables.frame.f_globals}',
+        '{variables.frame.f_locals}',
+        '{variables.frame.f_back}',
+    ):
+        label = progressbar.FormatLabel(template, new_style=True)
+        with pytest.raises(ValueError, match='not allowed'):
+            label(bar, data)

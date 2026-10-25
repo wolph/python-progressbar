@@ -43,6 +43,22 @@ class _SafeFormatter(string.Formatter):
     user's business.
     """
 
+    #: Non-dunder attributes that also lead from an object stored as a
+    #: bar variable (a generator, coroutine, traceback or frame) to a
+    #: frame and its globals.
+    blocked_attributes: frozenset[str] = frozenset(
+        {
+            'f_back',
+            'f_builtins',
+            'f_globals',
+            'f_locals',
+            'gi_frame',
+            'cr_frame',
+            'ag_frame',
+            'tb_frame',
+        }
+    )
+
     def get_field(
         self,
         field_name: str,
@@ -52,7 +68,9 @@ class _SafeFormatter(string.Formatter):
         rest: typing.Iterable[tuple[bool, typing.Any]]
         _first, rest = _string.formatter_field_name_split(field_name)
         for is_attr, name in rest:
-            if is_attr and str(name).startswith('__'):
+            if is_attr and (
+                str(name).startswith('__') or name in self.blocked_attributes
+            ):
                 raise ValueError(
                     f'attribute {name!r} is not allowed in a format template',
                 )
