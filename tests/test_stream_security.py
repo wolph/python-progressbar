@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import io
+import logging
 import sys
+import threading
+import typing
 from collections.abc import Iterator
 
 import pytest
@@ -272,3 +275,394 @@ def test_unwrap_tolerates_a_stream_whose_flush_raises_anything(
     streams.wrap_stdout()
     streams.unwrap_stdout()  # must not raise
     assert sys.stdout is target
+
+
+# ---- second review round (Codex findings 1-4) ---------------------------
+
+
+class _LockProbeHandler(logging.Handler):
+    """Record, per log record, whether `lock` was free at emit time."""
+
+    def __init__(self, lock: threading.RLock) -> None:
+        super().__init__(level=logging.DEBUG)
+        self.watched = lock  # not `self.lock`: that is the handler's own
+        self.free: list[bool] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        result: list[bool] = []
+
+        def probe() -> None:
+            got: bool = self.watched.acquire(timeout=1.0)
+            if got:
+                self.watched.release()
+            result.append(got)
+
+        thread: threading.Thread = threading.Thread(target=probe)
+        thread.start()
+        thread.join()
+        self.free.append(result[0])
+
+
+def test_logging_never_happens_under_the_transition_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class RaisingFlush(io.StringIO):
+        armed: bool = False
+
+        def flush(self) -> None:
+            if self.armed:
+                raise RuntimeError('gone')
+
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    original: RaisingFlush = RaisingFlush()
+    streams.original_stdout = original
+    streams.stdout = original
+    monkeypatch.setattr(sys, 'stdout', original)
+    handler: _LockProbeHandler = _LockProbeHandler(streams.lock)
+    logger: logging.Logger = logging.getLogger('progressbar.utils')
+    logger.addHandler(handler)
+    old_level: int = logger.level
+    logger.setLevel(logging.DEBUG)
+    try:
+        streams.wrap_stdout()  # logs 'wrapping excepthook'
+        streams.start_capturing()
+        print('buffered')
+        original.armed = True
+        streams.unwrap_stdout()  # logs 'Could not deliver ...'
+        streams.stop_capturing()
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(old_level)
+    assert len(handler.free) >= 2
+    assert all(handler.free), handler.free
+
+
+def test_targets_are_never_written_under_the_transition_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    seen: list[bool] = []
+
+    class LockProbeTarget(io.StringIO):
+        def write(self, text: str) -> int:
+            result: list[bool] = []
+
+            def probe() -> None:
+                got: bool = streams.lock.acquire(timeout=1.0)
+                if got:
+                    streams.lock.release()
+                result.append(got)
+
+            thread: threading.Thread = threading.Thread(target=probe)
+            thread.start()
+            thread.join()
+            seen.append(result[0])
+            return super().write(text)
+
+    target: LockProbeTarget = LockProbeTarget()
+    streams.original_stdout = target
+    streams.stdout = target
+    monkeypatch.setattr(sys, 'stdout', target)
+    streams.wrap_stdout()
+    streams.start_capturing()
+    print('one')
+    streams.stop_capturing()  # delivers 'one' to the target
+    streams.start_capturing()
+    print('two')
+    streams.unwrap_stdout()  # delivers 'two' to the target
+    assert target.getvalue() == 'one\ntwo\n'
+    assert len(seen) >= 2
+    assert all(seen), seen
+
+
+class NamedIO(utils.WrappingIO):  # pickle needs a module-level class
+    __slots__ = ('name',)
+
+    def __init__(self, target: io.StringIO, name: str) -> None:
+        super().__init__(target)
+        self.name = name
+
+
+class NamedStreams(utils.StreamWrapper):
+    __slots__ = ('name',)
+
+    def __init__(self, name: str) -> None:
+        super().__init__()
+        self.name = name
+
+
+def test_pickle_and_deepcopy_keep_subclass_slots() -> None:
+    import copy
+    import pickle
+
+    named_io: NamedIO = NamedIO(io.StringIO(), 'spam-stream')
+    named_streams: NamedStreams = NamedStreams('spam-streams')
+    for name in ('stdout', 'stderr'):
+        setattr(named_streams, f'original_{name}', io.StringIO())
+        setattr(named_streams, name, io.StringIO())
+    # a builtin pickles by reference only while it is still installed,
+    # and another test may have left the shared hook wrapped
+    named_streams.original_excepthook = sys.excepthook
+    for restore in (copy.deepcopy, lambda o: pickle.loads(pickle.dumps(o))):
+        assert restore(named_io).name == 'spam-stream'
+        assert restore(named_streams).name == 'spam-streams'
+
+
+def test_restored_wrappers_share_the_restored_listener_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import copy
+    import pickle
+
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    for name in ('stdout', 'stderr'):
+        target: io.StringIO = io.StringIO()
+        setattr(streams, f'original_{name}', target)
+        setattr(streams, name, target)
+        monkeypatch.setattr(sys, name, target)
+    streams.wrap_stdout()
+    streams.wrap_stderr()
+    streams.original_excepthook = sys.excepthook  # see the slots test
+    try:
+        for restored in (
+            copy.deepcopy(streams),
+            pickle.loads(pickle.dumps(streams)),
+        ):
+            assert isinstance(restored.stdout, utils.WrappingIO)
+            assert isinstance(restored.stderr, utils.WrappingIO)
+            assert restored.stdout.listeners is restored.listeners
+            assert restored.stdout.lock is restored.listeners_lock
+            assert restored.stderr.lock is restored.listeners_lock
+            assert restored.listeners_lock is not streams.listeners_lock
+    finally:
+        streams.unwrap_stdout()
+        streams.unwrap_stderr()
+
+
+def test_wrapping_io_subclass_without_super_init_can_write() -> None:
+    class NoSuper(utils.WrappingIO):
+        def __init__(self, target: io.StringIO) -> None:
+            self.buffer = io.StringIO()
+            self.target = target
+            self.capturing = True
+            self.listeners = set()
+            self.needs_clear = False
+
+    wrapper: NoSuper = NoSuper(io.StringIO())
+    assert wrapper.write('spam\n') == 5
+    assert wrapper.needs_clear
+
+
+def test_stream_class_type_hints_evaluate_on_this_python() -> None:
+    import typing
+
+    # `threading.Lock` is a factory function before 3.13, so an annotation
+    # naming it directly cannot be evaluated there (regression caught by
+    # the second hunt).
+    typing.get_type_hints(utils.WrappingIO.__init__)
+    typing.get_type_hints(utils.WrappingIO)
+    typing.get_type_hints(utils.StreamWrapper.__init__)
+
+
+def test_forked_child_gets_fresh_stream_locks() -> None:
+    import os
+
+    if not hasattr(os, 'fork') or not hasattr(os, 'register_at_fork'):
+        pytest.skip('needs a POSIX fork')
+    streams: utils.StreamWrapper = progressbar.streams
+    held: threading.Event = threading.Event()
+    release: threading.Event = threading.Event()
+
+    def holder() -> None:
+        with streams.lock, streams.listeners_lock:
+            held.set()
+            release.wait(10)
+
+    thread: threading.Thread = threading.Thread(target=holder, daemon=True)
+    thread.start()
+    held.wait(5)
+    pid: int = os.fork()
+    if pid == 0:  # pragma: no cover - child
+        status: int = 0
+        if not streams.lock.acquire(timeout=2):
+            status |= 1
+        if not streams.listeners_lock.acquire(timeout=2):
+            status |= 2
+        os._exit(status)
+    try:
+        _, raw_status = os.waitpid(pid, 0)
+    finally:
+        release.set()
+        thread.join()
+    assert os.waitstatus_to_exitcode(raw_status) == 0
+
+
+def test_wrap_excepthook_directly(monkeypatch: pytest.MonkeyPatch) -> None:
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    original: object = sys.excepthook
+    monkeypatch.setattr(sys, 'excepthook', original)
+    streams.original_excepthook = original  # type: ignore[assignment]
+    streams.wrap_excepthook()
+    assert sys.excepthook == streams.excepthook
+    streams.wrap_excepthook()  # idempotent
+    streams.unwrap_excepthook()
+    assert sys.excepthook is original
+
+
+# ---- third review round (Codex re-review findings 1-4) -------------------
+
+
+def test_overlapping_stop_capturing_delivers_buffered_text_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paused: threading.Event = threading.Event()
+    resume: threading.Event = threading.Event()
+
+    class PausingBuffer(io.StringIO):
+        # The first stop pauses between reading and clearing the
+        # buffer; a second lifecycle must not drain the same text again
+        def getvalue(self) -> str:
+            value: str = super().getvalue()
+            if threading.current_thread().name == 'first-stop':
+                paused.set()
+                assert resume.wait(3)
+            return value
+
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    target: io.StringIO = io.StringIO()
+    streams.stdout = streams.original_stdout = target
+    monkeypatch.setattr(sys, 'stdout', target)
+    wrapper: utils.WrappingIO = streams.wrap_stdout()
+    streams.start_capturing()
+    wrapper.buffer = PausingBuffer()
+    wrapper.write('spam')
+    first: threading.Thread = threading.Thread(
+        target=streams.stop_capturing, name='first-stop'
+    )
+    first.start()
+    assert paused.wait(2)
+    second_done: threading.Event = threading.Event()
+
+    def another_lifecycle() -> None:
+        streams.start_capturing()
+        streams.stop_capturing()
+        second_done.set()
+
+    second: threading.Thread = threading.Thread(target=another_lifecycle)
+    second.start()
+    second_done.wait(0.3)
+    resume.set()
+    first.join()
+    second.join()
+    streams.unwrap_stdout()
+    assert target.getvalue() == 'spam'
+
+
+def test_subclass_defining_eq_without_hash_constructs() -> None:
+    class EqualStreams(utils.StreamWrapper):
+        def __eq__(self, other: object) -> bool:
+            return self is other
+
+    streams: EqualStreams = EqualStreams()
+    assert streams.lock is not utils.StreamWrapper.lock
+
+
+class _BackReference:  # a listener that refers to its StreamWrapper
+    def __init__(self, streams: utils.StreamWrapper) -> None:
+        self.streams = streams
+
+    def update(self) -> None:
+        pass
+
+
+def test_cyclic_graph_restores_from_any_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import copy
+    import pickle
+
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    for name in ('stdout', 'stderr'):
+        target: io.StringIO = io.StringIO()
+        setattr(streams, f'original_{name}', target)
+        setattr(streams, name, target)
+        monkeypatch.setattr(sys, name, target)
+    streams.original_excepthook = sys.excepthook
+    listener: _BackReference = _BackReference(streams)
+    wrapper: utils.WrappingIO = streams.wrap_stdout()
+    streams.start_capturing(listener)  # type: ignore[arg-type]
+    try:
+        for root in (streams, wrapper, listener):
+            for restore in (
+                copy.deepcopy,
+                lambda o: pickle.loads(pickle.dumps(o)),
+            ):
+                clone: object = restore(root)
+                if isinstance(clone, utils.WrappingIO):
+                    owner = next(iter(clone.listeners)).streams  # type: ignore[attr-defined]
+                    assert clone.lock is owner.listeners_lock
+                elif isinstance(clone, _BackReference):
+                    owner = clone.streams
+                else:
+                    owner = clone
+                assert isinstance(owner.stdout, utils.WrappingIO)
+                assert owner.stdout.lock is owner.listeners_lock
+                assert owner.listeners_lock is not streams.listeners_lock
+    finally:
+        streams.stop_capturing(listener)  # type: ignore[arg-type]
+        streams.unwrap_stdout()
+
+
+def _fork_and_acquire(current_lock: typing.Callable[[], typing.Any]) -> None:
+    # `current_lock` is re-read in the child: the fork hook replaces the
+    # lock object, so a reference taken before the fork stays locked
+    import os
+
+    if not hasattr(os, 'fork'):
+        pytest.skip('needs a POSIX fork')
+    held: threading.Event = threading.Event()
+    release: threading.Event = threading.Event()
+
+    def holder() -> None:
+        with current_lock():
+            held.set()
+            release.wait(10)
+
+    thread: threading.Thread = threading.Thread(target=holder, daemon=True)
+    thread.start()
+    held.wait(5)
+    pid: int = os.fork()
+    if pid == 0:  # pragma: no cover - child
+        os._exit(0 if current_lock().acquire(timeout=2) else 1)
+    try:
+        _, raw_status = os.waitpid(pid, 0)
+    finally:
+        release.set()
+        thread.join()
+    assert os.waitstatus_to_exitcode(raw_status) == 0
+
+
+def test_forked_child_gets_a_fresh_standalone_wrapper_lock() -> None:
+    wrapper: utils.WrappingIO = utils.WrappingIO(io.StringIO())
+    _fork_and_acquire(lambda: wrapper.lock)
+
+
+def test_forked_child_gets_a_fresh_interval_warning_lock() -> None:
+    from progressbar import bar as bar_module
+
+    _fork_and_acquire(lambda: bar_module._bad_interval_lock.lock)
+
+
+def test_shared_lock_box_reset_and_wrapper_lock_setter() -> None:
+    box: utils._SharedLock = utils._SharedLock()
+    old_lock: object = box.lock
+    with box.lock:
+        box.reset()  # what the fork hook does: a new, unlocked lock
+    assert box.lock is not old_lock
+    assert box.lock.acquire(blocking=False)
+    box.lock.release()
+
+    wrapper: utils.WrappingIO = utils.WrappingIO(io.StringIO())
+    private: threading.Lock = threading.Lock()
+    wrapper.lock = private  # the 4.6.0-era way of handing in a lock
+    assert wrapper.lock is private
