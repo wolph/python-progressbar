@@ -414,6 +414,8 @@ def _parse_size_option(
         parser.error(f'invalid {option} value {value!r}: {exception}')
     if size < minimum:
         parser.error(f'{option} must be at least {minimum}, got {value!r}')
+    if size > sys.maxsize:
+        parser.error(f'{option} is too large: {value!r}')
     return size
 
 
@@ -432,6 +434,8 @@ def _collect_inputs(
     filesize_available: bool = True
     for filename in args.input:
         if filename == '-':
+            if sys.stdin is None:  # started with stdin closed
+                parser.error('stdin is closed, cannot read from -')
             inputs.append(sys.stdin if args.line_mode else sys.stdin.buffer)
             filesize_available = False
             continue
@@ -441,6 +445,8 @@ def _collect_inputs(
             parser.error(f'File not found: {filename}')
         if input_path.is_dir():
             parser.error(f'Is a directory: {filename}')
+        if not os.access(input_path, os.R_OK):
+            parser.error(f'Permission denied: {filename}')
         total_size += input_path.stat().st_size
         inputs.append(input_path)
     return inputs, total_size, filesize_available
@@ -466,9 +472,31 @@ def _check_output_path(
         # Devices (two names of one tty, /dev/null) share an inode without
         # sharing data, so only a regular file can be truncated away
         return
-    for input_path in inputs:
-        if isinstance(input_path, Path) and output_path.samefile(input_path):
+    output_stat: os.stat_result = output_path.stat()
+    for input_item in inputs:
+        same: bool = (
+            output_path.samefile(input_item)
+            if isinstance(input_item, Path)
+            else _stream_is_file(input_item, output_stat)
+        )
+        if same:
             parser.error(f'Output file is also an input: {output}')
+
+
+def _stream_is_file(stream: IO[typing.Any], target: os.stat_result) -> bool:
+    """Return whether `stream` (stdin, say) is open on the file `target`.
+
+    A stream without a descriptor (`io.BytesIO`, a test double) is not
+    an alias of anything.
+    """
+    try:
+        stream_stat: os.stat_result = os.fstat(stream.fileno())
+    except (AttributeError, OSError, ValueError):
+        return False
+    return (stream_stat.st_dev, stream_stat.st_ino) == (
+        target.st_dev,
+        target.st_ino,
+    )
 
 
 def _open_input(
@@ -613,6 +641,10 @@ def main(argv: list[str] | None = None) -> None:
                         started_at,
                         transferred,
                     )
+            # A reader that went away is only noticed when the buffer
+            # reaches the pipe, which for a small copy is this flush, so
+            # it must happen inside the guarded block
+            output_stream.flush()
         except KeyboardInterrupt:
             exit_status = EXIT_INTERRUPTED
         except BrokenPipeError:

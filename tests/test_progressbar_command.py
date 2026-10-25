@@ -1,3 +1,4 @@
+import argparse
 import io
 import pathlib
 
@@ -331,7 +332,14 @@ def test_output_same_as_input_is_rejected(tmp_path: pathlib.Path) -> None:
 
 
 @pytest.mark.parametrize(
-    'option', [['-B', '0'], ['-B', 'abc'], ['-s', 'x'], ['-L', 'abc']]
+    'option',
+    [
+        ['-B', '0'],
+        ['-B', 'abc'],
+        ['-s', 'x'],
+        ['-L', 'abc'],
+        ['-B', '99999999999999999999999'],  # OverflowError in read() before
+    ],
 )
 def test_invalid_size_options_are_rejected(
     tmp_path: pathlib.Path, option: list[str]
@@ -529,3 +537,79 @@ def test_discard_broken_stdout_leaves_other_descriptors_alone(
 
     monkeypatch.setattr(main.sys, 'stdout', io.StringIO())
     main._discard_broken_stdout()  # no fileno(): nothing to do, no raise
+
+
+def test_output_that_is_also_stdin_is_rejected(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import io
+
+    file: pathlib.Path = tmp_path / 'data.bin'
+    file.write_bytes(b'preserve this')
+    with file.open('rb') as stdin_file:
+        with pytest.raises(SystemExit) as excinfo:
+            main._check_output_path(
+                argparse.ArgumentParser(), str(file), [stdin_file]
+            )
+        assert excinfo.value.code == 2
+    assert file.read_bytes() == b'preserve this'
+    # a stream without a descriptor is not an alias of anything
+    main._check_output_path(
+        argparse.ArgumentParser(), str(file), [io.BytesIO()]
+    )
+
+
+def test_broken_pipe_found_at_flush_time_is_handled(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import io
+
+    file: pathlib.Path = tmp_path / 'small.bin'
+    file.write_bytes(b'12345')
+
+    class LateBrokenPipe(io.BytesIO):
+        def flush(self) -> None:
+            raise BrokenPipeError
+
+    stream: LateBrokenPipe = LateBrokenPipe()
+    discarded: list[bool] = []
+    monkeypatch.setattr(main, '_get_output_stream', lambda *args: stream)
+    monkeypatch.setattr(main.sys, 'stdout', stream)
+    monkeypatch.setattr(
+        main, '_discard_broken_stdout', lambda: discarded.append(True)
+    )
+    main.main([str(file)])  # must not raise, and must not exit non-zero
+    assert discarded == [True]
+
+
+def test_closed_stdin_is_a_usage_error(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output: pathlib.Path = tmp_path / 'out.bin'
+    output.write_bytes(b'precious')
+    monkeypatch.setattr(main.sys, 'stdin', None)  # `exec 0<&-` shape
+    with pytest.raises(SystemExit) as excinfo:
+        main.main(['-', '-o', str(output)])
+    assert excinfo.value.code == 2
+    assert output.read_bytes() == b'precious'
+
+
+def test_unreadable_input_leaves_the_output_untouched(
+    tmp_path: pathlib.Path,
+) -> None:
+    import os
+
+    if os.name == 'nt' or os.geteuid() == 0:
+        pytest.skip('needs POSIX permissions and a non-root user')
+    secret: pathlib.Path = tmp_path / 'secret.txt'
+    secret.write_bytes(b'hidden')
+    secret.chmod(0)
+    output: pathlib.Path = tmp_path / 'out.txt'
+    output.write_bytes(b'precious')
+    try:
+        with pytest.raises(SystemExit) as excinfo:
+            main.main(['-q', str(secret), '-o', str(output)])
+    finally:
+        secret.chmod(0o600)
+    assert excinfo.value.code == 2
+    assert output.read_bytes() == b'precious'
