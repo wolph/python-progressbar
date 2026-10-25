@@ -224,10 +224,14 @@ def test_wrapping_io_and_a_redirecting_bar_deepcopy_and_pickle(
     )
     bar.start()
     try:
-        copy.deepcopy(bar)
-        copy.deepcopy(streams)  # while wrapping
+        clones: list[object] = [copy.deepcopy(bar), copy.deepcopy(streams)]
     finally:
         bar.finish()
+    # A copy of a started bar is a started bar: its __del__ would finish()
+    # it later, at gc time, and unwrap the singleton under some other test
+    for clone in clones:
+        for listener in getattr(clone, 'listeners', [clone]):
+            listener._finished = True
 
 
 def test_captured_write_never_waits_for_the_streamwrapper_lock() -> None:
