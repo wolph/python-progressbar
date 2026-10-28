@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -823,7 +823,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=4.6.9" },
     { name = "pytest-cov", marker = "extra == 'docs-tests'", specifier = ">=2.6.1" },
     { name = "pytest-cov", marker = "extra == 'tests'", specifier = ">=2.6.1" },
-    { name = "python-utils", specifier = ">=3.8.1" },
+    { name = "python-utils", specifier = ">=4.1.4" },
     { name = "pywin32", marker = "sys_platform == 'win32' and extra == 'tests'" },
     { name = "speedups", marker = "extra == 'fast'", specifier = ">=2.1.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=1.8.5" },
@@ -901,14 +901,14 @@ wheels = [
 
 [[package]]
 name = "python-utils"
-version = "3.9.1"
+version = "4.1.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/13/4c/ef8b7b1046d65c1f18ca31e5235c7d6627ca2b3f389ab1d44a74d22f5cc9/python_utils-3.9.1.tar.gz", hash = "sha256:eb574b4292415eb230f094cbf50ab5ef36e3579b8f09e9f2ba74af70891449a0", size = 35403, upload-time = "2024-11-26T00:38:58.736Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/e7/064880019d2f205b837e5c463eb472b36e220d380e5733e49911975f7072/python_utils-4.1.4.tar.gz", hash = "sha256:a8c01f8c0b5a113fa1ab663308bb8a4773afec3cc8f9e6baeb756ac97377f8ce", size = 80130, upload-time = "2026-10-21T01:07:07.458Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/69/31c82567719b34d8f6b41077732589104883771d182a9f4ff3e71430999a/python_utils-3.9.1-py2.py3-none-any.whl", hash = "sha256:0273d7363c7ad4b70999b2791d5ba6b55333d6f7a4e4c8b6b39fb82b5fab4613", size = 32078, upload-time = "2024-11-26T00:38:57.488Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/97/4dfe369f4e1eed1f50e7cbfaf5ef5e1fa025e8fa29073290d77d7aea89b1/python_utils-4.1.4-py3-none-any.whl", hash = "sha256:009251f6182f872cd4a74225cdf3636f48ee4596532082bd367797c5924d92bf", size = 49838, upload-time = "2026-10-21T01:07:05.761Z" },
 ]
 
 [[package]]

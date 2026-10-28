@@ -107,7 +107,7 @@ classifiers = [
 ]
 
 requires-python = '>=3.10'
-dependencies = ['python-utils >= 3.8.1']
+dependencies = ['python-utils >= 4.1.4']
 
 [project.urls]
 bugs = 'https://github.com/wolph/python-progressbar/issues'
