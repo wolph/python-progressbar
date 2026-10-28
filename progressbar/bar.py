@@ -590,18 +590,38 @@ class _ResizeRegistry:
     A single signal handler dispatches to every live bar. The original
     handler is saved when the first bar registers and restored when the
     last one unregisters, so overlapping bars can finish in any order
-    without leaving a dangling handler installed.
+    without leaving a dangling handler installed. A bar that is garbage
+    collected without `finish()` counts as unregistered too.
+
+    `signal.signal` only works on the main thread, so a last bar
+    finished elsewhere leaves the shared handler in place with nobody
+    to dispatch to. The saved handler is kept for that case, and the
+    restore is retried at the next registration change or the next
+    resize signal (which does run on the main thread). Whether the
+    shared handler is installed is read from `signal.getsignal` rather
+    than remembered, so a handler that other code set over it is never
+    clobbered by a restore.
     """
 
     bars: typing.ClassVar[weakref.WeakSet[ResizableMixin]] = weakref.WeakSet()
     previous_handler: typing.ClassVar[typing.Any] = None
 
     @classmethod
+    def installed(cls) -> bool:
+        """Return whether `handle_resize` is the handler set on SIGWINCH."""
+        import signal
+
+        return (
+            signal.getsignal(signal.SIGWINCH)  # type: ignore[attr-defined]
+            == cls.handle_resize
+        )
+
+    @classmethod
     def install(cls, bar: ResizableMixin) -> None:
         """Register `bar` for resize dispatch, installing the handler once.
 
         The process-global `SIGWINCH` handler is only installed (saving
-        whatever handler was previously set) on the first registration. A
+        whatever handler was previously set) when it is not ours yet. A
         second, third, etc. overlapping bar just joins the `WeakSet`.
         """
         import signal
@@ -610,7 +630,7 @@ class _ResizeRegistry:
             # Not available on Windows
             return
 
-        if not cls.bars:
+        if not cls.installed():
             cls.previous_handler = signal.getsignal(
                 signal.SIGWINCH  # type: ignore[attr-defined]
             )
@@ -620,6 +640,7 @@ class _ResizeRegistry:
             )
 
         cls.bars.add(bar)
+        weakref.finalize(bar, cls._restore_if_idle)
 
     @classmethod
     def uninstall(cls, bar: ResizableMixin) -> None:
@@ -630,27 +651,65 @@ class _ResizeRegistry:
         keep the shared handler installed regardless of registration
         order.
         """
+        cls.bars.discard(bar)
+        cls._restore_if_idle()
+
+    @classmethod
+    def _restore_if_idle(cls) -> None:
+        """Put the saved handler back when no live bar is registered.
+
+        Iterating the `WeakSet` skips entries whose bar is already dead
+        but not yet removed, which is the state inside a finalizer.
+        """
         import signal
 
         if not hasattr(signal, 'SIGWINCH'):  # pragma: no cover
             # Not available on Windows
             return
-
-        cls.bars.discard(bar)
-        if not cls.bars:
+        if not cls.installed() or any(True for _ in cls.bars):
+            return
+        handler = cls.previous_handler
+        if handler is None:
+            # `getsignal` returns None for a handler installed from C,
+            # which cannot be reinstalled from Python. SIGWINCH is
+            # ignored by default, so the default is the closest fit.
+            handler = signal.SIG_DFL
+        try:
             signal.signal(
                 signal.SIGWINCH,  # type: ignore[attr-defined]
-                cls.previous_handler,
+                handler,
             )
-            cls.previous_handler = None
+        except ValueError:
+            # Not the main thread: keep `previous_handler` and retry at
+            # the next registration change or resize signal
+            return
+        cls.previous_handler = None
 
     @classmethod
     def handle_resize(
         cls, signum: int | None = None, frame: FrameType | None = None
     ) -> None:
-        """Dispatch a `SIGWINCH` to every currently-registered bar."""
+        """Dispatch a `SIGWINCH` to every currently-registered bar.
+
+        A bar whose `_handle_resize` raises is logged and skipped, so
+        the other bars still get the resize and nothing propagates out
+        of the signal handler into unrelated main-thread code.
+        """
         for bar in list(cls.bars):
+            cls._dispatch(bar, signum, frame)
+        cls._restore_if_idle()
+
+    @staticmethod
+    def _dispatch(
+        bar: ResizableMixin, signum: int | None, frame: FrameType | None
+    ) -> None:
+        """Resize one bar, logging instead of raising when it fails."""
+        try:
             bar._handle_resize(signum, frame)
+        except Exception:
+            logger.warning(
+                'Ignoring a failed resize of %r', bar, exc_info=True
+            )
 
 
 class ResizableMixin(ProgressBarMixinBase):

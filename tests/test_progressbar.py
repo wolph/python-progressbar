@@ -1,6 +1,7 @@
 import contextlib
 import gc
 import io
+import logging
 import os
 import signal
 import sys
@@ -344,47 +345,143 @@ def test_start_preserves_original_error_when_base_cleanup_fails(
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='SIGWINCH is POSIX-only')
-def test_sigwinch_restored_with_overlapping_bars() -> None:
+def test_sigwinch_restored_with_overlapping_bars(
+    isolated_resize_registry,
+) -> None:
     # Regression: A5 - with two live bars, finishing them in creation
-    # order left a dangling handler installed.
+    # order left a dangling handler installed. The fixture starts from
+    # SIG_IGN, so "still installed" and "restored" can be told apart.
+    bar1 = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
+    bar1.start()
+    bar2 = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
+    bar2.start()
+
+    # The first bar installs the shared handler
+    assert signal.getsignal(signal.SIGWINCH) is not signal.SIG_IGN
+
+    # A resize signal is dispatched to all live bars
+    signal.raise_signal(signal.SIGWINCH)
+    assert isinstance(bar1.term_width, int)
+    assert isinstance(bar2.term_width, int)
+
+    bar1.update(5)
+    bar1.finish()
+    # The handler must stay installed while bar2 is still live
+    assert signal.getsignal(signal.SIGWINCH) is not signal.SIG_IGN
+
+    bar2.update(5)
+    bar2.finish()
+    # The last bar to finish restores the previous handler
+    assert signal.getsignal(signal.SIGWINCH) is signal.SIG_IGN
+
+
+@pytest.fixture
+def isolated_resize_registry():
+    """Give a test an empty `_ResizeRegistry` and the handler it found.
+
+    The registry is process-global, so bars left registered by other
+    tests (and a handler they left installed) would otherwise leak into
+    the assertions. Everything is put back afterwards.
+    """
     import progressbar.bar as bar_module
 
+    registry = bar_module._ResizeRegistry
     saved_handler = signal.getsignal(signal.SIGWINCH)
-    # Isolate the global registry so the assertions don't depend on bars
-    # left registered (and a handler left installed) by other tests
-    saved_bars = list(bar_module._ResizeRegistry.bars)
-    saved_prev = bar_module._ResizeRegistry.previous_handler
-    bar_module._ResizeRegistry.bars.clear()
-    bar_module._ResizeRegistry.previous_handler = None
-
-    # Start from a known sentinel handler so we can tell apart "still
-    # installed" from "restored" without depending on global state
+    saved_bars = list(registry.bars)
+    saved_prev = registry.previous_handler
+    registry.bars.clear()
+    registry.previous_handler = None
     signal.signal(signal.SIGWINCH, signal.SIG_IGN)
     try:
-        bar1 = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
-        bar1.start()
-        bar2 = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
-        bar2.start()
-
-        # The first bar installs the shared handler
-        assert signal.getsignal(signal.SIGWINCH) is not signal.SIG_IGN
-
-        # A resize signal is dispatched to all live bars
-        signal.raise_signal(signal.SIGWINCH)
-        assert isinstance(bar1.term_width, int)
-        assert isinstance(bar2.term_width, int)
-
-        bar1.update(5)
-        bar1.finish()
-        # The handler must stay installed while bar2 is still live
-        assert signal.getsignal(signal.SIGWINCH) is not signal.SIG_IGN
-
-        bar2.update(5)
-        bar2.finish()
-        # The last bar to finish restores the previous handler
-        assert signal.getsignal(signal.SIGWINCH) is signal.SIG_IGN
+        yield registry
     finally:
+        registry.bars.clear()
         for restored_bar in saved_bars:
-            bar_module._ResizeRegistry.bars.add(restored_bar)
-        bar_module._ResizeRegistry.previous_handler = saved_prev
+            registry.bars.add(restored_bar)
+        registry.previous_handler = saved_prev
         signal.signal(signal.SIGWINCH, saved_handler)
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='SIGWINCH is POSIX-only')
+def test_sigwinch_dispatch_survives_a_raising_bar(
+    isolated_resize_registry, caplog
+) -> None:
+    # A35: one bar's failing `_handle_resize` skipped every later bar
+    # and raised out of the signal handler into whatever the main
+    # thread was doing.
+    class Broken(progressbar.ProgressBar):
+        def _handle_resize(self, signum=None, frame=None) -> None:
+            if signum is not None:
+                raise RuntimeError('spam')
+            super()._handle_resize(signum, frame)
+
+    broken = Broken(max_value=5, fd=io.StringIO())
+    broken.start()
+    other = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
+    other.start()
+    other.term_width = 1
+    try:
+        with caplog.at_level(logging.WARNING, logger='progressbar.bar'):
+            signal.raise_signal(signal.SIGWINCH)
+        assert other.term_width != 1
+        assert any(
+            record.levelno == logging.WARNING and record.exc_info
+            for record in caplog.records
+        )
+    finally:
+        broken.finish()
+        other.finish()
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='SIGWINCH is POSIX-only')
+def test_sigwinch_restored_after_a_leaked_bar(
+    isolated_resize_registry,
+) -> None:
+    # A35: a bar that was never finished dropped out of the WeakSet,
+    # and nobody restored the handler it had installed. Registration
+    # happens at construction, so a bar that is built and dropped
+    # without start() is the shape that gets collected (a started bar
+    # is kept alive by `streams.listeners` until it finishes).
+    bar = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
+    assert signal.getsignal(signal.SIGWINCH) is not signal.SIG_IGN
+    bar._finished = True  # keep __del__ from finishing it for us
+    del bar
+    gc.collect()
+    assert signal.getsignal(signal.SIGWINCH) is signal.SIG_IGN
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='SIGWINCH is POSIX-only')
+def test_sigwinch_previous_handler_survives_an_off_thread_finish(
+    isolated_resize_registry,
+) -> None:
+    # A35: `signal.signal` raises ValueError off the main thread, the
+    # bar was already unregistered, and the next bar then saved the
+    # registry's own handler as the "previous" one, losing SIG_IGN.
+    import threading
+
+    first = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
+    first.start()
+    thread = threading.Thread(target=first.finish)
+    thread.start()
+    thread.join(10)
+    assert not thread.is_alive()
+
+    second = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
+    second.start()
+    second.finish()
+    assert signal.getsignal(signal.SIGWINCH) is signal.SIG_IGN
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='SIGWINCH is POSIX-only')
+def test_sigwinch_restores_the_default_when_no_python_handler_was_set(
+    isolated_resize_registry,
+) -> None:
+    # A35: `signal.getsignal` returns None for a handler installed from
+    # C, and `signal.signal(SIGWINCH, None)` is a TypeError, so the
+    # registry's handler stayed installed for good.
+    registry = isolated_resize_registry
+    bar = progressbar.ProgressBar(max_value=5, fd=io.StringIO())
+    bar.start()
+    registry.previous_handler = None
+    bar.finish()
+    assert signal.getsignal(signal.SIGWINCH) is signal.SIG_DFL
