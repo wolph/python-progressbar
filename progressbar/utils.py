@@ -232,7 +232,9 @@ def _reset_locks_after_fork() -> None:  # pragma: no cover
         box.reset()
 
 
-if hasattr(os, 'register_at_fork'):  # pragma: no branch
+if sys.platform != 'win32':  # pragma: no branch
+    # `os.register_at_fork` exists on every platform that can fork, and
+    # the type stubs only declare it off Windows
     os.register_at_fork(after_in_child=_reset_locks_after_fork)
 
 
