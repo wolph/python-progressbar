@@ -551,26 +551,61 @@ def _copy_stream(
         _sleep_for_rate_limit(rate_limit, transferred, started_at)
 
 
-def _discard_broken_stdout() -> None:
-    """Point fd 1 at `os.devnull` after a broken pipe on stdout.
+def _output_is_stdout(output_stream: typing.IO[typing.Any]) -> bool:
+    """Return whether `output_stream` writes to the same place as stdout.
+
+    `sys.stdout` and its binary buffer count, and so does a file opened
+    by `-o` on a path that aliases it (`/dev/stdout`, `/dev/fd/1`): its
+    descriptor differs, but `fstat` reports the same device and inode.
+    """
+    if output_stream is sys.stdout or output_stream is getattr(
+        sys.stdout, 'buffer', None
+    ):
+        return True
+    try:
+        stdout_stat: os.stat_result = os.fstat(sys.stdout.fileno())
+    except (AttributeError, OSError, ValueError):
+        return False
+    return _stream_is_file(output_stream, stdout_stat)
+
+
+def _fileno(stream: typing.IO[typing.Any]) -> int | None:
+    """Return the descriptor behind `stream`, or None when it has none.
+
+    An `io.StringIO` under a test runner has no descriptor, and a closed
+    file raises `ValueError` for one.
+    """
+    try:
+        return stream.fileno()
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+def _discard_broken_stdout(output_stream: typing.IO[typing.Any]) -> None:
+    """Point fd 1 (and an `-o` alias of it) at `os.devnull` after EPIPE.
 
     The copy loop has already stopped, but the interpreter flushes
     `sys.stdout` once more at exit, and that flush would raise the same
     `BrokenPipeError` again (status 120, "Exception ignored on flushing
     sys.stdout"). Redirecting the descriptor makes that last flush
     succeed, which is what the Python docs recommend for a pipeline
-    whose reader went away.
+    whose reader went away. A file opened on `/dev/stdout` is closed by
+    the exit stack with the same failing flush, so its descriptor is
+    redirected as well.
     """
-    try:
-        fd: int = sys.stdout.fileno()
-    except (OSError, ValueError, AttributeError):
-        return  # not descriptor-backed (io.StringIO under a test runner)
-    if fd != 1:
-        return  # a replacement stdout owns that descriptor, leave it alone
+    descriptors: set[int] = {
+        fd
+        for fd in (_fileno(sys.stdout), _fileno(output_stream))
+        if fd is not None
+    }
+    # A replacement stdout that owns another descriptor is left alone
+    if 1 not in descriptors:
+        return
     try:
         devnull: int = os.open(os.devnull, os.O_WRONLY)
         try:
-            os.dup2(devnull, fd)
+            for fd in descriptors:
+                os.dup2(devnull, fd)
         finally:
             os.close(devnull)
     except OSError:  # pragma: no cover
@@ -651,10 +686,8 @@ def main(argv: list[str] | None = None) -> None:
             # The reader went away (`... | head`): finish quietly with
             # status 0, as 4.6.0 did and as a pipeline under pipefail
             # expects
-            if output_stream is sys.stdout or output_stream is getattr(
-                sys.stdout, 'buffer', None
-            ):
-                _discard_broken_stdout()
+            if _output_is_stdout(output_stream):
+                _discard_broken_stdout(output_stream)
 
         bar.finish(dirty=True)
 

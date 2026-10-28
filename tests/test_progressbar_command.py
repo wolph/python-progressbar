@@ -483,7 +483,7 @@ def test_broken_pipe_on_stdout_discards_the_descriptor(
     monkeypatch.setattr(main, '_get_output_stream', lambda *args: broken)
     monkeypatch.setattr(main.sys, 'stdout', broken)
     monkeypatch.setattr(
-        main, '_discard_broken_stdout', lambda: discarded.append(True)
+        main, '_discard_broken_stdout', lambda *args: discarded.append(True)
     )
     main.main([str(file)])
     assert discarded == [True]
@@ -505,7 +505,7 @@ def test_discard_broken_stdout_points_fd_at_devnull(
 
     monkeypatch.setattr(main.sys, 'stdout', FakeStdout())
     try:
-        main._discard_broken_stdout()
+        main._discard_broken_stdout(main.sys.stdout)
         os.write(1, b'late output')  # would raise EPIPE before
         assert os.fstat(1).st_ino == os.stat(os.devnull).st_ino
     finally:
@@ -528,7 +528,7 @@ def test_discard_broken_stdout_leaves_other_descriptors_alone(
 
     monkeypatch.setattr(main.sys, 'stdout', PipeStdout())
     try:
-        main._discard_broken_stdout()
+        main._discard_broken_stdout(main.sys.stdout)
         os.write(write_end, b'XYZ')
         assert os.read(read_end, 3) == b'XYZ'  # still the pipe, not devnull
     finally:
@@ -536,7 +536,7 @@ def test_discard_broken_stdout_leaves_other_descriptors_alone(
         os.close(write_end)
 
     monkeypatch.setattr(main.sys, 'stdout', io.StringIO())
-    main._discard_broken_stdout()  # no fileno(): nothing to do, no raise
+    main._discard_broken_stdout(main.sys.stdout)  # no fileno(): no raise
 
 
 def test_output_that_is_also_stdin_is_rejected(
@@ -576,7 +576,7 @@ def test_broken_pipe_found_at_flush_time_is_handled(
     monkeypatch.setattr(main, '_get_output_stream', lambda *args: stream)
     monkeypatch.setattr(main.sys, 'stdout', stream)
     monkeypatch.setattr(
-        main, '_discard_broken_stdout', lambda: discarded.append(True)
+        main, '_discard_broken_stdout', lambda *args: discarded.append(True)
     )
     main.main([str(file)])  # must not raise, and must not exit non-zero
     assert discarded == [True]
@@ -613,3 +613,60 @@ def test_unreadable_input_leaves_the_output_untouched(
         secret.chmod(0o600)
     assert excinfo.value.code == 2
     assert output.read_bytes() == b'precious'
+
+
+@pytest.mark.skipif(
+    not pathlib.Path('/dev/stdout').exists(), reason='needs /dev/stdout'
+)
+def test_output_path_aliasing_stdout_exits_zero_on_broken_pipe(
+    tmp_path: pathlib.Path,
+) -> None:
+    # `-o /dev/stdout | head -c1` ended with status 1: the file opened
+    # for `-o` is not `sys.stdout`, so the broken-pipe handling for the
+    # reader going away did not apply to it.
+    import subprocess
+    import sys
+
+    file = tmp_path / 'data.bin'
+    file.write_bytes(b'x' * (4 * 1024 * 1024))
+    process = subprocess.Popen(
+        [sys.executable, '-m', 'progressbar', str(file), '-o', '/dev/stdout'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env={
+            **__import__('os').environ,
+            'PYTHONPATH': str(pathlib.Path(__file__).parents[1]),
+        },
+    )
+    assert process.stdout is not None
+    assert process.stdout.read(1) == b'x'
+    process.stdout.close()
+    _, stderr = process.communicate(timeout=60)
+    assert process.returncode == 0, stderr.decode(errors='replace')
+    assert b'Exception ignored' not in stderr
+
+
+def test_output_is_stdout_without_a_descriptor_backed_stdout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A stdout without a descriptor (a StringIO under a test runner) can
+    # alias nothing, so an -o file is never mistaken for it
+    monkeypatch.setattr(main.sys, 'stdout', io.StringIO())
+    assert main._output_is_stdout(io.BytesIO()) is False
+
+
+@pytest.mark.skipif(
+    not pathlib.Path('/dev/fd/1').exists(), reason='needs /dev/fd'
+)
+def test_output_is_stdout_for_a_path_that_aliases_descriptor_one(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+) -> None:
+    class DescriptorOneStdout:
+        def fileno(self) -> int:
+            return 1
+
+    monkeypatch.setattr(main.sys, 'stdout', DescriptorOneStdout())
+    with open('/dev/fd/1', 'wb') as alias:  # noqa: PTH123
+        assert main._output_is_stdout(alias) is True
+    with open(tmp_path / 'out.bin', 'wb') as regular:  # noqa: PTH123
+        assert main._output_is_stdout(regular) is False
