@@ -124,13 +124,13 @@ def test_lazy_template_object_renders() -> None:
         _LazyStr('{value} of {max_value}'),  # type: ignore[arg-type]
         new_style=True,
     )
-    assert label(bar, data) == '3 of 10'
+    assert progressbar.utils.no_color(label(bar, data)) == '3 of 10'
 
 
 def test_single_underscore_variable_renders() -> None:
     bar, data = _label_data()
     label = progressbar.FormatLabel('{variables._x}', new_style=True)
-    assert label(bar, data) == 'v2'
+    assert progressbar.utils.no_color(label(bar, data)) == 'v2'
 
 
 def test_dunder_attribute_still_refused() -> None:
