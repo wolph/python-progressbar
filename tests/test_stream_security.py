@@ -759,3 +759,106 @@ def test_failed_stdout_delivery_still_delivers_the_stderr_text(
     assert err.getvalue() == 'eggs'  # not lost to the stdout failure
     streams.unwrap_stdout()
     streams.unwrap_stderr()
+
+
+class _PausingStringIO(io.StringIO):
+    """A buffer whose first `truncate()` pauses until told to go on."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.paused: threading.Event = threading.Event()
+        self.resume: threading.Event = threading.Event()
+        self.calls: int = 0
+
+    def truncate(self, size: int | None = None) -> int:
+        self.calls += 1
+        if self.calls == 1:
+            self.paused.set()
+            assert self.resume.wait(10)
+        return super().truncate(size)
+
+
+def test_write_during_a_drain_is_not_lost() -> None:
+    # Codex-4b finding 7: `_take()` read the buffer, then truncated it,
+    # and a `write()` that landed between the two was gone.
+    wrapper = utils.WrappingIO(io.StringIO(), capturing=True)
+    buffer = _PausingStringIO()
+    wrapper.buffer = buffer
+    wrapper.write('A|')
+    taken: list[str] = []
+
+    def take() -> None:
+        taken.append(wrapper._take())
+
+    taker = threading.Thread(target=take)
+    taker.start()
+    assert buffer.paused.wait(10)
+    writer = threading.Thread(target=wrapper.write, args=('B|',))
+    writer.start()
+    writer.join(0.5)  # blocked behind the drain, or done without a lock
+    buffer.resume.set()
+    taker.join(10)
+    writer.join(10)
+    assert not taker.is_alive() and not writer.is_alive()
+
+    taken.append(wrapper._take())
+    assert ''.join(taken) == 'A|B|'
+
+
+def test_buffer_flush_that_logs_through_the_wrapper_does_not_deadlock() -> (
+    None
+):
+    # Review 5: `_take()` called `buffer.flush()` while holding the buffer
+    # lock. A replacement buffer whose flush() logs through a handler
+    # that writes to the wrapper then waited for the handler lock, held
+    # by a thread waiting to write into the buffer: a lock-order cycle
+    # 4.6.0 could not have.
+    entered: threading.Event = threading.Event()
+    handler_held: threading.Event = threading.Event()
+    logger: logging.Logger = logging.getLogger('test-buffer-flush-logs')
+    logger.propagate = False
+    logger.setLevel(logging.INFO)
+
+    class LoggingBuffer(io.StringIO):
+        fired: bool = False
+
+        def flush(self) -> None:
+            if not self.fired:
+                self.fired = True
+                entered.set()
+                logger.info('flush-log')
+            super().flush()
+
+    wrapper = utils.WrappingIO(io.StringIO(), capturing=True)
+    wrapper.buffer = LoggingBuffer()
+    handler: logging.StreamHandler[typing.Any] = logging.StreamHandler(wrapper)
+    logger.addHandler(handler)
+    try:
+        wrapper.write('A|')
+
+        def writer() -> None:
+            handler.acquire()
+            try:
+                handler_held.set()
+                assert entered.wait(10)
+                wrapper.write('B|')
+            finally:
+                handler.release()
+
+        def drainer() -> None:
+            assert handler_held.wait(10)
+            wrapper._flush()
+
+        threads = [
+            threading.Thread(target=writer, daemon=True),
+            threading.Thread(target=drainer, daemon=True),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(10)
+        assert not any(thread.is_alive() for thread in threads)
+        wrapper._flush()
+        assert wrapper.target.getvalue() == 'A|B|flush-log\n'
+    finally:
+        logger.removeHandler(handler)

@@ -251,6 +251,12 @@ class WrappingIO:
     #: default keeps a subclass that skips `super().__init__()` working,
     #: as for `StreamWrapper`.
     _lock_box: _SharedLock = _SharedLock()
+    #: Holds the lock that keeps `write()` and `_take()` from
+    #: interleaving on `buffer`: a write between the read and the
+    #: truncate of a drain was lost. Held around the `io.StringIO`
+    #: write, getvalue, seek and truncate calls only, never while
+    #: calling a listener, `target` or the buffer's `flush()`.
+    _buffer_box: _SharedLock = _SharedLock(threading.RLock)
     needs_clear: bool = False
 
     @property
@@ -297,6 +303,7 @@ class WrappingIO:
             self._lock_box = lock
         else:
             self._lock_box = _SharedLock(threading.Lock, lock)
+        self._buffer_box = _SharedLock(threading.RLock)
         self.needs_clear = False
 
     def write(self, value: str) -> int:
@@ -317,7 +324,8 @@ class WrappingIO:
         """
         ret = 0
         if self.capturing:
-            ret += self.buffer.write(value)
+            with self._buffer_box.lock:
+                ret += self.buffer.write(value)
             if '\n' in value:  # pragma: no branch
                 self.needs_clear = True
                 # Iterate a snapshot taken under the lock: a listener's
@@ -362,14 +370,20 @@ class WrappingIO:
         overlapping flushes cannot both pick up the same text, and
         delivers the result after releasing it.
         """
-        value: str = self.buffer.getvalue()
+        with self._buffer_box.lock:
+            value: str = self.buffer.getvalue()
+            if value:
+                # Clear the buffer before writing so a failed write
+                # cannot cause the same data to be written again by the
+                # next flush
+                self.buffer.seek(0)
+                self.buffer.truncate(0)
+                self.needs_clear = False
         if value:
+            # Outside the lock: a replacement buffer's flush() may call
+            # out (log, say), and must not do so while holding a lock
+            # that write() needs
             self.flush()
-            # Clear the buffer before writing so a failed write cannot
-            # cause the same data to be written again by the next flush
-            self.buffer.seek(0)
-            self.buffer.truncate(0)
-            self.needs_clear = False
         return value
 
     def _deliver(self, value: str) -> None:
