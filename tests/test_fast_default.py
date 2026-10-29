@@ -4,6 +4,8 @@ import gc
 import io
 import sys
 
+import pytest
+
 import progressbar
 
 # Alias (not a `from` import) so CodeQL doesn't flag `progressbar` as imported
@@ -248,3 +250,51 @@ def test_fast_path_does_not_import_widgets_or_colors():
     )
     assert out.returncode == 0, out.stderr
     assert 'ok' in out.stdout
+
+
+@pytest.mark.parametrize('width', [80, 110])
+@pytest.mark.parametrize(
+    ('prefix', 'suffix'),
+    [
+        ('', ''),
+        ('load ', ''),
+        ('', ' done'),
+        ('load ', ' done'),
+        ('\x1b[31mload \x1b[0m', ' done'),
+    ],
+)
+def test_fast_labels_share_terminal_width(width, prefix, suffix):
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=10, fd=fd, term_width=width, prefix=prefix, suffix=suffix
+    )
+    assert list(bar(range(10))) == list(range(10))
+    for frame in fd.repaints():
+        assert progressbar.utils.len_color(frame.rstrip('\r\n')) == width
+
+
+def test_fast_labels_use_custom_width_measurement():
+    def display_width(text):
+        return progressbar.utils.len_color(text.replace('界', 'xx'))
+
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=10,
+        fd=fd,
+        term_width=80,
+        prefix='界 ',
+        suffix=' 界',
+        custom_len=display_width,
+    )
+    assert list(bar(range(10))) == list(range(10))
+    for frame in fd.repaints():
+        assert display_width(frame.rstrip('\r\n')) == 80
+
+
+def test_shortcut_desc_shares_terminal_width():
+    fd = TTY()
+    assert list(
+        progressbar.progressbar(range(10), fd=fd, desc='load ', term_width=80)
+    ) == list(range(10))
+    for frame in fd.repaints():
+        assert progressbar.utils.len_color(frame.rstrip('\r\n')) == 80
