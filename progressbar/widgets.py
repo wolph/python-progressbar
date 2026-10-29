@@ -65,6 +65,11 @@ class _SafeFormatter(string.Formatter):
         args: typing.Sequence[typing.Any],
         kwargs: typing.Mapping[str, typing.Any],
     ) -> tuple[typing.Any, str]:
+        self.validate_field(field_name)
+        return super().get_field(field_name, args, kwargs)
+
+    def validate_field(self, field_name: str) -> None:
+        """Check every attribute before any value is looked up."""
         rest: typing.Iterable[tuple[bool, typing.Any]]
         _first, rest = _string.formatter_field_name_split(field_name)
         for is_attr, name in rest:
@@ -74,7 +79,23 @@ class _SafeFormatter(string.Formatter):
                 raise ValueError(
                     f'attribute {name!r} is not allowed in a format template',
                 )
-        return super().get_field(field_name, args, kwargs)
+
+    def validate(self, template: str, depth: int = 2) -> None:
+        """Check specialised templates before handing them to their owner."""
+        if depth < 0:
+            raise ValueError('Max string recursion exceeded')
+        for _, field, spec, conversion in self.parse(template):
+            if field is not None:
+                self.validate_field(field)
+                if conversion is not None and conversion not in (
+                    's',
+                    'r',
+                    'a',
+                ):
+                    raise ValueError(
+                        f'Unknown conversion specifier {conversion}'
+                    )
+                self.validate(spec or '', depth - 1)
 
 
 _SAFE_FORMATTER: _SafeFormatter = _SafeFormatter()
@@ -84,22 +105,24 @@ def _safe_format(
     template: object,
     data: typing.Mapping[str, typing.Any],
 ) -> str:
-    """Render `template` with `data` through the safe formatter.
+    """Render safe field paths while preserving specialised formatting.
 
-    `string.Formatter` needs a real `str`, while `str.format` accepted
-    anything with a `format()` method. A translation proxy (the
-    `gettext_lazy` shape) is therefore rendered through `str()` first,
-    so it keeps working. Anything else that is not text (None, a list,
-    a number) is a `TypeError`, as it was before.
+    Application-owned format methods retain their escaping and result
+    types. Field paths in the underlying string or proxy text are
+    validated before delegation. Application code in format methods
+    and proxies remains trusted.
     """
-    if not isinstance(template, str):
-        if not callable(getattr(template, 'format', None)):
-            raise TypeError(
-                'format template must be a str, got '
-                f'{type(template).__name__}',
-            )
-        template = str(template)
-    return _SAFE_FORMATTER.vformat(template, (), data)
+    if type(template) is str:
+        return _SAFE_FORMATTER.vformat(template, (), data)
+    formatter: typing.Any = getattr(template, 'format', None)
+    if not callable(formatter):
+        raise TypeError(
+            f'format template must be a str, got {type(template).__name__}',
+        )
+    _SAFE_FORMATTER.validate(
+        str.__str__(template) if isinstance(template, str) else str(template)
+    )
+    return typing.cast(str, formatter(**data))
 
 
 MAX_DATE = datetime.date.max

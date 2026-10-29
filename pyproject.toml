@@ -133,6 +133,7 @@ docs = [
 ]
 tests = [
     'dill>=0.3.6',
+    'markupsafe>=2.0',
     'freezegun>=0.3.11',
     'pytest-cov>=2.6.1',
     'pytest>=4.6.9',

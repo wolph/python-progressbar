@@ -174,7 +174,8 @@ def len_color(value: types.StringTypes) -> int:
 
 #: One installed wrapper's drained text, waiting to be written to the
 #: original stream once the transition lock is released.
-_Pending = tuple[str, 'WrappingIO', str]
+_Drain = str | BaseException | None
+_Pending = tuple[str, 'WrappingIO', _Drain]
 
 if typing.TYPE_CHECKING:
     _Lock = threading.Lock
@@ -255,7 +256,7 @@ class WrappingIO:
     #: interleaving on `buffer`: a write between the read and the
     #: truncate of a drain was lost. Held around the `io.StringIO`
     #: write, getvalue, seek and truncate calls only, never while
-    #: calling a listener, `target` or the buffer's `flush()`.
+    #: calling a listener, `target` or a custom buffer method.
     _buffer_box: _SharedLock = _SharedLock(threading.RLock)
     needs_clear: bool = False
 
@@ -324,7 +325,11 @@ class WrappingIO:
         """
         ret = 0
         if self.capturing:
-            with self._buffer_box.lock:
+            with (
+                self._buffer_box.lock
+                if self._native_buffer()
+                else contextlib.nullcontext()
+            ):
                 ret += self.buffer.write(value)
             if '\n' in value:  # pragma: no branch
                 self.needs_clear = True
@@ -366,11 +371,15 @@ class WrappingIO:
     def _take(self) -> str:
         """Drain and return the buffered text without touching `target`.
 
-        `StreamWrapper` calls this under its transition lock, so two
-        overlapping flushes cannot both pick up the same text, and
-        delivers the result after releasing it.
+        Native StringIO drains hold the buffer lock. `StreamWrapper`
+        also captures them under its transition lock. Custom buffer
+        methods run unlocked and retain caller-owned synchronisation.
         """
-        with self._buffer_box.lock:
+        with (
+            self._buffer_box.lock
+            if self._native_buffer()
+            else contextlib.nullcontext()
+        ):
             value: str = self.buffer.getvalue()
             if value:
                 # Clear the buffer before writing so a failed write
@@ -380,6 +389,36 @@ class WrappingIO:
                 self.buffer.truncate(0)
                 self.needs_clear = False
         return value
+
+    def _native_buffer(self) -> bool:
+        """Recognise built-in operations, including instance shadowing.
+
+        Custom buffers keep their original method dispatch. Their callers
+        own synchronisation of concurrent writes and drains, as in 4.6.0.
+        """
+        return type(self.buffer) is io.StringIO and not any(
+            name in vars(self.buffer)
+            for name in ('write', 'getvalue', 'seek', 'truncate', 'flush')
+        )
+
+    def _capture(self) -> _Drain:
+        """Take native text or its failure now, defer custom code."""
+        if (
+            not self._native_buffer()
+            or type(self)._take is not WrappingIO._take
+            or '_take' in vars(self)
+        ):
+            return None
+        try:
+            return self._take()
+        except BaseException as exception:  # noqa: BLE001
+            return exception
+
+    def _deliver_capture(self, captured: _Drain) -> None:
+        """Drain deferred custom text and deliver outside stream locks."""
+        if isinstance(captured, BaseException):
+            raise captured
+        self._deliver(self._take() if captured is None else captured)
 
     def _deliver(self, value: str) -> None:
         """Write text taken by `_take()` to `target`, then flush it."""
@@ -665,12 +704,12 @@ class StreamWrapper:
         return self._take()
 
     def _take(self) -> list[_Pending]:
-        """Drain both installed wrappers' buffers, under `lock`."""
+        """Capture native text or failures and defer custom drains."""
         pending: list[_Pending] = []
         if self.wrapped_stdout and isinstance(self.stdout, WrappingIO):
-            pending.append(('stdout', self.stdout, self.stdout._take()))
+            pending.append(('stdout', self.stdout, self.stdout._capture()))
         if self.wrapped_stderr and isinstance(self.stderr, WrappingIO):
-            pending.append(('stderr', self.stderr, self.stderr._take()))
+            pending.append(('stderr', self.stderr, self.stderr._capture()))
         return pending
 
     def _deliver(self, pending: list[_Pending]) -> None:
@@ -696,11 +735,13 @@ class StreamWrapper:
             )
             if failure is None:
                 failure = exception
+            elif exception is not None and exception is not failure:
+                failure.__context__ = exception
         if failure is not None:
             raise failure
 
     def _deliver_guarded(
-        self, name: str, wrapper: WrappingIO, text: str
+        self, name: str, wrapper: WrappingIO, text: _Drain
     ) -> BaseException | None:
         """Deliver one wrapper's text, returning what it raised."""
         try:
@@ -709,10 +750,12 @@ class StreamWrapper:
             return exception
         return None
 
-    def _deliver_one(self, name: str, wrapper: WrappingIO, text: str) -> None:
+    def _deliver_one(
+        self, name: str, wrapper: WrappingIO, text: _Drain
+    ) -> None:
         """Deliver one wrapper's text, disabling its redirection on failure."""
         try:
-            wrapper._deliver(text)
+            wrapper._deliver_capture(text)
         except io.UnsupportedOperation:
             setattr(self, f'wrapped_{name}', 0)
             logger.warning(
@@ -954,7 +997,7 @@ class StreamWrapper:
             self.unwrap_stderr()
 
     @staticmethod
-    def _drop(dropped: object) -> tuple[WrappingIO, str] | None:
+    def _drop(dropped: object) -> tuple[WrappingIO, _Drain] | None:
         """Stop buffering in a dropped wrapper and take what it holds.
 
         Runs under `lock`; the text goes to `_deliver_dropped` after
@@ -963,10 +1006,10 @@ class StreamWrapper:
         if not isinstance(dropped, WrappingIO):
             return None
         dropped.capturing = False
-        return dropped, dropped._take()
+        return dropped, dropped._capture()
 
     @staticmethod
-    def _deliver_dropped(taken: tuple[WrappingIO, str] | None) -> None:
+    def _deliver_dropped(taken: tuple[WrappingIO, _Drain] | None) -> None:
         """Deliver the text `_drop` took, outside `lock`.
 
         A stale reference to the wrapper must not swallow output. The
@@ -979,7 +1022,7 @@ class StreamWrapper:
             return
         dropped, text = taken
         try:
-            dropped._deliver(text)
+            dropped._deliver_capture(text)
         except Exception:
             logger.debug(
                 'Could not deliver buffered output on unwrap',
@@ -1001,13 +1044,15 @@ class StreamWrapper:
                 self.wrapped_stdout -= 1
                 return
 
-            taken = self._drop(self.stdout)
-            # Also reset our own reference so needs_clear() and
-            # update_capturing() don't act on a stale wrapper
-            self.stdout = sys.stdout = self.original_stdout
-            self.wrapped_stdout = 0
-            if not self.wrapped_stderr:
-                self.unwrap_excepthook()
+            try:
+                taken = self._drop(self.stdout)
+            finally:
+                # Also reset our own reference so needs_clear() and
+                # update_capturing() don't act on a stale wrapper
+                self.stdout = sys.stdout = self.original_stdout
+                self.wrapped_stdout = 0
+                if not self.wrapped_stderr:
+                    self.unwrap_excepthook()
         # Deliver after releasing `lock`: this writes into the original
         # stream and may log, see `_apply_capturing`
         self._deliver_dropped(taken)
@@ -1025,13 +1070,15 @@ class StreamWrapper:
                 self.wrapped_stderr -= 1
                 return
 
-            taken = self._drop(self.stderr)
-            # Also reset our own reference so needs_clear() and
-            # update_capturing() don't act on a stale wrapper
-            self.stderr = sys.stderr = self.original_stderr
-            self.wrapped_stderr = 0
-            if not self.wrapped_stdout:
-                self.unwrap_excepthook()
+            try:
+                taken = self._drop(self.stderr)
+            finally:
+                # Also reset our own reference so needs_clear() and
+                # update_capturing() don't act on a stale wrapper
+                self.stderr = sys.stderr = self.original_stderr
+                self.wrapped_stderr = 0
+                if not self.wrapped_stdout:
+                    self.unwrap_excepthook()
         # Deliver after releasing `lock`, see `unwrap_stdout`
         self._deliver_dropped(taken)
 
@@ -1053,9 +1100,9 @@ class StreamWrapper:
     def flush(self) -> None:
         """Flush buffered captured output on both wrapped streams.
 
-        The buffers are drained under `lock` and written to the
-        original streams after releasing it, see `_deliver` for what
-        happens when a stream cannot take the text.
+        Native buffers are drained under `lock`. Custom drains and
+        writes to original streams run after releasing it. See
+        `_deliver` for what happens when a stream cannot take the text.
         """
         with self.lock:
             pending: list[_Pending] = self._take()

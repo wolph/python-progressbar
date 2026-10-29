@@ -118,14 +118,18 @@ Ready to contribute? Here's how to set up `python-progressbar` for local develop
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass the
-   linter and the tests, including other Python versions with tox::
+5. Before committing, format the changed Python files, then check the
+   whole tree and run the tests, including other Python versions with tox::
 
-    $ uv run ruff check progressbar tests
+    $ uvx ruff@latest format path/to/changed.py
+    $ uvx ruff@latest check .
+    $ uvx ruff@latest format --check .
     $ uv run pytest
     $ uv run tox
 
-   The ``uv sync`` from step 3 already installed all of these.
+   Stage the formatted changes before committing. A checkout-local
+   pre-commit gate, when installed, checks the staged snapshot and leaves
+   partially staged files untouched.
 
 6. Commit your changes and push your branch to GitHub with `git-flow-avh`_::
 

@@ -595,3 +595,426 @@ def test_render_of_a_bar_removed_mid_frame_does_not_leak() -> None:
     )
     assert lines == []
     assert bar_ not in multibar._finished_at
+
+
+@pytest.mark.parametrize('mutation', ['assign', 'update', 'ior'])
+def test_expiry_keeps_concurrent_replacement(mutation: str) -> None:
+    import inspect
+    import sys
+    import types
+    import typing
+
+    multibar: progressbar.MultiBar = progressbar.MultiBar(
+        fd=io.StringIO(), remove_finished=1
+    )
+    old: progressbar.ProgressBar = multibar['task']
+    replacement: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO()
+    )
+    multibar._finished_at[old] = 0
+    multibar._labeled.add(old)
+    reached: threading.Event = threading.Event()
+    resume: threading.Event = threading.Event()
+    errors: list[BaseException] = []
+    lines, first = inspect.getsourcelines(multibar._render_finished_bar)
+    pause_line: int = first + next(
+        i for i, line in enumerate(lines) if 'self.remove_finished' in line
+    )
+
+    def trace(
+        frame: types.FrameType, event: str, arg: typing.Any
+    ) -> typing.Any:
+        if (
+            event == 'line'
+            and frame.f_code is multibar._render_finished_bar.__func__.__code__
+            and frame.f_lineno == pause_line
+        ):
+            reached.set()
+            assert resume.wait(3)
+        return trace
+
+    def render() -> None:
+        sys.settrace(trace)
+        try:
+            list(
+                multibar._render_finished_bar(old, 10, 9, lambda **kwargs: '')
+            )
+        except BaseException as error:
+            errors.append(error)
+        finally:
+            sys.settrace(None)
+
+    thread: threading.Thread = threading.Thread(target=render)
+    thread.start()
+    try:
+        assert reached.wait(3)
+        if mutation == 'assign':
+            multibar['task'] = replacement
+        elif mutation == 'update':
+            multibar.update(task=replacement)
+        else:
+            multibar |= {'task': replacement}
+    finally:
+        resume.set()
+        thread.join(3)
+    assert not thread.is_alive()
+    assert errors == []
+    assert multibar.get('task') is replacement
+    assert old not in multibar._finished_at
+    assert old not in multibar._labeled
+    assert replacement.label == 'task'
+
+
+@pytest.mark.parametrize('removal', ['pop', 'popitem', 'clear', 'del'])
+def test_membership_removal_cleans_tracking(removal: str) -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    progress: progressbar.ProgressBar = multibar['task']
+    multibar._finished_at[progress] = 0
+    multibar._labeled.add(progress)
+    if removal == 'pop':
+        assert multibar.pop('task') is progress
+    elif removal == 'popitem':
+        assert multibar.popitem() == ('task', progress)
+    elif removal == 'clear':
+        multibar.clear()
+    else:
+        del multibar['task']
+    assert not multibar
+    assert not multibar._finished_at
+    assert not multibar._labeled
+
+
+def test_membership_dict_defaults_and_update_iterable() -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    progress: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO()
+    )
+    assert multibar.setdefault('task', progress) is progress
+    assert multibar.setdefault('task') is progress
+    assert multibar.setdefault('none') is None
+    assert multibar.pop('none') is None
+    assert multibar.pop('missing', 42) == 42
+    with pytest.raises(KeyError):
+        multibar.pop('missing')
+    with pytest.raises(TypeError):
+        multibar.pop('missing', 1, 2)
+    multibar.clear()
+    with pytest.raises(KeyError):
+        multibar.popitem()
+    multibar.update([('task', progress)])
+    assert multibar['task'] is progress
+
+
+def test_membership_guard_is_released_before_finished_update() -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    progress: progressbar.ProgressBar = multibar['task']
+    unlocked: list[bool] = []
+
+    def update(**kwargs: object) -> str:
+        def observer() -> None:
+            acquired: bool = multibar._membership_lock.acquire(timeout=1)
+            unlocked.append(acquired)
+            if acquired:
+                multibar._membership_lock.release()
+
+        thread: threading.Thread = threading.Thread(target=observer)
+        thread.start()
+        thread.join(2)
+        assert not thread.is_alive()
+        return ''
+
+    list(multibar._render_finished_bar(progress, 10, None, update))
+    assert unlocked == [True]
+
+
+@pytest.mark.parametrize(
+    'operation', ['replace', 'pop', 'popitem', 'clear', 'finish']
+)
+def test_membership_tracking_never_calls_bar_hash(operation: str) -> None:
+    class HashBar(progressbar.ProgressBar):
+        armed: bool = False
+
+        def __hash__(self) -> int:
+            if self.armed:
+                raise AssertionError('bar hash callback')
+            return object.__hash__(self)
+
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    progress: HashBar = HashBar(fd=io.StringIO())
+    multibar['task'] = progress
+    multibar._finished_at[progress] = 0
+    multibar._labeled.add(progress)
+    progress.armed = True
+    if operation == 'replace':
+        multibar['task'] = progressbar.ProgressBar(fd=io.StringIO())
+    elif operation == 'pop':
+        multibar.pop('task')
+    elif operation == 'popitem':
+        multibar.popitem()
+    elif operation == 'clear':
+        multibar.clear()
+    else:
+        list(
+            multibar._render_finished_bar(
+                progress, 10, None, lambda **kwargs: ''
+            )
+        )
+    progress.armed = False
+
+
+def test_multibar_membership_lock_resets_after_fork() -> None:
+    import os
+    import subprocess
+    import sys
+    import textwrap
+
+    if not hasattr(os, 'fork'):
+        pytest.skip('fork requires POSIX')
+    code: str = textwrap.dedent("""
+        import io
+        import os
+        import signal
+        import threading
+        import progressbar
+
+        multibar = progressbar.MultiBar(fd=io.StringIO())
+        held = threading.Event()
+        release = threading.Event()
+        def holder():
+            with multibar._membership_lock:
+                held.set()
+                release.wait(5)
+        thread = threading.Thread(target=holder, daemon=True)
+        thread.start()
+        assert held.wait(2)
+        pid = os.fork()
+        if pid == 0:
+            signal.alarm(2)
+            multibar['child'] = progressbar.ProgressBar(fd=io.StringIO())
+            os._exit(0)
+        _, status = os.waitpid(pid, 0)
+        release.set()
+        thread.join(2)
+        assert os.waitstatus_to_exitcode(status) == 0
+    """)
+    result: subprocess.CompletedProcess[str] = subprocess.run(
+        [sys.executable, '-c', code],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_tracking_distinguishes_equal_bars_by_identity() -> None:
+    class EqualBar(progressbar.ProgressBar):
+        def __hash__(self) -> int:
+            raise AssertionError('tracking called hash')
+
+        def __eq__(self, other: object) -> bool:
+            raise AssertionError('tracking called equality')
+
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    first: EqualBar = EqualBar(fd=io.StringIO())
+    second: EqualBar = EqualBar(fd=io.StringIO())
+    multibar['first'] = first
+    multibar['second'] = second
+    multibar._finished_at[first] = 1
+    multibar._finished_at[second] = 2
+    multibar._labeled.add(first)
+    multibar._labeled.add(second)
+    assert len(multibar._finished_at) == len(multibar._labeled) == 2
+    assert multibar._finished_at[first] == 1
+    assert multibar._finished_at[second] == 2
+    assert next(iter(multibar._finished_at)) is first
+    assert list(multibar._labeled)[1] is second
+    del multibar['first']
+    assert first not in multibar._finished_at
+    assert first not in multibar._labeled
+    assert second in multibar._finished_at
+    assert second in multibar._labeled
+    multibar.clear()
+    assert not multibar._finished_at
+    assert not multibar._labeled
+
+
+class _IdentityTracked:
+    def __init__(self) -> None:
+        self.owner: object = None
+
+    def __hash__(self) -> int:
+        raise AssertionError('hash callback')
+
+    def __eq__(self, other: object) -> bool:
+        raise AssertionError('equality callback')
+
+
+@pytest.mark.parametrize('method', ['deepcopy', 'pickle'])
+@pytest.mark.parametrize('kind', ['mapping', 'set'])
+def test_identity_tracking_copy_rebuilds_ids_and_cycles(
+    method: str, kind: str
+) -> None:
+    import copy
+    import pickle
+    import typing
+
+    from progressbar import _identity
+
+    tracked: _IdentityTracked = _IdentityTracked()
+    collection: typing.Any
+    if kind == 'mapping':
+        collection = _identity.IdentityMap()
+        collection[tracked] = 'value'
+    else:
+        collection = _identity.IdentitySet()
+        collection.add(tracked)
+    tracked.owner = collection
+    restored: typing.Any = (
+        copy.deepcopy(collection)
+        if method == 'deepcopy'
+        else pickle.loads(pickle.dumps(collection))
+    )
+    copied: _IdentityTracked = next(iter(restored))
+    assert copied is not tracked
+    assert copied.owner is restored
+    assert copied in restored
+    assert tracked not in restored
+    if kind == 'mapping':
+        assert restored[copied] == 'value'
+        del restored[copied]
+    else:
+        restored.discard(copied)
+    assert not restored
+
+
+@pytest.mark.parametrize('operation', ['replace', 'clear', 'pop', 'popitem'])
+def test_removed_bar_finalizer_runs_outside_membership_guard(
+    operation: str,
+) -> None:
+    observed: list[bool] = []
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+
+    class FinalBar(progressbar.ProgressBar):
+        def __del__(self) -> None:
+            def observer() -> None:
+                acquired: bool = multibar._membership_lock.acquire(timeout=1)
+                observed.append(acquired)
+                if acquired:
+                    multibar._membership_lock.release()
+
+            thread: threading.Thread = threading.Thread(target=observer)
+            thread.start()
+            thread.join(2)
+            super().__del__()
+
+    multibar['task'] = FinalBar(fd=io.StringIO())
+    multibar._finished_at[multibar['task']] = 0
+    multibar._labeled.add(multibar['task'])
+    if operation == 'replace':
+        multibar['task'] = progressbar.ProgressBar(fd=io.StringIO())
+    elif operation == 'clear':
+        multibar.clear()
+    elif operation == 'pop':
+        multibar.pop('task')
+    else:
+        multibar.popitem()
+    assert observed == [True]
+
+
+def test_render_does_not_relabel_replaced_bar() -> None:
+    import inspect
+    import sys
+    import types
+    import typing
+
+    from progressbar import multi
+
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    old: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO(), widgets=['old'], max_value=1
+    )
+    replacement: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO()
+    )
+    multibar['task'] = old
+    old.start()
+    old.finish()
+    lines, first = inspect.getsourcelines(multi.MultiBar._render_bar)
+    pause_line: int = first + next(
+        i for i, line in enumerate(lines) if 'self._label_bar(bar_' in line
+    )
+    reached: threading.Event = threading.Event()
+    resume: threading.Event = threading.Event()
+    errors: list[BaseException] = []
+
+    def trace(
+        frame: types.FrameType, event: str, arg: typing.Any
+    ) -> typing.Any:
+        if (
+            event == 'line'
+            and frame.f_code.co_filename == multi.__file__
+            and frame.f_lineno == pause_line
+        ):
+            reached.set()
+            assert resume.wait(2)
+        return trace
+
+    def render() -> None:
+        sys.settrace(trace)
+        try:
+            list(multibar._render_bar(old, now=10, expired=None))
+        except BaseException as error:
+            errors.append(error)
+        finally:
+            sys.settrace(None)
+
+    thread: threading.Thread = threading.Thread(target=render)
+    thread.start()
+    try:
+        assert reached.wait(2)
+        multibar['task'] = replacement
+    finally:
+        resume.set()
+        thread.join(2)
+    assert not thread.is_alive()
+    assert errors == []
+    assert multibar.get('task') is replacement
+    assert old not in multibar._finished_at
+    assert old not in multibar._labeled
+
+
+def test_expiry_rechecks_membership_after_custom_interval_callback() -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    old: progressbar.ProgressBar = multibar['task']
+    replacement: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO()
+    )
+    multibar._finished_at[old] = 0
+
+    class Interval(float):
+        def __bool__(self) -> bool:
+            multibar['task'] = replacement
+            return True
+
+    multibar.remove_finished = Interval(1)
+    assert (
+        list(multibar._render_finished_bar(old, 10, 9, lambda **kwargs: ''))
+        == []
+    )
+    assert multibar.get('task') is replacement
+
+
+def test_label_reservation_skips_removed_bars_and_disabled_labels() -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(
+        fd=io.StringIO(), prepend_label=False, append_label=False
+    )
+    progress: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO(), widgets=['value']
+    )
+    multibar['task'] = progress
+    assert multibar._label_bar(progress, require_member=True)
+    assert progress.widgets == ['value']
+    assert progress not in multibar._labeled
+    del multibar['task']
+    assert not multibar._label_bar(progress, require_member=True)
+    assert progress not in multibar._labeled

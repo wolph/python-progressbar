@@ -287,3 +287,88 @@ def test_frame_walks_are_refused_like_dunders() -> None:
         label = progressbar.FormatLabel(template, new_style=True)
         with pytest.raises(ValueError, match='not allowed'):
             label(bar, data)
+
+
+def test_specialised_template_preserves_markup_escaping_and_type() -> None:
+    from markupsafe import Markup
+
+    bar, data = _label_data()
+    data['value'] = '<tag>'
+    label: progressbar.FormatLabel = progressbar.FormatLabel(
+        Markup('{value}'), new_style=True
+    )
+    result: str = label(bar, data)
+    assert result == '&lt;tag&gt;'
+    assert isinstance(result, Markup)
+
+
+@pytest.mark.parametrize(
+    'template',
+    [
+        '{value.__class__!s}',
+        '{value:{width.__class__}}',
+        '{value:{width.f_globals}}',
+        '{value!z}',
+        '{value:{width:{precision}}}',
+    ],
+)
+def test_specialised_template_validates_before_delegation(
+    template: str,
+) -> None:
+    calls: list[str] = []
+
+    class Template(str):
+        def format(self, *args: object, **kwargs: object) -> str:
+            calls.append(self)
+            return 'specialised'
+
+    bar, data = _label_data()
+    label: progressbar.FormatLabel = progressbar.FormatLabel(
+        Template(template), new_style=True
+    )
+    with pytest.raises(ValueError):
+        label(bar, data)
+    assert calls == []
+
+
+def test_specialised_proxy_preserves_format_method() -> None:
+    class Template(_LazyStr):
+        def format(self, *args: object, **kwargs: object) -> str:
+            return 'specialised:' + super().format(*args, **kwargs)
+
+    bar, data = _label_data()
+    label: progressbar.FormatLabel = progressbar.FormatLabel(
+        Template('{value}'), new_style=True
+    )  # type: ignore[arg-type]
+    assert label(bar, data) == 'specialised:3'
+
+
+def test_specialised_str_cannot_hide_field_paths_in_str_override() -> None:
+    calls: list[str] = []
+
+    class Template(str):
+        def __str__(self) -> str:
+            return '{value}'
+
+        def format(self, *args: object, **kwargs: object) -> str:
+            calls.append('called')
+            return super().format(*args, **kwargs)
+
+    bar, data = _label_data()
+    label: progressbar.FormatLabel = progressbar.FormatLabel(
+        Template('{value.__class__}'), new_style=True
+    )
+    with pytest.raises(ValueError, match='__class__'):
+        label(bar, data)
+    assert calls == []
+
+
+def test_specialised_template_allows_literal_braces_and_nested_width() -> None:
+    from markupsafe import Markup
+
+    bar, data = _label_data()
+    data['width'] = 3
+    label: progressbar.FormatLabel = progressbar.FormatLabel(
+        Markup('{{literal}} {value:0{width}d}'), new_style=True
+    )
+    assert label(bar, data) == '{literal} 003'

@@ -10,7 +10,6 @@ contract.
 from __future__ import annotations
 
 import collections.abc
-import contextlib
 import enum
 import importlib
 import io
@@ -26,7 +25,7 @@ from datetime import timedelta
 
 import python_utils
 
-from . import bar, terminal
+from . import _identity, bar, terminal, utils
 from .terminal import stream
 
 # MultiBar renders full (widget) progress bars from background threads. Warm
@@ -164,8 +163,9 @@ class MultiBar(dict[str, bar.ProgressBar]):
     sort_keyfunc: SortKeyFunc
 
     _previous_output: list[str]
-    _finished_at: dict[bar.ProgressBar, float]
-    _labeled: set[bar.ProgressBar]
+    _finished_at: _identity.IdentityMap[bar.ProgressBar, float]
+    _labeled: _identity.IdentitySet[bar.ProgressBar]
+    _membership_box: utils._SharedLock  # pyright: ignore[reportPrivateUsage]
     _print_lock: threading.RLock
     _thread: threading.Thread | None
     _thread_finished: threading.Event
@@ -223,10 +223,13 @@ class MultiBar(dict[str, bar.ProgressBar]):
         self.sort_keyfunc = sort_keyfunc
         self.sort_reverse = sort_reverse
 
-        self._labeled = set()
-        self._finished_at = {}
+        self._labeled = _identity.IdentitySet[bar.ProgressBar]()
+        self._finished_at = _identity.IdentityMap()
         self._previous_output = []
         self._buffer = io.StringIO()
+        self._membership_box = utils._SharedLock(  # pyright: ignore[reportPrivateUsage]
+            threading.RLock
+        )
         self._print_lock = threading.RLock()
         self._thread = None
         self._thread_finished = threading.Event()
@@ -247,6 +250,11 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
         for key, progress in bar_items:
             self[key] = progress
+
+    @property
+    def _membership_lock(self) -> threading.RLock:
+        """Return the membership guard, reset automatically after fork."""
+        return self._membership_box.lock
 
     def __setitem__(self, key: str, bar: bar.ProgressBar) -> None:
         """Add `bar` to the multibar, rebinding it to draw through us.
@@ -277,57 +285,138 @@ class MultiBar(dict[str, bar.ProgressBar]):
             key: The label and dict key to add/update `bar` under.
             bar: The progressbar to add, mutated as described above.
         """
-        if bar.label != key or not key:  # pragma: no branch
-            bar.label = key
+        self._prepare_bar(key, bar)
+        with self._membership_lock:
+            previous: bar.ProgressBar | None = super().get(key)
+            super().__setitem__(key, bar)
+            if previous is not bar:
+                self._forget_bar(previous)
 
+    def _prepare_bar(self, key: str, progress: bar.ProgressBar) -> None:
+        """Configure a bar outside the membership guard."""
+        if progress.label != key or not key:  # pragma: no branch
+            progress.label = key
         if not (
-            isinstance(bar.fd, stream.LastLineStream)
-            and bar.fd.stream is self.fd
+            isinstance(progress.fd, stream.LastLineStream)
+            and progress.fd.stream is self.fd
         ):
-            bar.fd = stream.LastLineStream(self.fd)
-
-        bar.paused = True
-        # `mypy` rejects assigning to a method, hence the ignore.
-        bar.print = self.print  # type: ignore
-
-        # Just in case someone is using a progressbar with a custom
-        # constructor and forgot to call the super constructor
-        if bar.index == -1:
-            bar.index = next(
-                bar._index_counter  # pyright: ignore[reportPrivateUsage]
+            progress.fd = stream.LastLineStream(self.fd)
+        progress.paused = True
+        progress.print = self.print  # type: ignore
+        if progress.index == -1:
+            progress.index = next(
+                progress._index_counter  # pyright: ignore[reportPrivateUsage]
             )
 
-        super().__setitem__(key, bar)
+    def _forget_bar(self, progress: bar.ProgressBar | None) -> None:
+        """Discard tracking for a removed member under the guard."""
+        if progress is not None:
+            self._finished_at.pop(progress, None)
+            self._labeled.discard(progress)
 
     def __delitem__(self, key: str) -> None:
-        """Remove a progressbar from the multibar."""
-        bar_: bar.ProgressBar = self.pop(key)
-        self._finished_at.pop(bar_, None)
-        self._labeled.discard(bar_)
+        """Remove a progressbar and its tracking."""
+        self.pop(key)
 
     def __getitem__(self, key: str) -> bar.ProgressBar:
         """Get (and create if needed) a progressbar from the multibar."""
-        try:
-            return super().__getitem__(key)
-        except KeyError:
-            progress = bar.ProgressBar(**self.progressbar_kwargs)
+        with self._membership_lock:
+            try:
+                return super().__getitem__(key)
+            except KeyError:
+                pass
+        progress: bar.ProgressBar = bar.ProgressBar(**self.progressbar_kwargs)
+        return self.setdefault(key, progress)
+
+    def update(self, *args: typing.Any, **kwargs: bar.ProgressBar) -> None:
+        """Add mapping or iterable entries through normal bar setup."""
+        entries: dict[str, bar.ProgressBar] = dict(*args, **kwargs)
+        for key, progress in entries.items():
             self[key] = progress
+
+    def __ior__(self, other: typing.Any) -> MultiBar:
+        """Update in place using the same membership guard as assignment."""
+        self.update(other)
+        return self
+
+    @typing.overload
+    def setdefault(
+        self, key: str, default: bar.ProgressBar
+    ) -> bar.ProgressBar: ...
+
+    @typing.overload
+    def setdefault(
+        self, key: str, default: None = None
+    ) -> bar.ProgressBar | None: ...
+
+    def setdefault(
+        self, key: str, default: bar.ProgressBar | None = None
+    ) -> bar.ProgressBar | None:
+        """Insert a missing member without replacing a concurrent one."""
+        with self._membership_lock:
+            if super().__contains__(key):
+                return super().__getitem__(key)
+        if default is not None:
+            self._prepare_bar(key, default)
+        with self._membership_lock:
+            members: dict[str, bar.ProgressBar | None] = typing.cast(
+                dict[str, bar.ProgressBar | None], self
+            )
+            return dict[str, bar.ProgressBar | None].setdefault(
+                members, key, default
+            )
+
+    def pop(self, key: str, *args: typing.Any) -> typing.Any:
+        """Remove a member and discard its lifecycle tracking."""
+        with self._membership_lock:
+            present: bool = super().__contains__(key)
+            progress: typing.Any = super().pop(key, *args)
+            if present:
+                self._forget_bar(progress)
             return progress
 
-    def _label_bar(self, bar: bar.ProgressBar) -> None:
-        """Insert the label widget(s) into `bar.widgets`, once per bar."""
-        if bar in self._labeled:  # pragma: no branch
-            return
+    def popitem(self) -> tuple[str, bar.ProgressBar]:
+        """Remove the newest member and its tracking."""
+        with self._membership_lock:
+            key: str
+            progress: bar.ProgressBar
+            key, progress = super().popitem()
+            self._forget_bar(progress)
+            return key, progress
 
-        assert bar.widgets, 'Cannot prepend label to empty progressbar'
+    def clear(self) -> None:
+        """Remove all members and their tracking."""
+        removed: list[bar.ProgressBar]
+        with self._membership_lock:
+            removed = list(super().values())
+            removed.extend(self._finished_at)
+            removed.extend(self._labeled)
+            super().clear()
+            self._finished_at.clear()
+            self._labeled.clear()
+        # Release the last references after leaving the membership guard.
+        del removed
+
+    def _label_bar(
+        self, bar: bar.ProgressBar, *, require_member: bool = False
+    ) -> bool:
+        """Reserve a bar's label under the guard, then format it unlocked."""
+        label: str = bar.label
+        widgets: collections.abc.MutableSequence[typing.Any] = bar.widgets
+        assert widgets, 'Cannot prepend label to empty progressbar'
+        with self._membership_lock:
+            if require_member and super().get(label) is not bar:
+                return False
+            if bar in self._labeled:  # pragma: no branch
+                return True
+            if self.prepend_label or self.append_label:
+                self._labeled.add(bar)
 
         if self.prepend_label:  # pragma: no branch
-            self._labeled.add(bar)
-            bar.widgets.insert(0, self.label_format.format(label=bar.label))
-
+            widgets.insert(0, self.label_format.format(label=label))
         if self.append_label:  # pragma: no branch
-            self._labeled.add(bar)
-            bar.widgets.append(self.label_format.format(label=bar.label))
+            widgets.append(self.label_format.format(label=label))
+        return True
 
     def render(self, flush: bool = True, force: bool = False) -> None:
         """Redraw every bar, only touching lines that actually changed.
@@ -419,7 +508,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
         def update(
             force: bool = True, write: bool = True
         ) -> str:  # pragma: no cover
-            self._label_bar(bar_)
+            if not self._label_bar(bar_, require_member=True):
+                return ''
             bar_.update(force=force)
             if write:
                 return typing.cast(stream.LastLineStream, bar_.fd).line
@@ -457,19 +547,16 @@ class MultiBar(dict[str, bar.ProgressBar]):
         Returns:
             Zero lines (dropped or hidden) or one rendered line.
         """
-        if self.get(bar_.label) is not bar_:
-            # Removed between the render snapshot and now (a task
-            # finished on another thread): nothing to draw, and nothing
-            # to remember about it
-            return
-        finished_at: float | None = self._finished_at.get(bar_)
-        if finished_at is None:
-            finished_at = self._finished_at.setdefault(bar_, now)
-            if self.get(bar_.label) is not bar_:  # pragma: no cover
-                # Removed while we stamped it: undo the stamp
-                self._finished_at.pop(bar_, None)
+        label: str = bar_.label
+        with self._membership_lock:
+            if super().get(label) is not bar_:
                 return
-            # Force update to get the finished format
+            finished_at: float | None = self._finished_at.get(bar_)
+            first_finish: bool = finished_at is None
+            if finished_at is None:
+                finished_at = self._finished_at.setdefault(bar_, now)
+        if first_finish:
+            # Widgets and targets may call back into membership methods.
             update(write=False)
 
         if (
@@ -477,8 +564,10 @@ class MultiBar(dict[str, bar.ProgressBar]):
             and expired is not None
             and expired >= finished_at
         ):
-            with contextlib.suppress(KeyError):  # removed concurrently
-                del self[bar_.label]
+            with self._membership_lock:
+                if super().get(label) is bar_:
+                    super().__delitem__(label)
+                    self._forget_bar(bar_)
             return
 
         if not self.show_finished:
@@ -674,10 +763,11 @@ class MultiBar(dict[str, bar.ProgressBar]):
             The bars sorted by `sort_keyfunc`, reversed if
             `sort_reverse`. The values are copied into a list first so
             a concurrent `__setitem__`/`__delitem__` from another
-            thread (the multibar is a plain `dict`, not a thread-safe
-            one) can't mutate it out from under the sort.
+            thread cannot mutate it during the snapshot. Sorting runs
+            after releasing the membership guard.
         """
-        bars = list(self.values())
+        with self._membership_lock:
+            bars: list[bar.ProgressBar] = list(super().values())
         return sorted(bars, key=self.sort_keyfunc, reverse=self.sort_reverse)
 
     def __enter__(self) -> MultiBar:

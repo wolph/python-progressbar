@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import io
 import logging
 import subprocess
@@ -524,27 +525,22 @@ def test_overlapping_stop_capturing_delivers_buffered_text_once(
     paused: threading.Event = threading.Event()
     resume: threading.Event = threading.Event()
 
-    class PausingBuffer(io.StringIO):
-        # The first stop pauses between reading and clearing the
-        # buffer; a second lifecycle must not drain the same text again
-        def getvalue(self) -> str:
-            value: str = super().getvalue()
-            if threading.current_thread().name == 'first-stop':
-                paused.set()
-                assert resume.wait(10)
-            return value
-
     streams: utils.StreamWrapper = utils.StreamWrapper()
     target: io.StringIO = io.StringIO()
     streams.stdout = streams.original_stdout = target
     monkeypatch.setattr(sys, 'stdout', target)
     wrapper: utils.WrappingIO = streams.wrap_stdout()
     streams.start_capturing()
-    wrapper.buffer = PausingBuffer()
     wrapper.write('spam')
-    first: threading.Thread = threading.Thread(
-        target=streams.stop_capturing, name='first-stop'
-    )
+
+    def stop() -> None:
+        sys.settrace(_pause_native_drain(paused, resume))
+        try:
+            streams.stop_capturing()
+        finally:
+            sys.settrace(None)
+
+    first: threading.Thread = threading.Thread(target=stop, name='first-stop')
     first.start()
     assert paused.wait(10)
     second_done: threading.Event = threading.Event()
@@ -698,6 +694,7 @@ def test_stop_capturing_returns_with_its_own_text_delivered(
     wrapper: utils.WrappingIO = streams.wrap_stdout()
     streams.start_capturing()
     wrapper.write('spam|')
+
     first: threading.Thread = threading.Thread(
         target=streams.stop_capturing, name='first-stop'
     )
@@ -763,42 +760,52 @@ def test_failed_stdout_delivery_still_delivers_the_stderr_text(
     streams.unwrap_stderr()
 
 
-class _PausingStringIO(io.StringIO):
-    """A buffer whose first `truncate()` pauses until told to go on."""
+def _pause_native_drain(
+    paused: threading.Event, resume: threading.Event
+) -> typing.Callable[..., typing.Any]:
+    """Pause real StringIO draining without replacing its methods."""
+    lines, first = inspect.getsourcelines(utils.WrappingIO._take)
+    pause_line: int = first + next(
+        i for i, line in enumerate(lines) if 'self.buffer.truncate(0)' in line
+    )
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.paused: threading.Event = threading.Event()
-        self.resume: threading.Event = threading.Event()
-        self.calls: int = 0
+    def trace(frame: typing.Any, event: str, arg: typing.Any) -> typing.Any:
+        if (
+            event == 'line'
+            and frame.f_code is utils.WrappingIO._take.__code__
+            and frame.f_lineno == pause_line
+            and not paused.is_set()
+        ):
+            paused.set()
+            assert resume.wait(10)
+        return trace
 
-    def truncate(self, size: int | None = None) -> int:
-        self.calls += 1
-        if self.calls == 1:
-            self.paused.set()
-            assert self.resume.wait(10)
-        return super().truncate(size)
+    return trace
 
 
 def test_write_during_a_drain_is_not_lost() -> None:
     # Codex-4b finding 7: `_take()` read the buffer, then truncated it,
     # and a `write()` that landed between the two was gone.
     wrapper = utils.WrappingIO(io.StringIO(), capturing=True)
-    buffer = _PausingStringIO()
-    wrapper.buffer = buffer
+    paused: threading.Event = threading.Event()
+    resume: threading.Event = threading.Event()
     wrapper.write('A|')
     taken: list[str] = []
 
     def take() -> None:
-        taken.append(wrapper._take())
+        sys.settrace(_pause_native_drain(paused, resume))
+        try:
+            taken.append(wrapper._take())
+        finally:
+            sys.settrace(None)
 
     taker = threading.Thread(target=take)
     taker.start()
-    assert buffer.paused.wait(10)
+    assert paused.wait(10)
     writer = threading.Thread(target=wrapper.write, args=('B|',))
     writer.start()
     writer.join(0.5)  # blocked behind the drain, or done without a lock
-    buffer.resume.set()
+    resume.set()
     taker.join(10)
     writer.join(10)
     assert not taker.is_alive() and not writer.is_alive()
@@ -1022,7 +1029,7 @@ def test_capture_hook_can_start_and_stop_another_capture(
     'failure_at', ['write', 'target_flush', 'buffer_flush', 'drain']
 )
 @pytest.mark.parametrize('hook_raises', [False, True])
-def test_failed_stop_still_notifies_hook_and_preserves_first_error(
+def test_failed_stop_still_notifies_hook_and_preserves_first_error(  # noqa: C901
     monkeypatch: pytest.MonkeyPatch,
     failure_at: str,
     hook_raises: bool,
@@ -1163,3 +1170,170 @@ def test_failed_start_state_propagation_still_notifies_hook(
     assert streams.capturing == 1
     assert wrapper.capturing is True
     streams.unwrap_stdout()
+
+
+@pytest.mark.parametrize('failed', ['stdout', 'stderr'])
+@pytest.mark.parametrize(
+    'operation', ['flush', 'stop_capturing', 'excepthook']
+)
+def test_drain_failure_preserves_other_stream(
+    failed: str, operation: str
+) -> None:
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    targets: dict[str, io.StringIO] = {}
+    for name in ('stdout', 'stderr'):
+        targets[name] = io.StringIO()
+        wrapper: utils.WrappingIO = utils.WrappingIO(
+            targets[name], capturing=True
+        )
+        setattr(streams, name, wrapper)
+        setattr(streams, f'wrapped_{name}', 1)
+        wrapper.write(name)
+    streams.capturing = 1
+    getattr(streams, failed).buffer.close()
+    streams.original_excepthook = lambda *args: None
+    with pytest.raises(ValueError, match='closed'):
+        if operation == 'excepthook':
+            streams.excepthook(ValueError, ValueError(), None)
+        else:
+            getattr(streams, operation)()
+    healthy: str = 'stderr' if failed == 'stdout' else 'stdout'
+    assert targets[healthy].getvalue() == healthy
+
+
+@pytest.mark.parametrize('name', ['stdout', 'stderr'])
+def test_closed_buffer_unwrap_restores_stream(
+    name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    original: io.StringIO = io.StringIO()
+    setattr(streams, f'original_{name}', original)
+    monkeypatch.setattr(sys, name, original)
+    wrapper: utils.WrappingIO = getattr(streams, f'wrap_{name}')()
+    wrapper.buffer.close()
+    try:
+        getattr(streams, f'unwrap_{name}')()
+        assert getattr(sys, name) is original
+        assert getattr(streams, name) is original
+        assert getattr(streams, f'wrapped_{name}') == 0
+    finally:
+        setattr(streams, name, original)
+        setattr(streams, f'wrapped_{name}', 0)
+        streams.unwrap_excepthook()
+
+
+@pytest.mark.parametrize(
+    'method', ['write', 'getvalue', 'seek', 'truncate', 'flush']
+)
+@pytest.mark.parametrize('instance_shadow', [False, True])
+def test_custom_buffer_methods_run_without_stream_locks(
+    method: str, instance_shadow: bool
+) -> None:
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    target: io.StringIO = io.StringIO()
+    wrapper: utils.WrappingIO = utils.WrappingIO(target, capturing=True)
+    streams.stdout = wrapper
+    streams.wrapped_stdout = 1
+    unlocked: list[bool] = []
+    native: typing.Callable[..., typing.Any] = getattr(io.StringIO, method)
+
+    def callback(buffer: io.StringIO, *args: typing.Any) -> typing.Any:
+        def observer() -> None:
+            for lock in (streams.lock, wrapper._buffer_box.lock):
+                acquired: bool = lock.acquire(timeout=0.2)
+                unlocked.append(acquired)
+                if acquired:
+                    lock.release()
+
+        thread: threading.Thread = threading.Thread(target=observer)
+        thread.start()
+        thread.join(2)
+        assert not thread.is_alive()
+        return native(buffer, *args)
+
+    if instance_shadow:
+        wrapper.buffer = io.StringIO()
+        setattr(
+            wrapper.buffer,
+            method,
+            lambda *args: callback(wrapper.buffer, *args),
+        )
+    else:
+        buffer_type: type[io.StringIO] = type(
+            'CustomBuffer', (io.StringIO,), {method: callback}
+        )
+        wrapper.buffer = buffer_type()
+    wrapper.write('pending')
+    streams.flush()
+    assert unlocked and all(unlocked)
+    assert target.getvalue() == 'pending'
+
+
+def test_two_drain_failures_preserve_first_exception_and_context() -> None:
+    failures: list[BaseException] = [
+        KeyboardInterrupt('first'),
+        RuntimeError('second'),
+    ]
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    for name, failure in zip(('stdout', 'stderr'), failures, strict=True):
+        wrapper: utils.WrappingIO = utils.WrappingIO(io.StringIO())
+
+        def fail(error: BaseException = failure) -> str:
+            raise error
+
+        wrapper.buffer.getvalue = fail  # type: ignore[method-assign]
+        setattr(streams, name, wrapper)
+        setattr(streams, f'wrapped_{name}', 1)
+    with pytest.raises(KeyboardInterrupt) as caught:
+        streams.flush()
+    assert caught.value is failures[0]
+    assert caught.value.__context__ is failures[1]
+
+
+@pytest.mark.parametrize('name', ['stdout', 'stderr'])
+def test_unwrap_restores_stream_even_when_capture_flag_raises(
+    name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    failure: KeyboardInterrupt = KeyboardInterrupt('capture flag')
+
+    class Wrapper(utils.WrappingIO):
+        armed: bool = False
+
+        def __setattr__(self, key: str, value: typing.Any) -> None:
+            if key == 'capturing' and self.armed:
+                raise failure
+            super().__setattr__(key, value)
+
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    original: io.StringIO = io.StringIO()
+    wrapper: Wrapper = Wrapper(original, capturing=True)
+    wrapper.armed = True
+    setattr(streams, name, wrapper)
+    setattr(streams, f'original_{name}', original)
+    setattr(streams, f'wrapped_{name}', 1)
+    monkeypatch.setattr(sys, name, wrapper)
+    with pytest.raises(KeyboardInterrupt) as caught:
+        getattr(streams, f'unwrap_{name}')()
+    assert caught.value is failure
+    assert getattr(sys, name) is original
+    assert getattr(streams, name) is original
+    assert getattr(streams, f'wrapped_{name}') == 0
+
+
+def test_stop_propagation_failure_notifies_hook() -> None:
+    failure: RuntimeError = RuntimeError('capture propagation')
+    notifications: list[int] = []
+
+    class Streams(utils.StreamWrapper):
+        def _apply_capturing(self) -> list[utils._Pending]:
+            raise failure
+
+        def update_capturing(self) -> None:
+            notifications.append(self.capturing)
+
+    streams: Streams = Streams()
+    streams.capturing = 1
+    with pytest.raises(RuntimeError) as caught:
+        streams.stop_capturing()
+    assert caught.value is failure
+    assert notifications == [0]

@@ -803,6 +803,7 @@ fast = [
 tests = [
     { name = "dill" },
     { name = "freezegun" },
+    { name = "markupsafe" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
@@ -818,6 +819,7 @@ requires-dist = [
     { name = "dill", marker = "extra == 'tests'", specifier = ">=0.3.6" },
     { name = "freezegun", marker = "extra == 'docs-tests'", specifier = ">=0.3.11" },
     { name = "freezegun", marker = "extra == 'tests'", specifier = ">=0.3.11" },
+    { name = "markupsafe", marker = "extra == 'tests'", specifier = ">=2.0" },
     { name = "playwright", marker = "extra == 'docs-tests'", specifier = ">=1.48.0" },
     { name = "pytest", marker = "extra == 'docs-tests'", specifier = ">=4.6.9" },
     { name = "pytest", marker = "extra == 'tests'", specifier = ">=4.6.9" },
