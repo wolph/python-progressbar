@@ -76,7 +76,9 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
             eta = '--:--:--'
         left = f'{pct:3.0f}% {count} '
         right = f' Elapsed Time: {elapsed_text} ETA: {eta}'
-        inner = max(width - len(left) - len(right) - 2, 0)
+        inner = max(
+            width - bar.custom_len(prefix + left + right + suffix) - 2, 0
+        )
         filled = int(inner * done / total) if total else inner
         barstr = '|' + '#' * filled + ' ' * (inner - filled) + '|'
         return f'{prefix}{left}{barstr}{right}{suffix}'
