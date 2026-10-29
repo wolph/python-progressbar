@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import io
 import logging
+import subprocess
 import sys
+import textwrap
 import threading
 import typing
 from collections.abc import Iterator
@@ -862,3 +864,149 @@ def test_buffer_flush_that_logs_through_the_wrapper_does_not_deadlock() -> (
         assert wrapper.target.getvalue() == 'A|B|flush-log\n'
     finally:
         logger.removeHandler(handler)
+
+
+@pytest.mark.parametrize('action', ['flush', 'stop_capturing', 'unwrap_stdout'])
+@pytest.mark.parametrize('transition', ['start_capturing', 'stop_capturing'])
+def test_buffer_flush_logging_does_not_hold_transition_lock(
+    action: str, transition: str,
+) -> None:
+    # Isolate a real logging lock cycle so a regression cannot block
+    # pytest's logging shutdown, even when daemon threads are stuck.
+    script: str = textwrap.dedent('''\
+        import io
+        import logging
+        import os
+        import sys
+        import threading
+        from progressbar import utils
+
+        streams: utils.StreamWrapper = utils.StreamWrapper()
+        target: io.StringIO = io.StringIO()
+        streams.stdout = streams.original_stdout = target
+        wrapper: utils.WrappingIO = streams.wrap_stdout()
+        streams.start_capturing()
+        entered: threading.Event = threading.Event()
+        held: threading.Event = threading.Event()
+        logger: logging.Logger = logging.getLogger('buffer-transition')
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+        handler: logging.StreamHandler = logging.StreamHandler(io.StringIO())
+        logger.addHandler(handler)
+        failures: list[BaseException] = []
+
+        class LoggingBuffer(io.StringIO):
+            fired: bool = False
+
+            def flush(self) -> None:
+                if not self.fired:
+                    self.fired = True
+                    entered.set()
+                    logger.info('buffer flush')
+                super().flush()
+
+        wrapper.buffer = LoggingBuffer()
+        wrapper.write('pending')
+
+        def writer() -> None:
+            handler.acquire()
+            try:
+                held.set()
+                assert entered.wait(3), 'buffer flush was not called'
+                getattr(streams, sys.argv[2])()
+            except BaseException as exception:
+                failures.append(exception)
+            finally:
+                handler.release()
+
+        def drainer() -> None:
+            try:
+                assert held.wait(3)
+                getattr(streams, sys.argv[1])()
+            except BaseException as exception:
+                failures.append(exception)
+
+        threads: list[threading.Thread] = [
+            threading.Thread(target=writer, daemon=True),
+            threading.Thread(target=drainer, daemon=True),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(4)
+        blocked: bool = any(thread.is_alive() for thread in threads)
+        delivered: bool = target.getvalue() == 'pending'
+        print(blocked, delivered, failures, file=sys.__stdout__, flush=True)
+        os._exit(1 if blocked or failures or not delivered else 0)
+    ''')
+    result: subprocess.CompletedProcess[str] = subprocess.run(
+        [sys.executable, '-c', script, action, transition],
+        capture_output=True, text=True, timeout=12, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_capture_transitions_notify_subclass_outside_locks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[int, bool]] = []
+    unlocked: list[bool] = []
+
+    class CustomStreams(utils.StreamWrapper):
+        def update_capturing(self) -> None:
+            def check_lock() -> None:
+                acquired: bool = self.lock.acquire(timeout=1)
+                unlocked.append(acquired)
+                if acquired:
+                    self.lock.release()
+
+            observer: threading.Thread = threading.Thread(target=check_lock)
+            observer.start()
+            observer.join(2)
+            assert not observer.is_alive()
+            calls.append((self.capturing, self.stdout.capturing))
+            super().update_capturing()
+
+    streams: CustomStreams = CustomStreams()
+    target: io.StringIO = io.StringIO()
+    streams.stdout = streams.original_stdout = target
+    monkeypatch.setattr(sys, 'stdout', target)
+    wrapper: utils.WrappingIO = streams.wrap_stdout()
+    streams.start_capturing()
+    wrapper.write('pending')
+    streams.stop_capturing()
+    assert calls == [(1, True), (0, False)]
+    assert unlocked == [True, True]
+    assert target.getvalue() == 'pending'
+    streams.unwrap_stdout()
+
+
+def test_capture_hook_can_start_and_stop_another_capture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[int] = []
+
+    class ReentrantStreams(utils.StreamWrapper):
+        reentered: bool = False
+
+        def update_capturing(self) -> None:
+            calls.append(self.capturing)
+            if self.capturing == 0 and not self.reentered:
+                self.reentered = True
+                self.start_capturing()
+                self.stdout.write('nested')
+                self.stop_capturing()
+            super().update_capturing()
+
+    streams: ReentrantStreams = ReentrantStreams()
+    target: io.StringIO = io.StringIO()
+    streams.stdout = streams.original_stdout = target
+    monkeypatch.setattr(sys, 'stdout', target)
+    wrapper: utils.WrappingIO = streams.wrap_stdout()
+    streams.start_capturing()
+    wrapper.write('outer')
+    streams.stop_capturing()
+    assert calls == [1, 0, 1, 0]
+    assert streams.capturing == 0
+    assert target.getvalue() == 'outernested'
+    streams.unwrap_stdout()

@@ -434,9 +434,14 @@ def _collect_inputs(
     filesize_available: bool = True
     for filename in args.input:
         if filename == '-':
-            if sys.stdin is None:  # started with stdin closed
+            if sys.stdin is None or sys.stdin.closed:
                 parser.error('stdin is closed, cannot read from -')
-            inputs.append(sys.stdin if args.line_mode else sys.stdin.buffer)
+            stdin: IO[typing.Any] = (
+                sys.stdin if args.line_mode else sys.stdin.buffer
+            )
+            if stdin.closed:
+                parser.error('stdin is closed, cannot read from -')
+            inputs.append(stdin)
             filesize_available = False
             continue
 

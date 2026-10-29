@@ -379,15 +379,14 @@ class WrappingIO:
                 self.buffer.seek(0)
                 self.buffer.truncate(0)
                 self.needs_clear = False
-        if value:
-            # Outside the lock: a replacement buffer's flush() may call
-            # out (log, say), and must not do so while holding a lock
-            # that write() needs
-            self.flush()
         return value
 
     def _deliver(self, value: str) -> None:
         """Write text taken by `_take()` to `target`, then flush it."""
+        if value:
+            # A replacement flush() may log. Call it only during
+            # delivery, outside both the buffer and transition locks.
+            self.flush()
         if value and not self.target.closed:
             self.target.write(value)
         # when explicitly flushing, always flush the target as well
@@ -570,6 +569,7 @@ class StreamWrapper:
             self.capturing += 1
             # Never flushes here: the count just went above zero
             self._apply_capturing()
+        self.update_capturing()
 
     def stop_capturing(self, bar: _ProgressListener | None = None) -> None:
         """Unregister `bar` and drop the shared capturing refcount.
@@ -588,6 +588,10 @@ class StreamWrapper:
             self.capturing = max(self.capturing - 1, 0)
             pending: list[_Pending] = self._apply_capturing()
         self._deliver(pending)
+        # Keep the public subclass hook outside the transition lock.
+        # The zero transition already owns its drained text, even if
+        # another capture starts before this callback runs.
+        self.update_capturing()
 
     def update_capturing(self) -> None:  # pragma: no cover
         """Propagate the capturing refcount to the wrapped streams.

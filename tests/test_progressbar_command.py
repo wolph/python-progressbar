@@ -594,6 +594,38 @@ def test_closed_stdin_is_a_usage_error(
     assert output.read_bytes() == b'precious'
 
 
+@pytest.mark.parametrize(
+    ('line_mode', 'closed_part'),
+    [(False, 'text'), (True, 'text'), (False, 'binary')],
+)
+def test_closed_stdin_stream_leaves_output_untouched(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    line_mode: bool,
+    closed_part: str,
+) -> None:
+    output: pathlib.Path = tmp_path / 'out.bin'
+    output.write_bytes(b'precious')
+    binary: io.BytesIO = io.BytesIO(b'input')
+    stdin: io.StringIO | io.TextIOWrapper
+    if closed_part == 'text':
+        stdin = io.TextIOWrapper(binary)
+        stdin.close()
+    else:
+        # A replacement stdin can expose a closed binary stream while
+        # its text wrapper remains open.
+        class SeparateStdin(io.StringIO):
+            buffer: io.BytesIO = binary
+
+        stdin = SeparateStdin('input')
+        binary.close()
+    monkeypatch.setattr(main.sys, 'stdin', stdin)
+    with pytest.raises(SystemExit) as excinfo:
+        main.main([*(['-l'] if line_mode else []), '-', '-o', str(output)])
+    assert excinfo.value.code == 2
+    assert output.read_bytes() == b'precious'
+
+
 def test_unreadable_input_leaves_the_output_untouched(
     tmp_path: pathlib.Path,
 ) -> None:
