@@ -866,14 +866,17 @@ def test_buffer_flush_that_logs_through_the_wrapper_does_not_deadlock() -> (
         logger.removeHandler(handler)
 
 
-@pytest.mark.parametrize('action', ['flush', 'stop_capturing', 'unwrap_stdout'])
+@pytest.mark.parametrize(
+    'action', ['flush', 'stop_capturing', 'unwrap_stdout']
+)
 @pytest.mark.parametrize('transition', ['start_capturing', 'stop_capturing'])
 def test_buffer_flush_logging_does_not_hold_transition_lock(
-    action: str, transition: str,
+    action: str,
+    transition: str,
 ) -> None:
     # Isolate a real logging lock cycle so a regression cannot block
     # pytest's logging shutdown, even when daemon threads are stuck.
-    script: str = textwrap.dedent('''\
+    script: str = textwrap.dedent("""\
         import io
         import logging
         import os
@@ -938,10 +941,13 @@ def test_buffer_flush_logging_does_not_hold_transition_lock(
         delivered: bool = target.getvalue() == 'pending'
         print(blocked, delivered, failures, file=sys.__stdout__, flush=True)
         os._exit(1 if blocked or failures or not delivered else 0)
-    ''')
+    """)
     result: subprocess.CompletedProcess[str] = subprocess.run(
         [sys.executable, '-c', script, action, transition],
-        capture_output=True, text=True, timeout=12, check=False,
+        capture_output=True,
+        text=True,
+        timeout=12,
+        check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
