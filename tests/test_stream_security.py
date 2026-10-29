@@ -1010,3 +1010,150 @@ def test_capture_hook_can_start_and_stop_another_capture(
     assert streams.capturing == 0
     assert target.getvalue() == 'outernested'
     streams.unwrap_stdout()
+
+
+@pytest.mark.parametrize(
+    'failure_at', ['write', 'target_flush', 'buffer_flush', 'drain']
+)
+@pytest.mark.parametrize('hook_raises', [False, True])
+def test_failed_stop_still_notifies_hook_and_preserves_first_error(
+    monkeypatch: pytest.MonkeyPatch,
+    failure_at: str,
+    hook_raises: bool,
+) -> None:
+    failure: OSError = OSError('original stream failure')
+    calls: list[int] = []
+    unlocked: list[bool] = []
+
+    class FailingTarget(io.StringIO):
+        armed: bool = True
+
+        def write(self, text: str) -> int:
+            if failure_at == 'write' and self.armed:
+                self.armed = False
+                raise failure
+            return super().write(text)
+
+        def flush(self) -> None:
+            if failure_at == 'target_flush' and self.armed:
+                self.armed = False
+                raise failure
+            super().flush()
+
+    class FailingBuffer(io.StringIO):
+        armed: bool = True
+
+        def getvalue(self) -> str:
+            if failure_at == 'drain' and self.armed:
+                self.armed = False
+                raise failure
+            return super().getvalue()
+
+        def flush(self) -> None:
+            if failure_at == 'buffer_flush' and self.armed:
+                self.armed = False
+                raise failure
+            super().flush()
+
+    class CustomStreams(utils.StreamWrapper):
+        def update_capturing(self) -> None:
+            calls.append(self.capturing)
+
+            def check_locks() -> None:
+                for lock in (self.lock, self.stdout._buffer_box.lock):
+                    acquired: bool = lock.acquire(timeout=1)
+                    unlocked.append(acquired)
+                    if acquired:
+                        lock.release()
+
+            observer: threading.Thread = threading.Thread(target=check_locks)
+            observer.start()
+            observer.join(3)
+            assert not observer.is_alive()
+            super().update_capturing()
+            if self.capturing == 0 and hook_raises:
+                raise RuntimeError('secondary callback failure')
+
+    streams: CustomStreams = CustomStreams()
+    out: FailingTarget = FailingTarget()
+    err: io.StringIO = io.StringIO()
+    streams.stdout = streams.original_stdout = out
+    streams.stderr = streams.original_stderr = err
+    monkeypatch.setattr(sys, 'stdout', out)
+    monkeypatch.setattr(sys, 'stderr', err)
+    stdout: utils.WrappingIO = streams.wrap_stdout()
+    stderr: utils.WrappingIO = streams.wrap_stderr()
+    streams.start_capturing()
+    stdout.buffer = FailingBuffer()
+    stdout.write('spam')
+    stderr.write('eggs')
+    with pytest.raises(OSError) as excinfo:
+        streams.stop_capturing()
+    assert excinfo.value is failure
+    if hook_raises:
+        assert isinstance(failure.__context__, RuntimeError)
+        assert str(failure.__context__) == 'secondary callback failure'
+    assert calls == [1, 0]
+    assert unlocked == [True, True, True, True]
+    assert streams.capturing == 0
+    assert stdout.capturing is False and stderr.capturing is False
+    assert err.getvalue() == 'eggs'
+    assert out.getvalue() == (
+        'spam' if failure_at in ('target_flush', 'drain') else ''
+    )
+    streams.unwrap_stdout()
+    streams.unwrap_stderr()
+
+
+def test_failed_start_state_propagation_still_notifies_hook(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    failure: OSError = OSError('capture flag failed')
+    calls: list[int] = []
+    unlocked: list[bool] = []
+
+    class FailingWrapper(utils.WrappingIO):
+        armed: bool = False
+
+        def __setattr__(self, name: str, value: typing.Any) -> None:
+            if name == 'capturing' and self.armed:
+                self.armed = False
+                raise failure
+            super().__setattr__(name, value)
+
+    class CustomStreams(utils.StreamWrapper):
+        def update_capturing(self) -> None:
+            calls.append(self.capturing)
+
+            def check_lock() -> None:
+                acquired: bool = self.lock.acquire(timeout=1)
+                unlocked.append(acquired)
+                if acquired:
+                    self.lock.release()
+
+            observer: threading.Thread = threading.Thread(target=check_lock)
+            observer.start()
+            observer.join(2)
+            assert not observer.is_alive()
+            super().update_capturing()
+            raise RuntimeError('secondary callback failure')
+
+    streams: CustomStreams = CustomStreams()
+    target: io.StringIO = io.StringIO()
+    streams.stdout = streams.original_stdout = target
+    monkeypatch.setattr(sys, 'stdout', target)
+    streams.wrap_stdout()
+    wrapper: FailingWrapper = FailingWrapper(target)
+    streams.stdout = wrapper
+    monkeypatch.setattr(sys, 'stdout', wrapper)
+    wrapper.armed = True
+    with pytest.raises(OSError) as excinfo:
+        streams.start_capturing()
+    assert excinfo.value is failure
+    assert isinstance(failure.__context__, RuntimeError)
+    assert str(failure.__context__) == 'secondary callback failure'
+    assert calls == [1]
+    assert unlocked == [True]
+    assert streams.capturing == 1
+    assert wrapper.capturing is True
+    streams.unwrap_stdout()

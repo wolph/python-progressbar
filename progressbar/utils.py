@@ -556,11 +556,16 @@ class StreamWrapper:
     def start_capturing(self, bar: _ProgressListener | None = None) -> None:
         """Turn capturing on for `bar` and bump the shared refcount.
 
+        Notify `update_capturing()` outside the locks after propagating
+        the new state. If propagation fails after the count changes,
+        still notify the hook and preserve the propagation failure.
+
         Args:
             bar: Registered as a listener so it's notified (`update()`)
                 when captured output completes a line. Omit to just
                 bump the refcount without listening.
         """
+        failure: BaseException | None = None
         with self.lock:
             if bar:  # pragma: no branch
                 with self.listeners_lock:
@@ -568,16 +573,26 @@ class StreamWrapper:
 
             self.capturing += 1
             # Never flushes here: the count just went above zero
-            self._apply_capturing()
-        self.update_capturing()
+            try:
+                self._apply_capturing()
+            except BaseException as exception:  # noqa: BLE001
+                failure = exception
+        self._notify_capturing(failure)
 
     def stop_capturing(self, bar: _ProgressListener | None = None) -> None:
         """Unregister `bar` and drop the shared capturing refcount.
+
+        Notify `update_capturing()` outside the locks after propagating
+        state and attempting delivery of this stop's owned text. The
+        hook still runs if propagation or delivery fails. The original
+        failure takes precedence over an additional hook failure.
 
         Args:
             bar: The listener to remove, if it was registered via
                 `start_capturing`.
         """
+        pending: list[_Pending] = []
+        failure: BaseException | None = None
         with self.lock:
             if bar:  # pragma: no branch
                 with self.listeners_lock, contextlib.suppress(KeyError):
@@ -586,12 +601,27 @@ class StreamWrapper:
             # Never go negative: an unmatched stop would otherwise make
             # the next start_capturing() a no-op
             self.capturing = max(self.capturing - 1, 0)
-            pending: list[_Pending] = self._apply_capturing()
-        self._deliver(pending)
-        # Keep the public subclass hook outside the transition lock.
-        # The zero transition already owns its drained text, even if
-        # another capture starts before this callback runs.
-        self.update_capturing()
+            try:
+                pending = self._apply_capturing()
+            except BaseException as exception:  # noqa: BLE001
+                failure = exception
+        if failure is None:
+            try:
+                self._deliver(pending)
+            except BaseException as exception:  # noqa: BLE001
+                failure = exception
+        self._notify_capturing(failure)
+
+    def _notify_capturing(self, failure: BaseException | None) -> None:
+        """Notify the public hook without replacing an earlier failure."""
+        if failure is None:
+            self.update_capturing()
+        else:
+            try:
+                self.update_capturing()
+            finally:
+                # Keep a hook failure as the original error's context.
+                raise failure
 
     def update_capturing(self) -> None:  # pragma: no cover
         """Propagate the capturing refcount to the wrapped streams.
@@ -600,6 +630,13 @@ class StreamWrapper:
         so whatever's left in the buffer reaches the terminal as soon
         as the last bar stops capturing, rather than sitting there
         until something else happens to trigger a flush.
+
+        Start and stop invoke overrides after the state propagation
+        attempt. Stop also attempts delivery before invoking the hook,
+        even if that attempt fails. Calling `super()` reconciles the
+        current state again and can flush an already empty target.
+        Concurrent transitions can change the state before the hook
+        runs, so it can observe a later transition's count and flags.
         """
         with self.lock:
             pending: list[_Pending] = self._apply_capturing()
