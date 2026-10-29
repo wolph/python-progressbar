@@ -122,3 +122,7 @@ max-line-length = 79
 
 [lint.flake8-pytest-style]
 mark-parentheses = true
+
+[lint.flake8-import-conventions.aliases]
+# Preserve the established module spelling, including public annotations.
+datetime = 'datetime'

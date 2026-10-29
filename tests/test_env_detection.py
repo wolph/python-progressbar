@@ -10,6 +10,11 @@ propagate.
 
 from __future__ import annotations
 
+import enum
+import io
+import os
+import sys
+import types
 import typing
 
 import pytest
@@ -93,3 +98,32 @@ def test_is_terminal_plain_tty_without_ansi(clean_environment: None) -> None:
 def test_is_terminal_non_tty(clean_environment: None) -> None:
     fd = typing.cast(typing.IO[str], TtyFd(False))
     assert env.is_terminal(fd) is False
+
+
+def test_windows_console_mode_ignored_for_non_tty(
+    clean_environment: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The console-mode probe reads the process console, not `fd`: a
+    # redirected stream must not be reported as an ANSI terminal just
+    # because the console happens to have processed output enabled.
+    fake_windows: types.ModuleType = types.ModuleType('fake_windows')
+
+    class FakeFlags(enum.IntFlag):
+        ENABLE_PROCESSED_OUTPUT = 1
+
+    def get_console_mode() -> int:  # pragma: no cover - must not be called
+        return 1
+
+    fake_windows.WindowsConsoleModeFlags = FakeFlags  # type: ignore[attr-defined]
+    fake_windows.get_console_mode = get_console_mode  # type: ignore[attr-defined]
+    monkeypatch.setitem(
+        sys.modules, 'progressbar.terminal.os_specific.windows', fake_windows
+    )
+    monkeypatch.setattr(
+        'progressbar.terminal.os_specific.windows',
+        fake_windows,
+        raising=False,
+    )
+    monkeypatch.setattr(os, 'name', 'nt')
+    assert env.is_ansi_terminal(io.StringIO()) is not True

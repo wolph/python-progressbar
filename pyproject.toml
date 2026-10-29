@@ -107,7 +107,7 @@ classifiers = [
 ]
 
 requires-python = '>=3.10'
-dependencies = ['python-utils >= 3.8.1']
+dependencies = ['python-utils >= 4.1.4']
 
 [project.urls]
 bugs = 'https://github.com/wolph/python-progressbar/issues'
@@ -133,6 +133,7 @@ docs = [
 ]
 tests = [
     'dill>=0.3.6',
+    'markupsafe>=2.0',
     'freezegun>=0.3.11',
     'pytest-cov>=2.6.1',
     'pytest>=4.6.9',

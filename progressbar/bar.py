@@ -41,6 +41,28 @@ from . import (
 )
 from .terminal import os_specific
 
+_PACKAGE_DIR: str = os.path.dirname(os.path.abspath(__file__))
+
+
+def _caller_stacklevel() -> int:
+    """Return the `stacklevel` that points a warning at the first frame
+    outside progressbar.
+
+    `warnings.warn()` counts level 1 as the function that calls it, so the
+    walk starts at this helper's caller and climbs until the code is not
+    ours. A fixed level would break as soon as a subclass adds an
+    `__init__` between the user and `ProgressBar.__init__`.
+    """
+    frame: FrameType | None = sys._getframe(1)
+    level: int = 1
+    while frame is not None and frame.f_code.co_filename.startswith(
+        _PACKAGE_DIR
+    ):
+        frame = frame.f_back
+        level += 1
+    return level
+
+
 try:
     # Optional native accelerator, shipped as the ``progressbar2[fast]`` extra
     # (the separate ``speedups`` package). When importable, the iterator path
@@ -52,6 +74,56 @@ try:
     ).FastBarIterator
 except Exception:  # pragma: no cover - environmental (absent / ABI mismatch)
     _FastBarIterator = None
+
+
+_bad_interval_seen: set[str] = set()
+#: A shared lock box, so a forked child gets an unlocked lock
+_bad_interval_lock: utils._SharedLock = utils._SharedLock()
+
+
+def _reset_bad_interval_warnings() -> None:
+    """Forget the bad values warned about so far (for tests)."""
+    with _bad_interval_lock.lock:
+        _bad_interval_seen.clear()
+
+
+def _warn_bad_minimum_update_interval(raw: str) -> None:
+    """Warn once per distinct bad value, not once per bar.
+
+    The value is recorded under a lock before the warning goes out, so
+    two bars constructed at the same moment on different threads
+    produce one record, and the warning itself is logged outside the
+    lock. Every distinct bad value seen in the process is remembered.
+    """
+    with _bad_interval_lock.lock:
+        if raw in _bad_interval_seen:
+            return
+        _bad_interval_seen.add(raw)
+    logger.warning(
+        'Ignoring PROGRESSBAR_MINIMUM_UPDATE_INTERVAL=%r: '
+        'not a non-negative finite number',
+        raw,
+    )
+
+
+def _env_minimum_update_interval() -> float:
+    """Read `PROGRESSBAR_MINIMUM_UPDATE_INTERVAL`, ignoring bad values.
+
+    A non-numeric, negative or non-finite value is logged as a warning
+    and falls back to 0, so a stray environment variable cannot stop a
+    bar from being built. An unset or empty variable is 0 silently.
+    """
+    raw: str = os.environ.get('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', '')
+    if not raw.strip():
+        return 0.0
+    try:
+        value: float = float(raw)
+    except ValueError:
+        value = -1.0
+    if not math.isfinite(value) or value < 0:
+        _warn_bad_minimum_update_interval(raw)
+        return 0.0
+    return value
 
 
 @functools.cache
@@ -518,18 +590,38 @@ class _ResizeRegistry:
     A single signal handler dispatches to every live bar. The original
     handler is saved when the first bar registers and restored when the
     last one unregisters, so overlapping bars can finish in any order
-    without leaving a dangling handler installed.
+    without leaving a dangling handler installed. A bar that is garbage
+    collected without `finish()` counts as unregistered too.
+
+    `signal.signal` only works on the main thread, so a last bar
+    finished elsewhere leaves the shared handler in place with nobody
+    to dispatch to. The saved handler is kept for that case, and the
+    restore is retried at the next registration change or the next
+    resize signal (which does run on the main thread). Whether the
+    shared handler is installed is read from `signal.getsignal` rather
+    than remembered, so a handler that other code set over it is never
+    clobbered by a restore.
     """
 
     bars: typing.ClassVar[weakref.WeakSet[ResizableMixin]] = weakref.WeakSet()
     previous_handler: typing.ClassVar[typing.Any] = None
 
     @classmethod
+    def installed(cls) -> bool:
+        """Return whether `handle_resize` is the handler set on SIGWINCH."""
+        import signal
+
+        return (
+            signal.getsignal(signal.SIGWINCH)  # type: ignore[attr-defined]
+            == cls.handle_resize
+        )
+
+    @classmethod
     def install(cls, bar: ResizableMixin) -> None:
         """Register `bar` for resize dispatch, installing the handler once.
 
         The process-global `SIGWINCH` handler is only installed (saving
-        whatever handler was previously set) on the first registration. A
+        whatever handler was previously set) when it is not ours yet. A
         second, third, etc. overlapping bar just joins the `WeakSet`.
         """
         import signal
@@ -538,7 +630,7 @@ class _ResizeRegistry:
             # Not available on Windows
             return
 
-        if not cls.bars:
+        if not cls.installed():
             cls.previous_handler = signal.getsignal(
                 signal.SIGWINCH  # type: ignore[attr-defined]
             )
@@ -548,6 +640,7 @@ class _ResizeRegistry:
             )
 
         cls.bars.add(bar)
+        weakref.finalize(bar, cls._restore_if_idle)
 
     @classmethod
     def uninstall(cls, bar: ResizableMixin) -> None:
@@ -558,27 +651,65 @@ class _ResizeRegistry:
         keep the shared handler installed regardless of registration
         order.
         """
+        cls.bars.discard(bar)
+        cls._restore_if_idle()
+
+    @classmethod
+    def _restore_if_idle(cls) -> None:
+        """Put the saved handler back when no live bar is registered.
+
+        Iterating the `WeakSet` skips entries whose bar is already dead
+        but not yet removed, which is the state inside a finalizer.
+        """
         import signal
 
         if not hasattr(signal, 'SIGWINCH'):  # pragma: no cover
             # Not available on Windows
             return
-
-        cls.bars.discard(bar)
-        if not cls.bars:
+        if not cls.installed() or any(True for _ in cls.bars):
+            return
+        handler = cls.previous_handler
+        if handler is None:
+            # `getsignal` returns None for a handler installed from C,
+            # which cannot be reinstalled from Python. SIGWINCH is
+            # ignored by default, so the default is the closest fit.
+            handler = signal.SIG_DFL
+        try:
             signal.signal(
                 signal.SIGWINCH,  # type: ignore[attr-defined]
-                cls.previous_handler,
+                handler,
             )
-            cls.previous_handler = None
+        except ValueError:
+            # Not the main thread: keep `previous_handler` and retry at
+            # the next registration change or resize signal
+            return
+        cls.previous_handler = None
 
     @classmethod
     def handle_resize(
         cls, signum: int | None = None, frame: FrameType | None = None
     ) -> None:
-        """Dispatch a `SIGWINCH` to every currently-registered bar."""
+        """Dispatch a `SIGWINCH` to every currently-registered bar.
+
+        A bar whose `_handle_resize` raises is logged and skipped, so
+        the other bars still get the resize and nothing propagates out
+        of the signal handler into unrelated main-thread code.
+        """
         for bar in list(cls.bars):
+            cls._dispatch(bar, signum, frame)
+        cls._restore_if_idle()
+
+    @staticmethod
+    def _dispatch(
+        bar: ResizableMixin, signum: int | None, frame: FrameType | None
+    ) -> None:
+        """Resize one bar, logging instead of raising when it fails."""
+        try:
             bar._handle_resize(signum, frame)
+        except Exception:
+            logger.warning(
+                'Ignoring a failed resize of %r', bar, exc_info=True
+            )
 
 
 class ResizableMixin(ProgressBarMixinBase):
@@ -764,7 +895,9 @@ class ProgressBar(
         line_offset: The number of lines to offset the progressbar from
             your current line. This is useful if you have other output or
             multiple progressbars.
-        desc: tqdm-style alias for `prefix` (rendered as `f'{desc}: '`).
+        desc: tqdm-style description, rendered literally as
+            `f'{desc}: '` in front of the bar. Unlike `prefix` it is
+            never a format template: braces in a file name stay braces.
             Ignored if `prefix` is also given.
         total: tqdm-style alias for `max_value`. Ignored if `max_value` is
             also given.
@@ -849,9 +982,14 @@ class ProgressBar(
         if max_value is None and total is not None:
             # tqdm-style alias for `max_value`
             max_value = total
+        self._literal_prefix: str | None = None
         if prefix is None and desc is not None:
-            # tqdm-style alias for `prefix`
+            # tqdm-style alias for `prefix`: `desc` is literal text, as in
+            # tqdm and as the fast path renders it. Remember the exact
+            # string, so `_init_prefix` escapes its braces and a prefix
+            # assigned later is a template again.
             prefix = f'{desc}: '
+            self._literal_prefix = prefix
 
         if max_value and min_value > typing.cast(NumberT, max_value):
             raise ValueError(
@@ -904,7 +1042,7 @@ class ProgressBar(
                 'The usage of `maxval` is deprecated, please use '
                 '`max_value` instead',
                 DeprecationWarning,
-                stacklevel=1,
+                stacklevel=_caller_stacklevel(),
             )
             max_value = kwargs.get('maxval')
 
@@ -913,7 +1051,7 @@ class ProgressBar(
                 'The usage of `poll` is deprecated, please use '
                 '`poll_interval` instead',
                 DeprecationWarning,
-                stacklevel=1,
+                stacklevel=_caller_stacklevel(),
             )
             poll_interval = kwargs.get('poll')
 
@@ -964,7 +1102,7 @@ class ProgressBar(
         self.min_poll_interval = max(
             min_poll_interval or self._MINIMUM_UPDATE_INTERVAL,
             self._MINIMUM_UPDATE_INTERVAL,
-            float(os.environ.get('PROGRESSBAR_MINIMUM_UPDATE_INTERVAL', 0)),
+            _env_minimum_update_interval(),
         )  # type: ignore
 
     def _seed_variables(self, variables: dict[str, typing.Any] | None) -> None:
@@ -1665,9 +1803,12 @@ class ProgressBar(
         if self.prefix:
             widgets = _load_widgets()
 
+            template: str = self.prefix
+            if template is getattr(self, '_literal_prefix', None):
+                # A desc is literal text: escape its braces for the label
+                template = template.replace('{', '{{').replace('}', '}}')
             self.widgets.insert(
-                0,
-                widgets.FormatLabel(self.prefix, new_style=True),
+                0, widgets.FormatLabel(template, new_style=True)
             )
             self.prefix = None
 
@@ -1738,7 +1879,7 @@ class ProgressBar(
         warnings.warn(
             'The usage of `currval` is deprecated, please use `value` instead',
             DeprecationWarning,
-            stacklevel=1,
+            stacklevel=_caller_stacklevel(),
         )
         return self.value
 

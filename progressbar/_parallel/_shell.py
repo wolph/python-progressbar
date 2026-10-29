@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import functools
 import os
+import re
 import shlex
 import subprocess
 import typing
@@ -18,6 +19,10 @@ from . import _sync
 
 #: The two placeholder spellings recognized in command templates.
 _PLACEHOLDERS: tuple[str, str] = ('{}', '{item}')
+
+#: Matches either placeholder spelling, so a template is substituted in
+#: one pass and placeholder text inside an item is never re-expanded.
+_PLACEHOLDER_RE: re.Pattern[str] = re.compile(r'\{(?:item)?\}')
 
 #: A command template: a string, an argv list, or a callable that
 #: builds the argv for one item.
@@ -29,10 +34,21 @@ CommandT = (
 
 
 def _substitute(token: str, item_text: str) -> str:
-    """Replace the placeholder spellings inside one token."""
-    for placeholder in _PLACEHOLDERS:
-        token = token.replace(placeholder, item_text)
-    return token
+    """Replace the placeholder spellings inside one token in one pass."""
+    return _PLACEHOLDER_RE.sub(lambda _match: item_text, token)
+
+
+def _check_shell(command: CommandT, *, shell: bool) -> None:
+    """Reject ``shell=True`` with a list or callable template.
+
+    `subprocess.run` with a sequence and ``shell=True`` runs only the
+    first element through the shell and drops the rest, item included.
+    """
+    if shell and not isinstance(command, str):
+        raise TypeError(
+            'shell=True requires a str command template, got '
+            f'{type(command).__name__}'
+        )
 
 
 def _has_placeholder(tokens: typing.Iterable[str]) -> bool:
@@ -66,7 +82,11 @@ def build_argv(
 
     Returns:
         The argv list, or the command string when ``shell=True``.
+
+    Raises:
+        TypeError: ``shell=True`` with a list or callable template.
     """
+    _check_shell(command, shell=shell)
     item_text: str = str(item)
     if callable(command):
         return [str(part) for part in command(item)]
@@ -120,6 +140,7 @@ def make_runner(
     env: typing.Any = None,
 ) -> typing.Callable[[typing.Any], subprocess.CompletedProcess[typing.Any]]:
     """Bind a command template into a per-item callable for `map`."""
+    _check_shell(command, shell=shell)
     return functools.partial(
         _run_one,
         command,

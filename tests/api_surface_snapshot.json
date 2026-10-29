@@ -485,7 +485,7 @@
     "StringT": "type-alias",
     "T": "type-alias",
     "TracebackType": "re-export",
-    "WrappingIO": "class(target, capturing=?, listeners=?)",
+    "WrappingIO": "class(target, capturing=?, listeners=?, lock=?)",
     "annotations": "_Feature",
     "deltas_to_seconds": "callable(*deltas, default=?)",
     "epoch": "datetime",

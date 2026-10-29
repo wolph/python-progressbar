@@ -8,12 +8,14 @@ widget implements.
 
 from __future__ import annotations
 
+import _string  # type: ignore[import-not-found]
 import abc
 import collections.abc
 import contextlib
 import datetime
 import functools
 import logging
+import string
 import typing
 from typing import ClassVar
 
@@ -26,6 +28,102 @@ if typing.TYPE_CHECKING:
     from .bar import NumberT, ProgressBarMixinBase
 
 logger = logging.getLogger(__name__)
+
+
+class _SafeFormatter(string.Formatter):
+    """`str.format` over widget data that refuses dunder attribute walks.
+
+    Format templates may come from text the application did not write
+    (a `prefix`, a `Variable` format). A field such as
+    `{variables.__class__.__init__.__globals__}` would otherwise reach
+    module globals, so any attribute segment starting with `__` raises
+    `ValueError` before it is looked up. A single leading underscore is
+    allowed: `{variables._my_var}` is a documented way to reach a
+    variable, and a user object's own `_private` attribute is the
+    user's business.
+    """
+
+    #: Non-dunder attributes that also lead from an object stored as a
+    #: bar variable (a generator, coroutine, traceback or frame) to a
+    #: frame and its globals.
+    blocked_attributes: frozenset[str] = frozenset(
+        {
+            'f_back',
+            'f_builtins',
+            'f_globals',
+            'f_locals',
+            'gi_frame',
+            'cr_frame',
+            'ag_frame',
+            'tb_frame',
+        }
+    )
+
+    def get_field(
+        self,
+        field_name: str,
+        args: typing.Sequence[typing.Any],
+        kwargs: typing.Mapping[str, typing.Any],
+    ) -> tuple[typing.Any, str]:
+        self.validate_field(field_name)
+        return super().get_field(field_name, args, kwargs)
+
+    def validate_field(self, field_name: str) -> None:
+        """Check every attribute before any value is looked up."""
+        rest: typing.Iterable[tuple[bool, typing.Any]]
+        _first, rest = _string.formatter_field_name_split(field_name)
+        for is_attr, name in rest:
+            if is_attr and (
+                str(name).startswith('__') or name in self.blocked_attributes
+            ):
+                raise ValueError(
+                    f'attribute {name!r} is not allowed in a format template',
+                )
+
+    def validate(self, template: str, depth: int = 2) -> None:
+        """Check specialised templates before handing them to their owner."""
+        if depth < 0:
+            raise ValueError('Max string recursion exceeded')
+        for _, field, spec, conversion in self.parse(template):
+            if field is not None:
+                self.validate_field(field)
+                if conversion is not None and conversion not in (
+                    's',
+                    'r',
+                    'a',
+                ):
+                    raise ValueError(
+                        f'Unknown conversion specifier {conversion}'
+                    )
+                self.validate(spec or '', depth - 1)
+
+
+_SAFE_FORMATTER: _SafeFormatter = _SafeFormatter()
+
+
+def _safe_format(
+    template: object,
+    data: typing.Mapping[str, typing.Any],
+) -> str:
+    """Render safe field paths while preserving specialised formatting.
+
+    Application-owned format methods retain their escaping and result
+    types. Field paths in the underlying string or proxy text are
+    validated before delegation. Application code in format methods
+    and proxies remains trusted.
+    """
+    if type(template) is str:
+        return _SAFE_FORMATTER.vformat(template, (), data)
+    formatter: typing.Any = getattr(template, 'format', None)
+    if not callable(formatter):
+        raise TypeError(
+            f'format template must be a str, got {type(template).__name__}',
+        )
+    _SAFE_FORMATTER.validate(
+        str.__str__(template) if isinstance(template, str) else str(template)
+    )
+    return typing.cast(str, formatter(**data))
+
 
 MAX_DATE = datetime.date.max
 MAX_TIME = datetime.time.max
@@ -198,14 +296,14 @@ class FormatWidgetMixin:
         format_ = self.get_format(progress, data, format)
         try:
             if self.new_style:
-                return format_.format(**data)
+                return _safe_format(format_, data)
             else:
                 return format_ % data
-        except (TypeError, KeyError):
+        except (TypeError, KeyError, IndexError, ValueError):
             logger.exception(
-                'Error while formatting %r with data: %r',
+                'Error while formatting %r with data keys: %r',
                 format_,
-                data,
+                list(data),
             )
             raise
 
@@ -2106,7 +2204,7 @@ class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
             else:
                 context['formatted_value'] = '-' * self.width
 
-        return self.format.format(**context)
+        return _safe_format(self.format, context)
 
 
 class DynamicMessage(Variable):

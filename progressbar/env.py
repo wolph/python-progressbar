@@ -162,10 +162,11 @@ def is_ansi_terminal(
     PyCharm terminal (not under pytest) short-circuits straight to
     `True`, since both render ANSI without being a tty. Otherwise,
     `fd.isatty()` plus a `TERM` match against `ANSI_TERM_RE`, or
-    `ANSICON` being set, or (on Windows) the console-mode probe (see
-    `os_specific.windows.get_console_mode` for what that probe actually
-    tests, which is not what its flag name suggests). Only the errors a
-    stream can legitimately raise while being probed are swallowed:
+    `ANSICON` being set, or (on Windows, for a tty only) the
+    console-mode probe (see `os_specific.windows.get_console_mode` for
+    what that probe actually tests, which is not what its flag name
+    suggests). Only the errors a stream can legitimately raise while
+    being probed are swallowed:
     `OSError` (real I/O), `ValueError` (closed/detached file) and
     `AttributeError` (no `isatty` at all). Anything else is a bug and
     propagates.
@@ -199,7 +200,7 @@ def is_ansi_terminal(
             # ANSICON is a Windows ANSI compatible console
             elif 'ANSICON' in os.environ:
                 is_terminal = True
-            elif os.name == 'nt':
+            elif os.name == 'nt' and is_tty:
                 from .terminal.os_specific import windows
 
                 return bool(
