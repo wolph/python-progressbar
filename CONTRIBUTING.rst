@@ -128,8 +128,10 @@ Ready to contribute? Here's how to set up `python-progressbar` for local develop
     $ uv run tox
 
    Stage the formatted changes before committing. A checkout-local
-   pre-commit gate, when installed, checks the staged snapshot and leaves
-   partially staged files untouched.
+   pre-commit gate, when installed, checks the staged snapshot with current
+   Ruff and the configured pre-commit hooks, including the CI-pinned Ruff
+   version. It leaves partially staged files untouched. Configured fixes
+   run only in the disposable snapshot and cause the commit to be rejected.
 
 6. Commit your changes and push your branch to GitHub with `git-flow-avh`_::
 

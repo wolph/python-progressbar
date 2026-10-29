@@ -5,6 +5,8 @@ repos:
     rev: v6.0.0
     hooks:
     -   id: end-of-file-fixer
+        # Preserve the upstream bytes copied by the vendor update command.
+        exclude: '^docs/_static/vendor/xterm\.js$'
     -   id: trailing-whitespace
     -   id: check-yaml
     -   id: check-added-large-files

@@ -14,6 +14,7 @@ import atexit
 import contextlib
 import datetime
 import io
+import itertools
 import logging
 import os
 import re
@@ -511,6 +512,31 @@ class WrappingIO:
         self.close()
 
 
+def _link_exception_context(
+    primary: BaseException,
+    secondary: BaseException,
+    *,
+    prepend: bool = False,
+) -> None:
+    """Retain distinct context objects once, preserving hook precedence."""
+    heads: tuple[BaseException | None, BaseException | None] = (
+        (secondary, primary.__context__)
+        if prepend
+        else (primary.__context__, secondary)
+    )
+    chain: list[BaseException] = [primary]
+    seen: set[int] = {id(primary)}
+    for head in heads:
+        current: BaseException | None = head
+        while current is not None and id(current) not in seen:
+            chain.append(current)
+            seen.add(id(current))
+            current = current.__context__
+    for previous, following in itertools.pairwise(chain):
+        previous.__context__ = following
+    chain[-1].__context__ = None
+
+
 class StreamWrapper:
     """Wrap `sys.stdout`/`sys.stderr` for output, logging, and a bar to share.
 
@@ -658,9 +684,9 @@ class StreamWrapper:
         else:
             try:
                 self.update_capturing()
-            finally:
-                # Keep a hook failure as the original error's context.
-                raise failure
+            except BaseException as exception:  # noqa: BLE001
+                _link_exception_context(failure, exception, prepend=True)
+            raise failure
 
     def update_capturing(self) -> None:  # pragma: no cover
         """Propagate the capturing refcount to the wrapped streams.
@@ -736,7 +762,7 @@ class StreamWrapper:
             if failure is None:
                 failure = exception
             elif exception is not None and exception is not failure:
-                failure.__context__ = exception
+                _link_exception_context(failure, exception)
         if failure is not None:
             raise failure
 

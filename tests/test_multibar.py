@@ -1018,3 +1018,187 @@ def test_label_reservation_skips_removed_bars_and_disabled_labels() -> None:
     del multibar['task']
     assert not multibar._label_bar(progress, require_member=True)
     assert progress not in multibar._labeled
+
+
+def _observe_membership_lock(
+    multibar: progressbar.MultiBar, observed: list[bool]
+) -> None:
+    def acquire() -> None:
+        acquired: bool = multibar._membership_lock.acquire(timeout=0.1)
+        observed.append(acquired)
+        if acquired:
+            multibar._membership_lock.release()
+
+    thread: threading.Thread = threading.Thread(target=acquire)
+    thread.start()
+    thread.join(2)
+    assert not thread.is_alive()
+
+
+@pytest.mark.parametrize(
+    'operation', ['assign', 'lookup', 'pop', 'setdefault', 'label', 'expire']
+)
+@pytest.mark.parametrize('callback', ['hash', 'equal'])
+def test_custom_label_callbacks_run_outside_membership_guard(
+    operation: str, callback: str
+) -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(
+        fd=io.StringIO(), remove_finished=1
+    )
+    observed: list[bool] = []
+    armed: bool = False
+
+    class Label(str):
+        def __hash__(self) -> int:
+            if armed and callback == 'hash':
+                _observe_membership_lock(multibar, observed)
+            return str.__hash__(self)
+
+        def __eq__(self, other: object) -> bool:
+            if armed and callback == 'equal':
+                _observe_membership_lock(multibar, observed)
+            return str.__eq__(self, other)
+
+    label: Label = Label('task')
+    progress: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO(), widgets=['x']
+    )
+    multibar[label] = progress
+    assert next(iter(multibar)) is label
+    # Exact-str queries still call equality on the retained custom key.
+    key: str = label if callback == 'hash' else 'task'
+    armed = True
+    if operation == 'assign':
+        multibar[key] = progressbar.ProgressBar(fd=io.StringIO())
+        assert next(iter(multibar)) is label
+    elif operation == 'lookup':
+        assert multibar[key] is progress
+    elif operation == 'pop':
+        assert multibar.pop(key) is progress
+    elif operation == 'setdefault':
+        assert multibar.setdefault(key) is progress
+    elif operation == 'label':
+        progress.label = key
+        multibar._label_bar(progress, require_member=True)
+    else:
+        progress.label = key
+        multibar._finished_at[progress] = 0
+        list(
+            multibar._render_finished_bar(progress, 10, 9, lambda **kwargs: '')
+        )
+    assert observed and all(observed)
+
+
+def test_waiting_native_lookup_rechecks_custom_mode() -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    observed: list[bool] = []
+    started: threading.Event = threading.Event()
+    errors: list[BaseException] = []
+    armed: bool = False
+
+    class Label(str):
+        __hash__ = str.__hash__
+
+        def __eq__(self, other: object) -> bool:
+            if armed:
+
+                def acquire() -> None:
+                    acquired: bool = multibar._membership_lock.acquire(
+                        timeout=0.2
+                    )
+                    observed.append(acquired)
+                    if acquired:
+                        multibar._membership_lock.release()
+
+                observer: threading.Thread = threading.Thread(target=acquire)
+                observer.start()
+                observer.join(2)
+            return str.__eq__(self, other)
+
+    progress: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO()
+    )
+
+    def lookup() -> None:
+        started.set()
+        try:
+            assert multibar['task'] is progress
+        except BaseException as error:
+            errors.append(error)
+
+    with multibar._membership_lock:
+        thread: threading.Thread = threading.Thread(target=lookup)
+        thread.start()
+        assert started.wait(2)
+        multibar[Label('task')] = progress
+        armed = True
+    thread.join(2)
+    assert not thread.is_alive()
+    assert errors == []
+    assert observed and all(observed)
+
+
+def test_clear_does_not_reenable_native_mode_during_custom_insert() -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
+    hashing: threading.Event = threading.Event()
+    resume: threading.Event = threading.Event()
+    observed: list[bool] = []
+    errors: list[BaseException] = []
+    armed: bool = False
+
+    class Label(str):
+        def __hash__(self) -> int:
+            if (
+                threading.current_thread().name == 'custom-insert'
+                and not hashing.is_set()
+            ):
+                hashing.set()
+                assert resume.wait(3)
+            return str.__hash__(self)
+
+        def __eq__(self, other: object) -> bool:
+            if armed:
+
+                def acquire() -> None:
+                    acquired: bool = multibar._membership_lock.acquire(
+                        timeout=0.2
+                    )
+                    observed.append(acquired)
+                    if acquired:
+                        multibar._membership_lock.release()
+
+                observer: threading.Thread = threading.Thread(target=acquire)
+                observer.start()
+                observer.join(2)
+            return str.__eq__(self, other)
+
+    label: Label = Label('task')
+    progress: progressbar.ProgressBar = progressbar.ProgressBar(
+        fd=io.StringIO()
+    )
+
+    def insert() -> None:
+        try:
+            multibar[label] = progress
+        except BaseException as error:
+            errors.append(error)
+
+    thread: threading.Thread = threading.Thread(
+        target=insert, name='custom-insert'
+    )
+    thread.start()
+    try:
+        assert hashing.wait(2)
+        # On the old code this lock remains held by the custom hash callback.
+        acquired: bool = multibar._membership_lock.acquire(timeout=0.2)
+        assert acquired
+        multibar._membership_lock.release()
+        multibar.clear()
+    finally:
+        resume.set()
+        thread.join(3)
+    assert errors == []
+    armed = True
+    assert multibar['task'] is progress
+    assert next(iter(multibar)) is label
+    assert observed and all(observed)

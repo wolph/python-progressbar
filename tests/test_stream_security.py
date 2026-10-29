@@ -1337,3 +1337,54 @@ def test_stop_propagation_failure_notifies_hook() -> None:
         streams.stop_capturing()
     assert caught.value is failure
     assert notifications == [0]
+
+
+@pytest.mark.parametrize('hook_error', ['distinct', 'primary', 'secondary'])
+@pytest.mark.parametrize('with_context', [False, True])
+def test_capture_hook_retains_both_drain_failure_contexts(
+    hook_error: str, with_context: bool
+) -> None:
+    first: KeyboardInterrupt = KeyboardInterrupt('stdout drain')
+    second: RuntimeError = RuntimeError('stderr drain')
+    third: BaseException = {
+        'distinct': OSError('capture hook'),
+        'primary': first,
+        'secondary': second,
+    }[hook_error]
+    origins: list[BaseException] = []
+    if with_context:
+        origins = [LookupError('first origin'), LookupError('second origin')]
+        first.__context__, second.__context__ = origins
+        if hook_error == 'distinct':
+            origin: LookupError = LookupError('hook origin')
+            third.__context__ = origin
+            origins.append(origin)
+
+    class Streams(utils.StreamWrapper):
+        def update_capturing(self) -> None:
+            raise third
+
+    streams: Streams = Streams()
+    for name, error in (('stdout', first), ('stderr', second)):
+        wrapper: utils.WrappingIO = utils.WrappingIO(io.StringIO())
+
+        def fail(exception: BaseException = error) -> str:
+            raise exception
+
+        wrapper.buffer.getvalue = fail  # type: ignore[method-assign]
+        setattr(streams, name, wrapper)
+        setattr(streams, f'wrapped_{name}', 1)
+    with pytest.raises(KeyboardInterrupt) as caught:
+        streams.stop_capturing()
+    assert caught.value is first
+    chain: list[BaseException] = []
+    current: BaseException | None = caught.value
+    while current is not None:
+        assert all(current is not previous for previous in chain)
+        chain.append(current)
+        current = current.__context__
+    assert second in chain
+    assert third in chain
+    assert all(origin in chain for origin in origins)
+    if hook_error == 'distinct':
+        assert first.__context__ is third
