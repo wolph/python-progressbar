@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from . import (
     bar as bar_module,
     base,
+    utils,
 )
 
 #: Optional native line-formatter hook. Left as ``None`` so the pure-Python
@@ -58,8 +59,10 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
     width = bar.term_width
     elapsed = bar._fast_elapsed()
     elapsed_text = _format_seconds(elapsed)
-    prefix = bar.prefix or ''
-    suffix = bar.suffix or ''
+    # 4.6.0 rendered the labels through an f-string, so a non-str label such
+    # as an int still printed. Keep that: str() before the width arithmetic.
+    prefix = str(bar.prefix or '')
+    suffix = str(bar.suffix or '')
 
     known = max_value not in (None, base.UnknownLength)
     if known:
@@ -76,9 +79,14 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
             eta = '--:--:--'
         left = f'{pct:3.0f}% {count} '
         right = f' Elapsed Time: {elapsed_text} ETA: {eta}'
-        inner = max(
-            width - bar.custom_len(prefix + left + right + suffix) - 2, 0
-        )
+        # 4.6.0 never called `custom_len` on this path, so a `None` or a
+        # float-returning measurer rendered fine. Fall back to the default
+        # measurer for an uncallable one and truncate the result to int.
+        measure: Callable[[str], int] | None = getattr(bar, 'custom_len', None)
+        if not callable(measure):
+            measure = utils.len_color
+        fixed = int(measure(prefix + left + right + suffix))
+        inner = max(width - fixed - 2, 0)
         filled = int(inner * done / total) if total else inner
         barstr = '|' + '#' * filled + ' ' * (inner - filled) + '|'
         return f'{prefix}{left}{barstr}{right}{suffix}'

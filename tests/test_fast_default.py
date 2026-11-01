@@ -298,3 +298,36 @@ def test_shortcut_desc_shares_terminal_width():
     ) == list(range(10))
     for frame in fd.repaints():
         assert progressbar.utils.len_color(frame.rstrip('\r\n')) == 80
+
+
+@pytest.mark.parametrize(
+    ('label', 'rendered'),
+    [(1, '1'), (b'x ', 'b\x27x \x27'), (True, 'True')],
+)
+def test_fast_non_str_labels_still_render(label, rendered):
+    # 4.6.0 rendered labels through an f-string, so non-str values printed.
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=3, fd=fd, term_width=80, prefix=label, suffix=label
+    )
+    assert list(bar(range(3))) == [0, 1, 2]
+    frame = fd.repaints()[-1].rstrip('\r\n')
+    assert frame.startswith(rendered)
+    assert frame.endswith(rendered)
+    assert len(frame) == 80
+
+
+@pytest.mark.parametrize('custom_len', [None, lambda text: float(len(text))])
+def test_fast_tolerates_uncallable_or_float_custom_len(custom_len):
+    # 4.6.0 never called custom_len on the fast path, so these rendered.
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=3,
+        fd=fd,
+        term_width=80,
+        prefix='load ',
+        custom_len=custom_len,
+    )
+    assert list(bar(range(3))) == [0, 1, 2]
+    for frame in fd.repaints():
+        assert len(frame.rstrip('\r\n')) == 80
