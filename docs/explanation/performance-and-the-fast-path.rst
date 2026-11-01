@@ -42,6 +42,11 @@ gets the full ``ProgressBar`` instead. You can also construct
 renderer without going through the shortcut -- see
 :doc:`../reference/progressbar`.
 
+The known-length fast bar reserves width for ``prefix`` (or ``desc``)
+and ``suffix`` before sizing its bar. It uses ``custom_len`` to measure
+the fixed text, so ANSI colors and custom display-width rules do not
+consume extra bar columns.
+
 This dispatch only happens inside ``progressbar.progressbar()``.
 Constructing ``ProgressBar()`` yourself always gets the full class.
 
