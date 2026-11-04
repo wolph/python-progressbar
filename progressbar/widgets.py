@@ -59,15 +59,6 @@ class _SafeFormatter(string.Formatter):
         }
     )
 
-    def get_field(
-        self,
-        field_name: str,
-        args: typing.Sequence[typing.Any],
-        kwargs: typing.Mapping[str, typing.Any],
-    ) -> tuple[typing.Any, str]:
-        self.validate_field(field_name)
-        return super().get_field(field_name, args, kwargs)
-
     def validate_field(self, field_name: str) -> None:
         """Check every attribute before any value is looked up."""
         rest: typing.Iterable[tuple[bool, typing.Any]]
@@ -81,7 +72,12 @@ class _SafeFormatter(string.Formatter):
                 )
 
     def validate(self, template: str, depth: int = 2) -> None:
-        """Check specialised templates before handing them to their owner."""
+        """Check every field, conversion and nested spec of a template.
+
+        The depth limit mirrors the two levels of nesting `str.format`
+        accepts, so a template that passes here renders through the
+        built-in formatter without further checks.
+        """
         if depth < 0:
             raise ValueError('Max string recursion exceeded')
         for _, field, spec, conversion in self.parse(template):
@@ -100,6 +96,26 @@ class _SafeFormatter(string.Formatter):
 
 _SAFE_FORMATTER: _SafeFormatter = _SafeFormatter()
 
+#: Template texts that passed `_SafeFormatter.validate`. Validation is a
+#: property of the text, not of the data, so each distinct template is
+#: checked once and then rendered by the built-in formatter at
+#: `str.format` speed. Membership tests and insertions on a dict are
+#: atomic under the GIL, so the cache needs no lock. It is cleared when
+#: it grows past `_SAFE_TEMPLATE_LIMIT` entries, which only costs the
+#: next render of each template one more validation.
+_SAFE_TEMPLATES: dict[str, None] = {}
+_SAFE_TEMPLATE_LIMIT: int = 1024
+
+
+def _validate_once(text: str) -> None:
+    """Validate `text` unless an identical template passed before."""
+    if text in _SAFE_TEMPLATES:
+        return
+    _SAFE_FORMATTER.validate(text)
+    if len(_SAFE_TEMPLATES) >= _SAFE_TEMPLATE_LIMIT:
+        _SAFE_TEMPLATES.clear()
+    _SAFE_TEMPLATES[text] = None
+
 
 def _safe_format(
     template: object,
@@ -107,19 +123,26 @@ def _safe_format(
 ) -> str:
     """Render safe field paths while preserving specialised formatting.
 
-    Application-owned format methods retain their escaping and result
-    types. Field paths in the underlying string or proxy text are
-    validated before delegation. Application code in format methods
-    and proxies remains trusted.
+    A plain `str` is validated once per distinct text and then rendered
+    with `str.format_map`, which takes the mapping as it is (a
+    non-`str` key stays a `KeyError` on the missing field, not a
+    `TypeError` from keyword expansion). A specialised template (a
+    `Markup`, a translation proxy) keeps its own `format` method, so it
+    retains its escaping and result type. Its text is read again on
+    every call: a proxy may switch language between renders, and the
+    cache is keyed by the text that is about to render, never by the
+    object. Application code in format methods and proxies remains
+    trusted.
     """
     if type(template) is str:
-        return _SAFE_FORMATTER.vformat(template, (), data)
+        _validate_once(template)
+        return template.format_map(data)
     formatter: typing.Any = getattr(template, 'format', None)
     if not callable(formatter):
         raise TypeError(
             f'format template must be a str, got {type(template).__name__}',
         )
-    _SAFE_FORMATTER.validate(
+    _validate_once(
         str.__str__(template) if isinstance(template, str) else str(template)
     )
     return typing.cast(str, formatter(**data))

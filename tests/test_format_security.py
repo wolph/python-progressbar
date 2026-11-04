@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import typing
 
 import pytest
 
@@ -372,3 +373,69 @@ def test_specialised_template_allows_literal_braces_and_nested_width() -> None:
         Markup('{{literal}} {value:0{width}d}'), new_style=True
     )
     assert label(bar, data) == '{literal} 003'
+
+
+def test_validated_template_is_checked_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from progressbar import widgets
+
+    calls: list[str] = []
+    original: typing.Callable[..., None] = widgets._SAFE_FORMATTER.validate
+
+    def counting(template: str, depth: int = 2) -> None:
+        calls.append(template)
+        original(template, depth)
+
+    monkeypatch.setattr(widgets._SAFE_FORMATTER, 'validate', counting)
+    widgets._SAFE_TEMPLATES.clear()
+    bar, data = _label_data()
+    label: progressbar.FormatLabel = progressbar.FormatLabel(
+        '{value} once', new_style=True
+    )
+    first: str = label(bar, data)
+    second: str = label(bar, data)
+    assert first == second
+    # The nested-spec recursion records '' for the empty spec, so count
+    # the template itself.
+    assert calls.count('{value} once') == 1
+
+
+def test_template_cache_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    from progressbar import widgets
+
+    monkeypatch.setattr(widgets, '_SAFE_TEMPLATE_LIMIT', 2)
+    widgets._SAFE_TEMPLATES.clear()
+    bar, data = _label_data()
+    rendered: list[str] = [
+        progressbar.utils.no_color(
+            progressbar.FormatLabel(f'{{value}} {i}', new_style=True)(
+                bar, data
+            )
+        )
+        for i in range(3)
+    ]
+    assert rendered == ['3 0', '3 1', '3 2']
+    assert len(widgets._SAFE_TEMPLATES) <= 2
+    # A template dropped from the cache is validated and rendered again.
+    assert (
+        progressbar.utils.no_color(
+            progressbar.FormatLabel('{value} 0', new_style=True)(bar, data)
+        )
+        == '3 0'
+    )
+
+
+def test_proxy_text_change_is_validated_again() -> None:
+    class SwitchingProxy(_LazyStr):
+        pass
+
+    proxy: SwitchingProxy = SwitchingProxy('{value}')
+    bar, data = _label_data()
+    label: progressbar.FormatLabel = progressbar.FormatLabel(
+        proxy, new_style=True
+    )  # type: ignore[arg-type]
+    assert progressbar.utils.no_color(label(bar, data)) == '3'
+    proxy.text = '{value.__class__}'
+    with pytest.raises(ValueError, match='__class__'):
+        label(bar, data)
