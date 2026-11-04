@@ -698,8 +698,8 @@ class ColorGradient:
     completion). See `get_color` for how a value maps to a `Color`.
     """
 
-    interpolate: collections.abc.Callable[[Color, Color, float], Color] | None
-    colors: tuple[Color, ...]
+    _interpolate: collections.abc.Callable[[Color, Color, float], Color] | None
+    _colors: tuple[Color, ...]
 
     def __init__(
         self,
@@ -721,6 +721,33 @@ class ColorGradient:
         assert colors
         self.colors = colors
         self.interpolate = interpolate
+
+    @property
+    def colors(self) -> tuple[Color, ...]:
+        """The colors to interpolate across, in order."""
+        return self._colors
+
+    @colors.setter
+    def colors(self, colors: tuple[Color, ...]) -> None:
+        self._colors = colors
+        _GRADIENT_SGR.pop(self, None)
+
+    @property
+    def interpolate(
+        self,
+    ) -> collections.abc.Callable[[Color, Color, float], Color] | None:
+        """The blend between two adjacent colors, `None` to snap."""
+        return self._interpolate
+
+    @interpolate.setter
+    def interpolate(
+        self,
+        interpolate: (
+            collections.abc.Callable[[Color, Color, float], Color] | None
+        ),
+    ) -> None:
+        self._interpolate = interpolate
+        _GRADIENT_SGR.pop(self, None)
 
     def __call__(self, value: float) -> Color:
         """Shorthand for `get_color(value)`."""
@@ -875,6 +902,50 @@ def _gradient_ansi_at(gradient: ColorGradient, value: float) -> str | None:
     )
 
 
+#: Rendered `(prefix, suffix)` escapes per plain `ColorGradient`, by
+#: `(start code, value)`, with the colour support they were rendered for.
+#: `ColorGradient.colors` and `interpolate` assignments drop the entry.
+_GradientSGR = tuple[
+    env.ColorSupport, dict[tuple[int, float], tuple[str, str]]
+]
+_GRADIENT_SGR: dict[ColorGradient, _GradientSGR] = {}
+
+
+def _gradient_sgr(
+    gradient: ColorGradient,
+    support: env.ColorSupport,
+    start: int,
+    end: int,
+    value: float,
+) -> tuple[str, str]:
+    """The escapes `apply_colors` wraps around text coloured by `gradient`.
+
+    A gradient's colour at a value is a pure function of its colors, its
+    blend and the terminal's colour support, so the rendered escapes are
+    remembered per gradient and reused by every widget that shares it:
+    the default widgets of one bar all resolve the same gradient at the
+    same percentage on every redraw. An entry is dropped when the support
+    level changes, when `colors` or `interpolate` is assigned, or when it
+    holds 1024 values, and the table itself is emptied at 64 gradients.
+    A custom blend is not memoised, its result is its own business.
+    """
+    blend = gradient.interpolate
+    if blend is None:
+        ansi = gradient.get_color(value).ansi
+    elif getattr(blend, '__func__', None) is _DEFAULT_BLEND:
+        ansi = _gradient_ansi_at(gradient, value)
+    else:
+        return _sgr_pair(gradient.get_color(value).ansi, start, end)
+    wrap = _sgr_pair(ansi, start, end)
+    entry = _GRADIENT_SGR.get(gradient)
+    if entry is None or entry[0] is not support or len(entry[1]) >= 1024:
+        if len(_GRADIENT_SGR) >= 64:
+            _GRADIENT_SGR.clear()
+        entry = _GRADIENT_SGR[gradient] = (support, {})
+    entry[1][start, value] = wrap
+    return wrap
+
+
 #: The function behind the default `ColorGradient` blend, to recognise a
 #: gradient that `_gradient_ansi_at` may render.
 _DEFAULT_BLEND = Colors.interpolate.__func__  # pyright: ignore[reportFunctionMemberAccess]
@@ -962,6 +1033,39 @@ def get_color(value: float, color: OptionalColor) -> Color | None:
     return color
 
 
+#: No escapes: the pair `apply_colors` wraps around text that gets no
+#: colour (the legacy Windows console, or no usable encoding).
+_NO_SGR: tuple[str, str] = ('', '')
+
+#: Rendered `(prefix, suffix)` escapes of a plain `Color` by
+#: `(color, start code)`, valid for `_color_sgr_support` only.
+_COLOR_SGR: dict[tuple[Color, int], tuple[str, str]] = {}
+_color_sgr_support: env.ColorSupport | None = None
+
+
+def _sgr_pair(ansi: str | None, start: int, end: int) -> tuple[str, str]:
+    """The `(prefix, suffix)` escapes for an SGR colour parameter."""
+    if ansi is None or env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+        return _NO_SGR
+    return f'{ESC}[{start};{ansi}m', f'{ESC}[{end}m'
+
+
+def _color_sgr(color: Color, start: int, end: int) -> tuple[str, str]:
+    """The escapes of a plain `Color`, remembered per support level."""
+    global _color_sgr_support
+    support = env.COLOR_SUPPORT
+    if support is not _color_sgr_support:
+        _COLOR_SGR.clear()
+        _color_sgr_support = support
+    wrap = _COLOR_SGR.get((color, start))
+    if wrap is None:
+        wrap = _sgr_pair(color.ansi, start, end)
+        if len(_COLOR_SGR) >= 1024:
+            _COLOR_SGR.clear()
+        _COLOR_SGR[color, start] = wrap
+    return wrap
+
+
 def apply_colors(
     text: str,
     percentage: float | None = None,
@@ -977,6 +1081,10 @@ def apply_colors(
     When percentage is `None`, the `fg_none` and `bg_none` colors will be used.
     Otherwise, the `fg` and `bg` colors will be used. If the colors are
     gradients, the color will be interpolated depending on the percentage.
+
+    The escapes are concatenated around `text` rather than formatted into
+    a new string, so a `str` subclass (a `markupsafe.Markup`, say) comes
+    back as that subclass, the way `Color.fg` always returned it.
     """
     if percentage is None:
         if fg_none is not None:
@@ -986,7 +1094,22 @@ def apply_colors(
     elif fg is not None or bg is not None:
         value = percentage * 0.01
         if fg is not None:
-            text = _color_at(fg, value, 38, 39, text)
+            # The redraw hot path: every default widget colours its text
+            # with one shared gradient, so the gradient's own cache is
+            # consulted here without another call in between.
+            if type(fg) is ColorGradient and type(value) is float:
+                support = env.COLOR_SUPPORT
+                entry = _GRADIENT_SGR.get(fg)
+                wrap = (
+                    entry[1].get((38, value))
+                    if entry is not None and entry[0] is support
+                    else None
+                )
+                if wrap is None:
+                    wrap = _gradient_sgr(fg, support, 38, 39, value)
+                text = wrap[0] + text + wrap[1]
+            else:
+                text = _color_at(fg, value, 38, 39, text)
         if bg is not None:
             text = _color_at(bg, value, 48, 49, text)
 
@@ -1002,22 +1125,21 @@ def _color_at(
 ) -> str:
     """Wrap `text` in `color` resolved at `value`, see `apply_colors`.
 
-    A plain `ColorGradient` with the default blend and a `float` value
-    takes the arithmetic shortcut of `_gradient_ansi_at`. Any other
-    gradient (a subclass, a custom `interpolate`, a `Decimal` value) is
+    A plain `ColorGradient` with a `float` value takes its remembered
+    escapes. Any other gradient (a subclass, a `Decimal` value) is
     resolved through its own `get_color`, as before.
     """
     if type(color) is ColorGradient and type(value) is float:
-        blend = color.interpolate
-        if blend is not None and getattr(blend, '__func__', None) is (
-            _DEFAULT_BLEND
-        ):
-            if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
-                return text
-            ansi = _gradient_ansi_at(color, value)
-            if ansi is None:
-                return text
-            return f'{ESC}[{start};{ansi}m{text}{ESC}[{end}m'
+        support = env.COLOR_SUPPORT
+        entry = _GRADIENT_SGR.get(color)
+        wrap = (
+            entry[1].get((start, value))
+            if entry is not None and entry[0] is support
+            else None
+        )
+        if wrap is None:
+            wrap = _gradient_sgr(color, support, start, end, value)
+        return wrap[0] + text + wrap[1]
     if isinstance(color, ColorGradient):
         color = color(value)
     return _sgr_wrap(color, start, end, text)
@@ -1029,21 +1151,17 @@ def _sgr_wrap(color: Color, start: int, end: int, text: str) -> str:
     `Color.fg` and `Color.bg` build an `SGRColor` per call and render its
     two escape sequences through `CSI.__call__`, which is a `str.format`
     and a `join` each. A redraw does that once per coloured widget, so
-    this writes the same bytes directly: no colour on the legacy Windows
-    console, no colour when the terminal has no usable encoding for it,
-    otherwise `ESC [ start ; ansi m text ESC [ end m`. A `Color` subclass
-    keeps whatever its own `fg`/`bg` do.
+    this concatenates the remembered escapes instead: none on the legacy
+    Windows console or when the terminal has no usable encoding for the
+    colour, otherwise `ESC [ start ; ansi m text ESC [ end m`. A `Color`
+    subclass keeps whatever its own `fg`/`bg` do.
     """
     if type(color) is not Color:
         if start == 38:
             return color.fg(text)
         return color.bg(text)
-    if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
-        return text
-    ansi = color.ansi
-    if ansi is None:
-        return text
-    return f'{ESC}[{start};{ansi}m{text}{ESC}[{end}m'
+    wrap = _color_sgr(color, start, end)
+    return wrap[0] + text + wrap[1]
 
 
 class DummyColor:

@@ -246,6 +246,102 @@ def test_color_subclass_keeps_its_own_styling(
     assert terminal.apply_colors('x', 50, fg=loud, bg=loud) == '[<x>]'
 
 
+def test_coloured_str_subclass_keeps_its_type(
+    color_support: env.ColorSupport,
+) -> None:
+    from markupsafe import Markup
+
+    text: Markup = Markup('&lt;tag&gt;')
+    for percentage, kwargs in (
+        (None, {'fg_none': colors.yellow, 'bg_none': colors.black}),
+        (50.0, {'fg': colors.gradient}),
+        (50.0, {'fg': colors.red, 'bg': colors.gradient}),
+        (50.0, {'fg': _GRADIENTS['custom_blend']}),
+    ):
+        result: str = terminal.apply_colors(text, percentage, **kwargs)
+        assert isinstance(result, Markup), (percentage, kwargs, color_support)
+        assert result == _reference_apply_colors(
+            text,
+            percentage,
+            kwargs.get('fg'),
+            kwargs.get('bg'),
+            kwargs.get('fg_none'),
+            kwargs.get('bg_none'),
+        )
+
+
+def test_gradient_cache_follows_colors_blend_and_support(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_TRUECOLOR)
+    gradient: terminal.ColorGradient = terminal.ColorGradient(
+        colors.red, colors.green
+    )
+    first: str = terminal.apply_colors('x', 50, fg=gradient)
+    assert terminal.apply_colors('x', 50, fg=gradient) == first
+    assert first == gradient.get_color(0.5).fg('x')
+
+    gradient.colors = (colors.blue, colors.yellow)
+    swapped: str = terminal.apply_colors('x', 50, fg=gradient)
+    assert swapped != first
+    assert swapped == gradient.get_color(0.5).fg('x')
+
+    gradient.interpolate = None
+    snapped: str = terminal.apply_colors('x', 50, fg=gradient)
+    assert snapped == gradient.get_color(0.5).fg('x')
+    assert snapped != swapped
+
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_256)
+    assert terminal.apply_colors('x', 50, fg=gradient) == gradient.get_color(
+        0.5
+    ).fg('x')
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.NONE)
+    assert terminal.apply_colors('x', 50, fg=gradient) == gradient.get_color(
+        0.5
+    ).fg('x')
+    # A registered colour keeps its xterm index without colour support,
+    # as `Color.ansi` always did, an unregistered one renders nothing.
+    assert terminal.apply_colors('x', None, fg_none=colors.red) == (
+        colors.red.fg('x')
+    )
+    plain: terminal.Color = terminal.Color(
+        terminal.RGB(1, 2, 3), terminal.HSL(0, 0, 0), None, None
+    )
+    assert terminal.apply_colors('x', None, fg_none=plain) == 'x'
+    assert (
+        terminal.apply_colors('x', 50, fg=terminal.ColorGradient(plain, plain))
+        == 'x'
+    )
+
+
+def test_colour_caches_stay_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, 'COLOR_SUPPORT', env.ColorSupport.XTERM_TRUECOLOR)
+    gradient: terminal.ColorGradient = terminal.ColorGradient(
+        colors.red, colors.green
+    )
+    for step in range(1100):
+        terminal.apply_colors('x', step / 11, fg=gradient, bg=gradient)
+    entry = terminal_base._GRADIENT_SGR[gradient]
+    assert len(entry[1]) <= 1024
+    for _step in range(70):
+        terminal.apply_colors(
+            'x', 50, fg=terminal.ColorGradient(colors.red, colors.green)
+        )
+    assert len(terminal_base._GRADIENT_SGR) <= 64
+    for red in range(1100):
+        terminal.apply_colors(
+            'x',
+            None,
+            fg_none=terminal.Color(
+                terminal.RGB(red % 256, red // 256, 0),
+                terminal.HSL(0, 0, 0),
+                None,
+                None,
+            ),
+        )
+    assert len(terminal_base._COLOR_SGR) <= 1024
+
+
 def test_gradient_with_reassigned_blend_is_not_shortcut(
     color_support: env.ColorSupport,
 ) -> None:
