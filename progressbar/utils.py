@@ -729,6 +729,12 @@ class StreamWrapper:
         with self.lock:
             pending: list[_Pending] = self._apply_capturing()
         self._deliver(pending)
+        if self.capturing <= 0:
+            # 4.6.0 flushed through the public method here, so a
+            # subclass that overrides `flush()` sees the last bar stop
+            # capturing. The text itself went out above, this drains
+            # whatever a listener wrote in between.
+            self.flush()
 
     def _apply_capturing(self) -> list[_Pending]:
         """Push the capture state onto the wrappers, under `lock`.

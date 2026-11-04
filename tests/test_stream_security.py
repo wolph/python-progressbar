@@ -1431,3 +1431,32 @@ def test_unrelated_buffer_attribute_keeps_the_native_lock() -> None:
     assert wrapper.buffer.getvalue() == 'eggs'
     wrapper.buffer.getvalue = lambda: ''  # type: ignore[method-assign]
     assert not wrapper._native_buffer()
+
+
+def test_subclass_flush_and_update_capturing_hooks_fire_as_in_4_6_0(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+
+    class HookedStreams(utils.StreamWrapper):
+        def flush(self) -> None:
+            calls.append('flush')
+            super().flush()
+
+        def update_capturing(self) -> None:
+            calls.append('update_capturing')
+            super().update_capturing()
+
+    streams: HookedStreams = HookedStreams()
+    target: io.StringIO = io.StringIO()
+    streams.stdout = streams.original_stdout = target
+    monkeypatch.setattr(sys, 'stdout', target)
+    wrapper: utils.WrappingIO = streams.wrap_stdout()
+    streams.start_capturing()
+    wrapper.write('spam')
+    streams.stop_capturing()
+    streams.unwrap_stdout()
+    # 4.6.0 called update_capturing on start and stop, and flush() from
+    # the stop that brought the count to zero.
+    assert calls == ['update_capturing', 'update_capturing', 'flush']
+    assert target.getvalue() == 'spam'
