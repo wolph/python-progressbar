@@ -10,6 +10,11 @@ now exit with status 130 after Ctrl-C interrupts a transfer. Previously
 they exited with status 0. Scripts that check the exit status can now
 distinguish an interrupted transfer from a completed copy.
 
+The ``python-utils`` dependency now requires 4.1.4 or newer, up from
+3.8.1. Older releases render a negative ``scale_1024`` power as
+``0.1 YiB`` instead of the byte count. An environment that pins
+``python-utils<4`` has to lift that pin before upgrading.
+
 Captured output now survives a drain failure on the other stream, and
 unwrapping restores the original stream even when its capture buffer is
 closed. Built-in ``StringIO`` capture writes and drains remain atomic.
