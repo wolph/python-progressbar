@@ -179,15 +179,18 @@ def test_subclass_without_super_init_can_wrap(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class NoSuper(utils.StreamWrapper):
-        def __init__(self, out: io.StringIO) -> None:
-            self.stdout = self.original_stdout = out
-            self.stderr = self.original_stderr = io.StringIO()
-            self.original_excepthook = sys.excepthook
-            self.listeners = set()
-            self.logging_handlers = []
+        pass
 
+    # A subclass whose own constructor never reached StreamWrapper's: the
+    # instance is created without running any __init__ and only carries
+    # the attributes such a constructor would set itself.
     hook = sys.excepthook
-    wrapper: NoSuper = NoSuper(io.StringIO())
+    wrapper: NoSuper = NoSuper.__new__(NoSuper)
+    wrapper.stdout = wrapper.original_stdout = io.StringIO()
+    wrapper.stderr = wrapper.original_stderr = io.StringIO()
+    wrapper.original_excepthook = sys.excepthook
+    wrapper.listeners = set()
+    wrapper.logging_handlers = []
     try:
         wrapper.wrap_stdout()
     finally:
@@ -448,14 +451,16 @@ def test_restored_wrappers_share_the_restored_listener_lock(
 
 def test_wrapping_io_subclass_without_super_init_can_write() -> None:
     class NoSuper(utils.WrappingIO):
-        def __init__(self, target: io.StringIO) -> None:
-            self.buffer = io.StringIO()
-            self.target = target
-            self.capturing = True
-            self.listeners = set()
-            self.needs_clear = False
+        pass
 
-    wrapper: NoSuper = NoSuper(io.StringIO())
+    # Built without running any __init__, as a subclass constructor that
+    # skips WrappingIO's would leave it.
+    wrapper: NoSuper = NoSuper.__new__(NoSuper)
+    wrapper.buffer = io.StringIO()
+    wrapper.target = io.StringIO()
+    wrapper.capturing = True
+    wrapper.listeners = set()
+    wrapper.needs_clear = False
     written: int = wrapper.write('spam\n')
     assert written == 5
     assert wrapper.needs_clear
