@@ -456,7 +456,8 @@ def test_wrapping_io_subclass_without_super_init_can_write() -> None:
             self.needs_clear = False
 
     wrapper: NoSuper = NoSuper(io.StringIO())
-    assert wrapper.write('spam\n') == 5
+    written: int = wrapper.write('spam\n')
+    assert written == 5
     assert wrapper.needs_clear
 
 

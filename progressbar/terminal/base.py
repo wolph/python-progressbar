@@ -1038,9 +1038,11 @@ def get_color(value: float, color: OptionalColor) -> Color | None:
 _NO_SGR: tuple[str, str] = ('', '')
 
 #: Rendered `(prefix, suffix)` escapes of a plain `Color` by
-#: `(color, start code)`, valid for `_color_sgr_support` only.
+#: `(color, start code)`, valid for the support in `_COLOR_SGR_SUPPORT`.
 _COLOR_SGR: dict[tuple[Color, int], tuple[str, str]] = {}
-_color_sgr_support: env.ColorSupport | None = None
+#: The colour support the table was filled under, one cell so the
+#: function below can replace it without rebinding a module global.
+_COLOR_SGR_SUPPORT: list[env.ColorSupport | None] = [None]
 
 
 def _sgr_pair(ansi: str | None, start: int, end: int) -> tuple[str, str]:
@@ -1052,11 +1054,10 @@ def _sgr_pair(ansi: str | None, start: int, end: int) -> tuple[str, str]:
 
 def _color_sgr(color: Color, start: int, end: int) -> tuple[str, str]:
     """The escapes of a plain `Color`, remembered per support level."""
-    global _color_sgr_support
     support = env.COLOR_SUPPORT
-    if support is not _color_sgr_support:
+    if support is not _COLOR_SGR_SUPPORT[0]:
         _COLOR_SGR.clear()
-        _color_sgr_support = support
+        _COLOR_SGR_SUPPORT[0] = support
     wrap = _COLOR_SGR.get((color, start))
     if wrap is None:
         wrap = _sgr_pair(color.ansi, start, end)

@@ -674,7 +674,8 @@ def test_membership_removal_cleans_tracking(removal: str) -> None:
     multibar._finished_at[progress] = 0
     multibar._labeled.add(progress)
     if removal == 'pop':
-        assert multibar.pop('task') is progress
+        popped: object = multibar.pop('task')
+        assert popped is progress
     elif removal == 'popitem':
         assert multibar.popitem() == ('task', progress)
     elif removal == 'clear':
@@ -694,8 +695,10 @@ def test_membership_dict_defaults_and_update_iterable() -> None:
     assert multibar.setdefault('task', progress) is progress
     assert multibar.setdefault('task') is progress
     assert multibar.setdefault('none') is None
-    assert multibar.pop('none') is None
-    assert multibar.pop('missing', 42) == 42
+    popped_none: object = multibar.pop('none')
+    assert popped_none is None
+    popped_default: object = multibar.pop('missing', 42)
+    assert popped_default == 42
     with pytest.raises(KeyError):
         multibar.pop('missing')
     with pytest.raises(TypeError):
@@ -1076,7 +1079,8 @@ def test_custom_label_callbacks_run_outside_membership_guard(
     elif operation == 'lookup':
         assert multibar[key] is progress
     elif operation == 'pop':
-        assert multibar.pop(key) is progress
+        popped: object = multibar.pop(key)
+        assert popped is progress
     elif operation == 'setdefault':
         assert multibar.setdefault(key) is progress
     elif operation == 'label':
