@@ -60,9 +60,20 @@ class _SafeFormatter(string.Formatter):
     )
 
     def validate_field(self, field_name: str) -> None:
-        """Check every attribute before any value is looked up."""
+        """Check every attribute before any value is looked up.
+
+        A positional field (`{}` or `{0}`) has no value to look up:
+        the templates render from keyword data only, so it raises the
+        `IndexError` that `str.format` raised for it in 4.6.0.
+        """
+        first: typing.Any
         rest: typing.Iterable[tuple[bool, typing.Any]]
-        _first, rest = _string.formatter_field_name_split(field_name)
+        first, rest = _string.formatter_field_name_split(field_name)
+        if not isinstance(first, str) or not first:
+            raise IndexError(
+                f'Replacement index {first or 0} out of range for '
+                'positional args tuple'
+            )
         for is_attr, name in rest:
             if is_attr and (
                 str(name).startswith('__') or name in self.blocked_attributes

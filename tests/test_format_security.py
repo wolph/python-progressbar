@@ -439,3 +439,15 @@ def test_proxy_text_change_is_validated_again() -> None:
     proxy.text = '{value.__class__}'
     with pytest.raises(ValueError, match='__class__'):
         label(bar, data)
+
+
+@pytest.mark.parametrize('template', ['{}', '{0}', '[{value}] {1!r}'])
+def test_positional_fields_raise_index_error(template: str) -> None:
+    # 4.6.0 rendered templates with str.format(**data) and a positional
+    # field raised IndexError there. The validated fast path keeps that.
+    bar, data = _label_data()
+    label: progressbar.FormatLabel = progressbar.FormatLabel(
+        template, new_style=True
+    )
+    with pytest.raises(IndexError, match='positional'):
+        label(bar, data)
