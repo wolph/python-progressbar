@@ -343,6 +343,9 @@ def test_fast_coloured_prefix_counts_visible_width_only():
         term_width=80,
         prefix='\x1b[31mload\x1b[39m ',
         suffix=' \x1b[1mnow\x1b[0m',
+        # Keep the escapes in the output whatever the CI terminal
+        # supports, the width arithmetic is what this test is about.
+        enable_colors=True,
     )
     assert list(bar(range(3))) == [0, 1, 2]
     frames = fd.repaints()
