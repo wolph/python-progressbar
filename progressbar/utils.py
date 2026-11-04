@@ -170,6 +170,12 @@ def len_color(value: types.StringTypes) -> int:
     >>> len_color('\x1b[1234]abc')
     3
     """
+    if isinstance(value, str):
+        # Inlined `no_color`: this runs once per widget per redraw, so the
+        # plain text case pays one `in` and the coloured case one `sub`.
+        if '\x1b' not in value:
+            return len(value)
+        return len(_ANSI_COLOR_RE.sub('', value))
     return len(no_color(value))
 
 
