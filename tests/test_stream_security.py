@@ -1388,3 +1388,46 @@ def test_capture_hook_retains_both_drain_failure_contexts(
     assert all(origin in chain for origin in origins)
     if hook_error == 'distinct':
         assert first.__context__ is third
+
+
+def test_flush_with_nothing_wrapped_skips_the_transition_lock() -> None:
+    # Every bar redraw calls `streams.flush()`. With neither stream wrapped
+    # there is nothing to drain, so the call must return without the lock,
+    # or a redraw on one thread waits for an unrelated capture transition.
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    assert not streams.wrapped_stdout and not streams.wrapped_stderr
+    finished: threading.Event = threading.Event()
+
+    def flush() -> None:
+        streams.flush()
+        finished.set()
+
+    with streams.lock:
+        thread: threading.Thread = threading.Thread(target=flush)
+        thread.start()
+        assert finished.wait(2), 'flush() waited for the transition lock'
+    thread.join(2)
+    assert not thread.is_alive()
+
+
+def test_unrelated_buffer_attribute_keeps_the_native_lock() -> None:
+    # Only a shadowed StringIO method makes a buffer custom. Any other
+    # instance attribute keeps the write and drain lock in force.
+    wrapper: utils.WrappingIO = utils.WrappingIO(io.StringIO(), capturing=True)
+    wrapper.buffer.name = 'spam'  # type: ignore[attr-defined]
+    assert wrapper._native_buffer()
+    written: threading.Event = threading.Event()
+
+    def write() -> None:
+        wrapper.write('eggs')
+        written.set()
+
+    with wrapper._buffer_box.lock:
+        thread: threading.Thread = threading.Thread(target=write)
+        thread.start()
+        assert not written.wait(0.2), 'write() skipped the buffer lock'
+    assert written.wait(2)
+    thread.join(2)
+    assert wrapper.buffer.getvalue() == 'eggs'
+    wrapper.buffer.getvalue = lambda: ''  # type: ignore[method-assign]
+    assert not wrapper._native_buffer()

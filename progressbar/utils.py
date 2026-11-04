@@ -178,6 +178,12 @@ def len_color(value: types.StringTypes) -> int:
 _Drain = str | BaseException | None
 _Pending = tuple[str, 'WrappingIO', _Drain]
 
+#: The `io.StringIO` methods a capture buffer uses. An instance attribute
+#: shadowing one of them makes the buffer custom: its code runs unlocked.
+_NATIVE_BUFFER_METHODS: frozenset[str] = frozenset(
+    ('write', 'getvalue', 'seek', 'truncate', 'flush')
+)
+
 if typing.TYPE_CHECKING:
     _Lock = threading.Lock
 else:
@@ -259,8 +265,9 @@ class WrappingIO:
     #: interleaving on `buffer`: a write between the read and the
     #: truncate of a drain was lost. Held around the `io.StringIO`
     #: write, getvalue, seek and truncate calls only, never while
-    #: calling a listener, `target` or a custom buffer method.
-    _buffer_box: _SharedLock = _SharedLock(threading.RLock)
+    #: calling a listener, `target` or a custom buffer method, so a
+    #: plain lock suffices and costs half of a re-entrant one per write.
+    _buffer_box: _SharedLock = _SharedLock()
     needs_clear: bool = False
 
     @property
@@ -307,7 +314,7 @@ class WrappingIO:
             self._lock_box = lock
         else:
             self._lock_box = _SharedLock(threading.Lock, lock)
-        self._buffer_box = _SharedLock(threading.RLock)
+        self._buffer_box = _SharedLock()
         self.needs_clear = False
 
     def write(self, value: str) -> int:
@@ -328,12 +335,18 @@ class WrappingIO:
         """
         ret = 0
         if self.capturing:
-            with (
-                self._buffer_box.lock
-                if self._native_buffer()
-                else contextlib.nullcontext()
+            # Inlined `_native_buffer()`: this runs on every captured
+            # `print()`, so the check is one type test and one dict
+            # truth test on the common path
+            buffer: io.StringIO = self.buffer
+            shadowed: typing.Mapping[str, typing.Any] = buffer.__dict__
+            if type(buffer) is io.StringIO and (
+                not shadowed or _NATIVE_BUFFER_METHODS.isdisjoint(shadowed)
             ):
-                ret += self.buffer.write(value)
+                with self._buffer_box.lock:
+                    ret += buffer.write(value)
+            else:
+                ret += buffer.write(value)
             if '\n' in value:  # pragma: no branch
                 self.needs_clear = True
                 # Iterate a snapshot taken under the lock: a listener's
@@ -398,10 +411,12 @@ class WrappingIO:
 
         Custom buffers keep their original method dispatch. Their callers
         own synchronisation of concurrent writes and drains, as in 4.6.0.
+        `write()` inlines this test, keep the two in step.
         """
-        return type(self.buffer) is io.StringIO and not any(
-            name in vars(self.buffer)
-            for name in ('write', 'getvalue', 'seek', 'truncate', 'flush')
+        buffer: io.StringIO = self.buffer
+        shadowed: typing.Mapping[str, typing.Any] = buffer.__dict__
+        return type(buffer) is io.StringIO and (
+            not shadowed or _NATIVE_BUFFER_METHODS.isdisjoint(shadowed)
         )
 
     def _capture(self) -> _Drain:
@@ -1131,7 +1146,11 @@ class StreamWrapper:
         Native buffers are drained under `lock`. Custom drains and
         writes to original streams run after releasing it. See
         `_deliver` for what happens when a stream cannot take the text.
+        With neither stream wrapped there is nothing to drain, and every
+        bar redraw calls this, so that case returns before the lock.
         """
+        if not (self.wrapped_stdout or self.wrapped_stderr):
+            return
         with self.lock:
             pending: list[_Pending] = self._take()
         self._deliver(pending)
