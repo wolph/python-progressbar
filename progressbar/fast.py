@@ -83,9 +83,14 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
         # float-returning measurer rendered fine. Fall back to the default
         # measurer for an uncallable one and truncate the result to int.
         measure: Callable[[str], int] | None = getattr(bar, 'custom_len', None)
-        if not callable(measure):
-            measure = utils.len_color
-        fixed = int(measure(prefix + left + right + suffix))
+        text = prefix + left + right + suffix
+        if measure is utils.len_color or not callable(measure):
+            # The default measurer strips escape codes first. Plain text
+            # has none, so its width is its length, which skips two
+            # function calls per redraw on the common path.
+            fixed = len(text) if '\x1b' not in text else utils.len_color(text)
+        else:
+            fixed = int(measure(text))
         inner = max(width - fixed - 2, 0)
         filled = int(inner * done / total) if total else inner
         barstr = '|' + '#' * filled + ' ' * (inner - filled) + '|'
