@@ -494,11 +494,15 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
     def _apply_colors(self, text: str, data: Data) -> str:
         """Wrap `text` in the configured fixed/gradient colors, if any."""
         if self.uses_colors:
+            gradient = self._gradient_colors
+            fixed = self._fixed_colors
             return terminal.apply_colors(
                 text,
                 data.get('percentage'),
-                **self._gradient_colors,
-                **self._fixed_colors,
+                fg=gradient['fg'],
+                bg=gradient['bg'],
+                fg_none=fixed['fg_none'],
+                bg_none=fixed['bg_none'],
             )
         else:
             return text
@@ -650,8 +654,11 @@ class FormatLabel(FormatWidgetMixin, ColoredMixin, WidgetBase):
             if transform is None:
                 data[name] = data[key]
             else:
-                with contextlib.suppress(ValueError, IndexError):
-                    data[name] = transform(data[key])
+                try:
+                    value = transform(data[key])
+                except (ValueError, IndexError):
+                    continue
+                data[name] = value
 
         output: str = FormatWidgetMixin.__call__(self, progress, data, format)
         return self._apply_colors(output, data)

@@ -284,6 +284,45 @@ class WindowsColor:
         return text
 
 
+def _to_ansi_16(red: int, green: int, blue: int) -> int:
+    """Nearest ANSI 16-color-palette index (0-7), see `RGB.to_ansi_16`."""
+    return (int(blue >= 128) << 2) | (int(green >= 128) << 1) | int(red >= 128)
+
+
+def _to_ansi_256(red: int, green: int, blue: int) -> int:
+    """Nearest xterm 256-color cube index, see `RGB.to_ansi_256`."""
+    return (
+        16
+        + 36 * round(red / 255 * 5)
+        + 6 * round(green / 255 * 5)
+        + round(blue / 255 * 5)
+    )
+
+
+def _ansi_parameter(
+    red: int, green: int, blue: int, xterm: int | None
+) -> str | None:
+    """The SGR colour parameter for a colour, see `Color.ansi`.
+
+    Takes the channels and the registered xterm index apart so a gradient
+    can render an interpolated colour without first building the `Color`.
+    """
+    support = env.COLOR_SUPPORT
+    if support is env.ColorSupport.XTERM_TRUECOLOR:  # pragma: no branch
+        return f'2;{red};{green};{blue}'
+
+    if support is env.ColorSupport.XTERM:
+        color = _to_ansi_16(red, green, blue)
+    elif xterm is not None:
+        color = xterm
+    elif support is env.ColorSupport.XTERM_256:  # pragma: no branch
+        color = _to_ansi_256(red, green, blue)
+    else:  # pragma: no branch
+        return None
+
+    return f'5;{color}'
+
+
 class RGB(typing.NamedTuple):
     """Red, Green, Blue color, each channel 0-255."""
 
@@ -318,10 +357,7 @@ class RGB(typing.NamedTuple):
         only ever 1 at exactly 255, which collapsed almost every
         color (e.g. maroon 128,0,0) to black.
         """
-        red = int(self.red >= 128)
-        green = int(self.green >= 128)
-        blue = int(self.blue >= 128)
-        return (blue << 2) | (green << 1) | red
+        return _to_ansi_16(self.red, self.green, self.blue)
 
     @property
     def to_ansi_256(self) -> int:
@@ -330,10 +366,7 @@ class RGB(typing.NamedTuple):
         Rounds each channel to the nearest of 6 steps and combines
         them into the standard ``16 + 36r + 6g + b`` cube index.
         """
-        red = round(self.red / 255 * 5)
-        green = round(self.green / 255 * 5)
-        blue = round(self.blue / 255 * 5)
-        return 16 + 36 * red + 6 * green + blue
+        return _to_ansi_256(self.red, self.green, self.blue)
 
     @property
     def to_windows(self) -> WindowsColors:
@@ -539,23 +572,8 @@ class Color(typing.NamedTuple):
             The SGR color parameter (e.g. ``'5;196'``), or `None`
             if no color encoding applies.
         """
-        if (
-            env.COLOR_SUPPORT is env.ColorSupport.XTERM_TRUECOLOR
-        ):  # pragma: no branch
-            return f'2;{self.rgb.red};{self.rgb.green};{self.rgb.blue}'
-
-        if env.COLOR_SUPPORT is env.ColorSupport.XTERM:
-            color = self.rgb.to_ansi_16
-        elif self.xterm is not None:
-            color = self.xterm
-        elif (
-            env.COLOR_SUPPORT is env.ColorSupport.XTERM_256
-        ):  # pragma: no branch
-            color = self.rgb.to_ansi_256
-        else:  # pragma: no branch
-            return None
-
-        return f'5;{color}'
+        rgb = self.rgb
+        return _ansi_parameter(rgb.red, rgb.green, rgb.blue, self.xterm)
 
     def interpolate(self, end: Color, step: float) -> Color:
         """Linearly interpolate between this color and `end`.
@@ -742,6 +760,43 @@ class ColorGradient:
         Returns:
             The color at `value`.
         """
+        if type(value) is not float:
+            return self._get_color_generic(value)
+
+        # The redraw hot path: a `float` between the ends. The arithmetic
+        # below is `converters.remap` with its promotion and validation
+        # unrolled for an input range of `0..1` and an output range of
+        # `0..n`: subtracting a zero, dividing by one and adding a zero
+        # leave a finite float unchanged, so the results are bit for bit
+        # what `remap` returns and the rendered colours do not move.
+        if value <= 0:
+            return self.colors[0]
+        elif value >= 1:
+            return self.colors[-1]
+
+        colors = self.colors
+        max_color_idx = len(colors) - 1
+        if max_color_idx == 0:
+            return colors[0]
+        elif self.interpolate:
+            if max_color_idx > 1:
+                index = round(value * (max_color_idx - 1))
+            else:
+                index = 0
+
+            old_min = index / max_color_idx
+            step = (value - old_min) / ((index + 1) / max_color_idx - old_min)
+            return self.interpolate(colors[index], colors[index + 1], step)
+        else:
+            return colors[round(value * max_color_idx)]
+
+    def _get_color_generic(self, value: float) -> Color:
+        """Resolve a non-float `value` (an int, a `Decimal`, a sentinel).
+
+        The sentinels and integers are the ends of the gradient. Anything
+        else goes through `converters.remap`, which promotes a `Decimal`
+        to `Decimal` arithmetic the way it always did.
+        """
         if (
             value == pbase.Undefined
             or value == pbase.UnknownLength
@@ -779,6 +834,50 @@ class ColorGradient:
             color = self.colors[index]
 
         return color
+
+
+def _gradient_ansi_at(gradient: ColorGradient, value: float) -> str | None:
+    """The SGR colour parameter of `gradient` at `value`, see `get_color`.
+
+    The redraw path needs the escape parameter of the blended colour and
+    nothing else, so this does the arithmetic of `ColorGradient.get_color`
+    with the default blend (`Color.interpolate`) and hands the channels
+    straight to `_ansi_parameter`, without building the three namedtuples
+    of an interpolated `Color`. Only called for a plain `ColorGradient`
+    whose `interpolate` is the default, so the bytes are those of
+    ``gradient.get_color(value).ansi``.
+    """
+    colors = gradient.colors
+    if value <= 0:
+        return colors[0].ansi
+    elif value >= 1:
+        return colors[-1].ansi
+
+    max_color_idx = len(colors) - 1
+    if max_color_idx == 0:
+        return colors[0].ansi
+    if max_color_idx > 1:
+        index = round(value * (max_color_idx - 1))
+    else:
+        index = 0
+
+    old_min = index / max_color_idx
+    step = (value - old_min) / ((index + 1) / max_color_idx - old_min)
+    start = colors[index]
+    end = colors[index + 1]
+    start_rgb = start.rgb
+    end_rgb = end.rgb
+    return _ansi_parameter(
+        int(start_rgb.red + (end_rgb.red - start_rgb.red) * step),
+        int(start_rgb.green + (end_rgb.green - start_rgb.green) * step),
+        int(start_rgb.blue + (end_rgb.blue - start_rgb.blue) * step),
+        start.xterm if step < 0.5 else end.xterm,
+    )
+
+
+#: The function behind the default `ColorGradient` blend, to recognise a
+#: gradient that `_gradient_ansi_at` may render.
+_DEFAULT_BLEND = Colors.interpolate.__func__  # pyright: ignore[reportFunctionMemberAccess]
 
 
 class HueGradient(ColorGradient):
@@ -881,19 +980,70 @@ def apply_colors(
     """
     if percentage is None:
         if fg_none is not None:
-            text = fg_none.fg(text)
+            text = _sgr_wrap(fg_none, 38, 39, text)
         if bg_none is not None:
-            text = bg_none.bg(text)
+            text = _sgr_wrap(bg_none, 48, 49, text)
     elif fg is not None or bg is not None:
-        fg = get_color(percentage * 0.01, fg)
-        bg = get_color(percentage * 0.01, bg)
-
-        if fg is not None:  # pragma: no branch
-            text = fg.fg(text)
-        if bg is not None:  # pragma: no branch
-            text = bg.bg(text)
+        value = percentage * 0.01
+        if fg is not None:
+            text = _color_at(fg, value, 38, 39, text)
+        if bg is not None:
+            text = _color_at(bg, value, 48, 49, text)
 
     return text
+
+
+def _color_at(
+    color: Color | ColorGradient,
+    value: float,
+    start: int,
+    end: int,
+    text: str,
+) -> str:
+    """Wrap `text` in `color` resolved at `value`, see `apply_colors`.
+
+    A plain `ColorGradient` with the default blend and a `float` value
+    takes the arithmetic shortcut of `_gradient_ansi_at`. Any other
+    gradient (a subclass, a custom `interpolate`, a `Decimal` value) is
+    resolved through its own `get_color`, as before.
+    """
+    if type(color) is ColorGradient and type(value) is float:
+        blend = color.interpolate
+        if blend is not None and getattr(blend, '__func__', None) is (
+            _DEFAULT_BLEND
+        ):
+            if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+                return text
+            ansi = _gradient_ansi_at(color, value)
+            if ansi is None:
+                return text
+            return f'{ESC}[{start};{ansi}m{text}{ESC}[{end}m'
+    if isinstance(color, ColorGradient):
+        color = color(value)
+    return _sgr_wrap(color, start, end, text)
+
+
+def _sgr_wrap(color: Color, start: int, end: int, text: str) -> str:
+    """Wrap `text` in `color`, as `color.fg(text)` or `color.bg(text)` would.
+
+    `Color.fg` and `Color.bg` build an `SGRColor` per call and render its
+    two escape sequences through `CSI.__call__`, which is a `str.format`
+    and a `join` each. A redraw does that once per coloured widget, so
+    this writes the same bytes directly: no colour on the legacy Windows
+    console, no colour when the terminal has no usable encoding for it,
+    otherwise `ESC [ start ; ansi m text ESC [ end m`. A `Color` subclass
+    keeps whatever its own `fg`/`bg` do.
+    """
+    if type(color) is not Color:
+        if start == 38:
+            return color.fg(text)
+        return color.bg(text)
+    if env.COLOR_SUPPORT is env.ColorSupport.WINDOWS:
+        return text
+    ansi = color.ansi
+    if ansi is None:
+        return text
+    return f'{ESC}[{start};{ansi}m{text}{ESC}[{end}m'
 
 
 class DummyColor:

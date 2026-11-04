@@ -508,7 +508,14 @@ class DefaultFdMixin(ProgressBarMixinBase):
 
     def _format_line(self) -> str:
         """Join the formatted widgets and justify to `term_width`."""
-        widgets = ''.join(self._to_unicode(self._format_widgets()))
+        # Every entry is already a `str` unless an auto-width widget
+        # returned something else, so only those pay for the conversion.
+        widgets = ''.join(
+            [
+                part if type(part) is str else converters.to_unicode(part)
+                for part in self._format_widgets()
+            ]
+        )
 
         if self.left_justify:
             return widgets.ljust(self.term_width)
@@ -539,6 +546,9 @@ class DefaultFdMixin(ProgressBarMixinBase):
         allocation shifts the rest.
         """
         widgets = _load_widgets()
+        widget_base = widgets.WidgetBase
+        auto_width_base = widgets.AutoWidthWidgetBase
+        custom_len = self.custom_len
 
         result = []
         expanding = []
@@ -546,21 +556,31 @@ class DefaultFdMixin(ProgressBarMixinBase):
         data = self.data()
 
         for index, widget in enumerate(self.widgets):
-            if isinstance(
-                widget,
-                widgets.WidgetBase,
-            ) and not widget.check_size(self):
-                continue
-            elif isinstance(widget, widgets.AutoWidthWidgetBase):
+            # A plain `str` is the common literal separator and never a
+            # widget, so test for it first and spare it the two abstract
+            # base class checks below.
+            if type(widget) is str:
                 result.append(widget)
-                expanding.insert(0, index)
+                width -= custom_len(widget)
+            elif isinstance(widget, widget_base):
+                if not widget.check_size(self):
+                    continue
+                elif isinstance(widget, auto_width_base):
+                    result.append(widget)
+                    expanding.insert(0, index)
+                else:
+                    widget_output = widget(self, data)
+                    if type(widget_output) is not str:
+                        widget_output = converters.to_unicode(widget_output)
+                    result.append(widget_output)
+                    width -= custom_len(widget_output)
             elif isinstance(widget, str):
                 result.append(widget)
-                width -= self.custom_len(widget)  # type: ignore
+                width -= custom_len(widget)
             else:
                 widget_output = converters.to_unicode(widget(self, data))
                 result.append(widget_output)
-                width -= self.custom_len(widget_output)  # type: ignore
+                width -= custom_len(widget_output)
 
         count = len(expanding)
         while expanding:
@@ -570,7 +590,7 @@ class DefaultFdMixin(ProgressBarMixinBase):
             count -= 1
 
             widget_output = widget(self, data, portion)
-            width -= self.custom_len(widget_output)  # type: ignore
+            width -= custom_len(widget_output)
             result[index] = widget_output
 
         return result
