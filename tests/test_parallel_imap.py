@@ -74,14 +74,22 @@ class TestImap:
 class TestImapUnordered:
     @pytest.mark.no_freezegun
     def test_yields_pairs_in_completion_order(self) -> None:
-        pairs: list[tuple[int, int]] = list(
-            _sync.imap_unordered(
-                _sleep_inverse, range(5), workers=5, bar=False
-            )
-        )
+        # Deterministic ordering: only item 4 can finish until the gate
+        # opens, so timing on a loaded machine cannot reorder the result
+        gate: threading.Event = threading.Event()
+
+        def gated(value: int) -> int:
+            if value != 4:
+                assert gate.wait(10)
+            return value
+
+        iterator = _sync.imap_unordered(gated, range(5), workers=5, bar=False)
+        first: tuple[int, int] = next(iterator)
+        gate.set()
+        pairs: list[tuple[int, int]] = [first, *iterator]
         assert sorted(pairs) == [(value, value) for value in range(5)]
-        # The fastest item (highest input) completes and is seen first.
-        assert pairs[0] == (4, 4)
+        # The only item that could complete is seen first.
+        assert first == (4, 4)
 
     def test_multi_iterable_pairs_use_args_tuple(self) -> None:
         pairs = list(

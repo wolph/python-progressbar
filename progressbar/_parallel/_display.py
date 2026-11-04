@@ -15,6 +15,7 @@ no-ops, which would freeze ETA/spinners during long tasks.
 from __future__ import annotations
 
 import os
+import re
 import sys
 import typing
 
@@ -27,6 +28,22 @@ from . import _common
 
 if typing.TYPE_CHECKING:
     from .. import multi as multi_module
+
+# Batch items are data, not caller-authored markup. Remove every
+# ESC-introduced sequence and every C0/C1 control (CR, LF and TAB
+# included) so the label is inert text on exactly one terminal row.
+_LABEL_CONTROL_RE: re.Pattern[str] = re.compile(
+    r'\x1b\[[0-?]*[ -/]*[@-~]'  # CSI
+    r'|\x1b\][^\x07\x1b\x9c]*(?:\x07|\x1b\\|\x9c)?'  # OSC
+    r'|\x1b[PX^_][^\x1b\x9c]*(?:\x1b\\|\x9c)?'  # DCS, SOS, PM, APC
+    r'|\x1b[ -/]*[0-~]?'  # other ESC sequences
+    r'|[\x00-\x1f\x7f-\x9f]'  # C0, DEL, C1
+)
+
+
+def _display_label(label: str) -> str:
+    """Return a batch-item label as inert, single-row display text."""
+    return _LABEL_CONTROL_RE.sub('', label)
 
 
 @typing.runtime_checkable
@@ -251,7 +268,7 @@ class MultiDisplay:
         self, seq: int, label: str
     ) -> bar_module.ProgressBar | None:
         """Add a per-task bar and hand it out for `current_task_bar`."""
-        key: str = f'{seq}: {label}'
+        key: str = f'{seq}: {_display_label(str(label))}'
         self._keys[seq] = key
         task_bar: bar_module.ProgressBar = bar_module.ProgressBar(
             max_value=base.UnknownLength,
@@ -261,10 +278,18 @@ class MultiDisplay:
         return task_bar
 
     def task_finished(self, seq: int, ok: bool) -> None:
-        """Drop the task's bar -- finished bars must not pile up."""
+        """Drop and finish the task's bar.
+
+        Finished bars must not pile up in the MultiBar, and each bar
+        must be finished so its stream listeners, capture refcounts and
+        resize-handler registration return to their baseline.
+        """
         key: str | None = self._keys.pop(seq, None)
-        if key is not None and key in self.multibar:
-            del self.multibar[key]
+        if key is None or key not in self.multibar:
+            return
+        task_bar: bar_module.ProgressBar = self.multibar[key]
+        del self.multibar[key]
+        task_bar.finish(end='', dirty=not ok)
 
     def advance(self, n: int = 1) -> None:
         """Count completions on the overall bar.

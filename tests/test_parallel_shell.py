@@ -84,8 +84,35 @@ class TestBuildArgv:
         command = _shell.build_argv('gzip -k', 'a file.txt', shell=True)
         assert command == "gzip -k 'a file.txt'"
 
+    def test_item_placeholder_text_is_not_reexpanded(self) -> None:
+        # One substitution pass: '{item}' inside the item stays literal.
+        argv: list[str] | str = _shell.build_argv(
+            'echo {}', 'a{item}b', shell=False
+        )
+        assert argv == ['echo', 'a{item}b']
+
+    def test_shell_item_placeholder_text_is_not_reexpanded(self) -> None:
+        command: list[str] | str = _shell.build_argv(
+            'echo {item}', 'x{}y', shell=True
+        )
+        assert command == 'echo x{}y'
+
+    @pytest.mark.parametrize(
+        'command',
+        [['echo', '{}'], lambda item: ['echo', str(item)]],
+    )
+    def test_shell_rejects_non_str_template(
+        self, command: _shell.CommandT
+    ) -> None:
+        with pytest.raises(TypeError, match='str command template'):
+            _shell.build_argv(command, 'x', shell=True)
+
 
 class TestRun:
+    def test_shell_with_list_template_raises(self) -> None:
+        with pytest.raises(TypeError, match='str command template'):
+            _shell.run(['echo', '{}'], ['x'], shell=True)
+
     @pytest.mark.no_freezegun
     def test_runs_commands_and_returns_completed_processes(self) -> None:
         results: list[subprocess.CompletedProcess[str]] = _shell.run(
