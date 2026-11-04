@@ -299,7 +299,7 @@ def test_specialised_template_preserves_markup_escaping_and_type() -> None:
         Markup('{value}'), new_style=True
     )
     result: str = label(bar, data)
-    assert result == '&lt;tag&gt;'
+    assert progressbar.utils.no_color(result) == '&lt;tag&gt;'
     assert isinstance(result, Markup)
 
 
@@ -341,7 +341,7 @@ def test_specialised_proxy_preserves_format_method() -> None:
     label: progressbar.FormatLabel = progressbar.FormatLabel(
         Template('{value}'), new_style=True
     )  # type: ignore[arg-type]
-    assert label(bar, data) == 'specialised:3'
+    assert progressbar.utils.no_color(label(bar, data)) == 'specialised:3'
 
 
 def test_specialised_str_cannot_hide_field_paths_in_str_override() -> None:
@@ -372,7 +372,7 @@ def test_specialised_template_allows_literal_braces_and_nested_width() -> None:
     label: progressbar.FormatLabel = progressbar.FormatLabel(
         Markup('{{literal}} {value:0{width}d}'), new_style=True
     )
-    assert label(bar, data) == '{literal} 003'
+    assert progressbar.utils.no_color(label(bar, data)) == '{literal} 003'
 
 
 def test_validated_template_is_checked_once(
