@@ -24,16 +24,20 @@ def _render(**kwargs: object) -> str:
     return fd.getvalue()
 
 
-def test_desc_attribute_walk_renders_literally() -> None:
+def test_desc_attribute_walk_is_refused() -> None:
     desc: str = (
         '{variables.__class__.__getattr__.__globals__[os].environ[HOME]}'
     )
-    output: str = _render(desc=desc)
-    assert desc + ': ' in output
+    with pytest.raises(ValueError, match='__class__'):
+        _render(desc=desc)
 
 
-def test_desc_with_braces_renders_literally() -> None:
-    output: str = _render(desc='report{2024}.txt')
+def test_desc_is_a_template_like_prefix() -> None:
+    # 4.6.0 rendered desc through the prefix label, so a field in it
+    # shows the bar's data and a literal brace has to be doubled.
+    output: str = _render(desc='{value} done')
+    assert '10 done: ' in output  # the finishing redraw
+    output = _render(desc='report{{2024}}.txt')
     assert 'report{2024}.txt: ' in output
 
 
@@ -239,30 +243,24 @@ def test_bad_interval_warning_is_once_per_value_beyond_sixteen_and_threadsafe(
     assert len(messages) == 18
 
 
-def test_desc_prefix_is_a_format_label_that_renders_literally() -> None:
+def test_desc_prefix_is_a_format_label_with_variables() -> None:
     fd: io.StringIO = io.StringIO()
     bar: progressbar.ProgressBar = progressbar.ProgressBar(
         fd=fd,
         max_value=10,
-        desc='{files}',
+        desc='{variables.files}',
+        variables={'files': 'spam'},
         widgets=[progressbar.SimpleProgress()],
     )
-    assert bar.prefix == '{files}: '  # read back unescaped, as in 4.6.0
+    assert bar.prefix == '{variables.files}: '  # as in 4.6.0
     bar.start()
     assert isinstance(bar.widgets[0], progressbar.FormatLabel)  # as in 4.6.0
     bar.update(4, force=True)
-    assert '{files}: 4 of 10' in fd.getvalue()
+    assert 'spam: 4 of 10' in fd.getvalue()
 
 
-def test_desc_with_braces_renders_literally_on_the_fast_path() -> None:
-    fd: io.StringIO = io.StringIO()
-    bar: progressbar.ProgressBar = progressbar.ProgressBar(
-        fd=fd, max_value=10, desc='{files}'
-    )
-    bar.start()
-    bar.update(4, force=True)
-    assert '{files}: ' in fd.getvalue()
-    assert '{{files}}' not in fd.getvalue()
+def test_desc_renders_literally_on_the_fast_path() -> None:
+    # The fast formatter never rendered templates, in 4.6.0 either.
     fast: progressbar.FastProgressBar = progressbar.FastProgressBar(
         fd=io.StringIO(), max_value=10, desc='{files}'
     )
