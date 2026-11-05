@@ -23,7 +23,9 @@ from progressbar.terminal import colors
 
 # The package re-exports `progressbar.base` under the name `base`, which
 # shadows the submodule for `from progressbar.terminal import base`.
-terminal_base: typing.Any = importlib.import_module('terminal.base')
+terminal_base: typing.Any = importlib.import_module(
+    'progressbar.terminal.base'
+)
 
 _PERCENTAGES: list[float | int | None] = [
     None,
