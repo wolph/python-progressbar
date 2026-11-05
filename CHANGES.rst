@@ -2,8 +2,65 @@
 Changelog
 =========
 
-Unreleased
-----------
+4.7.0 - 2026-11-05
+------------------
+
+Widgets are coloured by default: a bar on a colour terminal shows the
+default palette without ``enable_colors=True``, spinners cycle through
+colours, and the ``Bar`` fill colours are constructor arguments (``fg``,
+``bg``) instead of the ``Bar.fg`` and ``Bar.bg`` class attributes. A
+widget called directly returns the escape codes, and
+``progressbar.utils.no_color`` strips them. Output to a file or pipe is
+unchanged.
+
+A parallel execution API: ``progressbar.map``, ``imap``,
+``imap_unordered``, ``starmap``, ``thread_map``, ``process_map``,
+``as_completed``, the asyncio variants ``amap``, ``aimap``,
+``aimap_unordered`` and ``gather``, ``run`` for shell commands, and the
+``progressbar.parallel`` decorator, with ``bar='multi'`` for an overall
+bar plus a bar per task (PR #327).
+
+A forced redraw of the default widgets is 20 percent faster than in
+4.6.0 and the fast path, the iterator overhead and the import time are
+at or below their 4.6.0 cost, with colours on. Rendered colour escapes
+are remembered per gradient and per colour, new-style templates are
+validated once per template text, and captured writes take a cheaper
+lock (PR #333).
+
+New-style format templates such as ``FormatLabel('{value.__class__}')``
+or ``prefix='{value.__doc__} '`` now raise ``ValueError``: a template
+walking dunder or frame attributes could reach interpreter internals.
+Index access and ordinary attributes keep working, and a positional
+field still raises ``IndexError`` as it did.
+
+``desc`` is still the ``prefix`` alias and renders as a template, as it
+did in 4.6.0. A literal brace in a description has to be doubled.
+
+The fast bar reserves the width of ``prefix``, ``desc`` and ``suffix``
+before sizing the filler, so a labelled bar no longer overflows the
+terminal (contributed by @rupayon123 in PR #331). Labels that are not
+strings and an uncallable ``custom_len`` render as before.
+
+The ``progressbar`` and ``bar`` commands exit with status 2 and a usage
+line on an invalid option value, such as ``--size abc``, where they
+printed a traceback before, and validate every argument before the
+output file is opened. A pipeline whose reader goes away ends the copy
+quietly with status 0.
+
+``PROGRESSBAR_MINIMUM_UPDATE_INTERVAL`` set to a value that is not a
+non-negative finite number is logged once and ignored instead of raising
+at the first ``ProgressBar()``.
+
+Deprecation warnings for ``maxval``, ``poll`` and ``currval`` name the
+caller's file and line. A warnings filter by module ``progressbar`` no
+longer matches them, a filter by category or message does.
+
+``StreamWrapper.lock`` and ``listeners_lock`` are read-only properties
+shared with the wrapped streams and reset after ``fork``. A subclass
+that assigned its own lock raises ``AttributeError`` at construction.
+``update_capturing()`` calls ``flush()`` once the last capture stops, as
+in 4.6.0. ``wrapped_excepthook`` is a ``bool``.
+
 
 The ``progressbar`` and ``bar`` commands, and ``python -m progressbar``,
 now exit with status 130 after Ctrl-C interrupts a transfer. Previously
