@@ -9,8 +9,8 @@ here.
 .. demo:: howto/tqdm-style
 
 ``desc`` and ``total`` work on any ``ProgressBar``: ``desc`` becomes the
-prefix (rendered as ``f'{desc}: '``, as literal text, so braces in a file
-name stay braces), and ``total`` becomes ``max_value`` when ``max_value``
+prefix (rendered as ``f'{desc}: '``, a format template like ``prefix``,
+so double a literal brace), and ``total`` becomes ``max_value`` when ``max_value``
 isn't given explicitly. ``unit=``/``unit_scale=``
 don't render anything by themselves -- they only show up through a
 widget that reads them, such as ``UnitProgress()`` -- so pass a widget

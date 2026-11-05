@@ -915,10 +915,10 @@ class ProgressBar(
         line_offset: The number of lines to offset the progressbar from
             your current line. This is useful if you have other output or
             multiple progressbars.
-        desc: tqdm-style description, rendered literally as
-            `f'{desc}: '` in front of the bar. Unlike `prefix` it is
-            never a format template: braces in a file name stay braces.
-            Ignored if `prefix` is also given.
+        desc: tqdm-style alias for `prefix`, rendered as `f'{desc}: '`
+            in front of the bar. Like `prefix` it is a format template,
+            so `desc='{value}'` shows the value and a literal brace
+            must be doubled. Ignored if `prefix` is also given.
         total: tqdm-style alias for `max_value`. Ignored if `max_value` is
             also given.
         unit: The unit label used by unit-aware widgets. Defaults to
@@ -1002,14 +1002,9 @@ class ProgressBar(
         if max_value is None and total is not None:
             # tqdm-style alias for `max_value`
             max_value = total
-        self._literal_prefix: str | None = None
         if prefix is None and desc is not None:
-            # tqdm-style alias for `prefix`: `desc` is literal text, as in
-            # tqdm and as the fast path renders it. Remember the exact
-            # string, so `_init_prefix` escapes its braces and a prefix
-            # assigned later is a template again.
+            # tqdm-style alias for `prefix`, a template like `prefix`
             prefix = f'{desc}: '
-            self._literal_prefix = prefix
 
         if max_value and min_value > typing.cast(NumberT, max_value):
             raise ValueError(
@@ -1823,12 +1818,8 @@ class ProgressBar(
         if self.prefix:
             widgets = _load_widgets()
 
-            template: str = self.prefix
-            if template is getattr(self, '_literal_prefix', None):
-                # A desc is literal text: escape its braces for the label
-                template = template.replace('{', '{{').replace('}', '}}')
             self.widgets.insert(
-                0, widgets.FormatLabel(template, new_style=True)
+                0, widgets.FormatLabel(self.prefix, new_style=True)
             )
             self.prefix = None
 
