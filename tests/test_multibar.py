@@ -641,7 +641,7 @@ def test_expiry_keeps_concurrent_replacement(mutation: str) -> None:
             list(
                 multibar._render_finished_bar(old, 10, 9, lambda **kwargs: '')
             )
-        except BaseException as error:
+        except Exception as error:
             errors.append(error)
         finally:
             sys.settrace(None)
@@ -744,6 +744,9 @@ def test_membership_tracking_never_calls_bar_hash(operation: str) -> None:
                 raise AssertionError('bar hash callback')
             return object.__hash__(self)
 
+        def __eq__(self, other: object) -> bool:
+            return self is other
+
     multibar: progressbar.MultiBar = progressbar.MultiBar(fd=io.StringIO())
     progress: HashBar = HashBar(fd=io.StringIO())
     multibar['task'] = progress
@@ -814,7 +817,7 @@ def test_multibar_membership_lock_resets_after_fork() -> None:
 def test_tracking_distinguishes_equal_bars_by_identity() -> None:
     class EqualBar(progressbar.ProgressBar):
         def __hash__(self) -> int:
-            raise AssertionError('tracking called hash')
+            raise TypeError('tracking called hash')
 
         def __eq__(self, other: object) -> bool:
             raise AssertionError('tracking called equality')
@@ -848,7 +851,7 @@ class _IdentityTracked:
         self.owner: object = None
 
     def __hash__(self) -> int:
-        raise AssertionError('hash callback')
+        raise TypeError('hash callback')
 
     def __eq__(self, other: object) -> bool:
         raise AssertionError('equality callback')
@@ -968,7 +971,7 @@ def test_render_does_not_relabel_replaced_bar() -> None:
         sys.settrace(trace)
         try:
             list(multibar._render_bar(old, now=10, expired=None))
-        except BaseException as error:
+        except Exception as error:
             errors.append(error)
         finally:
             sys.settrace(None)
@@ -1129,7 +1132,7 @@ def test_waiting_native_lookup_rechecks_custom_mode() -> None:
         started.set()
         try:
             assert multibar['task'] is progress
-        except BaseException as error:
+        except Exception as error:
             errors.append(error)
 
     with multibar._membership_lock:
@@ -1186,7 +1189,7 @@ def test_clear_does_not_reenable_native_mode_during_custom_insert() -> None:
     def insert() -> None:
         try:
             multibar[label] = progress
-        except BaseException as error:
+        except Exception as error:
             errors.append(error)
 
     thread: threading.Thread = threading.Thread(

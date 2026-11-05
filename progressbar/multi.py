@@ -373,12 +373,14 @@ class MultiBar(dict[str, bar.ProgressBar]):
     @typing.overload
     def setdefault(
         self, key: str, default: bar.ProgressBar
-    ) -> bar.ProgressBar: ...
+    ) -> bar.ProgressBar:
+        """Insert `default` under `key` unless a member exists."""
 
     @typing.overload
     def setdefault(
         self, key: str, default: None = None
-    ) -> bar.ProgressBar | None: ...
+    ) -> bar.ProgressBar | None:
+        """Return the member under `key`, or `None` when absent."""
 
     def setdefault(
         self, key: str, default: bar.ProgressBar | None = None
@@ -425,8 +427,8 @@ class MultiBar(dict[str, bar.ProgressBar]):
             super().clear()
             self._finished_at.clear()
             self._labeled.clear()
-        # Release the last references after leaving the membership guard.
-        del removed
+        # `removed` keeps the bars alive until this method returns, so
+        # their finalisers run after the membership guard is released.
 
     def _label_bar(
         self, bar: bar.ProgressBar, *, require_member: bool = False

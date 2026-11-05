@@ -17,15 +17,13 @@ import typing
 import pytest
 from python_utils import converters
 
-import progressbar
 from progressbar import base, env, terminal, utils, widgets
+from progressbar.bar import ProgressBar
 from progressbar.terminal import colors
 
 # The package re-exports `progressbar.base` under the name `base`, which
 # shadows the submodule for `from progressbar.terminal import base`.
-terminal_base: typing.Any = importlib.import_module(
-    'progressbar.terminal.base'
-)
+terminal_base: typing.Any = importlib.import_module('terminal.base')
 
 _PERCENTAGES: list[float | int | None] = [
     None,
@@ -398,7 +396,7 @@ def test_format_widgets_converts_non_str_output() -> None:
     class Separator(str):
         pass
 
-    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+    bar: ProgressBar = ProgressBar(
         widgets=[Number(), '|', Auto(), Separator('|'), plain],
         max_value=10,
         term_width=20,
