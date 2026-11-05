@@ -143,3 +143,15 @@ General options
 
 ``-h``/``--help`` shows the built-in ``argparse`` help and exits.
 ``-P``/``--pidfile`` is accepted but not wired up.
+
+Exit status
+==============
+
+A complete copy exits ``0``, and so does a copy whose reader goes away
+early (``progressbar big.bin | head``): the bar is finished quietly and
+nothing is printed about the broken pipe. An invalid size value, a
+missing, unreadable or directory input, a directory as output, or an
+output path that is also one of the inputs is reported before the output
+file is opened, so the output is left untouched, and the command exits
+``2`` like any other usage error. Ctrl-C finishes the bar and exits
+``130``.

@@ -8,12 +8,14 @@ widget implements.
 
 from __future__ import annotations
 
+import _string  # type: ignore[import-not-found]
 import abc
 import collections.abc
 import contextlib
 import datetime
 import functools
 import logging
+import string
 import typing
 from typing import ClassVar
 
@@ -26,6 +28,136 @@ if typing.TYPE_CHECKING:
     from .bar import NumberT, ProgressBarMixinBase
 
 logger = logging.getLogger(__name__)
+
+
+class _SafeFormatter(string.Formatter):
+    """`str.format` over widget data that refuses dunder attribute walks.
+
+    Format templates may come from text the application did not write
+    (a `prefix`, a `Variable` format). A field such as
+    `{variables.__class__.__init__.__globals__}` would otherwise reach
+    module globals, so any attribute segment starting with `__` raises
+    `ValueError` before it is looked up. A single leading underscore is
+    allowed: `{variables._my_var}` is a documented way to reach a
+    variable, and a user object's own `_private` attribute is the
+    user's business.
+    """
+
+    #: Non-dunder attributes that also lead from an object stored as a
+    #: bar variable (a generator, coroutine, traceback or frame) to a
+    #: frame and its globals.
+    blocked_attributes: frozenset[str] = frozenset(
+        {
+            'f_back',
+            'f_builtins',
+            'f_globals',
+            'f_locals',
+            'gi_frame',
+            'cr_frame',
+            'ag_frame',
+            'tb_frame',
+        }
+    )
+
+    def validate_field(self, field_name: str) -> None:
+        """Check every attribute before any value is looked up.
+
+        A positional field (`{}` or `{0}`) has no value to look up:
+        the templates render from keyword data only, so it raises the
+        `IndexError` that `str.format` raised for it in 4.6.0.
+        """
+        first: typing.Any
+        rest: typing.Iterable[tuple[bool, typing.Any]]
+        first, rest = _string.formatter_field_name_split(field_name)
+        if not isinstance(first, str) or not first:
+            raise IndexError(
+                f'Replacement index {first or 0} out of range for '
+                'positional args tuple'
+            )
+        for is_attr, name in rest:
+            if is_attr and (
+                str(name).startswith('__') or name in self.blocked_attributes
+            ):
+                raise ValueError(
+                    f'attribute {name!r} is not allowed in a format template',
+                )
+
+    def validate(self, template: str, depth: int = 2) -> None:
+        """Check every field, conversion and nested spec of a template.
+
+        The depth limit mirrors the two levels of nesting `str.format`
+        accepts, so a template that passes here renders through the
+        built-in formatter without further checks.
+        """
+        if depth < 0:
+            raise ValueError('Max string recursion exceeded')
+        for _, field, spec, conversion in self.parse(template):
+            if field is not None:
+                self.validate_field(field)
+                if conversion is not None and conversion not in (
+                    's',
+                    'r',
+                    'a',
+                ):
+                    raise ValueError(
+                        f'Unknown conversion specifier {conversion}'
+                    )
+                self.validate(spec or '', depth - 1)
+
+
+_SAFE_FORMATTER: _SafeFormatter = _SafeFormatter()
+
+#: Template texts that passed `_SafeFormatter.validate`. Validation is a
+#: property of the text, not of the data, so each distinct template is
+#: checked once and then rendered by the built-in formatter at
+#: `str.format` speed. Membership tests and insertions on a dict are
+#: atomic under the GIL, so the cache needs no lock. It is cleared when
+#: it grows past `_SAFE_TEMPLATE_LIMIT` entries, which only costs the
+#: next render of each template one more validation.
+_SAFE_TEMPLATES: dict[str, None] = {}
+_SAFE_TEMPLATE_LIMIT: int = 1024
+
+
+def _validate_once(text: str) -> None:
+    """Validate `text` unless an identical template passed before."""
+    if text in _SAFE_TEMPLATES:
+        return
+    _SAFE_FORMATTER.validate(text)
+    if len(_SAFE_TEMPLATES) >= _SAFE_TEMPLATE_LIMIT:
+        _SAFE_TEMPLATES.clear()
+    _SAFE_TEMPLATES[text] = None
+
+
+def _safe_format(
+    template: object,
+    data: typing.Mapping[str, typing.Any],
+) -> str:
+    """Render safe field paths while preserving specialised formatting.
+
+    A plain `str` is validated once per distinct text and then rendered
+    with `str.format_map`, which takes the mapping as it is (a
+    non-`str` key stays a `KeyError` on the missing field, not a
+    `TypeError` from keyword expansion). A specialised template (a
+    `Markup`, a translation proxy) keeps its own `format` method, so it
+    retains its escaping and result type. Its text is read again on
+    every call: a proxy may switch language between renders, and the
+    cache is keyed by the text that is about to render, never by the
+    object. Application code in format methods and proxies remains
+    trusted.
+    """
+    if type(template) is str:
+        _validate_once(template)
+        return template.format_map(data)
+    formatter: typing.Any = getattr(template, 'format', None)
+    if not callable(formatter):
+        raise TypeError(
+            f'format template must be a str, got {type(template).__name__}',
+        )
+    _validate_once(
+        str.__str__(template) if isinstance(template, str) else str(template)
+    )
+    return typing.cast(str, formatter(**data))
+
 
 MAX_DATE = datetime.date.max
 MAX_TIME = datetime.time.max
@@ -198,14 +330,14 @@ class FormatWidgetMixin:
         format_ = self.get_format(progress, data, format)
         try:
             if self.new_style:
-                return format_.format(**data)
+                return _safe_format(format_, data)
             else:
                 return format_ % data
-        except (TypeError, KeyError):
+        except (TypeError, KeyError, IndexError, ValueError):
             logger.exception(
-                'Error while formatting %r with data: %r',
+                'Error while formatting %r with data keys: %r',
                 format_,
-                data,
+                list(data),
             )
             raise
 
@@ -362,11 +494,15 @@ class WidgetBase(WidthWidgetMixin, metaclass=abc.ABCMeta):
     def _apply_colors(self, text: str, data: Data) -> str:
         """Wrap `text` in the configured fixed/gradient colors, if any."""
         if self.uses_colors:
+            gradient = self._gradient_colors
+            fixed = self._fixed_colors
             return terminal.apply_colors(
                 text,
                 data.get('percentage'),
-                **self._gradient_colors,
-                **self._fixed_colors,
+                fg=gradient['fg'],
+                bg=gradient['bg'],
+                fg_none=fixed['fg_none'],
+                bg_none=fixed['bg_none'],
             )
         else:
             return text
@@ -518,8 +654,11 @@ class FormatLabel(FormatWidgetMixin, ColoredMixin, WidgetBase):
             if transform is None:
                 data[name] = data[key]
             else:
-                with contextlib.suppress(ValueError, IndexError):
-                    data[name] = transform(data[key])
+                try:
+                    value = transform(data[key])
+                except (ValueError, IndexError):
+                    continue
+                data[name] = value
 
         output: str = FormatWidgetMixin.__call__(self, progress, data, format)
         return self._apply_colors(output, data)
@@ -2106,7 +2245,7 @@ class Variable(FormatWidgetMixin, VariableMixin, WidgetBase):
             else:
                 context['formatted_value'] = '-' * self.width
 
-        return self.format.format(**context)
+        return _safe_format(self.format, context)
 
 
 class DynamicMessage(Variable):

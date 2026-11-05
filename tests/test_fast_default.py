@@ -331,3 +331,46 @@ def test_fast_tolerates_uncallable_or_float_custom_len(custom_len):
     assert list(bar(range(3))) == [0, 1, 2]
     for frame in fd.repaints():
         assert len(frame.rstrip('\r\n')) == 80
+
+
+def test_fast_coloured_prefix_counts_visible_width_only():
+    # A label carrying escape codes is measured through len_color, so the
+    # bar still fills the terminal width exactly.
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=3,
+        fd=fd,
+        term_width=80,
+        prefix='\x1b[31mload\x1b[39m ',
+        suffix=' \x1b[1mnow\x1b[0m',
+        # Keep the escapes in the output whatever the CI terminal
+        # supports, the width arithmetic is what this test is about.
+        enable_colors=True,
+    )
+    assert list(bar(range(3))) == [0, 1, 2]
+    frames = fd.repaints()
+    assert frames
+    for frame in frames:
+        assert '\x1b[31m' in frame
+        assert progressbar.utils.len_color(frame.rstrip('\r\n')) == 80
+
+
+def test_fast_str_subclass_labels_render_as_plain_text():
+    class Label(str):
+        pass
+
+    fd = TTY()
+    bar = fast_module.FastProgressBar(
+        max_value=3,
+        fd=fd,
+        term_width=80,
+        prefix=Label('load '),
+        suffix=Label(' now'),
+    )
+    assert list(bar(range(3))) == [0, 1, 2]
+    frames = fd.repaints()
+    assert frames
+    for frame in frames:
+        assert frame.startswith(('\rload ', 'load '))
+        assert frame.rstrip('\r\n').endswith(' now')
+        assert len(frame.rstrip('\r\n')) == 80

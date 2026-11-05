@@ -59,10 +59,16 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
     width = bar.term_width
     elapsed = bar._fast_elapsed()
     elapsed_text = _format_seconds(elapsed)
-    # 4.6.0 rendered the labels through an f-string, so a non-str label such
-    # as an int still printed. Keep that: str() before the width arithmetic.
-    prefix = str(bar.prefix or '')
-    suffix = str(bar.suffix or '')
+    prefix = bar.prefix or ''
+    suffix = bar.suffix or ''
+    if prefix or suffix:
+        # 4.6.0 rendered the labels through an f-string, so a non-str
+        # label such as an int still printed. Keep that: str() before
+        # the width arithmetic.
+        if type(prefix) is not str:
+            prefix = str(prefix)
+        if type(suffix) is not str:
+            suffix = str(suffix)
 
     known = max_value not in (None, base.UnknownLength)
     if known:
@@ -82,10 +88,22 @@ def _pure_format_fast_line(bar: FastProgressBar) -> str:
         # 4.6.0 never called `custom_len` on this path, so a `None` or a
         # float-returning measurer rendered fine. Fall back to the default
         # measurer for an uncallable one and truncate the result to int.
-        measure: Callable[[str], int] | None = getattr(bar, 'custom_len', None)
-        if not callable(measure):
-            measure = utils.len_color
-        fixed = int(measure(prefix + left + right + suffix))
+        if not prefix and not suffix:
+            # No labels: the 4.6.0 arithmetic, `left` and `right` are
+            # plain ASCII so nothing needs measuring.
+            fixed = len(left) + len(right)
+        else:
+            measure: Callable[[str], int] | None = bar.custom_len
+            if measure is utils.len_color or not callable(measure):
+                # The default measurer strips escape codes first. `left`
+                # and `right` never carry any, so when the labels have
+                # none either the width is the plain length.
+                if '\x1b' in prefix or '\x1b' in suffix:
+                    fixed = utils.len_color(prefix + left + right + suffix)
+                else:
+                    fixed = len(prefix) + len(left) + len(right) + len(suffix)
+            else:
+                fixed = int(measure(prefix + left + right + suffix))
         inner = max(width - fixed - 2, 0)
         filled = int(inner * done / total) if total else inner
         barstr = '|' + '#' * filled + ' ' * (inner - filled) + '|'
