@@ -114,6 +114,7 @@ bugs = 'https://github.com/wolph/python-progressbar/issues'
 documentation = 'https://progressbar-2.readthedocs.io/en/latest/'
 repository = 'https://github.com/wolph/python-progressbar/'
 Funding = 'https://github.com/sponsors/wolph'
+Changelog = 'https://github.com/wolph/python-progressbar/releases'
 
 [project.scripts]
 progressbar = 'progressbar.__main__:main'
