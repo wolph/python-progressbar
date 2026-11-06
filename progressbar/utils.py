@@ -449,11 +449,32 @@ class WrappingIO:
         if value:
             # A replacement flush() may log. Call it only during
             # delivery, outside both the buffer and transition locks.
-            self.flush()
+            try:
+                self.flush()
+            except BaseException:
+                # The text was taken already. Put it back in front of
+                # anything written since, so a flush() that fails once
+                # (a handler that is not ready yet) costs no output.
+                self._restore(value)
+                raise
         if value and not self.target.closed:
             self.target.write(value)
         # when explicitly flushing, always flush the target as well
         self.flush_target()
+
+    def _restore(self, value: str) -> None:
+        """Put text taken by `_take()` back, ahead of later writes."""
+        with (
+            self._buffer_box.lock
+            if self._native_buffer()
+            else contextlib.nullcontext()
+        ):
+            rest: str = self.buffer.getvalue()
+            self.buffer.seek(0)
+            self.buffer.truncate(0)
+            self.buffer.write(value + rest)
+            if '\n' in value:
+                self.needs_clear = True
 
     def flush_target(self) -> None:  # pragma: no cover
         """Flush `target` itself, if it's open and flushable."""
@@ -681,6 +702,11 @@ class StreamWrapper:
         """
         pending: list[_Pending] = []
         failure: BaseException | None = None
+        # The default hook drains and delivers through `flush()`, as
+        # 4.6.0 did, so the original stream is flushed once. Only a
+        # replaced hook, which may not call `super()`, needs this stop
+        # to deliver its own text before the hook runs.
+        deliver: bool = not self._default_capture_hook()
         with self.lock:
             if bar:  # pragma: no branch
                 with self.listeners_lock, contextlib.suppress(KeyError):
@@ -690,15 +716,23 @@ class StreamWrapper:
             # the next start_capturing() a no-op
             self.capturing = max(self.capturing - 1, 0)
             try:
-                pending = self._apply_capturing()
+                if deliver:
+                    pending = self._apply_capturing()
+                else:
+                    self._propagate_capturing()
             except BaseException as exception:  # noqa: BLE001
                 failure = exception
-        if failure is None:
+        if failure is None and pending:
             try:
                 self._deliver(pending)
             except BaseException as exception:  # noqa: BLE001
                 failure = exception
         self._notify_capturing(failure)
+
+    def _default_capture_hook(self) -> bool:
+        """Return whether `update_capturing` is the one defined here."""
+        hook: object = getattr(self.update_capturing, '__func__', None)
+        return hook is StreamWrapper.update_capturing
 
     def _notify_capturing(self, failure: BaseException | None) -> None:
         """Notify the public hook without replacing an earlier failure."""
@@ -720,21 +754,27 @@ class StreamWrapper:
         until something else happens to trigger a flush.
 
         Start and stop invoke overrides after the state propagation
-        attempt. Stop also attempts delivery before invoking the hook,
-        even if that attempt fails. Calling `super()` reconciles the
-        current state again and can flush an already empty target.
+        attempt. A stop with a replaced hook also delivers its own text
+        before invoking it, even if that delivery fails. Calling
+        `super()` reconciles the current state again and flushes.
         Concurrent transitions can change the state before the hook
         runs, so it can observe a later transition's count and flags.
         """
         with self.lock:
-            pending: list[_Pending] = self._apply_capturing()
-        self._deliver(pending)
+            self._propagate_capturing()
         if self.capturing <= 0:
             # 4.6.0 flushed through the public method here, so a
             # subclass that overrides `flush()` sees the last bar stop
-            # capturing. The text itself went out above, this drains
-            # whatever a listener wrote in between.
+            # capturing, and the original stream is flushed once.
             self.flush()
+
+    def _propagate_capturing(self) -> None:
+        """Push the capture flag onto the installed wrappers, under `lock`."""
+        if isinstance(self.stdout, WrappingIO):
+            self.stdout.capturing = self.capturing > 0
+
+        if isinstance(self.stderr, WrappingIO):
+            self.stderr.capturing = self.capturing > 0
 
     def _apply_capturing(self) -> list[_Pending]:
         """Push the capture state onto the wrappers, under `lock`.
@@ -748,12 +788,7 @@ class StreamWrapper:
         same text twice, and an unwrap cannot swap the wrapper out
         between the type check and the drain.
         """
-        if isinstance(self.stdout, WrappingIO):
-            self.stdout.capturing = self.capturing > 0
-
-        if isinstance(self.stderr, WrappingIO):
-            self.stderr.capturing = self.capturing > 0
-
+        self._propagate_capturing()
         if self.capturing > 0:
             return []
         return self._take()

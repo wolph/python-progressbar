@@ -176,6 +176,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
     _previous_output: list[str]
     _finished_at: _identity.IdentityMap[bar.ProgressBar, float]
     _labeled: _identity.IdentitySet[bar.ProgressBar]
+    _labels: _identity.IdentityMap[bar.ProgressBar, list[str]]
     _custom_labels: bool
     _membership_box: utils._SharedLock  # pyright: ignore[reportPrivateUsage]
     _print_lock: threading.RLock
@@ -237,6 +238,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
         self._custom_labels = False
         self._labeled = _identity.IdentitySet[bar.ProgressBar]()
+        self._labels = _identity.IdentityMap()
         self._finished_at = _identity.IdentityMap()
         self._previous_output = []
         self._buffer = io.StringIO()
@@ -344,6 +346,21 @@ class MultiBar(dict[str, bar.ProgressBar]):
         if progress is not None:
             self._finished_at.pop(progress, None)
             self._labeled.discard(progress)
+            self._remove_labels(progress, self._labels.pop(progress, []))
+
+    @staticmethod
+    def _remove_labels(progress: bar.ProgressBar, labels: list[str]) -> None:
+        """Take the generated label widgets out of a bar that leaves.
+
+        The widgets are matched by identity: the bar keeps a label of
+        its own that happens to render the same text.
+        """
+        widgets: collections.abc.MutableSequence[typing.Any] = progress.widgets
+        for label in labels:
+            for index, widget in enumerate(widgets):
+                if widget is label:
+                    del widgets[index]
+                    break
 
     def __delitem__(self, key: str) -> None:
         """Remove a progressbar and its tracking."""
@@ -424,9 +441,12 @@ class MultiBar(dict[str, bar.ProgressBar]):
             removed = list(super().values())
             removed.extend(self._finished_at)
             removed.extend(self._labeled)
+            for progress in self._labels:
+                self._remove_labels(progress, self._labels[progress])
             super().clear()
             self._finished_at.clear()
             self._labeled.clear()
+            self._labels.clear()
         # `removed` keeps the bars alive until this method returns, so
         # their finalisers run after the membership guard is released.
 
@@ -445,11 +465,25 @@ class MultiBar(dict[str, bar.ProgressBar]):
             if self.prepend_label or self.append_label:
                 self._labeled.add(bar)
 
+        labels: list[str] = []
         if self.prepend_label:  # pragma: no branch
-            widgets.insert(0, self.label_format.format(label=label))
+            prefix: str = self.label_format.format(label=label)
+            widgets.insert(0, prefix)
+            labels.append(prefix)
         if self.append_label:  # pragma: no branch
-            widgets.append(self.label_format.format(label=label))
-        return True
+            suffix: str = self.label_format.format(label=label)
+            widgets.append(suffix)
+            labels.append(suffix)
+        if not labels:
+            return True
+        with self._membership_guard(label):
+            if bar in self._labeled:
+                self._labels[bar] = labels
+                return True
+        # The bar left while its labels were being formatted. Take them
+        # out again, so a later insertion labels it once.
+        self._remove_labels(bar, labels)
+        return not require_member
 
     def render(self, flush: bool = True, force: bool = False) -> None:
         """Redraw every bar, only touching lines that actually changed.
