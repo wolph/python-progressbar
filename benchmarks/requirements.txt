@@ -1,6 +1,6 @@
-speedups==2.3.0
-tqdm==4.68.3
+speedups==2.3.3
+tqdm==4.70.1
 rich==15.0.0
 alive-progress==3.3.0
-click==8.4.1
+click==8.5.0
 matplotlib==3.11.0
