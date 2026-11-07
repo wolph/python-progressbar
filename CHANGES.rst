@@ -2,6 +2,22 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+A bar that leaves a ``MultiBar``, through ``pop``, ``del``, ``clear``,
+a replacement under the same label or ``remove_finished``, takes its
+generated label widgets with it. Adding it again labels it once. 4.7.0
+left the old labels in ``bar.widgets`` and labelled it twice.
+
+The ``stop_capturing()`` that brings the count to zero flushes the
+original stream once, as 4.6.0 did. 4.7.0 flushed it three times.
+
+A ``WrappingIO.flush()`` replacement that raises no longer costs the
+captured text. The text goes back in front of anything written since,
+and the next flush delivers it in order. 4.7.0 drained the buffer first
+and lost the text.
+
 4.7.0 - 2026-11-05
 ------------------
 

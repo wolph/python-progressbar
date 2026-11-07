@@ -1211,3 +1211,93 @@ def test_clear_does_not_reenable_native_mode_during_custom_insert() -> None:
     assert multibar['task'] is progress
     assert next(iter(multibar)) is label
     assert observed and all(observed)
+
+
+@pytest.mark.parametrize('removal', ['pop', 'del', 'clear', 'replace'])
+@pytest.mark.parametrize(
+    'prepend,append', [(True, False), (False, True), (True, True)]
+)
+def test_reinserted_bar_keeps_one_label_at_each_end(
+    removal: str, prepend: bool, append: bool
+) -> None:
+    # Regression against 4.7.0: a bar that left the multibar kept its
+    # generated label widgets, so adding it again labelled it twice.
+    multibar: progressbar.MultiBar = progressbar.MultiBar(
+        fd=io.StringIO(),
+        prepend_label=prepend,
+        append_label=append,
+        label_format='{label}:',
+    )
+    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+        widgets=['body'], max_value=1, fd=io.StringIO()
+    )
+    multibar['task'] = bar
+    bar.start()
+    multibar.render()
+    expected: list[str] = ['body']
+    if prepend:
+        expected.insert(0, 'task:')
+    if append:
+        expected.append('task:')
+    assert bar.widgets == expected
+    for _ in range(2):
+        if removal == 'pop':
+            multibar.pop('task')
+        elif removal == 'del':
+            del multibar['task']
+        elif removal == 'clear':
+            multibar.clear()
+        else:
+            multibar['task'] = progressbar.ProgressBar(fd=io.StringIO())
+        assert bar.widgets == ['body']
+        multibar['task'] = bar
+        multibar.render()
+        assert bar.widgets == expected
+
+
+def test_bar_removed_while_being_labelled_ends_up_unlabelled() -> None:
+    # The labels are formatted outside the membership guard, so another
+    # thread can remove the bar in between. Here the removal happens
+    # from inside the format call, which pins the same interleaving
+    # without a tracer (which coverage on 3.10 could not measure).
+    multibar: progressbar.MultiBar = progressbar.MultiBar(
+        fd=io.StringIO(), prepend_label=True, label_format='{label}:'
+    )
+    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+        widgets=['body'], max_value=1, fd=io.StringIO()
+    )
+
+    class PoppingFormat(str):
+        def format(self, *args: object, **kwargs: object) -> str:
+            multibar.pop('task')
+            return str.format(self, *args, **kwargs)
+
+    multibar.label_format = PoppingFormat('{label}:')
+    multibar['task'] = bar
+    assert multibar._label_bar(bar, require_member=True) is False
+    assert 'task' not in multibar
+    assert bar.widgets == ['body']
+    assert bar not in multibar._labeled
+    assert bar not in multibar._labels
+    multibar.label_format = '{label}:'
+    multibar['task'] = bar
+    assert multibar._label_bar(bar, require_member=True) is True
+    assert bar.widgets == ['task:', 'body']
+
+
+def test_label_already_removed_by_the_caller_costs_no_other_widget() -> None:
+    multibar: progressbar.MultiBar = progressbar.MultiBar(
+        fd=io.StringIO(), prepend_label=True, label_format='{label}:'
+    )
+    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+        widgets=['task:', 'body'], max_value=1, fd=io.StringIO()
+    )
+    multibar['task'] = bar
+    bar.start()
+    multibar.render()
+    assert bar.widgets == ['task:', 'task:', 'body']
+    del bar.widgets[0]
+    multibar.pop('task')
+    # Only the generated label object is removed, matched by identity,
+    # so the bar's own equal-looking label stays.
+    assert bar.widgets == ['task:', 'body']

@@ -1117,9 +1117,10 @@ def test_failed_stop_still_notifies_hook_and_preserves_first_error(  # noqa: C90
     assert streams.capturing == 0
     assert stdout.capturing is False and stderr.capturing is False
     assert err.getvalue() == 'eggs'
-    assert out.getvalue() == (
-        'spam' if failure_at in ('target_flush', 'drain') else ''
-    )
+    # Only a failed target write costs the text, so a retry cannot
+    # write it twice. A failed buffer flush keeps it for the hook's
+    # own flush, as in 4.6.0.
+    assert out.getvalue() == ('' if failure_at == 'write' else 'spam')
     streams.unwrap_stdout()
     streams.unwrap_stderr()
 
@@ -1466,3 +1467,71 @@ def test_subclass_flush_and_update_capturing_hooks_fire_as_in_4_6_0(
     # the stop that brought the count to zero.
     assert calls == ['update_capturing', 'update_capturing', 'flush']
     assert target.getvalue() == 'spam'
+
+
+def test_default_capture_stop_flushes_the_target_once() -> None:
+    # 4.6.0 flushed the original stream once when the last bar stopped
+    # capturing. 4.7.0 flushed it three times: from stop_capturing()
+    # and twice more from the default update_capturing() it then ran.
+    class Target(io.StringIO):
+        flushes: int = 0
+
+        def flush(self) -> None:
+            self.flushes += 1
+            super().flush()
+
+    target: Target = Target()
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    streams.stdout = utils.WrappingIO(target)
+    streams.wrapped_stdout = 1
+    streams.start_capturing()
+    streams.stdout.write('spam')
+    assert target.flushes == 0
+    streams.stop_capturing()
+    assert target.getvalue() == 'spam'
+    assert target.flushes == 1
+
+
+@pytest.mark.parametrize('shadow', [False, True])
+def test_failing_flush_hook_keeps_the_captured_text(shadow: bool) -> None:
+    # A flush() replacement that raises once must not cost the text
+    # already taken from the buffer. 4.6.0 called flush() before
+    # draining, 4.7.0 drained first and lost the text.
+    failure: OSError = OSError('temporary flush failure')
+    attempts: int = 0
+
+    def flush() -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise failure
+
+    class RetryFlush(utils.WrappingIO):
+        def flush(self) -> None:
+            flush()
+
+    target: io.StringIO = io.StringIO()
+    healthy: io.StringIO = io.StringIO()
+    wrapper: utils.WrappingIO = (
+        utils.WrappingIO(target, capturing=True)
+        if shadow
+        else RetryFlush(target, capturing=True)
+    )
+    if shadow:
+        wrapper.flush = flush  # type: ignore[method-assign]
+    streams: utils.StreamWrapper = utils.StreamWrapper()
+    streams.stdout = wrapper
+    streams.stderr = utils.WrappingIO(healthy, capturing=True)
+    streams.wrapped_stdout = streams.wrapped_stderr = 1
+    wrapper.write('first|\n')
+    streams.stderr.write('healthy|')
+    with pytest.raises(OSError) as caught:
+        streams.flush()
+    assert caught.value is failure
+    assert healthy.getvalue() == 'healthy|'
+    assert wrapper.buffer.getvalue() == 'first|\n'
+    assert wrapper.needs_clear is True
+    wrapper.write('second|')
+    streams.flush()
+    assert target.getvalue() == 'first|\nsecond|'
+    assert wrapper.buffer.getvalue() == ''
