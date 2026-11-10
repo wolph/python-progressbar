@@ -64,6 +64,22 @@ def test_filename_to_bytes(tmp_path) -> None:
         main.size_to_bytes(f'@{tmp_path / "nonexistent"}')
 
 
+def test_size_to_bytes_rejects_empty_at_path(tmp_path) -> None:
+    # Regression: '@' with no path silently returned the size of the
+    # current directory instead of failing.
+    with pytest.raises(ValueError):
+        main.size_to_bytes('@')
+
+    file = tmp_path / 'data.bin'
+    file.write_bytes(b'x' * 16)
+    output = tmp_path / 'out.bin'
+    output.write_bytes(b'precious')
+    with pytest.raises(SystemExit) as excinfo:
+        main.main(['-s', '@', str(file), '-o', str(output)])
+    assert excinfo.value.code == 2
+    assert output.read_bytes() == b'precious'
+
+
 def test_create_argument_parser() -> None:
     parser = main.create_argument_parser()
     args = parser.parse_args(
