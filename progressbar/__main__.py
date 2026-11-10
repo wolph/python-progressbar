@@ -48,6 +48,8 @@ def size_to_bytes(size_str: str) -> int:
     exponent = 0
 
     if size_str.startswith('@'):
+        if not size_str[1:]:
+            raise ValueError("missing file path after '@'")
         return pathlib.Path(size_str[1:]).stat().st_size
 
     if size_str[-1].lower() in suffix_exponent:
