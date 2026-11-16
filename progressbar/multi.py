@@ -39,6 +39,9 @@ importlib.import_module('progressbar.widgets')
 
 SortKeyFunc = collections.abc.Callable[[bar.ProgressBar], typing.Any]
 _NO_LABEL: object = object()
+#: The label widgets a `MultiBar` inserted into one bar: the prefix and
+#: the suffix, `None` for the end that got no label.
+_Labels = tuple[str | None, str | None]
 
 
 class _Update(typing.Protocol):
@@ -176,6 +179,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
     _previous_output: list[str]
     _finished_at: _identity.IdentityMap[bar.ProgressBar, float]
     _labeled: _identity.IdentitySet[bar.ProgressBar]
+    _labels: _identity.IdentityMap[bar.ProgressBar, _Labels]
     _custom_labels: bool
     _membership_box: utils._SharedLock  # pyright: ignore[reportPrivateUsage]
     _print_lock: threading.RLock
@@ -237,6 +241,7 @@ class MultiBar(dict[str, bar.ProgressBar]):
 
         self._custom_labels = False
         self._labeled = _identity.IdentitySet[bar.ProgressBar]()
+        self._labels = _identity.IdentityMap()
         self._finished_at = _identity.IdentityMap()
         self._previous_output = []
         self._buffer = io.StringIO()
@@ -344,6 +349,35 @@ class MultiBar(dict[str, bar.ProgressBar]):
         if progress is not None:
             self._finished_at.pop(progress, None)
             self._labeled.discard(progress)
+            self._remove_labels(
+                progress, self._labels.pop(progress, (None, None))
+            )
+
+    @staticmethod
+    def _remove_labels(progress: bar.ProgressBar, labels: _Labels) -> None:
+        """Take the generated label widgets out of a bar that leaves.
+
+        The widgets are matched by identity: the bar keeps a label of
+        its own that happens to render the same text. The prefix is
+        searched from the front and the suffix from the back, because
+        `label_format` can return an object the bar also holds as a
+        widget of its own (`'{label}'` returns the key itself).
+        """
+        widgets: collections.abc.MutableSequence[typing.Any] = progress.widgets
+        prefix: str | None
+        suffix: str | None
+        prefix, suffix = labels
+        index: int
+        if prefix is not None:
+            for index in range(len(widgets)):
+                if widgets[index] is prefix:
+                    del widgets[index]
+                    break
+        if suffix is not None:
+            for index in reversed(range(len(widgets))):
+                if widgets[index] is suffix:
+                    del widgets[index]
+                    break
 
     def __delitem__(self, key: str) -> None:
         """Remove a progressbar and its tracking."""
@@ -424,9 +458,12 @@ class MultiBar(dict[str, bar.ProgressBar]):
             removed = list(super().values())
             removed.extend(self._finished_at)
             removed.extend(self._labeled)
+            for progress in self._labels:
+                self._remove_labels(progress, self._labels[progress])
             super().clear()
             self._finished_at.clear()
             self._labeled.clear()
+            self._labels.clear()
         # `removed` keeps the bars alive until this method returns, so
         # their finalisers run after the membership guard is released.
 
@@ -445,11 +482,25 @@ class MultiBar(dict[str, bar.ProgressBar]):
             if self.prepend_label or self.append_label:
                 self._labeled.add(bar)
 
+        prefix: str | None = None
+        suffix: str | None = None
         if self.prepend_label:  # pragma: no branch
-            widgets.insert(0, self.label_format.format(label=label))
+            prefix = self.label_format.format(label=label)
+            widgets.insert(0, prefix)
         if self.append_label:  # pragma: no branch
-            widgets.append(self.label_format.format(label=label))
-        return True
+            suffix = self.label_format.format(label=label)
+            widgets.append(suffix)
+        if prefix is None and suffix is None:
+            return True
+        labels: _Labels = (prefix, suffix)
+        with self._membership_guard(label):
+            if bar in self._labeled:
+                self._labels[bar] = labels
+                return True
+        # The bar left while its labels were being formatted. Take them
+        # out again, so a later insertion labels it once.
+        self._remove_labels(bar, labels)
+        return not require_member
 
     def render(self, flush: bool = True, force: bool = False) -> None:
         """Redraw every bar, only touching lines that actually changed.
