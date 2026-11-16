@@ -3,6 +3,7 @@ import io
 import random
 import threading
 import time
+import typing
 
 import pytest
 
@@ -1255,6 +1256,40 @@ def test_reinserted_bar_keeps_one_label_at_each_end(
         assert bar.widgets == expected
 
 
+@pytest.mark.parametrize(
+    'prepend,append', [(True, False), (False, True), (True, True)]
+)
+def test_label_object_shared_with_a_widget_leaves_from_its_own_end(
+    prepend: bool, append: bool
+) -> None:
+    # CPython returns the key object itself for `'{label}'.format()`,
+    # so a bar that carries that string as a widget of its own holds
+    # the label object more than once. The prefix leaves from the front
+    # and the suffix from the back, so the bar's own widgets keep their
+    # order. `Verbatim` pins the shared object on every interpreter.
+    class Verbatim(str):
+        def format(self, *args: object, **kwargs: object) -> str:
+            return typing.cast(str, kwargs['label'])
+
+    key: str = 'spam'
+    multibar: progressbar.MultiBar = progressbar.MultiBar(
+        fd=io.StringIO(),
+        prepend_label=prepend,
+        append_label=append,
+        label_format=Verbatim('{label}'),
+    )
+    own: list[str] = [key, 'body', key]
+    bar: progressbar.ProgressBar = progressbar.ProgressBar(
+        widgets=list(own), max_value=1, fd=io.StringIO()
+    )
+    multibar[key] = bar
+    bar.start()
+    multibar.render()
+    assert len(bar.widgets) == len(own) + prepend + append
+    multibar.pop(key)
+    assert bar.widgets == own
+
+
 def test_bar_removed_while_being_labelled_ends_up_unlabelled() -> None:
     # The labels are formatted outside the membership guard, so another
     # thread can remove the bar in between. Here the removal happens
@@ -1285,19 +1320,27 @@ def test_bar_removed_while_being_labelled_ends_up_unlabelled() -> None:
     assert bar.widgets == ['task:', 'body']
 
 
-def test_label_already_removed_by_the_caller_costs_no_other_widget() -> None:
+@pytest.mark.parametrize('append', [False, True])
+def test_label_already_removed_by_the_caller_costs_no_other_widget(
+    append: bool,
+) -> None:
     multibar: progressbar.MultiBar = progressbar.MultiBar(
-        fd=io.StringIO(), prepend_label=True, label_format='{label}:'
+        fd=io.StringIO(),
+        prepend_label=not append,
+        append_label=append,
+        label_format='{label}:',
     )
+    own: list[str] = ['body', 'task:'] if append else ['task:', 'body']
     bar: progressbar.ProgressBar = progressbar.ProgressBar(
-        widgets=['task:', 'body'], max_value=1, fd=io.StringIO()
+        widgets=list(own), max_value=1, fd=io.StringIO()
     )
     multibar['task'] = bar
     bar.start()
     multibar.render()
-    assert bar.widgets == ['task:', 'task:', 'body']
-    del bar.widgets[0]
+    generated: int = -1 if append else 0
+    assert bar.widgets == ([*own, 'task:'] if append else ['task:', *own])
+    del bar.widgets[generated]
     multibar.pop('task')
     # Only the generated label object is removed, matched by identity,
     # so the bar's own equal-looking label stays.
-    assert bar.widgets == ['task:', 'body']
+    assert bar.widgets == own

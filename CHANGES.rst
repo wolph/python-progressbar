@@ -11,7 +11,9 @@ generated label widgets with it. Adding it again labels it once. 4.7.0
 left the old labels in ``bar.widgets`` and labelled it twice.
 
 The ``stop_capturing()`` that brings the count to zero flushes the
-original stream once, as 4.6.0 did. 4.7.0 flushed it three times.
+original stream once, as 4.6.0 did. 4.7.0 flushed it three times. A
+``StreamWrapper`` subclass whose ``update_capturing()`` calls ``super()``
+gets two flushes, the second one on an empty buffer.
 
 A ``WrappingIO.flush()`` replacement that raises no longer costs the
 captured text. The text goes back in front of anything written since,

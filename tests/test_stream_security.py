@@ -1492,6 +1492,42 @@ def test_default_capture_stop_flushes_the_target_once() -> None:
     assert target.flushes == 1
 
 
+@pytest.mark.parametrize('call_super,flushes', [(False, 1), (True, 2)])
+def test_replaced_capture_hook_gets_the_stop_delivery_first(
+    call_super: bool, flushes: int
+) -> None:
+    # A replaced hook may not call super(), so the last stop delivers
+    # its own text before the hook runs. A hook that does call super()
+    # flushes the original stream a second time, on an empty buffer.
+    # 4.7.0 flushed it three times there, 4.6.0 once.
+    class Target(io.StringIO):
+        flushes: int = 0
+
+        def flush(self) -> None:
+            self.flushes += 1
+            super().flush()
+
+    delivered: list[str] = []
+
+    class Streams(utils.StreamWrapper):
+        def update_capturing(self) -> None:
+            delivered.append(target.getvalue())
+            if call_super:
+                super().update_capturing()
+
+    target: Target = Target()
+    streams: Streams = Streams()
+    streams.stdout = utils.WrappingIO(target)
+    streams.wrapped_stdout = 1
+    streams.start_capturing()
+    streams.stdout.write('spam')
+    before: int = target.flushes
+    streams.stop_capturing()
+    assert delivered == ['', 'spam']
+    assert target.getvalue() == 'spam'
+    assert target.flushes - before == flushes
+
+
 @pytest.mark.parametrize('shadow', [False, True])
 def test_failing_flush_hook_keeps_the_captured_text(shadow: bool) -> None:
     # A flush() replacement that raises once must not cost the text
