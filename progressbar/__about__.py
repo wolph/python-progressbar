@@ -21,9 +21,9 @@ long running operations.
 """.strip().split(),
 )
 __email__ = 'wolph@wol.ph'
-__version__ = '4.7.0'
+__version__ = '4.7.1'
 #: Release date of ``__version__`` as a static string. Bump on each release.
-__date__ = '2026-11-05'
+__date__ = '2026-11-16'
 __license__ = 'BSD'
 __copyright__ = 'Copyright 2015-2026 Rick van Hattem (Wolph)'
 __url__ = 'https://github.com/wolph/python-progressbar'

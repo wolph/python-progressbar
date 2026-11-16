@@ -2,8 +2,8 @@
 Changelog
 =========
 
-Unreleased
-----------
+4.7.1 - 2026-11-16
+------------------
 
 A bar that leaves a ``MultiBar``, through ``pop``, ``del``, ``clear``,
 a replacement under the same label or ``remove_finished``, takes its
@@ -19,6 +19,8 @@ A ``WrappingIO.flush()`` replacement that raises no longer costs the
 captured text. The text goes back in front of anything written since,
 and the next flush delivers it in order. 4.7.0 drained the buffer first
 and lost the text.
+
+The package metadata on PyPI links to the release notes (PR #335).
 
 4.7.0 - 2026-11-05
 ------------------
