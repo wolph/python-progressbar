@@ -1,0 +1,217 @@
+# Signs the PyPI files of a GitHub release with Sigstore, using the identity
+# of this workflow run. Copy this file unchanged to .github/workflows/sign.yml.
+# `ppt sign` dispatches it and finds the run by its run-name.
+name: Sign release
+
+run-name: Sign ${{ inputs.tag }} ${{ inputs.request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to sign, for example v1.2.3
+        required: true
+        type: string
+      package:
+        description: Name of the package on PyPI
+        required: true
+        type: string
+      version:
+        description: Version on PyPI, when it differs from the tag without its leading v
+        required: false
+        default: ''
+        type: string
+      request_id:
+        description: Only used by ppt to find this run
+        required: false
+        default: ''
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: sign-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    name: Sign the PyPI files of the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # upload the bundles and missing files to the release
+      id-token: write # the OIDC token Sigstore signs with
+    env:
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+      PACKAGE: ${{ inputs.package }}
+      PYPI_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Validate inputs
+        run: |
+          if ! [[ "$TAG" =~ ^v?[0-9][0-9A-Za-z._+!-]*$ ]]; then
+            echo "Invalid tag input" >&2
+            exit 1
+          fi
+          if ! [[ "$PACKAGE" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+            echo "Invalid package input" >&2
+            exit 1
+          fi
+          if [ -n "$PYPI_VERSION" ] && ! [[ "$PYPI_VERSION" =~ ^v?[0-9][0-9A-Za-z._+!-]*$ ]]; then
+            echo "Invalid version input" >&2
+            exit 1
+          fi
+
+      - name: Read the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "$TAG" --json assets > assets.json
+
+      - name: Download the files already on the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir existing
+          count="$(python3 -I -c '
+          import json
+          import sys
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              names = [a["name"] for a in json.load(handle)["assets"]]
+          suffixes = (".whl", ".tar.gz", ".zip")
+          print(sum(1 for name in names if name.endswith(suffixes)))
+          ' assets.json)"
+          if [ "$count" -eq 0 ]; then
+            echo "No distribution files on the release yet"
+          else
+            gh release download "$TAG" -D existing -p '*.whl' -p '*.tar.gz' -p '*.zip'
+          fi
+
+      - name: Plan
+        id: plan
+        env:
+          EXISTING_DIR: existing
+          DIST_DIR: dist
+          ASSETS_JSON: assets.json
+        run: |
+          python3 -I - <<'PYEOF'
+          # ppt-plan-begin
+          import hashlib
+          import json
+          import os
+          import re
+          import sys
+          import urllib.request
+          from pathlib import Path
+          from typing import NoReturn
+
+          TAG: str = os.environ['TAG']
+          PACKAGE: str = os.environ['PACKAGE']
+          # The version input when ppt passes one, else the tag without its v.
+          VERSION: str = os.environ.get('PYPI_VERSION') or (
+              TAG[1:] if TAG.startswith('v') else TAG
+          )
+          URL_TEMPLATE: str = os.environ.get(
+              'PYPI_JSON_URL', 'https://pypi.org/pypi/{package}/{version}/json'
+          )
+          # Only files PyPI serves itself are fetched. Tests point it at file://.
+          FILES_PREFIX: str = os.environ.get(
+              'PYPI_FILES_PREFIX', 'https://files.pythonhosted.org/'
+          )
+          EXISTING_DIR: Path = Path(os.environ['EXISTING_DIR'])
+          DIST_DIR: Path = Path(os.environ['DIST_DIR'])
+
+
+          def fail(message: str) -> NoReturn:
+              print(message, file=sys.stderr)
+              raise SystemExit(1)
+
+
+          def sha256_of(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest()
+
+
+          def fetch(url: str) -> bytes:
+              with urllib.request.urlopen(url, timeout=120) as response:
+                  data: bytes = response.read()
+              return data
+
+
+          def main() -> None:
+              json_url: str = URL_TEMPLATE.format(package=PACKAGE, version=VERSION)
+              info: dict = json.loads(fetch(json_url))
+              files: list[dict] = info.get('urls') or []
+              if not files:
+                  fail(f'PyPI lists no files for {PACKAGE} {VERSION}')
+              with open(os.environ['ASSETS_JSON'], encoding='utf-8') as handle:
+                  assets: set[str] = {a['name'] for a in json.load(handle)['assets']}
+              DIST_DIR.mkdir(parents=True, exist_ok=True)
+              to_sign: list[str] = []
+              to_upload: list[str] = []
+              for entry in files:
+                  name: str = entry['filename']
+                  if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+!-]*', name):
+                      fail(f'Refusing unsafe file name {name!r}')
+                  expected: str = entry['digests']['sha256']
+                  url: str = entry['url']
+                  if not url.startswith(FILES_PREFIX):
+                      fail(f'Refusing {name}: its URL does not start with {FILES_PREFIX}')
+                  data: bytes = fetch(url)
+                  if sha256_of(data) != expected:
+                      fail(f'Downloaded {name} does not match the PyPI sha256')
+                  (DIST_DIR / name).write_bytes(data)
+                  if name in assets:
+                      existing: Path = EXISTING_DIR / name
+                      if not existing.is_file():
+                          fail(f'Release asset {name} could not be downloaded')
+                      if sha256_of(existing.read_bytes()) != expected:
+                          fail(f'Release asset {name} differs from the PyPI file')
+                  else:
+                      to_upload.append(name)
+                  if f'{name}.sigstore.json' not in assets:
+                      to_sign.append(name)
+              with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as out:
+                  out.write(f'to_sign={" ".join(to_sign)}\n')
+                  out.write(f'to_upload={" ".join(to_upload)}\n')
+
+
+          main()
+          # ppt-plan-end
+          PYEOF
+
+      - name: List files to sign
+        id: paths
+        env:
+          TO_SIGN: ${{ steps.plan.outputs.to_sign }}
+        run: |
+          paths=""
+          for name in $TO_SIGN; do
+            paths="$paths dist/$name"
+          done
+          echo "sign_inputs=${paths# }" >> "$GITHUB_OUTPUT"
+
+      - name: Sign with Sigstore
+        if: steps.plan.outputs.to_sign != ''
+        uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
+        with:
+          inputs: ${{ steps.paths.outputs.sign_inputs }}
+          upload-signing-artifacts: false
+          release-signing-artifacts: false
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TO_SIGN: ${{ steps.plan.outputs.to_sign }}
+          TO_UPLOAD: ${{ steps.plan.outputs.to_upload }}
+        run: |
+          files=()
+          for name in $TO_UPLOAD; do
+            files+=("dist/$name")
+          done
+          for name in $TO_SIGN; do
+            files+=("dist/$name.sigstore.json")
+          done
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "Nothing to upload"
+            exit 0
+          fi
+          gh release upload "$TAG" "${files[@]}"
